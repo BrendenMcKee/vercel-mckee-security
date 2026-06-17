@@ -1,13 +1,31 @@
 import { NextResponse } from "next/server";
 import {
   fallbackReviews,
+  filterFiveStarReviews,
   googleBusiness,
   type GoogleReview,
 } from "@/lib/reviews";
 
 export const revalidate = 86400;
 
-async function fetchGoogleReviews(): Promise<GoogleReview[] | null> {
+type LivePlaceData = {
+  rating?: number;
+  userRatingCount?: number;
+  reviews?: Array<{
+    name?: string;
+    rating?: number;
+    text?: { text?: string };
+    relativePublishTimeDescription?: string;
+    publishTime?: string;
+    authorAttribution?: { displayName?: string };
+  }>;
+};
+
+async function fetchGoogleReviews(): Promise<{
+  reviews: GoogleReview[];
+  rating: number;
+  reviewCount: number;
+} | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   const placeId = process.env.GOOGLE_PLACE_ID;
   if (!apiKey || !placeId) return null;
@@ -18,43 +36,46 @@ async function fetchGoogleReviews(): Promise<GoogleReview[] | null> {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "reviews,rating,userRatingCount,displayName",
+        "X-Goog-FieldMask":
+          "reviews,rating,userRatingCount,displayName,reviews.publishTime",
       },
       next: { revalidate: 86400 },
     },
   );
 
   if (!res.ok) return null;
-  const data = await res.json();
+  const data = (await res.json()) as LivePlaceData;
 
   if (!data.reviews?.length) return null;
 
-  return data.reviews.slice(0, 8).map(
-    (r: {
-      name?: string;
-      rating?: number;
-      text?: { text?: string };
-      relativePublishTimeDescription?: string;
-      authorAttribution?: { displayName?: string };
-    }, i: number) => ({
-      id: r.name ?? String(i),
-      author: r.authorAttribution?.displayName ?? "Google User",
-      rating: r.rating ?? 5,
-      text: r.text?.text ?? "",
-      relativeTime: r.relativePublishTimeDescription ?? "",
-    }),
-  );
+  const mapped = data.reviews.map((r, i) => ({
+    id: r.name ?? String(i),
+    author: r.authorAttribution?.displayName ?? "Google User",
+    rating: r.rating ?? 5,
+    text: r.text?.text ?? "",
+    relativeTime: r.relativePublishTimeDescription ?? "",
+    publishTime: r.publishTime,
+  }));
+
+  return {
+    reviews: filterFiveStarReviews(mapped),
+    rating: data.rating ?? googleBusiness.rating,
+    reviewCount: data.userRatingCount ?? googleBusiness.reviewCount,
+  };
 }
 
 export async function GET() {
   try {
     const live = await fetchGoogleReviews();
-    const reviews = live ?? fallbackReviews;
+    const reviews = live?.reviews ?? filterFiveStarReviews(fallbackReviews);
 
     return NextResponse.json({
       business: {
-        ...googleBusiness,
-        aiSummary: googleBusiness.aiSummary,
+        name: googleBusiness.name,
+        mapsUrl: googleBusiness.mapsUrl,
+        rating: live?.rating ?? googleBusiness.rating,
+        reviewCount: live?.reviewCount ?? googleBusiness.reviewCount,
+        aiSummaryBullets: googleBusiness.aiSummaryBullets,
       },
       reviews,
       source: live ? "google" : "fallback",
@@ -62,10 +83,13 @@ export async function GET() {
   } catch {
     return NextResponse.json({
       business: {
-        ...googleBusiness,
-        aiSummary: googleBusiness.aiSummary,
+        name: googleBusiness.name,
+        mapsUrl: googleBusiness.mapsUrl,
+        rating: googleBusiness.rating,
+        reviewCount: googleBusiness.reviewCount,
+        aiSummaryBullets: googleBusiness.aiSummaryBullets,
       },
-      reviews: fallbackReviews,
+      reviews: filterFiveStarReviews(fallbackReviews),
       source: "fallback",
     });
   }

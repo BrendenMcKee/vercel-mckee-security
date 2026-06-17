@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Menu,
   Phone,
@@ -70,6 +71,7 @@ function ServiceDropdown({
 }
 
 export function Header() {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
@@ -106,6 +108,30 @@ export function Header() {
       window.clearTimeout(t1);
       window.removeEventListener("pageshow", syncFromScroll);
     };
+  }, []);
+
+  useLayoutEffect(() => {
+    setScrolled(false);
+    syncHeaderScrolledClass(false);
+    requestAnimationFrame(() => {
+      if (headerRef.current) {
+        setSpacerHeight(headerRef.current.getBoundingClientRect().height);
+      }
+    });
+  }, [pathname]);
+
+  useEffect(() => {
+    const onScrollTop = () => {
+      setScrolled(false);
+      syncHeaderScrolledClass(false);
+      requestAnimationFrame(() => {
+        if (headerRef.current) {
+          setSpacerHeight(headerRef.current.getBoundingClientRect().height);
+        }
+      });
+    };
+    window.addEventListener("mckee:scroll-top", onScrollTop);
+    return () => window.removeEventListener("mckee:scroll-top", onScrollTop);
   }, []);
 
   useEffect(() => {

@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 
-/** Scroll to top on every client-side route change */
+/** Scroll to top and reset header state on every client-side route change */
 export function ScrollToTop() {
   const pathname = usePathname();
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  useLayoutEffect(() => {
+    const scrollTop = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      document.documentElement.classList.remove("header-scrolled");
+      window.dispatchEvent(new CustomEvent("mckee:scroll-top"));
+    };
+
+    scrollTop();
+    requestAnimationFrame(scrollTop);
   }, [pathname]);
 
   return null;
