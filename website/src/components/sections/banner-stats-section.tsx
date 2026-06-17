@@ -60,7 +60,7 @@ export function BannerStatsSection({ embedded = false }: { embedded?: boolean })
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5 pb-2 md:pb-0">
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}

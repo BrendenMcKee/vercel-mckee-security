@@ -104,7 +104,7 @@ export function HomePageContent() {
         </div>
       </ParallaxSection>
 
-      <section className="py-12 lg:py-14">
+      <section className="border-b border-white/10 py-14 lg:py-16">
         <div className="mx-auto max-w-3xl px-6 text-center">
           <FadeIn>
             <h6 className="text-sm font-bold uppercase tracking-widest text-white/80">
@@ -122,16 +122,16 @@ export function HomePageContent() {
         </div>
       </section>
 
-      <section className="py-8 lg:py-10">
-        <div className="mx-auto grid max-w-[1400px] items-center gap-8 px-6 lg:grid-cols-2 lg:gap-14">
-          <FadeIn className="flex justify-center lg:justify-end">
-            <div className="relative h-[220px] w-[220px] sm:h-[260px] sm:w-[260px]">
+      <section className="border-b border-white/10 bg-[#111111] py-14 lg:py-16">
+        <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-12 xl:gap-16">
+          <FadeIn className="flex justify-center lg:justify-start lg:pl-4 xl:pl-10">
+            <div className="relative h-[240px] w-[240px] sm:h-[280px] sm:w-[280px] lg:h-[300px] lg:w-[300px]">
               <Image
                 src={images.hat}
                 alt="McKee Security"
                 fill
-                className="object-contain"
-                sizes="260px"
+                className="object-contain object-left"
+                sizes="(max-width: 1024px) 280px, 300px"
               />
             </div>
           </FadeIn>
@@ -157,7 +157,7 @@ export function HomePageContent() {
         </div>
       </section>
 
-      <section className="py-10 lg:py-14">
+      <section className="border-t border-primary/30 bg-[#0a0a0a] py-14 lg:py-16">
         <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-6 lg:grid-cols-2 lg:gap-12">
           <FadeIn className="order-2 lg:order-1">
             <h6 className="text-sm font-bold uppercase tracking-widest text-white/70">
@@ -183,7 +183,7 @@ export function HomePageContent() {
           </FadeIn>
           <FadeIn
             delay={0.1}
-            className="relative order-1 aspect-square w-full max-w-lg overflow-hidden rounded-2xl lg:order-2 lg:mx-auto"
+            className="relative order-1 aspect-square w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 lg:order-2 lg:mx-auto"
           >
             <Image
               src={images.teamInstall}
