@@ -68,3 +68,14 @@
 .mckee-starlink-block .hero-image.mckee-elementor-img-loading {
   opacity: 0;
 }
+
+/* Non-clickable sensor/device feature pills — keep default cursor, preserve hover highlight */
+.mks2025-sec-service-feature,
+.mks2025-cam-service-feature,
+.mks2025-net-service-feature,
+.mckee-starlink-block .service-feature,
+.mckee-audio-block .service-feature,
+.mks2025-ci-card-feature {
+  cursor: default !important;
+  user-select: none;
+}
