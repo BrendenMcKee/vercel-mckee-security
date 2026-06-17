@@ -16,14 +16,12 @@ Modern rebuild of [mckeesecurity.ca](https://mckeesecurity.ca) — Next.js on Ve
 
 https://github.com/BrendenMcKee/vercel-mckee-security
 
-## Vercel Setup
+## Vercel
 
-When connecting in the Vercel dashboard:
+**Production URL:** https://vercel-mckee-security.vercel.app  
+**Dashboard:** https://vercel.com/brendenmckees-projects/vercel-mckee-security
 
-1. Import the GitHub repo `vercel-mckee-security`
-2. Set **Root Directory** to `website`
-3. Framework preset: Next.js (auto-detected)
-4. Deploy
+Root directory is set to `website`. Pushes to `main` auto-deploy.
 
 ## Local Development
 

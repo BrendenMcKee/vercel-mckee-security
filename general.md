@@ -124,12 +124,12 @@ Full brand tokens: `audit/BRAND-AUDIT.md`
 - [x] WordPress feature → rebuild mapping
 - [x] Artifacts in `audit/`
 
-### Phase 2 — Repo & Infrastructure 🔄
+### Phase 2 — Repo & Infrastructure ✅
 - [x] Local git init
 - [x] Initial commit
 - [x] GitHub repo `vercel-mckee-security` created + pushed
 - [x] Next.js scaffold in `website/` (branded placeholder)
-- [ ] Vercel project linked (root: `website/`) — connect via dashboard after push
+- [x] Vercel project linked (root: `website/`) — https://vercel-mckee-security.vercel.app
 
 ### Phase 3 — Foundation ⬜
 - [ ] Design tokens (Tailwind theme)
@@ -168,7 +168,7 @@ Full brand tokens: `audit/BRAND-AUDIT.md`
 | 2026-06-17 | No user auth in v1 |
 | 2026-06-17 | LearnDash → static course pages, free, no login |
 | 2026-06-17 | Improve UX where possible; not a pixel-perfect WP clone |
-| 2026-06-17 | Repo name: `vercel-mckee-security` |
+| 2026-06-17 | GitHub + Vercel live; root directory `website/` |
 
 ---
 
