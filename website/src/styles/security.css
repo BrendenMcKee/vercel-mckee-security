@@ -436,6 +436,7 @@ body main,
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)) !important;
     gap: clamp(20px, 3vw, 30px) !important;
     margin-top: 40px !important;
+    align-items: stretch !important;
 }
 
 .mks2025-sec-card-grid.mks2025-sec-three-col {
@@ -460,7 +461,10 @@ body main,
     overflow: hidden !important;
     margin: 0 !important;
     text-align: left !important;
-    height: fit-content !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 .mks2025-sec-card::before {
@@ -511,12 +515,14 @@ body main,
 .mks2025-sec-card p {
     margin-bottom: 0 !important;
     margin-top: 0 !important;
+    flex: 1 !important;
 }
 
 .mks2025-sec-card-image-wrapper {
     width: 100% !important;
     height: 140px !important;
     margin-bottom: 20px !important;
+    flex-shrink: 0 !important;
     border-radius: 8px !important;
     overflow: hidden !important;
     position: relative !important;

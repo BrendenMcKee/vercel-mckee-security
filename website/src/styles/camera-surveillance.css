@@ -403,6 +403,7 @@ body main,
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)) !important;
     gap: clamp(20px, 3vw, 30px) !important;
     margin-top: 40px !important;
+    align-items: stretch !important;
 }
 
 .mks2025-cam-card-grid.mks2025-cam-three-col {
@@ -434,7 +435,10 @@ body main,
     overflow: hidden !important;
     margin: 0 !important;
     text-align: center !important;
-    height: fit-content !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 .mks2025-cam-card::before {
@@ -486,14 +490,17 @@ body main,
 .mks2025-cam-card p {
     margin-bottom: 0 !important;
     margin-top: 0 !important;
+    flex: 1 !important;
 }
 
 .mks2025-cam-card-image {
     width: 100% !important;
     max-width: 280px !important;
-    height: auto !important;
+    height: 160px !important;
+    object-fit: contain !important;
     margin: 0 auto 20px !important;
     display: block !important;
+    flex-shrink: 0 !important;
     border-radius: 8px !important;
     box-shadow: 0 0 15px rgba(196, 30, 46, 0.12), 0 0 30px rgba(196, 30, 46, 0.06) !important;
     transition: transform 0.3s ease !important;

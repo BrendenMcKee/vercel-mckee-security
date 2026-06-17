@@ -1,4 +1,7 @@
 /* Equal-height cards in shared grids across Elementor service pages */
+#mks2025-cam-wrapper .mks2025-cam-card-grid,
+#mks2025-net-wrapper .mks2025-net-card-grid,
+#mks2025-sec-wrapper .mks2025-sec-card-grid,
 .mks2025-sec-card-grid,
 .mks2025-cam-card-grid,
 .mks2025-net-card-grid,
@@ -12,6 +15,9 @@
   align-items: stretch !important;
 }
 
+#mks2025-cam-wrapper .mks2025-cam-card-grid > .mks2025-cam-card,
+#mks2025-net-wrapper .mks2025-net-card-grid > .mks2025-net-card,
+#mks2025-sec-wrapper .mks2025-sec-card-grid > .mks2025-sec-card,
 .mks2025-sec-card,
 .mks2025-cam-card,
 .mks2025-net-card,
@@ -23,14 +29,23 @@
 .mks2025-ci-why-card,
 .mks2025-ci-service-card {
   height: 100% !important;
+  min-height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
 .mks2025-sec-card-image-wrapper,
-.mks2025-cam-card-image-wrapper,
-.mks2025-net-card-image-wrapper {
+.mks2025-cam-card-image,
+.mks2025-net-card-image {
   flex-shrink: 0 !important;
+}
+
+.mks2025-sec-card p,
+.mks2025-cam-card p,
+.mks2025-net-card p,
+.mckee-audio-block .card-grid > .card p,
+.mckee-starlink-block .card-grid > .card p {
+  flex: 1 !important;
 }
 
 /* Reserve space and soften image pop-in on service pages */
