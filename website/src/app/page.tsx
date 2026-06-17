@@ -1,50 +1,108 @@
-export default function Home() {
+import { Hero } from "@/components/sections/hero";
+import { StatsBar } from "@/components/sections/stats-bar";
+import { ServiceCardGrid } from "@/components/sections/service-card-grid";
+import { ServiceCategoryTabs } from "@/components/sections/service-category-tabs";
+import { FadeIn } from "@/components/motion/fade-in";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { Button } from "@/components/ui/button";
+import { HeritageBand } from "@/components/sections/cta-band";
+
+export default function HomePage() {
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="border-b border-white/10 bg-[#660000]/90">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <p className="text-sm font-bold uppercase tracking-widest text-white">
-            McKee Security & Audio Systems
-          </p>
-          <a
-            href="tel:+17054572156"
-            className="text-sm font-bold text-white hover:text-[#ec0000]"
-          >
-            (705) 457-2156
-          </a>
-        </div>
-      </header>
+    <>
+      <Hero
+        eyebrow="Specialized Security"
+        title="Full Home Integration"
+        subtitle="We are your one stop technology solution. You can have peace of mind knowing that our systems are custom designed to fit your needs."
+        primaryCta={{
+          label: "Explore Our Services",
+          href: "/custom-installations-professional-products",
+        }}
+        secondaryCta={{ label: "Contact Us", href: "/contact-us" }}
+      />
 
-      <main className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-        <p className="mb-4 text-sm font-bold uppercase tracking-[0.2em] text-[#ec0000]">
-          Vercel Edition
-        </p>
-        <h1 className="max-w-3xl text-4xl font-bold leading-tight text-white sm:text-5xl">
-          Full home integration — rebuilt for speed
-        </h1>
-        <p className="mt-6 max-w-xl text-lg text-white/70">
-          This is the new McKee Security site scaffold. Marketing pages, forms,
-          and technician course content are being migrated from WordPress.
-        </p>
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-          <a
-            href="https://mckeesecurity.ca"
-            className="rounded-xl bg-[#ec0000] px-8 py-3 font-bold text-white transition hover:bg-[#b20000]"
-          >
-            Visit live site
-          </a>
-          <a
-            href="mailto:info@mckeesecurity.ca"
-            className="rounded-xl border border-white/20 px-8 py-3 font-bold text-white transition hover:border-white/40"
-          >
-            info@mckeesecurity.ca
-          </a>
-        </div>
-      </main>
+      <StatsBar />
 
-      <footer className="border-t border-white/10 bg-[#262626] py-6 text-center text-sm text-white/50">
-        Copyright 1994 © McKee Security & Audio Systems
-      </footer>
-    </div>
+      <section className="py-20">
+        <div className="mx-auto max-w-7xl px-6">
+          <FadeIn>
+            <SectionHeading
+              eyebrow="Browse"
+              title="Custom Installation Services"
+              description="We specialize in security, camera surveillance, home audio distribution, home theater, networking, and cellular expansion."
+            />
+          </FadeIn>
+          <div className="mt-12">
+            <ServiceCardGrid />
+          </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden bg-surface py-20">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
+        <div className="relative mx-auto max-w-4xl px-6 text-center">
+          <FadeIn>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">
+              Professional
+            </p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
+              Custom Installations
+            </h2>
+            <p className="mt-4 text-lg text-white/65">
+              Our professionally trained and fully certified technicians are ready
+              to take on any custom home technology installations or renovations
+              you may have.
+            </p>
+            <Button
+              href="/custom-installations-professional-products"
+              className="mt-8"
+              size="lg"
+            >
+              Learn More
+            </Button>
+          </FadeIn>
+        </div>
+      </section>
+
+      <section className="py-20">
+        <div className="mx-auto max-w-7xl px-6">
+          <FadeIn>
+            <SectionHeading
+              eyebrow="Who we are"
+              title="Why choose us?"
+              description="At McKee Security and Audio Systems, we deliver comprehensive security solutions, camera surveillance systems, home audio distribution, home theater installations, networking infrastructure, and cellular expansion services."
+            />
+          </FadeIn>
+          <FadeIn delay={0.15}>
+            <p className="mx-auto mt-6 max-w-3xl text-center text-white/60">
+              McKee Security streamlines your technology experience with custom-designed
+              systems tailored precisely to your requirements, providing complete peace
+              of mind through our integrated, one-stop technology solutions.
+            </p>
+            <div className="mt-8 text-center">
+              <Button href="/about-us" variant="outline">
+                Read More
+              </Button>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      <section className="border-y border-white/5 bg-surface py-20">
+        <div className="mx-auto max-w-7xl px-6">
+          <FadeIn>
+            <SectionHeading
+              eyebrow="Our Services at a Glance"
+              title="What we do"
+            />
+          </FadeIn>
+          <div className="mt-12">
+            <ServiceCategoryTabs />
+          </div>
+        </div>
+      </section>
+
+      <HeritageBand />
+    </>
   );
 }

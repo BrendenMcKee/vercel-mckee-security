@@ -1,15 +1,15 @@
-# McKee Security — Vercel Edition
+# McKee Security Vercel Edition
 
-Modern rebuild of [mckeesecurity.ca](https://mckeesecurity.ca) — Next.js on Vercel, replacing WordPress/Flatsome.
+Modern rebuild of [mckeesecurity.ca](https://mckeesecurity.ca). Next.js on Vercel, replacing WordPress and Flatsome.
 
 **Master plan:** see [`general.md`](./general.md)
 
 ## Repository Structure
 
 ```
-├── general.md       # Master plan + progress tracker
-├── audit/           # WordPress audit (reference — not deployed)
-└── website/         # Next.js app → Vercel root directory
+├── general.md       # Master plan and progress tracker
+├── audit/           # WordPress audit (reference only, not deployed)
+└── website/         # Next.js app. Vercel root directory.
 ```
 
 ## GitHub
@@ -32,3 +32,13 @@ npm run dev
 ```
 
 Open http://localhost:3000
+
+## Environment Variables (Vercel)
+
+| Variable | Purpose |
+|----------|---------|
+| `RESEND_API_KEY` | Sends form notification emails |
+| `CONTACT_EMAIL` | Inbox for form submissions (default: info@mckeesecurity.ca) |
+| `EMAIL_FROM` | Sender address for Resend |
+
+Without `RESEND_API_KEY`, forms still succeed and log to the server console.

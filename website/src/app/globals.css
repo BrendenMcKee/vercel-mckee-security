@@ -7,6 +7,7 @@
   --secondary: #1e99e6;
   --surface: #262626;
   --surface-elevated: #424242;
+  --muted: rgba(255, 255, 255, 0.65);
 }
 
 @theme inline {
@@ -17,10 +18,26 @@
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
   --font-sans: var(--font-lato);
+  --font-accent: var(--font-dancing);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: rgba(236, 0, 0, 0.35);
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
