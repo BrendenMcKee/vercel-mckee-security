@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
-import featuredReviewContent from "@/content/google-reviews-featured.json";
-import { fetchAllGoogleBusinessReviews } from "@/lib/google-business-reviews";
 import {
   fallbackReviews,
   filterFiveStarReviews,
   getGoogleMapsProfileUrl,
   getGoogleWriteReviewUrl,
   googleBusiness,
-  mergeDisplayReviews,
   resolveGooglePlaceId,
   type GoogleReview,
 } from "@/lib/reviews";
 
 export const revalidate = 86400;
-
-const featuredReviews = (featuredReviewContent.reviews ?? []) as GoogleReview[];
 
 type LivePlaceData = {
   rating?: number;
@@ -29,7 +24,7 @@ type LivePlaceData = {
   }>;
 };
 
-async function fetchPlacesApiReviews(): Promise<{
+async function fetchGoogleReviews(): Promise<{
   reviews: GoogleReview[];
   rating: number;
   reviewCount: number;
@@ -75,30 +70,6 @@ async function fetchPlacesApiReviews(): Promise<{
   };
 }
 
-async function fetchLiveReviews() {
-  const businessProfile = await fetchAllGoogleBusinessReviews();
-  if (businessProfile) {
-    return {
-      ...businessProfile,
-      placeId: process.env.GOOGLE_PLACE_ID ?? googleBusiness.placeId ?? null,
-      source: "google-business-profile" as const,
-    };
-  }
-
-  const places = await fetchPlacesApiReviews();
-  if (places) {
-    return {
-      reviews: places.reviews,
-      rating: places.rating,
-      reviewCount: places.reviewCount,
-      placeId: places.placeId,
-      source: "google-places" as const,
-    };
-  }
-
-  return null;
-}
-
 function buildBusinessLinks(placeId?: string | null) {
   const id = placeId ?? googleBusiness.placeId ?? undefined;
   return {
@@ -111,15 +82,13 @@ function buildBusinessLinks(placeId?: string | null) {
 export async function GET() {
   try {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-    const live = await fetchLiveReviews();
+    const live = await fetchGoogleReviews();
     const resolvedPlaceId =
       live?.placeId ||
       googleBusiness.placeId ||
       (apiKey ? await resolveGooglePlaceId(apiKey) : null);
     const links = buildBusinessLinks(resolvedPlaceId);
-    const reviews = live
-      ? mergeDisplayReviews(live.reviews, featuredReviews)
-      : mergeDisplayReviews(filterFiveStarReviews(fallbackReviews), featuredReviews);
+    const reviews = live?.reviews ?? filterFiveStarReviews(fallbackReviews);
 
     return NextResponse.json({
       business: {
@@ -130,7 +99,7 @@ export async function GET() {
         aiSummaryBullets: googleBusiness.aiSummaryBullets,
       },
       reviews,
-      source: live?.source ?? "fallback",
+      source: live ? "google" : "fallback",
     });
   } catch {
     const links = buildBusinessLinks();
@@ -142,7 +111,7 @@ export async function GET() {
         reviewCount: googleBusiness.reviewCount,
         aiSummaryBullets: googleBusiness.aiSummaryBullets,
       },
-      reviews: mergeDisplayReviews(filterFiveStarReviews(fallbackReviews), featuredReviews),
+      reviews: filterFiveStarReviews(fallbackReviews),
       source: "fallback",
     });
   }
