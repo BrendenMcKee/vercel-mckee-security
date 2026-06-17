@@ -112,15 +112,51 @@ export const footerNav = [
 ];
 
 export const team = [
-  { name: "Maurice & Mary McKee", role: "Founders" },
-  { name: "Brenden McKee", role: "Owner-Operator, Technical Director" },
-  { name: "Dennis McKee", role: "Co-Owner" },
-  { name: "Brenda McKee", role: "Co-Owner" },
-  { name: "Andi Donaldson", role: "Administrative Manager" },
-  { name: "Austin Reeve", role: "Master Technician, Networking Specialist" },
-  { name: "Talon Dakin", role: "Master Technician, Training Specialist" },
-  { name: "Daniel Murdoch", role: "Professional Technician" },
-  { name: "Ethan Wildman", role: "Professional Technician" },
+  {
+    name: "Maurice & Mary McKee",
+    role: "Founders",
+    photo: "/images/team/maurice-mary.jpg",
+  },
+  {
+    name: "Brenden McKee",
+    role: "Owner-Operator, Technical Director",
+    photo: "/images/team/brenden-mckee.png",
+  },
+  {
+    name: "Dennis McKee",
+    role: "Co-Owner",
+    photo: "/images/team/dennis-mckee.jpg",
+  },
+  {
+    name: "Brenda McKee",
+    role: "Co-Owner",
+    photo: "/images/team/brenda-mckee.jpg",
+  },
+  {
+    name: "Andi Donaldson",
+    role: "Administrative Manager",
+    photo: "/images/team/andi-donaldson.png",
+  },
+  {
+    name: "Austin Reeve",
+    role: "Master Technician, Networking Specialist",
+    photo: "/images/team/austin-reeve.png",
+  },
+  {
+    name: "Talon Dakin",
+    role: "Master Technician, Training Specialist",
+    photo: "/images/team/talon-dakin.png",
+  },
+  {
+    name: "Daniel Murdoch",
+    role: "Professional Technician",
+    photo: "/images/team/daniel-murdoch.png",
+  },
+  {
+    name: "Ethan Wildman",
+    role: "Professional Technician",
+    photo: "/images/team/ethan-wildman.png",
+  },
 ] as const;
 
 export const heritageBlurb =

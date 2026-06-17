@@ -14,6 +14,8 @@ type HeroProps = {
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   compact?: boolean;
+  /** dark = contact-style gradient, light = subtle single overlay like live home */
+  overlay?: "dark" | "light";
 };
 
 export function Hero({
@@ -24,6 +26,7 @@ export function Hero({
   primaryCta,
   secondaryCta,
   compact = false,
+  overlay = "light",
 }: HeroProps) {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
@@ -38,7 +41,7 @@ export function Hero({
       ref={ref}
       className={`relative overflow-hidden ${compact ? "min-h-[50vh]" : "min-h-[85vh]"}`}
     >
-      <motion.div style={{ y }} className="absolute inset-0">
+      <motion.div style={{ y }} className="absolute inset-0 scale-110">
         <Image
           src={image}
           alt=""
@@ -46,8 +49,13 @@ export function Hero({
           priority
           className="object-cover"
           sizes="100vw"
+          quality={90}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-background" />
+        {overlay === "dark" ? (
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-background" />
+        ) : (
+          <div className="absolute inset-0 bg-[rgba(17,17,17,0.42)]" />
+        )}
       </motion.div>
 
       <motion.div
@@ -60,11 +68,11 @@ export function Hero({
               {eyebrow}
             </p>
           )}
-          <h1 className="max-w-4xl text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl">
+          <h1 className="max-w-4xl text-4xl font-bold leading-tight text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/75 sm:text-xl">
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85 sm:text-xl">
               {subtitle}
             </p>
           )}

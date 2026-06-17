@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mainNav, siteConfig, type NavChild } from "@/lib/site-config";
+import { SocialIconButtons } from "@/components/ui/social-icons";
 import { cn } from "@/lib/utils";
 
 const childIcons = {
@@ -65,7 +66,7 @@ export function Header() {
   const dropdownRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const onScroll = () => setScrolled(window.scrollY > 40);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -98,45 +99,20 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Top bar */}
-      <div className="hidden bg-[#660000] lg:block">
+      <div
+        className={cn(
+          "hidden overflow-hidden bg-[#660000] transition-all duration-300 ease-out lg:block",
+          scrolled ? "max-h-0 opacity-0" : "max-h-12 opacity-100",
+        )}
+      >
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-1.5 text-xs text-white">
           <strong className="font-bold uppercase tracking-wide">
             {siteConfig.topBarTagline}
           </strong>
-          <div className="flex items-center gap-3">
-            <a
-              href={siteConfig.social.facebook}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 text-[10px] font-bold transition hover:border-white"
-              aria-label="Facebook"
-            >
-              f
-            </a>
-            <a
-              href={siteConfig.social.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 text-[10px] font-bold transition hover:border-white"
-              aria-label="Instagram"
-            >
-              ig
-            </a>
-            <a
-              href={siteConfig.social.youtube}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 text-[10px] font-bold transition hover:border-white"
-              aria-label="YouTube"
-            >
-              yt
-            </a>
-          </div>
+          <SocialIconButtons />
         </div>
       </div>
 
-      {/* Main nav */}
       <div
         className={cn(
           "border-b border-white/5 bg-[rgba(10,10,10,0.92)] backdrop-blur-md transition-shadow",
@@ -217,31 +193,31 @@ export function Header() {
         </div>
       </div>
 
-      {/* Bottom contact bar (desktop) */}
       <div className="hidden border-b border-white/5 bg-[rgba(63,63,63,0.95)] lg:block">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-center gap-8 px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-white">
-          <a
-            href={`mailto:${siteConfig.email.general}`}
-            className="flex items-center gap-2 transition hover:text-primary"
-          >
-            <Mail className="h-4 w-4" />
-            Contact
-          </a>
-          <span className="flex items-center gap-2 text-white/80">
-            <Clock className="h-4 w-4" />
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-white">
+          <span className="flex items-center gap-2 text-white/85">
+            <Clock className="h-4 w-4 shrink-0" />
             {siteConfig.hours}
           </span>
-          <a
-            href={`tel:${siteConfig.phone.tel}`}
-            className="flex items-center gap-2 transition hover:text-primary"
-          >
-            <Phone className="h-4 w-4" />
-            {siteConfig.phone.display}
-          </a>
+          <div className="flex items-center gap-8">
+            <a
+              href={`mailto:${siteConfig.email.general}`}
+              className="flex items-center gap-2 transition hover:text-primary"
+            >
+              <Mail className="h-4 w-4 shrink-0" />
+              Contact
+            </a>
+            <a
+              href={`tel:${siteConfig.phone.tel}`}
+              className="flex items-center gap-2 transition hover:text-primary"
+            >
+              <Phone className="h-4 w-4 shrink-0" />
+              {siteConfig.phone.display}
+            </a>
+          </div>
         </div>
       </div>
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div

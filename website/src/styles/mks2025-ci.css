@@ -1,0 +1,1008 @@
+
+/* ============================================
+   McKee Security 2025 - Custom Installations Overview
+   Unique prefix: mks2025-ci-
+   ============================================ */
+
+body .entry-content,
+body .post-content,
+body .page-content,
+body .content-area,
+body main,
+#mks2025-ci-wrapper {
+    background-color: #0a0a0a !important;
+}
+
+#mks2025-ci-wrapper *,
+#mks2025-ci-wrapper *::before,
+#mks2025-ci-wrapper *::after {
+    box-sizing: border-box;
+}
+
+#mks2025-ci-wrapper {
+    background-color: #0a0a0a !important;
+    width: 100vw !important;
+    margin-left: calc(-50vw + 50%) !important;
+    position: relative !important;
+    left: 50% !important;
+    margin-left: -50vw !important;
+}
+
+.mks2025-ci-particles-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.mks2025-ci-particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: rgba(196, 30, 46, 0.6);
+    border-radius: 50%;
+    animation: mks2025-ci-float-particle linear infinite;
+    box-shadow: 0 0 6px rgba(196, 30, 46, 0.4);
+}
+
+@keyframes mks2025-ci-float-particle {
+    0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100vh) translateX(50px);
+        opacity: 0;
+    }
+}
+
+#mks2025-ci-main {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+    line-height: 1.7 !important;
+    color: #e0e0e0 !important;
+    background-color: #0a0a0a !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    max-width: 1600px !important;
+    margin: 0 auto !important;
+    padding: 0 20px !important;
+    position: relative !important;
+}
+
+#mks2025-ci-main h1 {
+    font-size: clamp(2.2em, 5vw, 3.2em) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.5px !important;
+    line-height: 1.2 !important;
+    margin-bottom: 25px !important;
+    color: #ffffff !important;
+}
+
+#mks2025-ci-main h2 {
+    font-size: clamp(1.8em, 4vw, 2.4em) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.3px !important;
+    line-height: 1.3 !important;
+    margin-bottom: 40px !important;
+    color: #ffffff !important;
+}
+
+#mks2025-ci-main h3 {
+    font-size: clamp(1.3em, 2.5vw, 1.5em) !important;
+    font-weight: 600 !important;
+    margin-bottom: 18px !important;
+    color: #ffffff !important;
+}
+
+#mks2025-ci-main h4 {
+    font-size: clamp(1.15em, 2vw, 1.35em) !important;
+    font-weight: 600 !important;
+    margin-bottom: 15px !important;
+    color: #ffffff !important;
+}
+
+#mks2025-ci-main p {
+    font-size: clamp(1em, 1.5vw, 1.1em) !important;
+    line-height: 1.8 !important;
+    color: #b0b0b0 !important;
+}
+
+#mks2025-ci-main strong {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+#mks2025-ci-main a.mks2025-ci-link {
+    color: #c41e2e !important;
+    text-decoration: none !important;
+    transition: color 0.3s ease !important;
+}
+
+#mks2025-ci-main a.mks2025-ci-link:hover {
+    color: #e63946 !important;
+}
+
+/* Hero Section */
+.mks2025-ci-hero {
+    background:
+        url('/images/services/pre-wire-topaz.jpg')
+        center center / cover no-repeat !important;
+    padding: clamp(70px, 12vw, 120px) clamp(25px, 4vw, 40px) !important;
+    text-align: center !important;
+    margin-top: clamp(30px, 5vw, 50px) !important;
+    margin-bottom: clamp(40px, 6vw, 60px) !important;
+    border-radius: 16px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    /* Border rendered as an inset shadow so it sits inside the clipping region */
+    border: none !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Black overlay — covers the full clipped area right to the rounded corners */
+.mks2025-ci-hero::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.74) !important;
+    border-radius: inherit !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+}
+
+/* Red accent glow layered above the overlay */
+.mks2025-ci-hero::after {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.32) 100%),
+        radial-gradient(ellipse at 50% 0%, rgba(196, 30, 46, 0.14) 0%, transparent 55%),
+        radial-gradient(ellipse at 20% 100%, rgba(196, 30, 46, 0.06) 0%, transparent 45%),
+        radial-gradient(ellipse at 80% 100%, rgba(196, 30, 46, 0.05) 0%, transparent 45%) !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-hero-content {
+    max-width: 1100px !important;
+    margin: 0 auto !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+#mks2025-ci-main .mks2025-ci-hero h1 {
+    color: #ffffff !important;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.75), 0 2px 30px rgba(196, 30, 46, 0.18) !important;
+}
+
+.mks2025-ci-hero-icon {
+    font-size: 4em !important;
+    color: #c41e2e !important;
+    margin-bottom: 25px !important;
+    display: block !important;
+    opacity: 0.95 !important;
+    text-shadow: 0 0 40px rgba(196, 30, 46, 0.4) !important;
+}
+
+#mks2025-ci-main .mks2025-ci-hero .mks2025-ci-hero-tagline {
+    font-size: clamp(1.1em, 2vw, 1.4em) !important;
+    color: #ffffff !important;
+    margin-bottom: 30px !important;
+    font-weight: 400 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.75) !important;
+}
+
+.mks2025-ci-hero-tagline::after {
+    content: '' !important;
+    display: block !important;
+    width: 80px !important;
+    height: 3px !important;
+    background: linear-gradient(90deg, transparent, #c41e2e, transparent) !important;
+    margin: 20px auto 0 !important;
+}
+
+#mks2025-ci-main .mks2025-ci-hero p {
+    font-size: clamp(1em, 1.8vw, 1.15em) !important;
+    color: #ffffff !important;
+    margin-bottom: 20px !important;
+    max-width: 800px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.72) !important;
+}
+
+.mks2025-ci-hero-emphasis {
+    color: #c41e2e !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7) !important;
+}
+
+.mks2025-ci-hero-badges {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 15px !important;
+    margin-top: 35px !important;
+}
+
+.mks2025-ci-hero-badge {
+    background: rgba(196, 30, 46, 0.1) !important;
+    border: 1px solid rgba(196, 30, 46, 0.3) !important;
+    padding: 10px 20px !important;
+    border-radius: 30px !important;
+    color: #ffffff !important;
+    font-size: clamp(0.85em, 1.5vw, 0.95em) !important;
+    font-weight: 500 !important;
+    backdrop-filter: blur(10px) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    transition: all 0.3s ease !important;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7) !important;
+}
+
+.mks2025-ci-hero-badge:hover {
+    background: rgba(196, 30, 46, 0.2) !important;
+    border-color: #c41e2e !important;
+    box-shadow: 0 0 20px rgba(196, 30, 46, 0.4) !important;
+}
+
+.mks2025-ci-hero-badge i {
+    color: #c41e2e !important;
+}
+
+a.mks2025-ci-hero-badge {
+    text-decoration: none !important;
+    cursor: pointer !important;
+}
+
+/* Highlight — driven entirely by JS via inline style transitions */
+.mks2025-ci-service-card.mks2025-ci-highlighted {
+    z-index: 10 !important;
+    overflow: visible !important;
+}
+
+/* Value Proposition Section */
+.mks2025-ci-values-section {
+    background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
+    padding: clamp(50px, 8vw, 70px) 30px !important;
+    margin-bottom: clamp(40px, 6vw, 60px) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-values-content {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+}
+
+.mks2025-ci-values-section h2 {
+    margin-bottom: 15px !important;
+}
+
+.mks2025-ci-values-section > .mks2025-ci-values-content > p {
+    font-size: clamp(1.05em, 2vw, 1.2em) !important;
+    margin-bottom: 50px !important;
+    max-width: 750px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.mks2025-ci-values-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: clamp(20px, 3vw, 30px) !important;
+    margin-top: 40px !important;
+}
+
+.mks2025-ci-value-card {
+    background: #111111 !important;
+    padding: clamp(30px, 4vw, 40px) clamp(25px, 3vw, 35px) !important;
+    border-radius: 12px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    text-align: center !important;
+}
+
+.mks2025-ci-value-card::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, transparent, #c41e2e, transparent) !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.mks2025-ci-value-card:hover {
+    transform: translateY(-5px) !important;
+    border-color: rgba(196, 30, 46, 0.4) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(196, 30, 46, 0.15) !important;
+}
+
+.mks2025-ci-value-card:hover::before {
+    opacity: 1 !important;
+}
+
+.mks2025-ci-value-icon {
+    font-size: 2.2em !important;
+    color: #c41e2e !important;
+    margin-bottom: 20px !important;
+    display: block !important;
+    text-shadow: 0 0 25px rgba(196, 30, 46, 0.3) !important;
+}
+
+.mks2025-ci-value-card h3 {
+    margin-bottom: 15px !important;
+    font-size: clamp(1.2em, 2vw, 1.4em) !important;
+}
+
+.mks2025-ci-value-card p {
+    margin: 0 !important;
+}
+
+/* Services Section Header */
+.mks2025-ci-services-header {
+    text-align: center !important;
+    padding: clamp(40px, 6vw, 55px) 30px clamp(30px, 4vw, 40px) !important;
+    margin-bottom: clamp(30px, 5vw, 45px) !important;
+    background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%) !important;
+    border-radius: 12px !important;
+    position: relative !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-services-header::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 60% !important;
+    height: 3px !important;
+    background: linear-gradient(90deg, transparent, #c41e2e, transparent) !important;
+}
+
+.mks2025-ci-services-header h2 {
+    margin-bottom: 15px !important;
+    color: #c41e2e !important;
+    text-shadow: 0 0 30px rgba(196, 30, 46, 0.4) !important;
+}
+
+.mks2025-ci-services-header p {
+    max-width: 650px !important;
+    margin: 0 auto !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Service Cards Grid */
+.mks2025-ci-services-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: clamp(20px, 3vw, 30px) !important;
+    max-width: 1500px !important;
+    margin: 0 auto clamp(30px, 5vw, 45px) !important;
+    padding: 0 20px !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-service-card {
+    background: #111111 !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+}
+
+.mks2025-ci-service-card::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 3px !important;
+    background: linear-gradient(90deg, transparent, #c41e2e, transparent) !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+    z-index: 2 !important;
+    pointer-events: none !important;
+}
+
+.mks2025-ci-service-card:hover {
+    transform: translateY(-8px) !important;
+    border-color: rgba(196, 30, 46, 0.5) !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(196, 30, 46, 0.2) !important;
+}
+
+.mks2025-ci-service-card:hover::before {
+    opacity: 1 !important;
+}
+
+.mks2025-ci-service-card.mks2025-ci-full-width {
+    grid-column: 1 / -1 !important;
+    max-width: 540px !important;
+    justify-self: center !important;
+}
+
+.mks2025-ci-card-image {
+    width: 100% !important;
+    height: 220px !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.mks2025-ci-card-image-bg {
+    width: 100% !important;
+    height: 100% !important;
+    background-size: cover !important;
+    background-position: center !important;
+    transition: transform 0.5s ease !important;
+}
+
+.mks2025-ci-service-card:hover .mks2025-ci-card-image-bg {
+    transform: scale(1.08) !important;
+}
+
+.mks2025-ci-card-image::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.88) 80%, rgba(0,0,0,1) 100%) !important;
+    z-index: 1 !important;
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+}
+
+.mks2025-ci-card-image-icon {
+    position: absolute !important;
+    bottom: 20px !important;
+    left: 25px !important;
+    z-index: 2 !important;
+    width: 55px !important;
+    height: 55px !important;
+    background: rgba(196, 30, 46, 0.9) !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.5em !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 20px rgba(196, 30, 46, 0.5) !important;
+    transition: all 0.3s ease !important;
+}
+
+.mks2025-ci-service-card:hover .mks2025-ci-card-image-icon {
+    transform: scale(1.1) !important;
+    box-shadow: 0 6px 30px rgba(196, 30, 46, 0.6) !important;
+}
+
+.mks2025-ci-card-body {
+    padding: clamp(25px, 3vw, 35px) !important;
+    padding-top: calc(clamp(25px, 3vw, 35px) + 2px) !important;
+    margin-top: -2px !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    z-index: 1 !important;
+    background: #111111 !important;
+}
+
+.mks2025-ci-card-body h3 {
+    margin-bottom: 12px !important;
+    color: #ffffff !important;
+    font-size: clamp(1.25em, 2.5vw, 1.5em) !important;
+}
+
+.mks2025-ci-card-body p {
+    margin-bottom: 20px !important;
+    flex: 1 !important;
+}
+
+.mks2025-ci-card-features {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-bottom: 20px !important;
+}
+
+.mks2025-ci-card-feature {
+    background: rgba(196, 30, 46, 0.1) !important;
+    padding: 6px 14px !important;
+    border-radius: 20px !important;
+    font-size: 0.85em !important;
+    color: #b0b0b0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition: all 0.3s ease !important;
+}
+
+.mks2025-ci-service-card:hover .mks2025-ci-card-feature {
+    background: rgba(196, 30, 46, 0.15) !important;
+    color: #ffffff !important;
+}
+
+.mks2025-ci-card-cta {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    color: #c41e2e !important;
+    font-weight: 600 !important;
+    font-size: clamp(0.95em, 1.5vw, 1.05em) !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    margin-top: auto !important;
+}
+
+.mks2025-ci-card-cta i {
+    transition: transform 0.3s ease !important;
+}
+
+.mks2025-ci-service-card:hover .mks2025-ci-card-cta {
+    color: #e63946 !important;
+}
+
+.mks2025-ci-service-card:hover .mks2025-ci-card-cta i {
+    transform: translateX(5px) !important;
+}
+
+/* Why McKee Section */
+.mks2025-ci-why-section {
+    background: linear-gradient(180deg, #1a1a1a 0%, #111111 100%) !important;
+    padding: clamp(50px, 8vw, 70px) 30px !important;
+    margin-bottom: clamp(40px, 6vw, 60px) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-why-content {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+}
+
+.mks2025-ci-why-section h2 {
+    margin-top: 0 !important;
+}
+
+.mks2025-ci-why-section > .mks2025-ci-why-content > p {
+    font-size: clamp(1.05em, 2vw, 1.2em) !important;
+    margin-bottom: 50px !important;
+    max-width: 700px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.mks2025-ci-why-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: clamp(20px, 3vw, 30px) !important;
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+}
+
+.mks2025-ci-why-card {
+    background: #111111 !important;
+    padding: clamp(25px, 4vw, 35px) !important;
+    border-radius: 12px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    text-align: left !important;
+}
+
+.mks2025-ci-why-card::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, transparent, #c41e2e, transparent) !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+}
+
+.mks2025-ci-why-card:hover {
+    transform: translateY(-5px) !important;
+    border-color: rgba(196, 30, 46, 0.4) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(196, 30, 46, 0.15) !important;
+}
+
+.mks2025-ci-why-card:hover::before {
+    opacity: 1 !important;
+}
+
+.mks2025-ci-why-card h4 {
+    margin-top: 0 !important;
+    margin-bottom: 15px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+}
+
+.mks2025-ci-why-card-icon {
+    font-size: 1.4em !important;
+    color: #c41e2e !important;
+    flex-shrink: 0 !important;
+    width: 45px !important;
+    height: 45px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(196, 30, 46, 0.15) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.mks2025-ci-why-card p {
+    margin: 0 !important;
+}
+
+/* CTA Section */
+.mks2025-ci-cta-section {
+    background: linear-gradient(180deg, #1a1a1a 0%, #000000 100%) !important;
+    color: #ffffff !important;
+    padding: clamp(50px, 8vw, 80px) 30px !important;
+    text-align: center !important;
+    border-radius: 12px 12px 0 0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-bottom: none !important;
+    position: relative !important;
+    overflow: hidden !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-cta-section::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: radial-gradient(ellipse at 50% 0%, rgba(196, 30, 46, 0.1) 0%, transparent 60%) !important;
+    pointer-events: none !important;
+}
+
+.mks2025-ci-cta-section > * {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-cta-section h3 {
+    font-size: clamp(1.8em, 4vw, 2.4em) !important;
+    font-weight: 600 !important;
+    margin-bottom: 25px !important;
+}
+
+.mks2025-ci-cta-section p {
+    font-size: clamp(1.1em, 2vw, 1.3em) !important;
+    margin-bottom: 40px !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-weight: 300 !important;
+}
+
+.mks2025-ci-cta-buttons {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 20px !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+.mks2025-ci-contact-form-wrapper {
+    max-width: 800px !important;
+    margin: 50px auto 40px !important;
+    background: rgba(196, 30, 46, 0.05) !important;
+    padding: clamp(30px, 5vw, 45px) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.mks2025-ci-contact-form-wrapper form,
+.mks2025-ci-contact-form-wrapper .contact-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.mks2025-ci-contact-form-wrapper label {
+    display: block !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500 !important;
+    margin-bottom: 8px !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    font-size: clamp(0.95em, 1.5vw, 1.05em) !important;
+}
+
+.mks2025-ci-contact-form-wrapper input[type="text"],
+.mks2025-ci-contact-form-wrapper input[type="email"],
+.mks2025-ci-contact-form-wrapper input[type="name"],
+.mks2025-ci-contact-form-wrapper textarea,
+.mks2025-ci-contact-form-wrapper input,
+.mks2025-ci-contact-form-wrapper textarea,
+.mks2025-ci-contact-form-wrapper .contact-field input,
+.mks2025-ci-contact-form-wrapper .contact-field textarea,
+.mks2025-ci-contact-form-wrapper input:not([type="submit"]):not([type="button"]),
+.mks2025-ci-contact-form-wrapper form input:not([type="submit"]):not([type="button"]),
+.mks2025-ci-contact-form-wrapper form textarea {
+    width: 100% !important;
+    padding: 14px 18px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    color: #ffffff !important;
+    font-size: clamp(0.95em, 1.5vw, 1.05em) !important;
+    font-family: inherit !important;
+    transition: all 0.3s ease !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+
+.mks2025-ci-contact-form-wrapper input[type="text"]:focus,
+.mks2025-ci-contact-form-wrapper input[type="email"]:focus,
+.mks2025-ci-contact-form-wrapper input[type="name"]:focus,
+.mks2025-ci-contact-form-wrapper textarea:focus,
+.mks2025-ci-contact-form-wrapper input:focus,
+.mks2025-ci-contact-form-wrapper textarea:focus {
+    outline: none !important;
+    border-color: #c41e2e !important;
+    box-shadow: 0 0 0 3px rgba(196, 30, 46, 0.2) !important;
+}
+
+.mks2025-ci-contact-form-wrapper textarea {
+    min-height: 100px !important;
+    resize: vertical !important;
+    font-family: inherit !important;
+    margin: 0 !important;
+}
+
+.mks2025-ci-contact-form-wrapper input[type="submit"],
+.mks2025-ci-contact-form-wrapper button[type="submit"] {
+    background: linear-gradient(135deg, #c41e2e 0%, #c41e2e 100%) !important;
+    color: #ffffff !important;
+    padding: 16px 40px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: clamp(1em, 1.8vw, 1.15em) !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(196, 30, 46, 0.4) !important;
+    margin-top: 10px !important;
+    margin-bottom: 0 !important;
+    align-self: center !important;
+    min-width: 200px !important;
+}
+
+.mks2025-ci-contact-form-wrapper input[type="submit"]:hover,
+.mks2025-ci-contact-form-wrapper button[type="submit"]:hover {
+    transform: translateY(-2px) !important;
+    background: linear-gradient(135deg, #e63946 0%, #ff4757 100%) !important;
+    box-shadow: 0 6px 25px rgba(230, 57, 70, 0.5) !important;
+}
+
+.mks2025-ci-contact-form-wrapper .required {
+    color: rgba(255, 255, 255, 0.6) !important;
+    margin-left: 8px !important;
+    display: inline-block !important;
+}
+
+.mks2025-ci-btn-primary {
+    display: inline-block !important;
+    background: linear-gradient(135deg, #c41e2e 0%, #c41e2e 100%) !important;
+    color: #ffffff !important;
+    padding: 18px 40px !important;
+    text-decoration: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: clamp(1.1em, 2vw, 1.2em) !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(196, 30, 46, 0.4) !important;
+    border: none !important;
+}
+
+.mks2025-ci-btn-primary:hover {
+    transform: translateY(-2px) !important;
+    background: linear-gradient(135deg, #e63946 0%, #ff4757 100%) !important;
+    box-shadow: 0 6px 25px rgba(230, 57, 70, 0.5) !important;
+    text-decoration: none !important;
+    color: #ffffff !important;
+}
+
+.mks2025-ci-btn-secondary {
+    display: inline-block !important;
+    background: transparent !important;
+    color: #ffffff !important;
+    padding: 18px 40px !important;
+    text-decoration: none !important;
+    border-radius: 8px !important;
+    border: 2px solid rgba(255, 255, 255, 0.5) !important;
+    font-weight: 500 !important;
+    font-size: clamp(1.1em, 2vw, 1.2em) !important;
+    transition: all 0.3s ease !important;
+}
+
+.mks2025-ci-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: #ffffff !important;
+    text-decoration: none !important;
+    color: #ffffff !important;
+}
+
+/* Dark Section / Three Generations */
+.mks2025-ci-dark-section {
+    background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%) !important;
+    color: #ffffff !important;
+    padding: clamp(50px, 8vw, 70px) 30px !important;
+    margin-bottom: 0 !important;
+    border-radius: 0 0 12px 12px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: none !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-dark-section::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: radial-gradient(ellipse at 50% 100%, rgba(196, 30, 46, 0.1) 0%, transparent 60%) !important;
+    pointer-events: none !important;
+}
+
+.mks2025-ci-dark-section h2 {
+    margin-bottom: 25px !important;
+}
+
+.mks2025-ci-dark-section p {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: clamp(0.95em, 1.5vw, 1.1em) !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+.mks2025-ci-dark-content {
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 900px) {
+    .mks2025-ci-services-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .mks2025-ci-service-card.mks2025-ci-full-width {
+        max-width: 100% !important;
+    }
+
+    .mks2025-ci-values-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .mks2025-ci-why-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #mks2025-ci-main {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .mks2025-ci-hero {
+        padding: 50px 20px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+    }
+
+    .mks2025-ci-hero-badges {
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+
+    .mks2025-ci-values-section,
+    .mks2025-ci-services-header,
+    .mks2025-ci-why-section,
+    .mks2025-ci-cta-section,
+    .mks2025-ci-dark-section {
+        padding: 40px 20px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+    }
+
+    .mks2025-ci-services-grid {
+        padding: 0 15px !important;
+    }
+
+    .mks2025-ci-card-image {
+        height: 180px !important;
+    }
+
+    .mks2025-ci-contact-form-wrapper {
+        padding: 25px 20px !important;
+        margin: 40px auto 30px !important;
+    }
+
+    .mks2025-ci-cta-buttons {
+        flex-direction: column !important;
+    }
+
+    .mks2025-ci-btn-primary,
+    .mks2025-ci-btn-secondary {
+        width: 100% !important;
+        max-width: 300px !important;
+    }
+
+    .mks2025-ci-why-card {
+        text-align: center !important;
+    }
+
+    .mks2025-ci-why-card h4 {
+        justify-content: center !important;
+    }
+
+    .mks2025-ci-value-card {
+        text-align: center !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #mks2025-ci-wrapper * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .mks2025-ci-particle {
+        display: none !important;
+    }
+}
