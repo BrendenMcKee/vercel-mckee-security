@@ -1,0 +1,77 @@
+{
+  "businessName": "McKee Security & Audio Systems",
+  "tagline": "A viable technology solution",
+  "foundedYear": 1994,
+  "yearsInBusiness": 30,
+  "region": "Haliburton region, Ontario, Canada",
+  "address": {
+    "street": "4702 Haliburton County Rd 21",
+    "city": "Haliburton",
+    "province": "ON",
+    "postalCode": "K0M 1S0",
+    "country": "Canada",
+    "full": "4702 Haliburton County Rd 21, Haliburton, ON K0M 1S0"
+  },
+  "phone": {
+    "display": "+1 705 457 2156",
+    "tel": "+17054572156",
+    "short": "(705) 457-2156"
+  },
+  "email": {
+    "general": "info@mckeesecurity.ca",
+    "contacts": [
+      {
+        "name": "Dennis McKee",
+        "title": "Owner-Operator",
+        "email": "dennis@mckeesecurity.ca"
+      },
+      {
+        "name": "Andi Donaldson",
+        "title": "Administrative Manager",
+        "email": "andi@mckeesecurity.ca"
+      },
+      {
+        "name": "Brenden McKee",
+        "title": "Owner-Operator | Technical Director",
+        "email": "brenden@mckeesecurity.ca"
+      }
+    ]
+  },
+  "social": {
+    "facebook": "https://www.facebook.com/McKeeTechnologySolutions",
+    "instagram": "https://www.instagram.com/mckeesecurity/",
+    "youtube": "https://www.youtube.com/channel/UCJxaxUSwhF3InTs5fE8hCDg"
+  },
+  "hours": null,
+  "certifications": [
+    "ULC-listed monitoring",
+    "Certified Sonos dealer",
+    "Fiber certified networking",
+    "NDAA compliant camera systems"
+  ],
+  "brands": {
+    "security": ["Honeywell", "Total Connect 2.0"],
+    "cameras": ["Uniview UNV"],
+    "networking": ["Ubiquiti UniFi"],
+    "audioVideo": ["Sonos", "Sonance", "Samsung", "Paradigm", "Anthem"],
+    "internet": ["Starlink Gen 3"]
+  },
+  "team": [
+    { "name": "Maurice & Mary McKee", "role": "Founders" },
+    { "name": "Brenden McKee", "role": "Owner-Operator, Technical Director" },
+    { "name": "Dennis McKee", "role": "Co-Owner" },
+    { "name": "Brenda McKee", "role": "Co-Owner" },
+    { "name": "Andi Donaldson", "role": "Administrative Manager" },
+    { "name": "Austin Reeve", "role": "Master Technician, Networking Specialist" },
+    { "name": "Talon Dakin", "role": "Master Technician, Training Specialist" },
+    { "name": "Daniel Murdoch", "role": "Professional Technician" },
+    { "name": "Ethan Wildman", "role": "Professional Technician" }
+  ],
+  "hiring": {
+    "page": "/apply-now",
+    "position": "Full-Time Technician",
+    "startingWage": "$18/hr",
+    "seniorWage": "$30/hr+",
+    "requirements": "Must reside or commute to Haliburton County. No previous experience required; onsite training available."
+  }
+}

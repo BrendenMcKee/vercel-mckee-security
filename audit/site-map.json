@@ -1,0 +1,72 @@
+{
+  "site": "https://mckeesecurity.ca",
+  "auditedAt": "2026-06-17",
+  "primaryNav": [
+    { "label": "Home", "path": "/", "wpSlug": "home" },
+    { "label": "Contact Us", "path": "/contact-us", "wpSlug": "contact-us" },
+    { "label": "About Us", "path": "/about-us", "wpSlug": "about-us" },
+    { "label": "Our Services", "path": "/custom-installations-professional-products", "wpSlug": "custom-installations-professional-products" },
+    { "label": "Security", "path": "/security", "wpSlug": "security" },
+    { "label": "Camera Surveillance", "path": "/camera-surveillance", "wpSlug": "camera-surveillance" },
+    { "label": "Networking / Cellular Expansion", "path": "/networking-cellular-expansion", "wpSlug": "networking-cellular-expansion" },
+    { "label": "Audio / Video", "path": "/audio-video", "wpSlug": "audio-video" },
+    { "label": "Starlink", "path": "/starlink", "wpSlug": "starlink" }
+  ],
+  "footerNav": [],
+  "orphanedPages": [
+    { "label": "Apply Now", "path": "/apply-now", "note": "Not in primary nav; careers/recruiting" },
+    { "label": "Our Courses", "path": "/our-courses", "note": "LearnDash LMS landing; not in primary nav" },
+    { "label": "Monitoring Information", "path": "/monitoring-information", "note": "Content largely duplicated on /security" },
+    { "label": "Shop", "path": "/shop", "note": "WooCommerce remnant; appears empty" },
+    { "label": "Privacy Policy", "path": "/terms-conditions", "note": "Misleading slug; footer link TBD" },
+    { "label": "Terms and Conditions", "path": "/terms-and-conditions", "note": "Legal; not in nav" }
+  ],
+  "authAndLms": [
+    { "label": "Login", "path": "/login" },
+    { "label": "Registration", "path": "/registration" },
+    { "label": "Registration Success", "path": "/registration-success" },
+    { "label": "Profile", "path": "/profile" },
+    { "label": "User Dashboard", "path": "/user-dashboard" },
+    { "label": "Technician Course", "path": "/courses/mckee-security-technician" },
+    { "label": "Technician Course (page)", "path": "/our-courses-technician" }
+  ],
+  "ecommerceRemnants": [
+    { "path": "/shop" },
+    { "path": "/cart" },
+    { "path": "/checkout" },
+    { "path": "/wishlist" }
+  ],
+  "internalOnly": [
+    { "path": "/data-drops-hhhs", "note": "Custom Data Drops plugin — internal" },
+    { "path": "/data-drops-mckeesecurity", "note": "Custom Data Drops plugin — internal" }
+  ],
+  "redirects": [
+    { "from": "/terms-conditions", "to": "/privacy-policy", "status": 301, "note": "Proposed: fix misleading slug; keep old URL as redirect" },
+    { "from": "/monitoring-information", "to": "/security#monitoring", "status": 301, "note": "Merge duplicate monitoring content" },
+    { "from": "/shop", "to": "/custom-installations-professional-products", "status": 301, "note": "Empty shop → services hub" },
+    { "from": "/cart", "to": "/custom-installations-professional-products", "status": 301 },
+    { "from": "/checkout", "to": "/contact-us", "status": 301 },
+    { "from": "/wishlist", "to": "/", "status": 301 }
+  ],
+  "proposedV1Routes": [
+    "/",
+    "/about-us",
+    "/contact-us",
+    "/custom-installations-professional-products",
+    "/security",
+    "/camera-surveillance",
+    "/networking-cellular-expansion",
+    "/audio-video",
+    "/starlink",
+    "/apply-now",
+    "/terms-and-conditions",
+    "/privacy-policy"
+  ],
+  "deferredV2Routes": [
+    "/our-courses",
+    "/courses/[slug]",
+    "/login",
+    "/registration",
+    "/user-dashboard"
+  ]
+}
