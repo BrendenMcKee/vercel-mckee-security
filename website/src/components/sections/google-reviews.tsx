@@ -25,7 +25,7 @@ type ReviewsPayload = {
   reviews: GoogleReview[];
 };
 
-const CARD_HEIGHT = "min-h-[248px]";
+const CARD_HEIGHT = "h-[300px]";
 
 const defaultPayload: ReviewsPayload = {
   business: {
@@ -110,7 +110,7 @@ function AiSummaryCard({
   return (
     <article
       data-review-card
-      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 snap-start flex-col overflow-visible rounded-xl border border-[#6366f1]/25 bg-gradient-to-br from-[#1a1830] via-[#141824] to-[#101018] p-5 sm:w-[300px]`}
+      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-[#6366f1]/25 bg-gradient-to-br from-[#1a1830] via-[#141824] to-[#101018] p-5 sm:w-[300px]`}
     >
       <div className="flex items-start gap-3">
         <AiSummaryIcon />
@@ -124,7 +124,10 @@ function AiSummaryCard({
         </div>
       </div>
 
-      <ul className="mt-4 space-y-2.5">
+      <ul
+        data-review-scroll
+        className="mt-4 min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [touch-action:pan-y] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20"
+      >
         {bullets.map((bullet) => (
           <li key={bullet} className="flex items-start gap-2.5 text-sm leading-snug text-white/80">
             <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#4285F4]/20 text-[#8ab4f8]">
@@ -135,7 +138,7 @@ function AiSummaryCard({
         ))}
       </ul>
 
-      <div className="mt-auto flex items-center gap-2 pt-4">
+      <div className="mt-3 flex shrink-0 items-center gap-2 pt-1">
         <GoogleLogo className="h-4 w-4 opacity-90" />
         <span className="text-[11px] text-white/40">Summarized from Google reviews</span>
       </div>
@@ -149,9 +152,9 @@ function ReviewCard({ review }: { review: GoogleReview }) {
   return (
     <article
       data-review-card
-      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 snap-start flex-col overflow-visible rounded-xl border border-white/10 bg-[#1a1a1a] p-5 sm:w-[300px]`}
+      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1a1a1a] p-5 sm:w-[300px]`}
     >
-      <div className="flex items-start gap-3 overflow-visible">
+      <div className="flex shrink-0 items-start gap-3 overflow-visible">
         <div className="relative h-11 w-11 shrink-0 overflow-visible">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4285F4] text-sm font-bold text-white">
             {initial}
@@ -172,12 +175,15 @@ function ReviewCard({ review }: { review: GoogleReview }) {
         </div>
         <GoogleLogo className="h-4 w-4 shrink-0 opacity-80" />
       </div>
-      <div className="mt-2.5">
+      <div className="mt-2.5 shrink-0">
         <StarRow rating={review.rating} size="sm" />
       </div>
-      <p className="mt-2.5 flex-1 text-sm leading-relaxed text-white/70 line-clamp-[6]">
-        {review.text}
-      </p>
+      <div
+        data-review-scroll
+        className="mt-2.5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [touch-action:pan-y] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20"
+      >
+        <p className="text-sm leading-relaxed text-white/70">{review.text}</p>
+      </div>
     </article>
   );
 }
@@ -246,6 +252,19 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
 
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+      const scrollable = (event.target as HTMLElement | null)?.closest(
+        "[data-review-scroll]",
+      );
+      if (scrollable instanceof HTMLElement) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollable;
+        const atTop = scrollTop <= 0;
+        const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+        const scrollingDown = event.deltaY > 0;
+        const scrollingUp = event.deltaY < 0;
+        if ((scrollingDown && !atBottom) || (scrollingUp && !atTop)) return;
+      }
+
       event.preventDefault();
       el.scrollBy({ left: event.deltaY, behavior: "auto" });
     };
