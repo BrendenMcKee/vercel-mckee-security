@@ -355,8 +355,16 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
             <ChevronRight className="h-4 w-4 text-white/80 md:h-5 md:w-5" />
           </button>
 
-          <p className="mb-3 px-1 text-center text-[11px] text-white/40 md:text-xs">
-            Swipe or use the arrows to browse our reviews.
+          <p className="mb-3 px-1 text-center text-[11px] leading-relaxed text-white/40 md:text-xs">
+            Swipe or use the arrows to go through our five latest reviews.{" "}
+            <a
+              href={data.business.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#8ab4f8] hover:underline"
+            >
+              Click here to read all {data.business.reviewCount}+ reviews on Google.
+            </a>
           </p>
 
           <div
