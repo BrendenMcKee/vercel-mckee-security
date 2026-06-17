@@ -26,6 +26,15 @@ export const googleBusiness = {
 const BUSINESS_TEXT_QUERY =
   "McKee Security & Audio Systems, 4702 Haliburton County Rd 21, Haliburton, ON K0M 1S0, Canada";
 
+/** Opens Google's reviews panel (not the Maps overview page). */
+export function getGoogleReadReviewsUrl(): string {
+  const override = process.env.GOOGLE_REVIEWS_URL?.trim();
+  if (override) return override;
+
+  const query = encodeURIComponent(BUSINESS_TEXT_QUERY);
+  return `https://www.google.com/search?q=${query}#mpd=~16217999612773077358/customers/reviews`;
+}
+
 /** Direct link from Google Business Profile → Share review form (optional override) */
 export function getGoogleReviewUrlOverride(): string {
   return process.env.GOOGLE_REVIEW_URL?.trim() ?? "";

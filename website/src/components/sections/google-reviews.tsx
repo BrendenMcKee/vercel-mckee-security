@@ -6,7 +6,7 @@ import type { GoogleReview } from "@/lib/reviews";
 import {
   fallbackReviews,
   filterFiveStarReviews,
-  getGoogleMapsProfileUrl,
+  getGoogleReadReviewsUrl,
   getGoogleWriteReviewUrl,
   googleBusiness,
 } from "@/lib/reviews";
@@ -32,7 +32,7 @@ const defaultPayload: ReviewsPayload = {
     name: googleBusiness.name,
     rating: googleBusiness.rating,
     reviewCount: googleBusiness.reviewCount,
-    mapsUrl: getGoogleMapsProfileUrl(),
+    mapsUrl: getGoogleReadReviewsUrl(),
     writeReviewUrl: getGoogleWriteReviewUrl(),
     aiSummaryBullets: googleBusiness.aiSummaryBullets,
   },

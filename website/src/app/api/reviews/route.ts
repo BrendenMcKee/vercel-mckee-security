@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   fallbackReviews,
   filterFiveStarReviews,
-  getGoogleMapsProfileUrl,
+  getGoogleReadReviewsUrl,
   getGoogleWriteReviewUrl,
   googleBusiness,
   resolveGooglePlaceId,
@@ -73,7 +73,7 @@ async function fetchGoogleReviews(): Promise<{
 function buildBusinessLinks(placeId?: string | null) {
   const id = placeId ?? googleBusiness.placeId ?? undefined;
   return {
-    mapsUrl: getGoogleMapsProfileUrl(id),
+    mapsUrl: getGoogleReadReviewsUrl(),
     writeReviewUrl: getGoogleWriteReviewUrl(id),
     placeId: id ?? "",
   };
