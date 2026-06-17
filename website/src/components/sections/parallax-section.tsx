@@ -10,8 +10,12 @@ type ParallaxSectionProps = {
   gradient?: boolean;
   minHeight?: string;
   objectPosition?: string;
+  /** Extra scale on the image layer to avoid edge gaps during parallax (keep near 1.0) */
   imageScale?: number;
+  /** Vertical travel in % of section height */
   parallaxStrength?: number;
+  /** Hero sections should pin at scroll 0; mid-page sections use a wider scroll range */
+  scrollMode?: "hero" | "section";
   children: React.ReactNode;
   className?: string;
   contentClassName?: string;
@@ -24,33 +28,41 @@ export function ParallaxSection({
   gradient = false,
   minHeight = "655px",
   objectPosition = "50% 50%",
-  imageScale = 1.2,
-  parallaxStrength = 50,
+  imageScale = 1.06,
+  parallaxStrength = 28,
+  scrollMode = "section",
   children,
   className = "",
   contentClassName = "",
   priority = false,
 }: ParallaxSectionProps) {
   const ref = useRef<HTMLElement>(null);
+  const scrollOffset: ["start start", "end start"] | ["start end", "end start"] =
+    scrollMode === "hero" ? ["start start", "end start"] : ["start end", "end start"];
+
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ["start end", "end start"],
+    offset: scrollOffset,
   });
+
+  const travel = parallaxStrength;
   const y = useTransform(
     scrollYProgress,
     [0, 1],
-    [`-${parallaxStrength * 0.12}%`, `${parallaxStrength}%`],
+    scrollMode === "hero"
+      ? [`-${travel * 0.35}%`, `${travel * 0.65}%`]
+      : [`-${travel * 0.5}%`, `${travel}%`],
   );
 
   return (
     <section
       ref={ref}
-      className={`relative overflow-hidden ${className}`}
+      className={`relative overflow-hidden bg-[#0a0a0a] ${className}`}
       style={{ minHeight }}
     >
       <motion.div
         style={{ y, scale: imageScale }}
-        className="absolute -inset-[12%] will-change-transform"
+        className="absolute -inset-[6%] will-change-transform"
       >
         <Image
           src={image}

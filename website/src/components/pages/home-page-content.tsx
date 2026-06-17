@@ -28,9 +28,10 @@ export function HomePageContent() {
         image={images.heroHome}
         minHeight="760px"
         gradient
-        objectPosition="50% 49%"
-        imageScale={1.22}
-        parallaxStrength={55}
+        scrollMode="hero"
+        objectPosition="50% 45%"
+        imageScale={1.04}
+        parallaxStrength={32}
         priority
         contentClassName="flex min-h-[760px] items-center"
       >
@@ -75,11 +76,11 @@ export function HomePageContent() {
 
       <ParallaxSection
         image={images.browseServicesBg}
-        overlay="rgba(0,0,0,0.22)"
+        overlay="rgba(0,0,0,0.28)"
         minHeight="520px"
-        objectPosition="49% 52%"
-        imageScale={1.28}
-        parallaxStrength={55}
+        objectPosition="50% 50%"
+        imageScale={1.06}
+        parallaxStrength={36}
         contentClassName="flex min-h-[520px] items-center justify-center py-12 lg:min-h-[580px] lg:py-20"
       >
         <div className="mx-auto w-full max-w-xl px-6">
@@ -200,11 +201,11 @@ export function HomePageContent() {
 
       <ParallaxSection
         image={images.sonosBg}
-        overlay="rgba(0,0,0,0.32)"
+        overlay="rgba(0,0,0,0.35)"
         minHeight="540px"
-        objectPosition="49% 100%"
-        imageScale={1.2}
-        parallaxStrength={55}
+        objectPosition="50% 60%"
+        imageScale={1.06}
+        parallaxStrength={36}
         contentClassName="flex min-h-[540px] items-center justify-center py-16 lg:py-20"
       >
         <div className="mx-auto flex w-full max-w-3xl justify-center px-6">

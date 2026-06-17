@@ -66,7 +66,20 @@ export function Header() {
   const dropdownRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 32);
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        setScrolled((prev) => {
+          if (prev && y < 12) return false;
+          if (!prev && y > 48) return true;
+          return prev;
+        });
+        ticking = false;
+      });
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -98,26 +111,24 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50">
-      <div
-        className="hidden grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] lg:grid"
-        style={{ gridTemplateRows: scrolled ? "0fr" : "1fr" }}
+    <header className="sticky top-0 z-50 bg-[#0a0a0a]">
+      <motion.div
+        className="hidden overflow-hidden bg-[#660000] lg:block"
+        initial={false}
+        animate={{ height: scrolled ? 0 : 36 }}
+        transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }}
       >
-        <div className="overflow-hidden">
-          <div className="bg-[#660000]">
-            <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-1.5 text-xs text-white">
-              <strong className="font-bold uppercase tracking-wide">
-                {siteConfig.topBarTagline}
-              </strong>
-              <SocialIconButtons />
-            </div>
-          </div>
+        <div className="mx-auto flex h-9 max-w-[1400px] items-center justify-between px-6 text-xs text-white">
+          <strong className="font-bold uppercase tracking-wide">
+            {siteConfig.topBarTagline}
+          </strong>
+          <SocialIconButtons />
         </div>
-      </div>
+      </motion.div>
 
       <div
         className={cn(
-          "border-b border-white/5 bg-[rgba(10,10,10,0.92)] backdrop-blur-md transition-shadow duration-300",
+          "border-b border-white/5 bg-[#0a0a0a] transition-shadow duration-300",
           scrolled && "shadow-lg shadow-black/40",
         )}
       >
@@ -195,7 +206,7 @@ export function Header() {
         </div>
       </div>
 
-      <div className="hidden border-b border-white/5 bg-[rgba(63,63,63,0.95)] lg:block">
+      <div className="hidden border-b border-white/5 bg-[#3f3f3f] lg:block">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-8 gap-y-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-white">
           <span className="flex items-center gap-2 text-white/85">
             <Clock className="h-4 w-4 shrink-0" />

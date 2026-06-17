@@ -15,6 +15,8 @@ type ReviewsPayload = {
   reviews: GoogleReview[];
 };
 
+const CARD_HEIGHT = "h-[248px]";
+
 function GoogleLogo({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
@@ -27,13 +29,13 @@ function GoogleLogo({ className = "h-5 w-5" }: { className?: string }) {
 }
 
 function StarRow({ rating, size = "md" }: { rating: number; size?: "sm" | "md" | "lg" }) {
-  const dim = size === "lg" ? "h-6 w-6" : size === "md" ? "h-4 w-4" : "h-3.5 w-3.5";
+  const dim = size === "lg" ? "h-5 w-5" : size === "md" ? "h-4 w-4" : "h-3.5 w-3.5";
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
         <svg
           key={i}
-          className={`${dim} ${i < rating ? "text-[#FBBC04]" : "text-gray-300"}`}
+          className={`${dim} ${i < rating ? "text-[#FBBC04]" : "text-white/20"}`}
           viewBox="0 0 20 20"
           fill="currentColor"
           aria-hidden="true"
@@ -45,24 +47,46 @@ function StarRow({ rating, size = "md" }: { rating: number; size?: "sm" | "md" |
   );
 }
 
+function AiSummaryCard({ summary }: { summary: string }) {
+  return (
+    <article
+      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col rounded-xl border border-[#4285F4]/30 bg-gradient-to-br from-[#1a2332] to-[#121820] p-5 sm:w-[300px]`}
+    >
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 shrink-0 text-[#8ab4f8]" />
+        <span className="text-xs font-semibold text-[#8ab4f8]">AI-powered summary</span>
+      </div>
+      <p className="mt-3 flex-1 overflow-hidden text-sm leading-relaxed text-white/75 line-clamp-[7]">
+        {summary}
+      </p>
+      <div className="mt-auto flex items-center gap-2 pt-3">
+        <GoogleLogo className="h-4 w-4 opacity-90" />
+        <span className="text-[11px] text-white/40">Summarized from Google reviews</span>
+      </div>
+    </article>
+  );
+}
+
 function ReviewCard({ review }: { review: GoogleReview }) {
   const initial = review.author.charAt(0).toUpperCase();
   return (
-    <article className="flex h-full min-w-[280px] max-w-[320px] shrink-0 flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:min-w-[300px]">
+    <article
+      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col rounded-xl border border-white/10 bg-[#1a1a1a] p-5 sm:w-[300px]`}
+    >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#4285F4] text-sm font-bold text-white">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4285F4] text-sm font-bold text-white">
           {initial}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-gray-900">{review.author}</p>
-          <p className="text-xs text-gray-500">{review.relativeTime}</p>
+          <p className="truncate text-sm font-semibold text-white">{review.author}</p>
+          <p className="text-xs text-white/45">{review.relativeTime}</p>
         </div>
         <GoogleLogo className="h-4 w-4 shrink-0 opacity-80" />
       </div>
-      <div className="mt-3">
+      <div className="mt-2.5">
         <StarRow rating={review.rating} size="sm" />
       </div>
-      <p className="mt-3 line-clamp-5 flex-1 text-sm leading-relaxed text-gray-700">
+      <p className="mt-2.5 flex-1 overflow-hidden text-sm leading-relaxed text-white/70 line-clamp-[6]">
         {review.text}
       </p>
     </article>
@@ -81,90 +105,77 @@ export function GoogleReviewsSection() {
   }, []);
 
   const scroll = (dir: -1 | 1) => {
-    scrollerRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
+    scrollerRef.current?.scrollBy({ left: dir * 312, behavior: "smooth" });
   };
 
   if (!data?.reviews.length) return null;
 
   return (
-    <section className="bg-[#f8f9fa] py-8 md:py-10">
+    <section className="border-y border-white/5 bg-[#0a0a0a] py-8 md:py-10">
       <div className="mx-auto max-w-[1400px] px-4 md:px-8">
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-md">
-          <div className="border-b border-gray-100 px-5 py-5 md:px-8 md:py-6">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex items-start gap-4">
-                <GoogleLogo className="mt-1 h-8 w-8 shrink-0" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Google Rating
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-3">
-                    <span className="text-4xl font-bold text-gray-900">
-                      {data.business.rating.toFixed(1)}
-                    </span>
-                    <StarRow rating={Math.round(data.business.rating)} size="lg" />
-                  </div>
-                  <a
-                    href={data.business.mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 inline-block text-sm text-[#1a73e8] hover:underline"
-                  >
-                    Based on {data.business.reviewCount}+ reviews
-                  </a>
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414] shadow-xl shadow-black/40">
+          <div className="flex flex-wrap items-center gap-4 border-b border-white/10 px-5 py-4 md:px-6 md:py-5">
+            <GoogleLogo className="h-7 w-7 shrink-0" />
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
+                  Google Rating
+                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2.5">
+                  <span className="text-3xl font-bold text-white">
+                    {data.business.rating.toFixed(1)}
+                  </span>
+                  <StarRow rating={Math.round(data.business.rating)} size="md" />
                 </div>
               </div>
-
-              {data.business.aiSummary && (
-                <div className="max-w-xl rounded-xl border border-[#dadce0] bg-gradient-to-br from-[#f8f9fa] to-white p-4 lg:max-w-md">
-                  <div className="mb-2 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-[#1a73e8]" />
-                    <span className="text-xs font-semibold text-gray-700">
-                      AI-powered summary
-                    </span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-gray-600">
-                    {data.business.aiSummary}
-                  </p>
-                </div>
-              )}
+              <a
+                href={data.business.mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[#8ab4f8] hover:underline"
+              >
+                Based on {data.business.reviewCount}+ reviews
+              </a>
             </div>
           </div>
 
-          <div className="relative bg-[#fafafa] px-3 py-5 md:px-6">
+          <div className="relative bg-[#101010] px-3 py-4 md:px-5">
             <button
               type="button"
               aria-label="Previous reviews"
               onClick={() => scroll(-1)}
-              className="absolute left-2 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-gray-200 bg-white p-2 shadow-md hover:bg-gray-50 md:flex"
+              className="absolute left-1.5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg hover:bg-[#252525] md:flex"
             >
-              <ChevronLeft className="h-5 w-5 text-gray-700" />
+              <ChevronLeft className="h-5 w-5 text-white/80" />
             </button>
             <button
               type="button"
               aria-label="Next reviews"
               onClick={() => scroll(1)}
-              className="absolute right-2 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-gray-200 bg-white p-2 shadow-md hover:bg-gray-50 md:flex"
+              className="absolute right-1.5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg hover:bg-[#252525] md:flex"
             >
-              <ChevronRight className="h-5 w-5 text-gray-700" />
+              <ChevronRight className="h-5 w-5 text-white/80" />
             </button>
 
             <div
               ref={scrollerRef}
-              className="flex gap-4 overflow-x-auto scroll-smooth px-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="flex items-stretch gap-3 overflow-x-auto scroll-smooth px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
+              {data.business.aiSummary && (
+                <AiSummaryCard summary={data.business.aiSummary} />
+              )}
               {data.reviews.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}
             </div>
           </div>
 
-          <div className="border-t border-gray-100 px-5 py-4 text-center md:px-8">
+          <div className="border-t border-white/10 px-5 py-3.5 text-center md:px-6">
             <a
               href={data.business.mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#1a1a1a] px-5 py-2 text-sm font-medium text-white/85 transition hover:border-white/25 hover:bg-[#222]"
             >
               <GoogleLogo className="h-4 w-4" />
               Review us on Google
