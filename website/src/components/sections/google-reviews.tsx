@@ -235,10 +235,20 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
   const syncScrollEdges = useCallback(() => {
     const el = scrollerRef.current;
     if (!el) return;
+
+    const cards = el.querySelectorAll<HTMLElement>("[data-review-card]");
+    const first = cards[0];
+    const last = cards[cards.length - 1];
+    if (!first || !last) return;
+
     const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
     const scrollLeft = el.scrollLeft;
-    setAtStart(scrollLeft <= 2);
-    setAtEnd(maxScroll <= 2 || scrollLeft >= maxScroll - 2);
+    const edgeSlack = 6;
+    const startTarget = first.offsetLeft;
+    const endTarget = last.offsetLeft + last.offsetWidth - el.clientWidth;
+
+    setAtStart(scrollLeft <= startTarget + edgeSlack);
+    setAtEnd(maxScroll <= edgeSlack || scrollLeft >= endTarget - edgeSlack);
   }, []);
 
   useLayoutEffect(() => {
@@ -279,10 +289,31 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
   const scroll = (dir: -1 | 1) => {
     const el = scrollerRef.current;
     if (!el) return;
-    const card = el.querySelector<HTMLElement>("[data-review-card]");
-    const gap = 12;
-    const delta = card ? card.offsetWidth + gap : 312;
-    el.scrollBy({ left: dir * delta, behavior: "smooth" });
+
+    const cards = Array.from(el.querySelectorAll<HTMLElement>("[data-review-card]"));
+    if (!cards.length) return;
+
+    const { scrollLeft, clientWidth } = el;
+    const viewStart = scrollLeft;
+    const viewEnd = scrollLeft + clientWidth;
+    const edgeSlack = 8;
+
+    let activeIndex = cards.findIndex(
+      (card) =>
+        card.offsetLeft >= viewStart - edgeSlack &&
+        card.offsetLeft < viewEnd - edgeSlack,
+    );
+    if (activeIndex === -1) {
+      activeIndex = cards.findLastIndex((card) => card.offsetLeft <= viewStart + edgeSlack);
+    }
+    if (activeIndex === -1) activeIndex = 0;
+
+    const nextIndex = Math.max(0, Math.min(cards.length - 1, activeIndex + dir));
+    cards[nextIndex]?.scrollIntoView({
+      behavior: "smooth",
+      inline: "start",
+      block: "nearest",
+    });
     window.setTimeout(syncScrollEdges, 400);
   };
 
@@ -362,7 +393,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
 
           <div
             ref={scrollerRef}
-            className="flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overflow-y-visible scroll-smooth px-8 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
+            className="flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overflow-y-visible scroll-smooth scroll-px-8 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
           >
             <AiSummaryCard bullets={aiBullets} reviewCount={data.business.reviewCount} />
             {reviews.map((review) => (
