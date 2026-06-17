@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { BadgeCheck, Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import type { GoogleReview } from "@/lib/reviews";
 import {
   fallbackReviews,
@@ -46,42 +46,25 @@ function GoogleLogo({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-function AiSummarySparklesIcon({ className = "h-5 w-5" }: { className?: string }) {
+function AiSummaryIcon() {
   return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M12 2.25 12.95 6.2 16.9 7.15 12.95 8.1 12 12.05 11.05 8.1 7.1 7.15 11.05 6.2 12 2.25Z"
-      />
-      <path
-        fill="#9334E9"
-        d="M18.75 13.5 19.35 15.65 21.5 16.25 19.35 16.85 18.75 19 18.15 16.85 16 16.25 18.15 15.65 18.75 13.5Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M5.25 15.75 5.85 17.9 8 18.5 5.85 19.1 5.25 21.25 4.65 19.1 2.5 18.5 4.65 17.9 5.25 15.75Z"
-      />
-    </svg>
+    <div
+      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#4285F4]/20 via-[#9334E9]/15 to-[#EA4335]/10 ring-1 ring-white/10"
+      aria-hidden
+    >
+      <Sparkles className="h-4 w-4 text-[#9ecbff]" strokeWidth={2} />
+    </div>
   );
 }
 
 function VerifiedBadge() {
   return (
-    <svg
-      className="h-[18px] w-[18px] shrink-0"
-      viewBox="0 -960 960 960"
+    <BadgeCheck
+      className="h-[18px] w-[18px] shrink-0 text-[#4285F4]"
+      strokeWidth={2.25}
       aria-label="Verified review"
       role="img"
-    >
-      <path
-        fill="#4285F4"
-        d="m344-60-76-128-144-32 14-148-98-126 98-126-14-148 144-32 76-128 136 58 136-58 76 128 144 32-14 148 98 126-98 126 14 148-144 32-76 128-136-58-136 58Z"
-      />
-      <path
-        fill="#ffffff"
-        d="M438-338 662-562 606-619 438-451 270-619 214-562Z"
-      />
-    </svg>
+    />
   );
 }
 
@@ -116,9 +99,7 @@ function AiSummaryCard({
       className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col overflow-visible rounded-xl border border-[#6366f1]/25 bg-gradient-to-br from-[#1a1830] via-[#141824] to-[#101018] p-5 sm:w-[300px]`}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
-          <AiSummarySparklesIcon className="h-5 w-5" />
-        </div>
+        <AiSummaryIcon />
         <div className="min-w-0">
           <p className="bg-gradient-to-r from-[#c084fc] via-[#818cf8] to-[#60a5fa] bg-clip-text text-sm font-semibold text-transparent">
             AI-generated summary
@@ -290,7 +271,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
             disabled={atStart}
             onClick={() => scroll(-1)}
             className={cn(
-              "absolute left-1.5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg transition-opacity duration-200 hover:bg-[#252525] md:flex",
+              "absolute left-1.5 top-1/2 z-10 hidden -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg transition-opacity duration-200 hover:bg-[#252525] md:flex",
               atStart && "pointer-events-none opacity-0",
             )}
           >
@@ -303,7 +284,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
             disabled={atEnd}
             onClick={() => scroll(1)}
             className={cn(
-              "absolute right-1.5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg transition-opacity duration-200 hover:bg-[#252525] md:flex",
+              "absolute right-1.5 top-1/2 z-10 hidden -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg transition-opacity duration-200 hover:bg-[#252525] md:flex",
               atEnd && "pointer-events-none opacity-0",
             )}
           >
