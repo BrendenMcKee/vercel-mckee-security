@@ -269,30 +269,9 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
       ro.observe(child);
     }
 
-    const onWheel = (event: WheelEvent) => {
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-
-      const scrollable = (event.target as HTMLElement | null)?.closest(
-        "[data-review-scroll]",
-      );
-      if (scrollable instanceof HTMLElement) {
-        const { scrollTop, scrollHeight, clientHeight } = scrollable;
-        const atTop = scrollTop <= 0;
-        const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
-        const scrollingDown = event.deltaY > 0;
-        const scrollingUp = event.deltaY < 0;
-        if ((scrollingDown && !atBottom) || (scrollingUp && !atTop)) return;
-      }
-
-      event.preventDefault();
-      el.scrollBy({ left: event.deltaY, behavior: "auto" });
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-
     return () => {
       el.removeEventListener("scroll", syncScrollEdges);
       el.removeEventListener("scrollend", syncScrollEdges);
-      el.removeEventListener("wheel", onWheel);
       ro.disconnect();
     };
   }, [reviews, aiBullets, syncScrollEdges]);
