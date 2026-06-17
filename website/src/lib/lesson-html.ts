@@ -3,14 +3,19 @@ export function prepareLessonHtml(html: string): string {
   let result = html
     .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(/<div[^>]*class="[^"]*wp-block-spacer[^"]*"[^>]*>[\s\S]*?<\/div>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "");
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/\s*has-text-align-center/g, "");
 
   result = result.replace(/style="([^"]*)"/gi, (_match, styles: string) => {
     let cleaned = styles
-      .replace(/background-color:\s*(white|#fff(?:fff)?|#f3f3f3|#f9f9f9|#eeeeee|#eee)\s*;?/gi, "")
-      .replace(/background:\s*(white|#fff(?:fff)?|#f3f3f3|#f9f9f9)\s*;?/gi, "")
+      .replace(/background-color:\s*(white|#fff(?:fff)?|#f3f3f3|#f9f9f9|#eeeeee|#eee|#e9e9e9)\s*;?/gi, "")
+      .replace(/background:\s*(white|#fff(?:fff)?|#f3f3f3|#f9f9f9|#e9e9e9)\s*;?/gi, "")
       .replace(/box-shadow:\s*[^;]+;?/gi, "")
       .replace(/color:\s*#(?:333|666|660000)\s*;?/gi, "")
+      .replace(/text-align:\s*center\s*;?/gi, "")
+      .replace(/display:\s*inline-block\s*;?/gi, "")
+      .replace(/list-style-position:\s*inside\s*;?/gi, "")
+      .replace(/margin-left:\s*-[\d.]+px\s*;?/gi, "")
       .replace(/margin-bottom:\s*-[\d.]+px\s*;?/gi, "")
       .replace(/margin-top:\s*-[\d.]+px\s*;?/gi, "")
       .replace(/;\s*;/g, ";")
@@ -22,7 +27,17 @@ export function prepareLessonHtml(html: string): string {
 
   result = result.replace(/\sstyle=""\s*/gi, " ");
 
+  result = normalizeWireColors(result);
+
   result = result
+    .replace(
+      /<tr\s+style="background-color:\s*#e9e9e9;">/gi,
+      '<tr class="mckee-table-head">',
+    )
+    .replace(
+      /<tr\s+style="background-color:\s*#f3f3f3;">/gi,
+      '<tr class="mckee-table-head">',
+    )
     .replace(
       /<a([^>]*href="https?:\/\/[^"]+"[^>]*)>/gi,
       (_match, attrs: string) => {
@@ -41,6 +56,32 @@ export function prepareLessonHtml(html: string): string {
     .replace(/<iframe([^>]*)>/gi, '<iframe$1 loading="lazy" title="Training video">');
 
   return result.trim();
+}
+
+function normalizeWireColors(html: string): string {
+  const replacements: Array<[RegExp, string]> = [
+    [
+      /<span[^>]*color:\s*#(?:ff0000|FF0000)[^>]*>\s*RED\s*<\/span>/gi,
+      '<span class="wire-badge wire-red">RED</span>',
+    ],
+    [
+      /<span[^>]*color:\s*#(?:000000|000)\b[^>]*>\s*BLACK\s*<\/span>/gi,
+      '<span class="wire-badge wire-black">BLACK</span>',
+    ],
+    [
+      /<span[^>]*color:\s*#(?:008000|008000)[^>]*>\s*GREEN\s*<\/span>/gi,
+      '<span class="wire-badge wire-green">GREEN</span>',
+    ],
+    [
+      /<span[^>]*color:\s*#(?:ffff00|FFD700|ff0)\b[^>]*>\s*YELLOW\s*<\/span>/gi,
+      '<span class="wire-badge wire-yellow">YELLOW</span>',
+    ],
+  ];
+
+  return replacements.reduce(
+    (acc, [pattern, replacement]) => acc.replace(pattern, replacement),
+    html,
+  );
 }
 
 export function countEmbeddedCheckboxes(html: string): number {

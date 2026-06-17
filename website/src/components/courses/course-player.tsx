@@ -353,7 +353,7 @@ export function CoursePlayer({ course }: { course: Course }) {
                                                 <ClipboardCheck className="h-3.5 w-3.5" />
                                                 Lesson Progress
                                               </p>
-                                              <p className="mt-1 text-xs text-white/45">
+                                              <p className="mt-1 text-left text-xs leading-relaxed text-white/45">
                                                 Check off each milestone below. Some steps
                                                 complete automatically when you finish hands-on
                                                 tasks or return from external training links.
@@ -374,12 +374,22 @@ export function CoursePlayer({ course }: { course: Course }) {
                                                       <li key={`${lessonId}-${itemIndex}`}>
                                                         <label
                                                           className={cn(
-                                                            "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition",
+                                                            "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 text-left transition",
                                                             checked
                                                               ? "border-green-500/25 bg-green-500/5"
                                                               : "border-white/8 bg-black/20 hover:border-primary/25",
                                                           )}
                                                         >
+                                                          <span
+                                                            className={cn(
+                                                              "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                                                              checked
+                                                                ? "bg-green-500/20 text-green-400"
+                                                                : "bg-white/8 text-white/45",
+                                                            )}
+                                                          >
+                                                            {itemIndex + 1}
+                                                          </span>
                                                           <input
                                                             type="checkbox"
                                                             checked={checked}
@@ -390,7 +400,7 @@ export function CoursePlayer({ course }: { course: Course }) {
                                                                 e.target.checked,
                                                               )
                                                             }
-                                                            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
+                                                            className="sr-only"
                                                           />
                                                           <span className="min-w-0 flex-1">
                                                             <span
@@ -398,7 +408,7 @@ export function CoursePlayer({ course }: { course: Course }) {
                                                                 "block text-sm leading-relaxed",
                                                                 checked
                                                                   ? "text-white/50 line-through"
-                                                                  : "text-white/85",
+                                                                  : "text-white/90",
                                                               )}
                                                             >
                                                               {item.label}
@@ -410,6 +420,11 @@ export function CoursePlayer({ course }: { course: Course }) {
                                                               <ChecklistHint type="embedded" />
                                                             )}
                                                           </span>
+                                                          {checked ? (
+                                                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                                                          ) : (
+                                                            <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/20" />
+                                                          )}
                                                         </label>
                                                       </li>
                                                     );
