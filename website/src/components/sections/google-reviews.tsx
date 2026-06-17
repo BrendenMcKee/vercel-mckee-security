@@ -46,19 +46,20 @@ function GoogleLogo({ className = "h-5 w-5" }: { className?: string }) {
   );
 }
 
-function GeminiSparkIcon({ className = "h-5 w-5" }: { className?: string }) {
+function AiSummarySparklesIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-      <defs>
-        <linearGradient id="gemini-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#8b5cf6" />
-          <stop offset="50%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#3b82f6" />
-        </linearGradient>
-      </defs>
       <path
-        fill="url(#gemini-gradient)"
-        d="M12 2.5c.4 2.8 2.2 5 5 5.5-2.8.5-4.6 2.7-5 5.5-.4-2.8-2.2-5-5-5.5 2.8-.5 4.6-2.7 5-5.5Zm0 8.5c.3 2.1 1.7 3.8 3.8 4.2-2.1.4-3.5 2.1-3.8 4.2-.3-2.1-1.7-3.8-3.8-4.2 2.1-.4 3.5-2.1 3.8-4.2Z"
+        fill="#4285F4"
+        d="M12 2.25 12.95 6.2 16.9 7.15 12.95 8.1 12 12.05 11.05 8.1 7.1 7.15 11.05 6.2 12 2.25Z"
+      />
+      <path
+        fill="#9334E9"
+        d="M18.75 13.5 19.35 15.65 21.5 16.25 19.35 16.85 18.75 19 18.15 16.85 16 16.25 18.15 15.65 18.75 13.5Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M5.25 15.75 5.85 17.9 8 18.5 5.85 19.1 5.25 21.25 4.65 19.1 2.5 18.5 4.65 17.9 5.25 15.75Z"
       />
     </svg>
   );
@@ -68,14 +69,17 @@ function VerifiedBadge() {
   return (
     <svg
       className="h-[18px] w-[18px] shrink-0"
-      viewBox="0 0 16 16"
+      viewBox="0 -960 960 960"
       aria-label="Verified review"
       role="img"
     >
-      <circle cx="8" cy="8" r="8" fill="#4285F4" />
+      <path
+        fill="#4285F4"
+        d="m344-60-76-128-144-32 14-148-98-126 98-126-14-148 144-32 76-128 136 58 136-58 76 128 144 32-14 148 98 126-98 126 14 148-144 32-76 128-136-58-136 58Z"
+      />
       <path
         fill="#ffffff"
-        d="M6.8 11.1 4.2 8.5l.9-.9 1.7 1.7 3.9-3.9.9.9-4.8 4.8z"
+        d="M438-338 662-562 606-619 438-451 270-619 214-562Z"
       />
     </svg>
   );
@@ -113,7 +117,7 @@ function AiSummaryCard({
     >
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
-          <GeminiSparkIcon className="h-5 w-5" />
+          <AiSummarySparklesIcon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <p className="bg-gradient-to-r from-[#c084fc] via-[#818cf8] to-[#60a5fa] bg-clip-text text-sm font-semibold text-transparent">
@@ -255,12 +259,12 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/95 shadow-xl shadow-black/40 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-4 border-b border-white/10 px-5 py-4 md:px-6 md:py-5">
           <GoogleLogo className="h-7 w-7 shrink-0" />
-          <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-0 gap-y-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-2 md:gap-x-8">
             <div className="min-w-0">
-              <p className="text-sm font-bold uppercase tracking-wider text-white/55 md:text-base lg:text-lg">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
                 Google Rating
               </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2.5">
+              <div className="mt-0.5 flex flex-wrap items-center gap-2.5">
                 <span className="text-3xl font-bold text-white md:text-4xl">
                   {data.business.rating.toFixed(1)}
                 </span>
@@ -271,7 +275,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
               href={data.business.mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mb-0.5 border-l border-white/15 pl-5 text-sm text-[#8ab4f8] hover:underline md:pl-8 md:text-base"
+              className="self-center text-xs text-[#8ab4f8] hover:underline md:text-sm"
             >
               Based on {data.business.reviewCount}+ reviews
             </a>
