@@ -5,6 +5,7 @@ export type GoogleReview = {
   text: string;
   relativeTime: string;
   publishTime?: string;
+  authorPhoto?: string;
 };
 
 export const googleBusiness = {
@@ -132,6 +133,12 @@ export const fallbackReviews: GoogleReview[] = [
   },
 ];
 
+export function normalizeGooglePhotoUri(uri?: string): string | undefined {
+  if (!uri?.trim()) return undefined;
+  if (uri.startsWith("//")) return `https:${uri}`;
+  return uri;
+}
+
 export function filterFiveStarReviews(reviews: GoogleReview[]) {
   return reviews
     .filter((review) => review.rating === 5)
@@ -139,6 +146,8 @@ export function filterFiveStarReviews(reviews: GoogleReview[]) {
       if (a.publishTime && b.publishTime) {
         return b.publishTime.localeCompare(a.publishTime);
       }
+      if (a.publishTime) return -1;
+      if (b.publishTime) return 1;
       return 0;
     });
 }

@@ -38,6 +38,19 @@ const defaultPayload: ReviewsPayload = {
   reviews: filterFiveStarReviews(fallbackReviews),
 };
 
+function GoogleWordmark({ className = "" }: { className?: string }) {
+  return (
+    <span className={className} aria-label="Google">
+      <span className="text-[#4285F4]">G</span>
+      <span className="text-[#EA4335]">o</span>
+      <span className="text-[#FBBC05]">o</span>
+      <span className="text-[#4285F4]">g</span>
+      <span className="text-[#34A853]">l</span>
+      <span className="text-[#EA4335]">e</span>
+    </span>
+  );
+}
+
 function GoogleLogo({ className = "h-5 w-5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
@@ -145,26 +158,41 @@ function AiSummaryCard({
   );
 }
 
-function ReviewCard({ review }: { review: GoogleReview }) {
+function ReviewAvatar({ review }: { review: GoogleReview }) {
   const initial = review.author.charAt(0).toUpperCase();
 
+  return (
+    <div className="relative h-11 w-11 shrink-0 overflow-visible">
+      {review.authorPhoto ? (
+        <img
+          src={review.authorPhoto}
+          alt=""
+          className="h-9 w-9 rounded-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4285F4] text-sm font-bold text-white">
+          {initial}
+        </div>
+      )}
+      <div
+        className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm ring-2 ring-[#1a1a1a]"
+        aria-hidden="true"
+      >
+        <GoogleLogo className="h-3.5 w-3.5" />
+      </div>
+    </div>
+  );
+}
+
+function ReviewCard({ review }: { review: GoogleReview }) {
   return (
     <article
       data-review-card
       className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1a1a1a] p-5 sm:w-[300px]`}
     >
       <div className="flex shrink-0 items-start gap-3 overflow-visible">
-        <div className="relative h-11 w-11 shrink-0 overflow-visible">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4285F4] text-sm font-bold text-white">
-            {initial}
-          </div>
-          <div
-            className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm ring-2 ring-[#1a1a1a]"
-            aria-hidden="true"
-          >
-            <GoogleLogo className="h-3.5 w-3.5" />
-          </div>
-        </div>
+        <ReviewAvatar review={review} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="truncate text-sm font-semibold text-white">{review.author}</p>
@@ -325,27 +353,19 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
   const widget = (
     <div className="mx-auto max-w-[1400px] px-4 md:px-8">
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/95 shadow-xl shadow-black/40 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center gap-4 border-b border-white/10 px-5 py-4 md:px-6 md:py-5">
-          <GoogleLogo className="h-7 w-7 shrink-0" />
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-2 md:gap-x-8">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
-                Google Rating
-              </p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2.5">
-                <span className="text-3xl font-bold text-white md:text-4xl">
-                  {data.business.rating.toFixed(1)}
-                </span>
-                <StarRow rating={Math.round(data.business.rating)} size="md" />
-              </div>
-            </div>
+        <div className="flex items-center gap-4 border-b border-white/10 px-5 py-4 md:px-6 md:py-5">
+          <span className="text-4xl font-bold leading-none text-white md:text-5xl">
+            {data.business.rating.toFixed(1)}
+          </span>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <StarRow rating={Math.round(data.business.rating)} size="md" />
             <a
               href={data.business.mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="self-center text-xs text-[#8ab4f8] hover:underline md:text-sm"
+              className="text-sm text-white/85 hover:underline md:text-base"
             >
-              Based on {data.business.reviewCount}+ reviews
+              {data.business.reviewCount} reviews on <GoogleWordmark />
             </a>
           </div>
         </div>

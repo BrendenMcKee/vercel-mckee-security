@@ -5,6 +5,7 @@ import {
   getGoogleReadReviewsUrl,
   getGoogleWriteReviewUrl,
   googleBusiness,
+  normalizeGooglePhotoUri,
   resolveGooglePlaceId,
   type GoogleReview,
 } from "@/lib/reviews";
@@ -20,7 +21,7 @@ type LivePlaceData = {
     text?: { text?: string };
     relativePublishTimeDescription?: string;
     publishTime?: string;
-    authorAttribution?: { displayName?: string };
+    authorAttribution?: { displayName?: string; photoUri?: string };
   }>;
 };
 
@@ -43,7 +44,7 @@ async function fetchGoogleReviews(): Promise<{
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
         "X-Goog-FieldMask":
-          "reviews,rating,userRatingCount,displayName,reviews.publishTime",
+          "reviews,rating,userRatingCount,displayName,reviews.publishTime,reviews.authorAttribution",
       },
       next: { revalidate: 86400 },
     },
@@ -60,6 +61,7 @@ async function fetchGoogleReviews(): Promise<{
     text: r.text?.text ?? "",
     relativeTime: r.relativePublishTimeDescription ?? "",
     publishTime: r.publishTime,
+    authorPhoto: normalizeGooglePhotoUri(r.authorAttribution?.photoUri),
   }));
 
   return {
