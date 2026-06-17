@@ -24,7 +24,7 @@ type ReviewsPayload = {
   reviews: GoogleReview[];
 };
 
-const CARD_HEIGHT = "h-[300px]";
+const CARD_HEIGHT = "h-[340px]";
 
 const defaultPayload: ReviewsPayload = {
   business: {
