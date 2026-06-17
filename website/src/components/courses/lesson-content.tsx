@@ -8,7 +8,8 @@ import {
   readEmbeddedChecklistState,
   writeEmbeddedChecklistState,
 } from "@/lib/course-progress";
-import { prepareLessonHtml } from "@/lib/lesson-html";
+import { cn } from "@/lib/utils";
+import { getLessonLayoutClass, prepareLessonHtml } from "@/lib/lesson-html";
 
 type LessonContentEntry = {
   sourceUrl: string;
@@ -31,6 +32,11 @@ export function LessonContentPanel({
 
   const preparedHtml = useMemo(
     () => (entry?.html ? prepareLessonHtml(entry.html) : ""),
+    [entry?.html],
+  );
+
+  const layoutClass = useMemo(
+    () => (entry?.html ? getLessonLayoutClass(entry.html) : ""),
     [entry?.html],
   );
 
@@ -81,7 +87,7 @@ export function LessonContentPanel({
   return (
     <div
       ref={containerRef}
-      className="course-lesson-html"
+      className={cn("course-lesson-html", layoutClass)}
       dangerouslySetInnerHTML={{ __html: preparedHtml }}
     />
   );

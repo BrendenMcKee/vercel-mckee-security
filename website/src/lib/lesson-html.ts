@@ -3,8 +3,7 @@ export function prepareLessonHtml(html: string): string {
   let result = html
     .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(/<div[^>]*class="[^"]*wp-block-spacer[^"]*"[^>]*>[\s\S]*?<\/div>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\s*has-text-align-center/g, "");
+    .replace(/<!--[\s\S]*?-->/g, "");
 
   result = result.replace(/style="([^"]*)"/gi, (_match, styles: string) => {
     let cleaned = styles
@@ -12,9 +11,6 @@ export function prepareLessonHtml(html: string): string {
       .replace(/background:\s*(white|#fff(?:fff)?|#f3f3f3|#f9f9f9|#e9e9e9)\s*;?/gi, "")
       .replace(/box-shadow:\s*[^;]+;?/gi, "")
       .replace(/color:\s*#(?:333|666|660000)\s*;?/gi, "")
-      .replace(/text-align:\s*center\s*;?/gi, "")
-      .replace(/display:\s*inline-block\s*;?/gi, "")
-      .replace(/list-style-position:\s*inside\s*;?/gi, "")
       .replace(/margin-left:\s*-[\d.]+px\s*;?/gi, "")
       .replace(/margin-bottom:\s*-[\d.]+px\s*;?/gi, "")
       .replace(/margin-top:\s*-[\d.]+px\s*;?/gi, "")
@@ -56,6 +52,27 @@ export function prepareLessonHtml(html: string): string {
     .replace(/<iframe([^>]*)>/gi, '<iframe$1 loading="lazy" title="Training video">');
 
   return result.trim();
+}
+
+/** Layout class for course lesson HTML — centered enrollment vs left-aligned guides */
+export function getLessonLayoutClass(html: string): string {
+  if (
+    /toc-container|checklist-item|dahua-section|ubiquiti-section|Installation Progress|step-container/i.test(
+      html,
+    )
+  ) {
+    return "mckee-lesson-guide";
+  }
+
+  if (
+    /has-text-align-center|Visit the Honeywell Academy|is-content-justification-center/i.test(
+      html,
+    )
+  ) {
+    return "mckee-lesson-centered";
+  }
+
+  return "";
 }
 
 function normalizeWireColors(html: string): string {

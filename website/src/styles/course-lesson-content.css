@@ -9,7 +9,6 @@
   color: rgba(255, 255, 255, 0.88);
   font-size: 0.9375rem;
   line-height: 1.65;
-  text-align: left;
 }
 
 @media (min-width: 768px) {
@@ -18,22 +17,50 @@
   }
 }
 
-/* Force left alignment — migrated WordPress content is heavily center-aligned */
-.course-lesson-html,
-.course-lesson-html div,
-.course-lesson-html p,
-.course-lesson-html li,
-.course-lesson-html label,
-.course-lesson-html ol,
-.course-lesson-html ul,
-.course-lesson-html table,
-.course-lesson-html th,
-.course-lesson-html td,
-.course-lesson-html h1,
-.course-lesson-html h2,
-.course-lesson-html h3,
-.course-lesson-html h4 {
+/* Hands-on installation guides — left-aligned readable layout */
+.course-lesson-html.mckee-lesson-guide,
+.course-lesson-html.mckee-lesson-guide > div,
+.course-lesson-html.mckee-lesson-guide > div > div,
+.course-lesson-html.mckee-lesson-guide p,
+.course-lesson-html.mckee-lesson-guide li,
+.course-lesson-html.mckee-lesson-guide label,
+.course-lesson-html.mckee-lesson-guide ol,
+.course-lesson-html.mckee-lesson-guide ul,
+.course-lesson-html.mckee-lesson-guide table,
+.course-lesson-html.mckee-lesson-guide th,
+.course-lesson-html.mckee-lesson-guide td,
+.course-lesson-html.mckee-lesson-guide h1,
+.course-lesson-html.mckee-lesson-guide h2,
+.course-lesson-html.mckee-lesson-guide h3,
+.course-lesson-html.mckee-lesson-guide h4 {
   text-align: left !important;
+}
+
+/* External academy enrollment lessons — centered instructions + CTA */
+.course-lesson-html.mckee-lesson-centered {
+  text-align: center;
+}
+
+.course-lesson-html.mckee-lesson-centered h2.has-text-align-center,
+.course-lesson-html.mckee-lesson-centered h2[style*="text-align: center"] {
+  border-left: none !important;
+  padding-left: 0 !important;
+  text-align: center !important;
+}
+
+.course-lesson-html.mckee-lesson-centered div[style*="text-align: center"],
+.course-lesson-html.mckee-lesson-centered p,
+.course-lesson-html.mckee-lesson-centered ol,
+.course-lesson-html.mckee-lesson-centered li {
+  text-align: center !important;
+}
+
+.course-lesson-html.mckee-lesson-centered ol {
+  display: inline-block;
+  list-style-position: inside;
+  padding-left: 0;
+  margin-left: 0;
+  max-width: 100%;
 }
 
 /* Flatten nested WordPress wrapper boxes — no white/light panels */
@@ -78,7 +105,7 @@
   font-weight: 700;
 }
 
-.course-lesson-html h2,
+.course-lesson-html h2:not(.has-text-align-center):not([style*="text-align: center"]),
 .course-lesson-html h3,
 .course-lesson-html h4 {
   border-left: 3px solid #c91818;
@@ -230,6 +257,11 @@
   justify-content: flex-start !important;
   width: 100% !important;
   margin: 1.5rem 0 !important;
+}
+
+.course-lesson-html.mckee-lesson-centered .wp-block-buttons,
+.course-lesson-html.mckee-lesson-centered .wp-block-button {
+  justify-content: center !important;
 }
 
 .course-lesson-html .wp-block-button__link,
