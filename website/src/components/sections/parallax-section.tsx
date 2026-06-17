@@ -50,7 +50,7 @@ export function ParallaxSection({
     scrollYProgress,
     [0, 1],
     scrollMode === "hero"
-      ? [`-${travel * 0.35}%`, `${travel * 0.65}%`]
+      ? ["0%", `${travel * 0.65}%`]
       : [`-${travel * 0.5}%`, `${travel}%`],
   );
 
@@ -75,7 +75,7 @@ export function ParallaxSection({
           quality={90}
         />
         {gradient ? (
-          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/38 to-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/38 to-[#0a0a0a]" />
         ) : (
           <div className="absolute inset-0" style={{ backgroundColor: overlay }} />
         )}

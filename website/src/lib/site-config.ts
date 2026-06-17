@@ -111,7 +111,20 @@ export const footerNav = [
   { label: "Privacy Policy", href: "/privacy-policy" },
 ];
 
-export const team = [
+export type TeamLink = {
+  type: "email" | "instagram" | "tiktok";
+  href: string;
+  label: string;
+};
+
+export type TeamMember = {
+  name: string;
+  role: string;
+  photo: string;
+  links?: TeamLink[];
+};
+
+export const team: TeamMember[] = [
   {
     name: "Maurice & Mary McKee",
     role: "Founders",
@@ -121,21 +134,28 @@ export const team = [
     name: "Brenden McKee",
     role: "Owner-Operator, Technical Director",
     photo: "/images/team/brenden-mckee.png",
+    links: [
+      { type: "instagram", href: "https://www.instagram.com/brendenmckee/", label: "Instagram" },
+      { type: "email", href: "mailto:brenden@mckeesecurity.ca", label: "Email" },
+    ],
   },
   {
     name: "Dennis McKee",
     role: "Co-Owner",
     photo: "/images/team/dennis-mckee.jpg",
+    links: [{ type: "email", href: "mailto:dennis@mckeesecurity.ca", label: "Email" }],
   },
   {
     name: "Brenda McKee",
     role: "Co-Owner",
     photo: "/images/team/brenda-mckee.jpg",
+    links: [{ type: "email", href: "mailto:brenda@mckeesecurity.ca", label: "Email" }],
   },
   {
     name: "Andi Donaldson",
     role: "Administrative Manager",
     photo: "/images/team/andi-donaldson.png",
+    links: [{ type: "email", href: "mailto:andi@mckeesecurity.ca", label: "Email" }],
   },
   {
     name: "Austin Reeve",
@@ -146,18 +166,35 @@ export const team = [
     name: "Talon Dakin",
     role: "Master Technician, Training Specialist",
     photo: "/images/team/talon-dakin.png",
+    links: [
+      { type: "instagram", href: "https://www.instagram.com/talondakin/", label: "Instagram" },
+    ],
   },
   {
     name: "Daniel Murdoch",
     role: "Professional Technician",
     photo: "/images/team/daniel-murdoch.png",
+    links: [
+      {
+        type: "tiktok",
+        href: "https://www.tiktok.com/@danielmurdoch?lang=en",
+        label: "TikTok",
+      },
+    ],
   },
   {
     name: "Ethan Wildman",
     role: "Professional Technician",
     photo: "/images/team/ethan-wildman.png",
+    links: [
+      {
+        type: "instagram",
+        href: "https://www.instagram.com/wildmancopywrites/",
+        label: "Instagram",
+      },
+    ],
   },
-] as const;
+];
 
 export const heritageBlurb =
   "For over 30 years, McKee Security has served families and businesses throughout the Haliburton region. Founded by Maurice McKee and now led by third-generation owner Brenden McKee, we have built our reputation on professional installation, honest service, and cutting-edge technology.";

@@ -7,8 +7,7 @@ import { images } from "@/lib/site-config";
 import { serviceCategories } from "@/lib/services";
 import { FadeIn } from "@/components/motion/fade-in";
 import { ParallaxSection } from "@/components/sections/parallax-section";
-import { GoogleReviewsSection } from "@/components/sections/google-reviews";
-import { BannerStatsSection } from "@/components/sections/banner-stats-section";
+import { StatsReviewsBand } from "@/components/sections/stats-reviews-band";
 
 function ReadMoreLink({ href }: { href: string }) {
   return (
@@ -70,9 +69,7 @@ export function HomePageContent() {
         </div>
       </ParallaxSection>
 
-      <BannerStatsSection />
-
-      <GoogleReviewsSection />
+      <StatsReviewsBand />
 
       <ParallaxSection
         image={images.browseServicesBg}

@@ -94,7 +94,7 @@ function ReviewCard({ review }: { review: GoogleReview }) {
   );
 }
 
-export function GoogleReviewsSection() {
+export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean }) {
   const [data, setData] = useState<ReviewsPayload | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -111,12 +111,9 @@ export function GoogleReviewsSection() {
 
   if (!data?.reviews.length) return null;
 
-  return (
-    <section className="relative overflow-hidden pb-20 pt-6 md:pb-28 md:pt-8">
-      <BrandedStatsBackground />
-
-      <div className="relative z-10 mx-auto max-w-[1400px] px-4 md:px-8">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/95 shadow-xl shadow-black/40 backdrop-blur-sm">
+  const widget = (
+    <div className="mx-auto max-w-[1400px] px-4 md:px-8">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/95 shadow-xl shadow-black/40 backdrop-blur-sm">
           <div className="flex flex-wrap items-center gap-4 border-b border-white/10 px-5 py-4 md:px-6 md:py-5">
             <GoogleLogo className="h-7 w-7 shrink-0" />
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
@@ -186,6 +183,16 @@ export function GoogleReviewsSection() {
           </div>
         </div>
       </div>
+  );
+
+  if (embedded) {
+    return <div className="pb-2 pt-1 md:pb-3">{widget}</div>;
+  }
+
+  return (
+    <section className="relative overflow-hidden pb-12 pt-4 md:pb-14 md:pt-6">
+      <BrandedStatsBackground />
+      <div className="relative z-10">{widget}</div>
     </section>
   );
 }
