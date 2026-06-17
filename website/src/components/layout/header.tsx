@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -23,7 +23,15 @@ import { SocialIconButtons } from "@/components/ui/social-icons";
 import { cn } from "@/lib/utils";
 
 const TOP_BAR_HEIGHT = 36;
+const SCROLL_COLLAPSE = 56;
+const SCROLL_EXPAND = 16;
 const collapseSpring = { type: "spring" as const, stiffness: 420, damping: 44, mass: 0.85 };
+const collapseInstant = { duration: 0 };
+
+function syncHeaderScrolledClass(scrolled: boolean) {
+  document.documentElement.classList.toggle("header-scrolled", scrolled);
+  document.documentElement.classList.add("header-ready");
+}
 
 const childIcons = {
   home: Home,
@@ -66,9 +74,39 @@ export function Header() {
   const [servicesOpen, setServicesOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [collapseMotionEnabled, setCollapseMotionEnabled] = useState(false);
   const [spacerHeight, setSpacerHeight] = useState(0);
   const headerRef = useRef<HTMLElement>(null);
   const dropdownRef = useRef<HTMLLIElement>(null);
+
+  useLayoutEffect(() => {
+    const syncFromScroll = () => {
+      const next = window.scrollY > SCROLL_COLLAPSE;
+      setScrolled(next);
+      syncHeaderScrolledClass(next);
+      if (headerRef.current) {
+        setSpacerHeight(headerRef.current.getBoundingClientRect().height);
+      }
+    };
+
+    syncFromScroll();
+    const t0 = window.setTimeout(syncFromScroll, 0);
+    const t1 = window.setTimeout(syncFromScroll, 100);
+    window.addEventListener("pageshow", syncFromScroll);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setCollapseMotionEnabled(true);
+        syncFromScroll();
+      });
+    });
+
+    return () => {
+      window.clearTimeout(t0);
+      window.clearTimeout(t1);
+      window.removeEventListener("pageshow", syncFromScroll);
+    };
+  }, []);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -97,14 +135,15 @@ export function Header() {
       requestAnimationFrame(() => {
         const y = window.scrollY;
         setScrolled((prev) => {
-          if (!prev && y > 56) return true;
-          if (prev && y < 16) return false;
-          return prev;
+          let next = prev;
+          if (!prev && y > SCROLL_COLLAPSE) next = true;
+          if (prev && y < SCROLL_EXPAND) next = false;
+          syncHeaderScrolledClass(next);
+          return next;
         });
         ticking = false;
       });
     };
-    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -138,13 +177,14 @@ export function Header() {
     <>
       <header ref={headerRef} className="fixed inset-x-0 top-0 z-50 bg-[#0a0a0a]">
         <motion.div
+          data-site-top-bar
           className="hidden overflow-hidden bg-[#660000] will-change-[height,opacity] lg:block"
           initial={false}
           animate={{
             height: scrolled ? 0 : TOP_BAR_HEIGHT,
             opacity: scrolled ? 0 : 1,
           }}
-          transition={collapseSpring}
+          transition={collapseMotionEnabled ? collapseSpring : collapseInstant}
         >
           <div className="mx-auto flex h-9 max-w-[1400px] items-center justify-between px-6 text-xs text-white">
             <strong className="font-bold uppercase tracking-wide">

@@ -26,6 +26,16 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Collapse the red top bar instantly on refresh when scroll is restored mid-page */
+@media (min-width: 1024px) {
+  html.header-scrolled [data-site-top-bar] {
+    height: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

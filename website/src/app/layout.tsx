@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Lato, Dancing_Script } from "next/font/google";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -45,6 +46,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${lato.variable} ${dancing.variable} h-full`}>
       <head>
+        <Script id="header-scroll-sync" strategy="beforeInteractive">
+          {`(function(){function syncHeaderScroll(){var y=window.scrollY||document.documentElement.scrollTop||0;document.documentElement.classList.toggle("header-scrolled",y>56);}syncHeaderScroll();window.addEventListener("load",syncHeaderScroll);window.addEventListener("pageshow",syncHeaderScroll);})();`}
+        </Script>
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
