@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import type { GoogleReview } from "@/lib/reviews";
 import {
   fallbackReviews,
@@ -59,12 +59,21 @@ function AiSummaryIcon() {
 
 function VerifiedBadge() {
   return (
-    <BadgeCheck
-      className="h-[18px] w-[18px] shrink-0 text-[#4285F4]"
-      strokeWidth={2.25}
+    <svg
+      className="h-[18px] w-[18px] shrink-0"
+      viewBox="0 -960 960 960"
       aria-label="Verified review"
       role="img"
-    />
+    >
+      <path
+        fill="#4285F4"
+        d="m344-60-76-128-144-32 14-148-98-126 98-126-14-148 144-32 76-128 136 58 136-58 76 128 144 32-14 148 98 126-98 126 14 148-144 32-76 128-136-58-136 58Z"
+      />
+      <path
+        fill="#ffffff"
+        d="M438-338l224-224-56-57-168 168-85-84-57 57 142 140z"
+      />
+    </svg>
   );
 }
 
