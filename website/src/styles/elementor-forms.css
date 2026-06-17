@@ -1,41 +1,190 @@
-/* Elementor CTA sections: centered layout and form spacing */
+/* Hide legacy Elementor CTA / duplicate monitoring blocks (replaced by React components) */
+.mks2025-sec-monitoring-info-section,
 .mks2025-sec-cta-section,
 .mks2025-cam-cta-section,
 .mks2025-net-cta-section,
 .mks2025-ci-cta-section,
 .mckee-audio-block .cta-section,
 .mckee-starlink-block .cta-section {
-  text-align: center !important;
+  display: none !important;
 }
 
-.mks2025-sec-contact-form-wrapper,
-.mks2025-cam-contact-form-wrapper,
-.mks2025-net-contact-form-wrapper,
-.mks2025-ci-contact-form-wrapper,
-.mckee-audio-block .contact-form-wrapper,
-.mckee-starlink-block .contact-form-wrapper {
-  padding-top: 1rem !important;
-  padding-bottom: 2rem !important;
+/* Unified service quote section */
+.mckee-service-quote-section {
+  position: relative;
+  z-index: 2;
+  padding: 2.5rem 1rem 3rem;
+  margin-bottom: 2.5rem;
 }
 
+.mckee-service-quote-section--hub {
+  padding: 2rem 0 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.mckee-service-quote-container {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.mckee-service-quote-panel {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, #1a1a1a 0%, #101010 100%);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.mckee-service-quote-header {
+  padding: 1.75rem 1.5rem 0;
+  text-align: center;
+}
+
+.mckee-service-quote-header h3 {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.25rem, 2.8vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.mckee-service-quote-header p {
+  margin: 0;
+  max-width: 36rem;
+  margin-inline: auto;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.mckee-service-quote-form-box {
+  margin: 1.25rem 1rem 1rem;
+  padding: 1rem 1rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 640px) {
+  .mckee-service-quote-section {
+    padding: 3rem 1.5rem 3.5rem;
+  }
+
+  .mckee-service-quote-header {
+    padding: 2rem 2rem 0;
+  }
+
+  .mckee-service-quote-form-box {
+    margin: 1.5rem 1.25rem 1.25rem;
+    padding: 1.25rem 1.25rem 1rem;
+  }
+}
+
+/* Form fields inside the quote box */
 .mckee-elementor-form {
-  padding: 0.5rem 0 1.5rem;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
 }
 
-#mks2025-sec-main .mks2025-sec-cta-section h3,
-#mks2025-cam-main .mks2025-cam-cta-section h3,
-#mks2025-net-main .mks2025-net-cta-section h3,
-#mks2025-ci-main .mks2025-ci-cta-section h3 {
-  text-align: center !important;
+.mckee-elementor-form--compact .mckee-elementor-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
 }
 
-#mks2025-sec-main .mks2025-sec-cta-section p,
-#mks2025-cam-main .mks2025-cam-cta-section p,
-#mks2025-net-main .mks2025-net-cta-section p,
-#mks2025-ci-main .mks2025-ci-cta-section p {
-  text-align: center !important;
+.mckee-elementor-form--compact label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
 }
 
-.mks2025-ci-cta-section {
-  padding-bottom: clamp(50px, 8vw, 80px) !important;
+.mckee-elementor-form--compact .mckee-elementor-form-required {
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 400;
+}
+
+.mckee-elementor-form--compact input,
+.mckee-elementor-form--compact textarea {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mckee-elementor-form--compact input::placeholder,
+.mckee-elementor-form--compact textarea::placeholder {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.mckee-elementor-form--compact input:focus,
+.mckee-elementor-form--compact textarea:focus {
+  outline: none;
+  border-color: #c41e2e;
+  box-shadow: 0 0 0 3px rgba(196, 30, 46, 0.2);
+}
+
+.mckee-elementor-form--compact textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+.mckee-elementor-form--compact .mckee-elementor-form-error {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #ec0000;
+}
+
+.mckee-elementor-form--compact .mckee-elementor-form-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.mckee-elementor-form--compact .mckee-elementor-form-submit {
+  min-width: 11rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, #c41e2e 0%, #c41e2e 100%);
+  padding: 0.75rem 2rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(196, 30, 46, 0.35);
+  transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.mckee-elementor-form--compact .mckee-elementor-form-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #e63946 0%, #ff4757 100%);
+  box-shadow: 0 6px 20px rgba(230, 57, 70, 0.45);
+}
+
+.mckee-elementor-form--compact .mckee-elementor-form-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mckee-elementor-form--compact .mckee-elementor-form-status {
+  margin-top: 0.75rem;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.mckee-elementor-form--compact .mckee-elementor-form-status--success {
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.mckee-elementor-form--compact .mckee-elementor-form-status--error {
+  color: #ec0000;
 }

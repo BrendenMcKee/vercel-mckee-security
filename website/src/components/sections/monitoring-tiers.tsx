@@ -5,14 +5,13 @@ import { motion } from "framer-motion";
 import { Check, X } from "lucide-react";
 import { monitoringTiers, monitoringDisclaimer } from "@/lib/monitoring";
 import { FadeIn } from "@/components/motion/fade-in";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { cn } from "@/lib/utils";
 
 function BoolIcon({ value }: { value: boolean }) {
   return value ? (
-    <Check className="h-5 w-5 text-green-400" />
+    <Check className="h-4 w-4 text-green-400" />
   ) : (
-    <X className="h-5 w-5 text-white/25" />
+    <X className="h-4 w-4 text-white/25" />
   );
 }
 
@@ -21,26 +20,33 @@ export function MonitoringTiers() {
   const tier = monitoringTiers[active];
 
   return (
-    <section id="monitoring" className="scroll-mt-24 bg-surface py-20">
-      <div className="mx-auto max-w-7xl px-6">
+    <section id="monitoring" className="scroll-mt-24 border-y border-white/5 bg-[#141414] py-10 md:py-12">
+      <div className="mx-auto max-w-3xl px-6">
         <FadeIn>
-          <SectionHeading
-            eyebrow="Monitoring Options"
-            title="Flexible Monitoring Options"
-            description="We strongly recommend cellular monitoring for comprehensive protection and Total Connect 2.0 access."
-          />
+          <div className="text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+              Monitoring Options
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-white md:text-3xl">
+              Flexible Monitoring Options
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-white/65">
+              We strongly recommend cellular monitoring for reliable protection and Total Connect
+              2.0 access.
+            </p>
+          </div>
         </FadeIn>
 
-        <div className="mt-10 flex flex-wrap justify-center gap-2">
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
           {monitoringTiers.map((t, i) => (
             <button
               key={t.tier}
               type="button"
               onClick={() => setActive(i)}
               className={cn(
-                "rounded-xl px-5 py-3 text-sm font-bold transition",
+                "rounded-lg px-4 py-2 text-xs font-bold transition md:text-sm",
                 active === i
-                  ? "bg-primary text-white shadow-lg shadow-primary/30"
+                  ? "bg-primary text-white shadow-md shadow-primary/25"
                   : "bg-white/5 text-white/60 hover:text-white",
               )}
             >
@@ -51,37 +57,37 @@ export function MonitoringTiers() {
 
         <motion.div
           key={active}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-auto mt-8 max-w-2xl rounded-2xl border border-white/10 bg-surface-elevated p-8"
+          className="mt-5 rounded-2xl border border-white/10 bg-[#1a1a1a] p-5 md:p-6"
         >
-          <h3 className="text-2xl font-bold text-white">{tier.name}</h3>
-          <p className="mt-2 text-3xl font-bold text-primary">{tier.price}</p>
-
-          <div className="mt-6 space-y-3">
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
-              <span className="text-white/70">Landline required</span>
-              <BoolIcon value={tier.landlineRequired} />
-            </div>
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
-              <span className="text-white/70">Cellular communicator</span>
-              <BoolIcon value={tier.cellular} />
-            </div>
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
-              <span className="text-white/70">Total Connect 2.0 app</span>
-              <BoolIcon value={tier.totalConnect} />
-            </div>
-            <div className="flex items-center justify-between pb-3">
-              <span className="text-white/70">Home automation</span>
-              <BoolIcon value={tier.homeAutomation} />
-            </div>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-lg font-bold text-white md:text-xl">{tier.name}</h3>
+            <p className="text-xl font-bold text-primary md:text-2xl">{tier.price}</p>
           </div>
 
-          <div className="mt-6 rounded-xl bg-black/30 p-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-white/50">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {[
+              { label: "Landline required", value: tier.landlineRequired },
+              { label: "Cellular communicator", value: tier.cellular },
+              { label: "Total Connect 2.0 app", value: tier.totalConnect },
+              { label: "Home automation", value: tier.homeAutomation },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between rounded-lg border border-white/5 bg-black/25 px-3 py-2.5"
+              >
+                <span className="text-sm text-white/70">{row.label}</span>
+                <BoolIcon value={row.value} />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-lg border border-white/5 bg-black/30 px-3 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/45">
               Requirements
             </p>
-            <ul className="mt-2 space-y-1 text-sm text-white/70">
+            <ul className="mt-1.5 space-y-1 text-sm text-white/70">
               {tier.requirements.map((r) => (
                 <li key={r}>{r}</li>
               ))}
@@ -89,43 +95,7 @@ export function MonitoringTiers() {
           </div>
         </motion.div>
 
-        <div className="mt-8 hidden lg:block">
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
-            <table className="w-full min-w-[800px] text-left text-sm">
-              <thead className="bg-surface-elevated text-white/50">
-                <tr>
-                  <th className="p-4">Feature</th>
-                  {monitoringTiers.map((t) => (
-                    <th key={t.tier} className="p-4 text-center">
-                      Tier {t.tier}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { label: "Landline required", key: "landlineRequired" as const },
-                  { label: "Cellular", key: "cellular" as const },
-                  { label: "Total Connect 2.0", key: "totalConnect" as const },
-                  { label: "Home automation", key: "homeAutomation" as const },
-                ].map((row) => (
-                  <tr key={row.key} className="border-t border-white/5">
-                    <td className="p-4 text-white/70">{row.label}</td>
-                    {monitoringTiers.map((t) => (
-                      <td key={t.tier} className="p-4 text-center">
-                        <span className="inline-flex justify-center">
-                          <BoolIcon value={t[row.key]} />
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <p className="mx-auto mt-8 max-w-3xl text-center text-sm italic text-white/45">
+        <p className="mx-auto mt-5 max-w-2xl text-center text-xs italic leading-relaxed text-white/40">
           {monitoringDisclaimer}
         </p>
       </div>

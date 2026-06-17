@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { ServiceQuoteForm } from "@/components/forms/service-quote-form";
+import { useEffect, useRef } from "react";
+import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
 import { MonitoringTiers } from "@/components/sections/monitoring-tiers";
 import {
   elementorStyles,
   getElementorPage,
-  type ElementorPageData,
 } from "@/lib/elementor-pages";
 
 function getParticleClassName(particleContainerClass: string) {
@@ -46,39 +44,6 @@ function useElementorStyles(slug: string) {
   }, [slug]);
 }
 
-function FormPortal({
-  containerRef,
-}: {
-  containerRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const el = containerRef.current?.querySelector('[data-mckee-form="true"]');
-    if (el instanceof HTMLElement) setTarget(el);
-  }, [containerRef]);
-
-  if (!target) return null;
-  return createPortal(<ServiceQuoteForm />, target);
-}
-
-function SecurityCta({ data }: { data: ElementorPageData }) {
-  return (
-    <div id="mks2025-sec-wrapper">
-      <div className="mks2025-sec-particles-container" aria-hidden="true" />
-      <div id="mks2025-sec-main">
-        <div className={data.ctaSectionClass ?? "mks2025-sec-cta-section"}>
-          <h3>{data.ctaTitle}</h3>
-          <p>{data.ctaText}</p>
-          <div className={data.formWrapperClass}>
-            <ServiceQuoteForm />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function ElementorServicePage({ slug }: { slug: string }) {
   const data = getElementorPage(slug);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,9 +58,10 @@ export function ElementorServicePage({ slug }: { slug: string }) {
   return (
     <>
       <div ref={containerRef} dangerouslySetInnerHTML={{ __html: data.html }} />
-      {slug !== "security" && <FormPortal containerRef={containerRef} />}
       {data.includeMonitoring && <MonitoringTiers />}
-      {slug === "security" && data.ctaTitle && <SecurityCta data={data} />}
+      {data.ctaTitle && data.ctaText && (
+        <ServiceQuoteSection title={data.ctaTitle} description={data.ctaText} />
+      )}
     </>
   );
 }

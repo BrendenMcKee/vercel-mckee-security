@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { ServiceQuoteForm } from "@/components/forms/service-quote-form";
+import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
 import { images } from "@/lib/site-config";
 import "@/styles/mks2025-ci.css";
 
@@ -283,13 +283,12 @@ export function ServicesHubContent() {
           </div>
         </div>
 
-        <div className="mks2025-ci-cta-section" id="quote">
-          <h3>Ready to Get Started?</h3>
-          <p>Tell us about your project and we will design a custom solution for your property.</p>
-          <div className="mks2025-ci-contact-form-wrapper">
-            <ServiceQuoteForm />
-          </div>
-        </div>
+        <ServiceQuoteSection
+          id="quote"
+          className="mckee-service-quote-section--hub"
+          title="Ready to Get Started?"
+          description="Tell us about your project and we will design a custom solution for your property."
+        />
       </div>
     </div>
   );
