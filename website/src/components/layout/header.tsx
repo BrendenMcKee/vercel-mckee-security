@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   Phone,
@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { mainNav, siteConfig, type NavChild } from "@/lib/site-config";
 import { SocialIconButtons } from "@/components/ui/social-icons";
 import { cn } from "@/lib/utils";
+import { pathsMatch, scrollPageToTop } from "@/lib/navigation";
 
 const TOP_BAR_HEIGHT = 36;
 const SCROLL_COLLAPSE = 56;
@@ -46,9 +47,11 @@ const childIcons = {
 function ServiceDropdown({
   children,
   onNavigate,
+  onSamePageNav,
 }: {
   children: NavChild[];
   onNavigate?: () => void;
+  onSamePageNav: (event: React.MouseEvent<HTMLAnchorElement>, href: string) => void;
 }) {
   return (
     <div className="min-w-[360px] rounded-lg border border-white/10 bg-[#1a1a1a] py-2 shadow-2xl">
@@ -58,7 +61,10 @@ function ServiceDropdown({
           <Link
             key={item.href}
             href={item.href}
-            onClick={onNavigate}
+            onClick={(event) => {
+              onSamePageNav(event, item.href);
+              onNavigate?.();
+            }}
             className="flex items-center gap-3 whitespace-nowrap px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white/85 transition hover:bg-white/5 hover:text-primary"
           >
             <Icon className="h-4 w-4 shrink-0 text-primary" />
@@ -72,6 +78,7 @@ function ServiceDropdown({
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
@@ -199,6 +206,16 @@ export function Header() {
     setMobileServicesOpen(false);
   };
 
+  const handleSamePageNav = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+  ) => {
+    if (!pathsMatch(pathname, href)) return;
+    event.preventDefault();
+    scrollPageToTop();
+    router.refresh();
+  };
+
   return (
     <>
       <header ref={headerRef} className="fixed inset-x-0 top-0 z-50 bg-[#0a0a0a]">
@@ -227,7 +244,11 @@ export function Header() {
           )}
         >
           <div className="mx-auto flex h-[100px] max-w-[1400px] items-center gap-6 px-4 lg:px-6">
-            <Link href="/" className="relative h-[70px] w-[180px] shrink-0 lg:w-[200px]">
+            <Link
+              href="/"
+              onClick={(event) => handleSamePageNav(event, "/")}
+              className="relative h-[70px] w-[180px] shrink-0 lg:w-[200px]"
+            >
               <Image
                 src="/images/logo.png"
                 alt={siteConfig.name}
@@ -270,7 +291,10 @@ export function Header() {
                             transition={{ duration: 0.15 }}
                             className="absolute left-0 top-full z-50 pt-1"
                           >
-                            <ServiceDropdown children={item.children} />
+                            <ServiceDropdown
+                              children={item.children}
+                              onSamePageNav={handleSamePageNav}
+                            />
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -279,6 +303,7 @@ export function Header() {
                     <li key={item.href}>
                       <Link
                         href={item.href}
+                        onClick={(event) => handleSamePageNav(event, item.href)}
                         className="block whitespace-nowrap px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-white transition hover:text-primary"
                       >
                         {item.label}
@@ -369,7 +394,10 @@ export function Header() {
                               <Link
                                 key={child.href}
                                 href={child.href}
-                                onClick={closeMobile}
+                                onClick={(event) => {
+                                  handleSamePageNav(event, child.href);
+                                  closeMobile();
+                                }}
                                 className="block px-4 py-2.5 text-xs font-bold uppercase text-white/75 hover:text-primary"
                               >
                                 {child.label}
@@ -382,7 +410,10 @@ export function Header() {
                       <Link
                         key={item.href}
                         href={item.href}
-                        onClick={closeMobile}
+                        onClick={(event) => {
+                          handleSamePageNav(event, item.href);
+                          closeMobile();
+                        }}
                         className="block px-4 py-3 text-sm font-bold uppercase text-white hover:text-primary"
                       >
                         {item.label}
