@@ -33,7 +33,7 @@ export default async function CourseDetailPage({ params }: Props) {
       />
 
       <section className="py-20">
-        <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-6xl px-6 lg:max-w-7xl xl:max-w-[1280px]">
           <FadeIn>
             <h2 className="mb-2 text-2xl font-bold text-white">Course Content</h2>
             <p className="mb-8 text-sm text-white/55">

@@ -15,7 +15,7 @@ export function CoursesCatalog() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-6 lg:max-w-7xl xl:max-w-[1280px]">
       {courses.map((course, i) => {
         const progress = mounted ? getCourseProgress(course) : null;
 
