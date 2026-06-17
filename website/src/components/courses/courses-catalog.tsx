@@ -46,6 +46,7 @@ export function CoursesCatalog() {
                     <div className="mt-5">
                       <div className="mb-2 flex items-center justify-between text-xs text-white/45">
                         <span>
+                          {progress.checkedItems} / {progress.totalItems} steps ·{" "}
                           {progress.completedLessons} / {progress.totalLessons} lessons
                         </span>
                         <span>{progress.percent}%</span>

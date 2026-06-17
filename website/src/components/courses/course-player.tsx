@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  BookOpen,
   CheckCircle2,
   ChevronDown,
   Circle,
@@ -12,8 +13,10 @@ import {
 } from "lucide-react";
 import type { Course } from "@/lib/courses";
 import { iterLessons } from "@/lib/courses";
+import { LessonContentPanel, hasLessonContent } from "@/components/courses/lesson-content";
 import {
   getCourseProgress,
+  getLessonProgress,
   isChecklistItemComplete,
   isLessonComplete,
   markCourseCelebrated,
@@ -22,6 +25,7 @@ import {
 } from "@/lib/course-progress";
 import { celebrateConfetti } from "@/lib/confetti";
 import { cn } from "@/lib/utils";
+import "@/styles/course-lesson-content.css";
 
 type OpenLesson = string | null;
 
@@ -44,7 +48,7 @@ export function CoursePlayer({ course }: { course: Course }) {
     toggleChecklistItem(course, lessonId, itemIndex, checked);
     const next = getCourseProgress(course);
     setProgress(next);
-    if (next.percent === 100 && next.totalLessons > 0 && !next.celebrated) {
+    if (next.percent === 100 && next.totalItems > 0 && !next.celebrated) {
       markCourseCelebrated(course.slug);
       celebrateConfetti();
       setProgress({ ...next, celebrated: true });
@@ -72,7 +76,7 @@ export function CoursePlayer({ course }: { course: Course }) {
             </h3>
             <p className="mt-1 text-sm text-white/60">
               {mounted
-                ? `${progress.completedLessons} of ${progress.totalLessons} lessons finished`
+                ? `${progress.checkedItems} of ${progress.totalItems} checklist steps done · ${progress.completedLessons} of ${progress.totalLessons} lessons finished`
                 : "Loading saved progress..."}
             </p>
           </div>
@@ -191,13 +195,17 @@ export function CoursePlayer({ course }: { course: Course }) {
                               </div>
                             </div>
 
-                            <ul className="space-y-2">
+                            <ul className="space-y-3">
                               {topic.lessons.map((lessonItem, lessonIndex) => {
                                 const lessonId = `${course.slug}:${moduleIndex}:${topicIndex}:${lessonIndex}`;
                                 const complete = mounted
                                   ? isLessonComplete(course, lessonId)
                                   : false;
                                 const expanded = openLesson === lessonId;
+                                const lessonProgress = mounted
+                                  ? getLessonProgress(course, lessonId)
+                                  : { checked: 0, total: 0, percent: 0 };
+                                const hasContent = hasLessonContent(lessonId);
 
                                 return (
                                   <li
@@ -222,13 +230,35 @@ export function CoursePlayer({ course }: { course: Course }) {
                                         <Circle className="mt-0.5 h-5 w-5 shrink-0 text-white/30" />
                                       )}
                                       <div className="min-w-0 flex-1">
-                                        <p className="font-medium text-white">
-                                          {lessonItem.title}
-                                        </p>
-                                        {lessonItem.duration && (
-                                          <p className="mt-1 text-xs text-white/45">
-                                            {lessonItem.duration}
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <p className="font-medium text-white">
+                                            {lessonItem.title}
                                           </p>
+                                          {hasContent && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                                              <BookOpen className="h-3 w-3" />
+                                              Content
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/45">
+                                          {lessonItem.duration && (
+                                            <span>{lessonItem.duration}</span>
+                                          )}
+                                          {mounted && lessonProgress.total > 0 && (
+                                            <span>
+                                              {lessonProgress.checked}/{lessonProgress.total}{" "}
+                                              checklist steps
+                                            </span>
+                                          )}
+                                        </div>
+                                        {mounted && lessonProgress.total > 0 && (
+                                          <div className="mt-2 h-1.5 max-w-xs overflow-hidden rounded-full bg-black/40">
+                                            <div
+                                              className="h-full rounded-full bg-primary transition-all duration-300"
+                                              style={{ width: `${lessonProgress.percent}%` }}
+                                            />
+                                          </div>
                                         )}
                                       </div>
                                       <ChevronDown
@@ -247,49 +277,57 @@ export function CoursePlayer({ course }: { course: Course }) {
                                           exit={{ height: 0, opacity: 0 }}
                                           className="border-t border-white/5"
                                         >
-                                          <div className="space-y-2 p-4 pt-3">
-                                            <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                                              Lesson Checklist
-                                            </p>
-                                            {lessonItem.checklist.map((item, itemIndex) => {
-                                              const checked = mounted
-                                                ? isChecklistItemComplete(
-                                                    course.slug,
-                                                    lessonId,
-                                                    itemIndex,
-                                                  )
-                                                : false;
+                                          <div className="space-y-6 p-4 pt-4">
+                                            <LessonContentPanel lessonId={lessonId} />
 
-                                              return (
-                                                <label
-                                                  key={item}
-                                                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/5 bg-black/20 px-3 py-2.5 transition hover:border-primary/30"
-                                                >
-                                                  <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    onChange={(e) =>
-                                                      handleToggleItem(
-                                                        lessonId,
-                                                        itemIndex,
-                                                        e.target.checked,
-                                                      )
-                                                    }
-                                                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
-                                                  />
-                                                  <span
-                                                    className={cn(
-                                                      "text-sm leading-relaxed",
-                                                      checked
-                                                        ? "text-white/50 line-through"
-                                                        : "text-white/80",
-                                                    )}
+                                            <div className="space-y-2">
+                                              <p className="text-xs font-bold uppercase tracking-widest text-primary">
+                                                Lesson Checklist
+                                              </p>
+                                              <p className="text-xs text-white/45">
+                                                Each checked item updates your course progress
+                                                immediately.
+                                              </p>
+                                              {lessonItem.checklist.map((item, itemIndex) => {
+                                                const checked = mounted
+                                                  ? isChecklistItemComplete(
+                                                      course.slug,
+                                                      lessonId,
+                                                      itemIndex,
+                                                    )
+                                                  : false;
+
+                                                return (
+                                                  <label
+                                                    key={item}
+                                                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/5 bg-black/20 px-3 py-2.5 transition hover:border-primary/30"
                                                   >
-                                                    {item}
-                                                  </span>
-                                                </label>
-                                              );
-                                            })}
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={checked}
+                                                      onChange={(e) =>
+                                                        handleToggleItem(
+                                                          lessonId,
+                                                          itemIndex,
+                                                          e.target.checked,
+                                                        )
+                                                      }
+                                                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
+                                                    />
+                                                    <span
+                                                      className={cn(
+                                                        "text-sm leading-relaxed",
+                                                        checked
+                                                          ? "text-white/50 line-through"
+                                                          : "text-white/80",
+                                                      )}
+                                                    >
+                                                      {item}
+                                                    </span>
+                                                  </label>
+                                                );
+                                              })}
+                                            </div>
                                           </div>
                                         </motion.div>
                                       )}

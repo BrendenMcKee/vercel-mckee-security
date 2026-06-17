@@ -1,0 +1,93 @@
+/* Embedded WordPress / LearnDash lesson HTML inside the course player */
+.course-lesson-html {
+  color: #222;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.course-lesson-html .wp-block-spacer {
+  display: none;
+}
+
+.course-lesson-html h1,
+.course-lesson-html h2,
+.course-lesson-html h3,
+.course-lesson-html h4 {
+  color: #660000;
+}
+
+.course-lesson-html a {
+  color: #1e99e6;
+  text-decoration: underline;
+}
+
+.course-lesson-html iframe {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 220px;
+  border: 0;
+  border-radius: 8px;
+}
+
+.course-lesson-html .wp-block-embed__wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.course-lesson-html .wp-block-button__link,
+.course-lesson-html a.wp-element-button {
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-word;
+  border-radius: 999px !important;
+  padding: 0.75rem 1.25rem !important;
+  background: #c91818 !important;
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+.course-lesson-html table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.course-lesson-html th,
+.course-lesson-html td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+}
+
+.course-lesson-html .table-responsive {
+  overflow-x: auto;
+}
+
+.course-lesson-html .checklist-item,
+.course-lesson-html label {
+  cursor: pointer;
+}
+
+.course-lesson-html input[type="checkbox"] {
+  accent-color: #c91818;
+  margin-right: 0.5rem;
+}
+
+.course-lesson-html img {
+  max-width: 100%;
+  height: auto;
+}
+
+.course-lesson-html #sticky-progress-container,
+.course-lesson-html #original-progress-container {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .course-lesson-html {
+    font-size: 14px;
+  }
+}

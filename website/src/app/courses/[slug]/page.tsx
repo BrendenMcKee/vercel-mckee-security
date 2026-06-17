@@ -33,9 +33,13 @@ export default async function CourseDetailPage({ params }: Props) {
       />
 
       <section className="py-20">
-        <div className="mx-auto max-w-3xl px-6">
+        <div className="mx-auto max-w-5xl px-6">
           <FadeIn>
-            <h2 className="mb-8 text-2xl font-bold text-white">Course Content</h2>
+            <h2 className="mb-2 text-2xl font-bold text-white">Course Content</h2>
+            <p className="mb-8 text-sm text-white/55">
+              Expand a module, select a lesson, and work through the embedded training
+              materials from our technician course.
+            </p>
           </FadeIn>
           <CoursePlayer course={course} />
         </div>

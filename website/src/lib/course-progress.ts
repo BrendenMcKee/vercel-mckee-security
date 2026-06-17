@@ -2,6 +2,7 @@ import type { Course } from "@/lib/courses";
 import { iterLessons } from "@/lib/courses";
 
 const STORAGE_KEY = "mckee-course-progress-v1";
+const HTML_CHECK_PREFIX = "mckee-lesson-html-checks:";
 
 type CourseProgressEntry = {
   checklist: Record<string, boolean>;
@@ -32,24 +33,54 @@ export function getCourseProgress(course: Course) {
   const store = readStore();
   const entry = store[course.slug] ?? { checklist: {} };
   const lessons = iterLessons(course);
+  let totalItems = 0;
+  let checkedItems = 0;
   let completedLessons = 0;
 
   for (const { lesson, lessonId } of lessons) {
-    const done = lesson.checklist.every(
-      (_, index) => entry.checklist[checklistKey(lessonId, index)],
-    );
-    if (done && lesson.checklist.length > 0) completedLessons += 1;
+    totalItems += lesson.checklist.length;
+    let lessonChecked = 0;
+    for (let index = 0; index < lesson.checklist.length; index++) {
+      if (entry.checklist[checklistKey(lessonId, index)]) {
+        checkedItems += 1;
+        lessonChecked += 1;
+      }
+    }
+    if (lessonChecked === lesson.checklist.length && lesson.checklist.length > 0) {
+      completedLessons += 1;
+    }
   }
 
-  const totalLessons = lessons.length;
   const percent =
-    totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
+    totalItems === 0 ? 0 : Math.round((checkedItems / totalItems) * 100);
 
   return {
+    checkedItems,
+    totalItems,
     completedLessons,
-    totalLessons,
+    totalLessons: lessons.length,
     percent,
     celebrated: entry.celebrated ?? false,
+  };
+}
+
+export function getLessonProgress(course: Course, lessonId: string) {
+  const store = readStore();
+  const entry = store[course.slug] ?? { checklist: {} };
+  const lesson = iterLessons(course).find((l) => l.lessonId === lessonId)?.lesson;
+  if (!lesson || lesson.checklist.length === 0) {
+    return { checked: 0, total: 0, percent: 0 };
+  }
+
+  let checked = 0;
+  for (let index = 0; index < lesson.checklist.length; index++) {
+    if (entry.checklist[checklistKey(lessonId, index)]) checked += 1;
+  }
+
+  return {
+    checked,
+    total: lesson.checklist.length,
+    percent: Math.round((checked / lesson.checklist.length) * 100),
   };
 }
 
@@ -96,4 +127,30 @@ export function resetCourseProgress(courseSlug: string) {
   const store = readStore();
   delete store[courseSlug];
   writeStore(store);
+
+  if (typeof window !== "undefined") {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(HTML_CHECK_PREFIX)) keysToRemove.push(key);
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  }
+}
+
+export function readEmbeddedChecklistState(lessonId: string): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(`${HTML_CHECK_PREFIX}${lessonId}`);
+    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeEmbeddedChecklistState(
+  lessonId: string,
+  state: Record<string, boolean>,
+) {
+  localStorage.setItem(`${HTML_CHECK_PREFIX}${lessonId}`, JSON.stringify(state));
 }

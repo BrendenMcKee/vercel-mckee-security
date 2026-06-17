@@ -26,19 +26,19 @@ export type Course = {
 
 function onlineChecklist(title: string): string[] {
   return [
-    "Review all e-learning materials for this lesson",
-    "Take notes on key steps, tools, and safety requirements",
-    "Complete any review questions or knowledge checks",
-    `Confirm you can explain the core concepts of: ${title}`,
+    "Open and review the lesson content below",
+    "Complete the linked e-learning module or training video",
+    "Take notes on tools, wiring, and programming steps",
+    `Confirm you understand the core concepts of: ${title}`,
   ];
 }
 
 function handsOnChecklist(title: string): string[] {
   return [
-    "Gather tools, parts, and documentation before starting",
-    `Complete the hands-on task: ${title}`,
-    "Verify the installation or configuration with a supervisor",
-    "Document issues, questions, or follow-up items",
+    "Read the full lesson content and table of contents",
+    "Work through each step in the embedded hands-on checklist",
+    `Verify your completed work for: ${title}`,
+    "Document issues, questions, or follow-up items for your supervisor",
   ];
 }
 
