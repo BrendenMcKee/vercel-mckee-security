@@ -337,16 +337,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
           </button>
 
           <p className="mb-3 px-1 text-center text-[11px] text-white/40 md:text-xs">
-            Swipe or use the arrows to browse {reviews.length} featured five-star review
-            {reviews.length === 1 ? "" : "s"}.{" "}
-            <a
-              href={data.business.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#8ab4f8] hover:underline"
-            >
-              View all {data.business.reviewCount}+ on Google
-            </a>
+            Swipe or use the arrows to browse our reviews.
           </p>
 
           <div

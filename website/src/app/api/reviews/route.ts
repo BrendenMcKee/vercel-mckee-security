@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import featuredReviewContent from "@/content/google-reviews-featured.json";
+import { fetchAllGoogleBusinessReviews } from "@/lib/google-business-reviews";
 import {
   fallbackReviews,
   filterFiveStarReviews,
@@ -28,7 +29,7 @@ type LivePlaceData = {
   }>;
 };
 
-async function fetchGoogleReviews(): Promise<{
+async function fetchPlacesApiReviews(): Promise<{
   reviews: GoogleReview[];
   rating: number;
   reviewCount: number;
@@ -55,7 +56,6 @@ async function fetchGoogleReviews(): Promise<{
 
   if (!res.ok) return null;
   const data = (await res.json()) as LivePlaceData;
-
   if (!data.reviews?.length) return null;
 
   const mapped = data.reviews.map((r, i) => ({
@@ -68,11 +68,35 @@ async function fetchGoogleReviews(): Promise<{
   }));
 
   return {
-    reviews: mergeDisplayReviews(mapped, featuredReviews),
+    reviews: filterFiveStarReviews(mapped),
     rating: data.rating ?? googleBusiness.rating,
     reviewCount: data.userRatingCount ?? googleBusiness.reviewCount,
     placeId,
   };
+}
+
+async function fetchLiveReviews() {
+  const businessProfile = await fetchAllGoogleBusinessReviews();
+  if (businessProfile) {
+    return {
+      ...businessProfile,
+      placeId: process.env.GOOGLE_PLACE_ID ?? googleBusiness.placeId ?? null,
+      source: "google-business-profile" as const,
+    };
+  }
+
+  const places = await fetchPlacesApiReviews();
+  if (places) {
+    return {
+      reviews: places.reviews,
+      rating: places.rating,
+      reviewCount: places.reviewCount,
+      placeId: places.placeId,
+      source: "google-places" as const,
+    };
+  }
+
+  return null;
 }
 
 function buildBusinessLinks(placeId?: string | null) {
@@ -87,7 +111,7 @@ function buildBusinessLinks(placeId?: string | null) {
 export async function GET() {
   try {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-    const live = await fetchGoogleReviews();
+    const live = await fetchLiveReviews();
     const resolvedPlaceId =
       live?.placeId ||
       googleBusiness.placeId ||
@@ -106,8 +130,7 @@ export async function GET() {
         aiSummaryBullets: googleBusiness.aiSummaryBullets,
       },
       reviews,
-      source: live ? "google" : "fallback",
-      displayedReviewCount: reviews.length,
+      source: live?.source ?? "fallback",
     });
   } catch {
     const links = buildBusinessLinks();
@@ -121,10 +144,6 @@ export async function GET() {
       },
       reviews: mergeDisplayReviews(filterFiveStarReviews(fallbackReviews), featuredReviews),
       source: "fallback",
-      displayedReviewCount: mergeDisplayReviews(
-        filterFiveStarReviews(fallbackReviews),
-        featuredReviews,
-      ).length,
     });
   }
 }
