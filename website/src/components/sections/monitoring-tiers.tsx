@@ -44,7 +44,7 @@ export function MonitoringTiers() {
               type="button"
               onClick={() => setActive(i)}
               className={cn(
-                "rounded-lg px-4 py-2 text-xs font-bold transition md:text-sm",
+                "cursor-pointer rounded-lg px-4 py-2 text-xs font-bold transition md:text-sm",
                 active === i
                   ? "bg-primary text-white shadow-md shadow-primary/25"
                   : "bg-white/5 text-white/60 hover:text-white",
