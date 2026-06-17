@@ -14,7 +14,7 @@ type ButtonProps = {
 
 const variants = {
   primary:
-    "bg-primary text-white hover:bg-[#b20000] shadow-lg shadow-primary/25",
+    "bg-primary text-white hover:bg-[var(--primary-hover)] shadow-lg shadow-primary/25",
   secondary:
     "bg-secondary text-white hover:bg-[#157ab8] shadow-lg shadow-secondary/20",
   outline:

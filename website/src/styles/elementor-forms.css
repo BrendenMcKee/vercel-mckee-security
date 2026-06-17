@@ -140,7 +140,7 @@
 .mckee-elementor-form--compact .mckee-elementor-form-error {
   margin-top: 0.25rem;
   font-size: 0.75rem;
-  color: #ec0000;
+  color: #c91818;
 }
 
 .mckee-elementor-form--compact .mckee-elementor-form-actions {
@@ -186,5 +186,5 @@
 }
 
 .mckee-elementor-form--compact .mckee-elementor-form-status--error {
-  color: #ec0000;
+  color: #c91818;
 }

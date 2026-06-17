@@ -186,7 +186,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
   );
 
   if (embedded) {
-    return <div className="px-0 pt-8 pb-8 md:pt-10 md:pb-10">{widget}</div>;
+    return <div className="px-0 pt-8 pb-12 md:pt-10 md:pb-14">{widget}</div>;
   }
 
   return (

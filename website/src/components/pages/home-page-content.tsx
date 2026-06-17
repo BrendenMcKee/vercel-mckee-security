@@ -95,7 +95,7 @@ export function HomePageContent() {
               </p>
               <Link
                 href="/custom-installations-professional-products"
-                className="mt-8 inline-flex items-center justify-center rounded-2xl bg-primary px-16 py-4 text-lg font-bold text-white transition hover:bg-[#b20000]"
+                className="mt-8 inline-flex items-center justify-center rounded-2xl bg-primary px-16 py-4 text-lg font-bold text-white transition hover:bg-[var(--primary-hover)]"
               >
                 Learn More
               </Link>
@@ -104,7 +104,7 @@ export function HomePageContent() {
         </div>
       </ParallaxSection>
 
-      <section className="border-b border-white/10 py-14 lg:py-16">
+      <section className="border-b border-primary/20 py-14 lg:py-16">
         <div className="mx-auto max-w-3xl px-6 text-center">
           <FadeIn>
             <h6 className="text-sm font-bold uppercase tracking-widest text-white/80">
@@ -122,7 +122,7 @@ export function HomePageContent() {
         </div>
       </section>
 
-      <section className="border-b border-white/10 bg-[#111111] py-14 lg:py-16">
+      <section className="border-b border-primary/20 bg-[#111111] py-14 lg:py-16">
         <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-12 xl:gap-16">
           <FadeIn className="flex justify-center lg:justify-start lg:pl-4 xl:pl-10">
             <div className="relative h-[240px] w-[240px] sm:h-[280px] sm:w-[280px] lg:h-[300px] lg:w-[300px]">
@@ -157,7 +157,7 @@ export function HomePageContent() {
         </div>
       </section>
 
-      <section className="border-t border-primary/30 bg-[#0a0a0a] py-14 lg:py-16">
+      <section className="bg-[#0a0a0a] py-14 lg:py-16">
         <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-6 lg:grid-cols-2 lg:gap-12">
           <FadeIn className="order-2 lg:order-1">
             <h6 className="text-sm font-bold uppercase tracking-widest text-white/70">
