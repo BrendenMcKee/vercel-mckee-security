@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
 import { images } from "@/lib/site-config";
-import "@/styles/mks2025-ci.css";
 
 const services = [
   {

@@ -25,15 +25,6 @@ export const elementorPages: Record<string, ElementorPageData> = {
   starlink: starlink as ElementorPageData,
 };
 
-export const elementorStyles: Record<string, () => Promise<unknown>> = {
-  security: () => import("@/styles/security.css"),
-  "camera-surveillance": () => import("@/styles/camera-surveillance.css"),
-  "networking-cellular-expansion": () =>
-    import("@/styles/networking-cellular-expansion.css"),
-  "audio-video": () => import("@/styles/audio-video.css"),
-  starlink: () => import("@/styles/starlink.css"),
-};
-
 export function getElementorPage(slug: string) {
   return elementorPages[slug];
 }

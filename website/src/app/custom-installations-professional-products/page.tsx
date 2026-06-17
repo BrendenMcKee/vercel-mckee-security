@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/mks2025-ci.css";
 import { ServicesHubContent } from "@/components/pages/services-hub-content";
 
 export const metadata: Metadata = {

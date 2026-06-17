@@ -3,10 +3,7 @@
 import { useEffect, useRef } from "react";
 import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
 import { MonitoringTiers } from "@/components/sections/monitoring-tiers";
-import {
-  elementorStyles,
-  getElementorPage,
-} from "@/lib/elementor-pages";
+import { getElementorPage } from "@/lib/elementor-pages";
 
 function getParticleClassName(particleContainerClass: string) {
   if (particleContainerClass.includes("mks2025")) {
@@ -37,18 +34,10 @@ function useParticles(particleContainerClass: string | undefined) {
   }, [particleContainerClass]);
 }
 
-function useElementorStyles(slug: string) {
-  useEffect(() => {
-    const load = elementorStyles[slug];
-    if (load) void load();
-  }, [slug]);
-}
-
 export function ElementorServicePage({ slug }: { slug: string }) {
   const data = getElementorPage(slug);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useElementorStyles(slug);
   useParticles(data?.particleClass);
 
   if (!data) {

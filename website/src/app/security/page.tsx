@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/styles/security.css";
 import { ElementorServicePage } from "@/components/pages/elementor-service-page";
 
 export const metadata: Metadata = {
