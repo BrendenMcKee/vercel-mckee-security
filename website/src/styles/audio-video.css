@@ -1,0 +1,1171 @@
+
+/* Reset only specific elements */
+.mckee-audio-block .hero *,
+.mckee-audio-block .section *,
+.mckee-audio-block .featured-section *,
+.mckee-audio-block .dark-section *,
+.mckee-audio-block .cta-section *,
+.mckee-audio-block .brand-section * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Exclude cards from reset */
+.mckee-audio-block .card,
+.mckee-audio-block .card * {
+    box-sizing: border-box;
+}
+
+/* Full-width dark wrapper */
+.mckee-audio-wrapper {
+    background-color: #0a0a0a;
+    width: 100%;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+}
+
+.mckee-audio-block {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.7;
+    color: #e0e0e0;
+    background-color: #0a0a0a;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+}
+
+/* Color Palette - Dark Theme with Red Accents */
+.mckee-audio-block {
+    --primary-dark: #000000;
+    --primary: #0a0a0a;
+    --primary-light: #1a1a1a;
+    --accent: #c41e2e;
+    --accent-light: #e63946;
+    --accent-glow: rgba(196, 30, 46, 0.4);
+    --bg-dark: #050505;
+    --bg-card: #111111;
+    --bg-card-hover: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --text-muted: #808080;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --shadow: rgba(0, 0, 0, 0.3);
+    --shadow-glow: rgba(196, 30, 46, 0.15);
+}
+
+/* Floating Particles Animation */
+.mckee-audio-block .particles-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.mckee-audio-block .particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: rgba(196, 30, 46, 0.6);
+    border-radius: 50%;
+    animation: float-particle-audio linear infinite;
+    box-shadow: 0 0 6px rgba(196, 30, 46, 0.4);
+}
+
+@keyframes float-particle-audio {
+    0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100vh) translateX(50px);
+        opacity: 0;
+    }
+}
+
+/* Typography */
+.mckee-audio-block h1 {
+    font-size: clamp(2.2em, 5vw, 3.2em);
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+    margin-bottom: 25px;
+    color: var(--text-primary);
+}
+
+.mckee-audio-block h2 {
+    font-size: clamp(1.8em, 4vw, 2.4em);
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    line-height: 1.3;
+    margin-bottom: 40px;
+    color: var(--text-primary);
+}
+
+.mckee-audio-block h3 {
+    font-size: clamp(1.3em, 2.5vw, 1.5em);
+    font-weight: 600;
+    margin-bottom: 18px;
+    color: var(--text-primary);
+}
+
+.mckee-audio-block h4 {
+    font-size: clamp(1.15em, 2vw, 1.35em);
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.mckee-audio-block p {
+    font-size: clamp(1em, 1.5vw, 1.1em);
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+
+/* Hero Section */
+.mckee-audio-block .hero {
+    background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
+    padding: clamp(60px, 10vw, 100px) clamp(25px, 4vw, 40px);
+    text-align: center;
+    margin-top: clamp(30px, 5vw, 50px);
+    margin-bottom: clamp(40px, 6vw, 60px);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.mckee-audio-block .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(ellipse at 50% 0%, rgba(196, 30, 46, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 20% 80%, rgba(196, 30, 46, 0.08) 0%, transparent 40%);
+    pointer-events: none;
+}
+
+.mckee-audio-block .hero-content {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .hero h1 {
+    color: #ffffff;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 30px rgba(196, 30, 46, 0.3);
+}
+
+.mckee-audio-block .hero .hero-tagline {
+    font-size: clamp(1.1em, 2vw, 1.4em);
+    color: var(--accent);
+    margin-bottom: 30px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.mckee-audio-block .hero .hero-tagline::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 20px auto 0;
+}
+
+.mckee-audio-block .hero p {
+    font-size: clamp(1em, 1.8vw, 1.15em);
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 20px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.mckee-audio-block .hero strong {
+    color: var(--accent-light);
+    font-weight: 600;
+}
+
+.mckee-audio-block .hero-icon {
+    font-size: 4em;
+    color: var(--accent);
+    margin-bottom: 25px;
+    display: block;
+    opacity: 0.95;
+    text-shadow: 0 0 40px var(--accent-glow);
+}
+
+.mckee-audio-block .hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 35px;
+}
+
+.mckee-audio-block .hero-badge {
+    background: rgba(196, 30, 46, 0.1);
+    border: 1px solid rgba(196, 30, 46, 0.3);
+    padding: 10px 20px;
+    border-radius: 30px;
+    color: #ffffff;
+    font-size: clamp(0.85em, 1.5vw, 0.95em);
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.mckee-audio-block .hero-badge:hover {
+    background: rgba(196, 30, 46, 0.2);
+    border-color: var(--accent);
+}
+
+.mckee-audio-block .hero-badge i {
+    color: var(--accent);
+}
+
+/* Brand Showcase Section */
+.mckee-audio-block .brand-section {
+    background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%);
+    padding: clamp(40px, 6vw, 60px) 30px;
+    margin-bottom: clamp(40px, 6vw, 60px);
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .brand-section h2 {
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.mckee-audio-block .brand-section > p {
+    max-width: 700px;
+    margin: 0 auto 40px;
+    color: var(--text-secondary);
+}
+
+.mckee-audio-block .brand-grid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: clamp(30px, 5vw, 60px);
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.mckee-audio-block .brand-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.3s ease;
+}
+
+.mckee-audio-block .brand-item:hover {
+    transform: translateY(-5px);
+}
+
+.mckee-audio-block .brand-logo {
+    font-size: clamp(2em, 4vw, 2.8em);
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+}
+
+.mckee-audio-block .brand-item:hover .brand-logo {
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent-glow);
+}
+
+.mckee-audio-block .brand-name {
+    font-size: clamp(0.9em, 1.5vw, 1.1em);
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Section Spacing */
+.mckee-audio-block .section {
+    margin-bottom: clamp(50px, 8vw, 80px);
+    padding: 0 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .section-title {
+    text-align: center;
+    margin-bottom: 60px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mckee-audio-block .section-title h2 {
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.mckee-audio-block .section-title p {
+    max-width: 700px;
+    margin: 0 auto;
+    color: var(--text-secondary);
+}
+
+/* Section Header */
+.mckee-audio-block .section-header {
+    text-align: center;
+    padding: clamp(40px, 6vw, 60px) 30px;
+    margin-bottom: clamp(40px, 6vw, 60px);
+    background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .section-header h2 {
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.mckee-audio-block .section-header p {
+    max-width: 650px;
+    margin: 0 auto;
+    color: var(--text-secondary);
+}
+
+/* Services Header - Standalone */
+.mckee-audio-block .services-header {
+    text-align: center;
+    padding: clamp(40px, 6vw, 55px) 30px clamp(30px, 4vw, 40px);
+    margin-bottom: clamp(30px, 5vw, 45px);
+    background: linear-gradient(180deg, #000000 0%, var(--primary) 100%);
+    border-radius: 12px;
+    position: relative;
+    border: 1px solid var(--border-color);
+    z-index: 1;
+}
+
+.mckee-audio-block .services-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.mckee-audio-block .services-header h2 {
+    margin-bottom: 15px;
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent-glow);
+}
+
+.mckee-audio-block .services-header p {
+    max-width: 600px;
+    margin: 0 auto;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Services Grid - Centered Layout */
+.mckee-audio-block .services-showcase {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(50px, 7vw, 70px);
+    max-width: 1000px;
+    margin: 0 auto clamp(50px, 8vw, 80px);
+    padding: 0 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .service-row {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: clamp(35px, 5vw, 50px);
+    align-items: center;
+}
+
+.mckee-audio-block .service-row.reverse {
+    grid-template-columns: 1fr 350px;
+}
+
+.mckee-audio-block .service-visual {
+    border-radius: 12px;
+    min-height: 240px;
+    width: 100%;
+    max-width: 350px;
+    position: relative;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(196, 30, 46, 0.1), 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark overlay with red accent glow */
+.mckee-audio-block .service-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0.6) 100%);
+    z-index: 1;
+}
+
+.mckee-audio-block .service-visual::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(196, 30, 46, 0.3) 0%, transparent 70%);
+    z-index: 2;
+    pointer-events: none;
+}
+
+.mckee-audio-block .service-visual-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(2.5em, 5vw, 3.5em);
+    color: var(--accent);
+    z-index: 3;
+    text-shadow: 0 4px 30px var(--accent-glow);
+    opacity: 0.9;
+}
+
+.mckee-audio-block .service-row.reverse .service-visual {
+    order: 2;
+    justify-self: end;
+}
+
+.mckee-audio-block .service-row.reverse .service-content {
+    order: 1;
+    text-align: left;
+}
+
+.mckee-audio-block .service-content {
+    padding: 20px 0;
+}
+
+.mckee-audio-block .service-content h3 {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    color: #ffffff;
+}
+
+.mckee-audio-block .service-content h3 .service-icon {
+    width: 45px;
+    height: 45px;
+    background: rgba(196, 30, 46, 0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    font-size: 1.2em;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color);
+}
+
+.mckee-audio-block .service-content p {
+    margin-bottom: 20px;
+}
+
+.mckee-audio-block .service-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.mckee-audio-block .service-feature {
+    background: rgba(196, 30, 46, 0.1);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.mckee-audio-block .service-feature:hover {
+    background: rgba(196, 30, 46, 0.2);
+    color: #ffffff;
+}
+
+/* Featured Section */
+.mckee-audio-block .featured-section {
+    background: linear-gradient(180deg, var(--primary-light) 0%, var(--bg-card) 100%);
+    padding: clamp(50px, 8vw, 70px) 30px;
+    margin-bottom: clamp(40px, 6vw, 60px);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .featured-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.mckee-audio-block .featured-section h2 {
+    color: #ffffff;
+    margin-top: 0;
+    text-align: center;
+}
+
+.mckee-audio-block .featured-section > .featured-content > p {
+    font-size: clamp(1.05em, 2vw, 1.2em);
+    color: var(--text-secondary);
+    margin-bottom: 50px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Card Grid */
+.mckee-audio-block .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: clamp(20px, 3vw, 30px);
+    margin-top: 40px;
+}
+
+.mckee-audio-block .card-grid.three-col {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.mckee-audio-block .card-grid.two-col {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Cards */
+.mckee-audio-block .card {
+    background: var(--bg-card);
+    padding: clamp(25px, 4vw, 35px) !important;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+    margin: 0 !important;
+    text-align: left;
+    height: fit-content;
+}
+
+.mckee-audio-block .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.mckee-audio-block .card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(196, 30, 46, 0.4);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px var(--shadow-glow);
+}
+
+.mckee-audio-block .card:hover::before {
+    opacity: 1;
+}
+
+.mckee-audio-block .card h3,
+.mckee-audio-block .card h4 {
+    margin-top: 0 !important;
+    margin-bottom: 15px !important;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: #ffffff;
+}
+
+.mckee-audio-block .card-icon {
+    font-size: 1.4em;
+    color: var(--accent);
+    flex-shrink: 0;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(196, 30, 46, 0.15);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.mckee-audio-block .card p {
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* Products Section */
+.mckee-audio-block .products-section {
+    background: linear-gradient(180deg, #000000 0%, var(--primary) 100%);
+    padding: clamp(50px, 8vw, 70px) 30px;
+    margin-bottom: clamp(40px, 6vw, 60px);
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .products-header {
+    margin-bottom: 50px;
+}
+
+.mckee-audio-block .products-header h2 {
+    color: var(--accent);
+    margin-bottom: 15px;
+    text-shadow: 0 0 30px var(--accent-glow);
+}
+
+.mckee-audio-block .products-header p {
+    max-width: 650px;
+    margin: 0 auto;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.mckee-audio-block .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 25px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.mckee-audio-block .product-item {
+    text-align: center;
+    padding: 20px 15px;
+    background: rgba(196, 30, 46, 0.05);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.mckee-audio-block .product-item:hover {
+    transform: translateY(-5px);
+    background: rgba(196, 30, 46, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 20px var(--shadow-glow);
+}
+
+.mckee-audio-block .product-image-wrapper {
+    width: 100%;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.mckee-audio-block .product-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: brightness(1.1);
+    transition: transform 0.3s ease;
+}
+
+.mckee-audio-block .product-item:hover .product-image {
+    transform: scale(1.1);
+}
+
+.mckee-audio-block .product-placeholder {
+    display: none;
+    width: 80px;
+    height: 80px;
+    background: rgba(196, 30, 46, 0.2);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+}
+
+.mckee-audio-block .product-placeholder i {
+    font-size: 2em;
+    color: var(--accent);
+}
+
+.mckee-audio-block .product-name {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #ffffff;
+    display: block;
+    letter-spacing: 0.5px;
+}
+
+/* Dark Section */
+.mckee-audio-block .dark-section {
+    background: linear-gradient(180deg, #000000 0%, var(--primary) 100%);
+    color: #ffffff;
+    padding: clamp(50px, 8vw, 70px) 30px;
+    margin-bottom: clamp(40px, 6vw, 60px);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .dark-section h2 {
+    color: #ffffff;
+    margin-bottom: 25px;
+}
+
+.mckee-audio-block .dark-section p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: clamp(0.95em, 1.5vw, 1.1em);
+}
+
+.mckee-audio-block .dark-content {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* CTA Section */
+.mckee-audio-block .cta-section {
+    background: linear-gradient(180deg, var(--primary-light) 0%, #000000 100%);
+    color: #ffffff;
+    padding: clamp(50px, 8vw, 80px) 30px;
+    text-align: center;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    z-index: 1;
+}
+
+.mckee-audio-block .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(196, 30, 46, 0.1) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.mckee-audio-block .cta-section > * {
+    position: relative;
+    z-index: 1;
+}
+
+.mckee-audio-block .cta-section h3 {
+    font-size: clamp(1.8em, 4vw, 2.4em);
+    font-weight: 600;
+    margin-bottom: 25px;
+    color: #ffffff;
+}
+
+.mckee-audio-block .cta-section p {
+    font-size: clamp(1.1em, 2vw, 1.3em);
+    margin-bottom: 40px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 300;
+}
+
+.mckee-audio-block .cta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+}
+
+.mckee-audio-block .contact-form-wrapper {
+    max-width: 800px;
+    margin: 50px auto 40px;
+    background: rgba(196, 30, 46, 0.05);
+    padding: clamp(30px, 5vw, 45px);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+}
+
+.mckee-audio-block .contact-form-wrapper form,
+.mckee-audio-block .contact-form-wrapper .contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.mckee-audio-block .contact-form-wrapper label {
+    display: block;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    margin-bottom: 8px !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    font-size: clamp(0.95em, 1.5vw, 1.05em);
+}
+
+.mckee-audio-block .contact-form-wrapper input[type="text"],
+.mckee-audio-block .contact-form-wrapper input[type="email"],
+.mckee-audio-block .contact-form-wrapper input[type="name"],
+.mckee-audio-block .contact-form-wrapper textarea,
+.mckee-audio-block .contact-form-wrapper input,
+.mckee-audio-block .contact-form-wrapper textarea,
+.mckee-audio-block .contact-form-wrapper .contact-field input,
+.mckee-audio-block .contact-form-wrapper .contact-field textarea,
+.mckee-audio-block .contact-form-wrapper input:not([type="submit"]):not([type="button"]),
+.mckee-audio-block .contact-form-wrapper form input:not([type="submit"]):not([type="button"]),
+.mckee-audio-block .contact-form-wrapper form textarea {
+    width: 100%;
+    padding: 14px 18px !important;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    font-size: clamp(0.95em, 1.5vw, 1.05em);
+    font-family: inherit;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    margin: 0 !important;
+}
+
+.mckee-audio-block .contact-form-wrapper input[type="text"]:focus,
+.mckee-audio-block .contact-form-wrapper input[type="email"]:focus,
+.mckee-audio-block .contact-form-wrapper input[type="name"]:focus,
+.mckee-audio-block .contact-form-wrapper textarea:focus,
+.mckee-audio-block .contact-form-wrapper input:focus,
+.mckee-audio-block .contact-form-wrapper textarea:focus,
+.mckee-audio-block .contact-form-wrapper .contact-field input:focus,
+.mckee-audio-block .contact-form-wrapper .contact-field textarea:focus,
+.mckee-audio-block .contact-form-wrapper input:not([type="submit"]):not([type="button"]):focus,
+.mckee-audio-block .contact-form-wrapper form input:not([type="submit"]):not([type="button"]):focus,
+.mckee-audio-block .contact-form-wrapper form textarea:focus {
+    outline: none !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px rgba(196, 30, 46, 0.2);
+}
+
+.mckee-audio-block .contact-form-wrapper textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+    margin: 0 !important;
+}
+
+.mckee-audio-block .contact-form-wrapper input[type="submit"],
+.mckee-audio-block .contact-form-wrapper button[type="submit"] {
+    background: var(--accent);
+    color: #ffffff;
+    padding: 16px 40px !important;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: clamp(1em, 1.8vw, 1.15em);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px var(--accent-glow);
+    margin-top: 10px !important;
+    margin-bottom: 0 !important;
+    align-self: center;
+    min-width: 200px;
+}
+
+.mckee-audio-block .contact-form-wrapper input[type="submit"]:hover,
+.mckee-audio-block .contact-form-wrapper button[type="submit"]:hover {
+    transform: translateY(-2px);
+    background: var(--accent-light) !important;
+    box-shadow: 0 6px 25px var(--accent-glow);
+}
+
+.mckee-audio-block .contact-form-wrapper .contact-field {
+    margin-bottom: 0;
+}
+
+.mckee-audio-block .contact-form-wrapper .required {
+    color: rgba(255, 255, 255, 0.6);
+    margin-left: 8px !important;
+    display: inline-block;
+}
+
+.mckee-audio-block .btn-primary {
+    display: inline-block;
+    background: var(--accent);
+    color: #ffffff;
+    padding: 18px 40px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: clamp(1.1em, 2vw, 1.2em);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px var(--accent-glow);
+    border: none;
+}
+
+.mckee-audio-block .btn-primary:hover {
+    transform: translateY(-2px);
+    background: var(--accent-light) !important;
+    box-shadow: 0 6px 25px var(--accent-glow);
+    text-decoration: none;
+    color: #ffffff;
+}
+
+.mckee-audio-block .btn-secondary {
+    display: inline-block;
+    background: transparent;
+    color: #ffffff;
+    padding: 18px 40px;
+    text-decoration: none;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    font-weight: 500;
+    font-size: clamp(1.1em, 2vw, 1.2em);
+    transition: all 0.3s ease;
+}
+
+.mckee-audio-block .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #ffffff;
+    text-decoration: none;
+    color: #ffffff;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 900px) {
+    .mckee-audio-block .service-row,
+    .mckee-audio-block .service-row.reverse {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    
+    .mckee-audio-block .service-visual {
+        min-height: 200px;
+        max-width: 100%;
+        margin: 0 auto;
+        justify-self: center;
+    }
+    
+    .mckee-audio-block .service-row.reverse .service-visual {
+        order: 0;
+        justify-self: center;
+    }
+    
+    .mckee-audio-block .service-row.reverse .service-content {
+        order: 0;
+        text-align: center;
+    }
+    
+    .mckee-audio-block .service-content {
+        text-align: center;
+    }
+    
+    .mckee-audio-block .service-content h3 {
+        justify-content: center;
+    }
+    
+    .mckee-audio-block .service-features {
+        justify-content: center;
+    }
+    
+    .mckee-audio-block .services-header {
+        padding: 30px 20px;
+    }
+    
+    .mckee-audio-block .card-grid.three-col,
+    .mckee-audio-block .card-grid.two-col {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .mckee-audio-block {
+        padding: 0;
+        max-width: 100%;
+    }
+    
+    .mckee-audio-block .hero {
+        padding: 50px 20px;
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+    }
+    
+    .mckee-audio-block .hero-badges {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .mckee-audio-block .featured-section,
+    .mckee-audio-block .brand-section,
+    .mckee-audio-block .dark-section,
+    .mckee-audio-block .cta-section,
+    .mckee-audio-block .section-header,
+    .mckee-audio-block .services-header {
+        padding: 40px 20px;
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+    }
+    
+    .mckee-audio-block .section {
+        padding: 0 15px;
+    }
+    
+    .mckee-audio-block .services-showcase {
+        padding: 0 15px;
+    }
+    
+    .mckee-audio-block .brand-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+        max-width: 400px;
+    }
+    
+    .mckee-audio-block .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        max-width: 400px;
+    }
+    
+    /* Center the last item if it's alone in its row (odd number of items) */
+    .mckee-audio-block .product-grid .product-item:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+        max-width: 180px;
+        justify-self: center;
+    }
+    
+    .mckee-audio-block .product-item {
+        padding: 15px 10px;
+    }
+    
+    .mckee-audio-block .product-image-wrapper {
+        height: 80px;
+        margin-bottom: 12px;
+    }
+    
+    .mckee-audio-block .product-name {
+        font-size: 0.85em;
+    }
+    
+    .mckee-audio-block .products-section {
+        padding: 35px 15px;
+    }
+    
+    .mckee-audio-block .products-header {
+        margin-bottom: 35px;
+    }
+    
+    .mckee-audio-block .products-header h2 {
+        font-size: 1.6em;
+    }
+    
+    .mckee-audio-block .products-header p {
+        font-size: 0.95em;
+    }
+    
+    .mckee-audio-block .cta-buttons {
+        flex-direction: column;
+    }
+    
+    .mckee-audio-block .btn-primary,
+    .mckee-audio-block .btn-secondary {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .mckee-audio-block .contact-form-wrapper {
+        padding: 25px 20px;
+        margin: 40px auto 30px;
+    }
+    
+    .mckee-audio-block .card {
+        text-align: center;
+    }
+    
+    .mckee-audio-block .card h3,
+    .mckee-audio-block .card h4 {
+        justify-content: center;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 400px) {
+    .mckee-audio-block .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        max-width: 100%;
+    }
+    
+    .mckee-audio-block .product-item {
+        padding: 12px 8px;
+    }
+    
+    .mckee-audio-block .product-image-wrapper {
+        height: 70px;
+    }
+    
+    .mckee-audio-block .product-name {
+        font-size: 0.8em;
+    }
+    
+    .mckee-audio-block .brand-grid {
+        gap: 20px;
+        max-width: 100%;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .mckee-audio-block * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .mckee-audio-block .particle {
+        display: none;
+    }
+}

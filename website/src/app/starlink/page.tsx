@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { ServicePageView } from "@/components/pages/service-page-view";
+import { ElementorServicePage } from "@/components/pages/elementor-service-page";
 
 export const metadata: Metadata = {
   title: "Starlink Installation",
-  description: "Professional Starlink Gen 3 installation with no roof penetration in Haliburton.",
+  description:
+    "Professional Starlink Gen 3 satellite internet installation with no roof penetration in Haliburton, Ontario.",
 };
 
 export default function StarlinkPage() {
-  return <ServicePageView slug="starlink" />;
+  return <ElementorServicePage slug="starlink" />;
 }

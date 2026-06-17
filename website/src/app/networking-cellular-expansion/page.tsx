@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { ServicePageView } from "@/components/pages/service-page-view";
+import { ElementorServicePage } from "@/components/pages/elementor-service-page";
 
 export const metadata: Metadata = {
-  title: "Networking and Cellular Expansion",
-  description: "UniFi Wi-Fi 7 networking, wireless bridges, and cellular distribution in Haliburton.",
+  title: "Networking / Cellular Expansion",
+  description:
+    "Enterprise UniFi Wi-Fi 7 networking, cellular expansion, and wireless bridges in Haliburton, Ontario.",
 };
 
 export default function NetworkingPage() {
-  return <ServicePageView slug="networking-cellular-expansion" />;
+  return <ElementorServicePage slug="networking-cellular-expansion" />;
 }

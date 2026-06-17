@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { ServicePageView } from "@/components/pages/service-page-view";
+import { ElementorServicePage } from "@/components/pages/elementor-service-page";
 
 export const metadata: Metadata = {
   title: "Camera Surveillance",
-  description: "Professional 4K Uniview UNV camera systems with AI detection and remote viewing.",
+  description:
+    "Uniview UNV 4K UHD camera systems with AI detection and remote viewing in Haliburton, Ontario.",
 };
 
-export default function CameraPage() {
-  return <ServicePageView slug="camera-surveillance" />;
+export default function CameraSurveillancePage() {
+  return <ElementorServicePage slug="camera-surveillance" />;
 }

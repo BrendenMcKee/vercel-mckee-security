@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ServicePageView } from "@/components/pages/service-page-view";
+import { ElementorServicePage } from "@/components/pages/elementor-service-page";
 
 export const metadata: Metadata = {
   title: "Security",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function SecurityPage() {
-  return <ServicePageView slug="security" />;
+  return <ElementorServicePage slug="security" />;
 }

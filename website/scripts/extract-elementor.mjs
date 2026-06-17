@@ -100,16 +100,15 @@ const netHtml = fs.readFileSync(
 const audioHtml = fs.readFileSync(path.join(auditDir, "audio-video.html"), "utf8");
 const starlinkHtml = fs.readFileSync(path.join(auditDir, "starlink.html"), "utf8");
 
-// Security main content (before monitoring tiers block)
-const secMain = extractBetween(
-  securityHtml,
-  '<div id="mks2025-sec-wrapper">',
-  "<!-- Blocks should be inserted",
+// Security main content (Elementor block only, monitoring tiers rendered in React)
+const secMatch = securityHtml.match(
+  /<div id="mks2025-sec-wrapper">[\s\S]*?<div class="mks2025-sec-monitoring-info-section"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>\s*<\/div>/,
 );
+const secMain = secMatch?.[0] ?? "";
 save(
   "security",
   extractCss(securityHtml, "Unique prefix: mks2025-sec-"),
-  secMain ?? "",
+  secMain,
   {
     wrapperId: "mks2025-sec-wrapper",
     mainId: "mks2025-sec-main",
@@ -126,7 +125,7 @@ save(
 const camMain = extractBetween(
   camHtml,
   '<div id="mks2025-cam-wrapper">',
-  '<div class="mks2025-cam-contact-form-wrapper">',
+  "<!-- Call to Action -->",
 );
 save(
   "camera-surveillance",
@@ -144,7 +143,7 @@ save(
 const netMain = extractBetween(
   netHtml,
   '<div id="mks2025-net-wrapper">',
-  '<div class="mks2025-net-contact-form-wrapper">',
+  "<!-- Call to Action -->",
 );
 const netCtaMatch = netHtml.match(
   /class="mks2025-net-cta-section"[\s\S]*?<h3>([\s\S]*?)<\/h3>\s*<p>([\s\S]*?)<\/p>/,
@@ -153,7 +152,7 @@ save(
   "networking-cellular-expansion",
   extractCss(netHtml, "Unique prefix: mks2025-net-"),
   (netMain ?? "") +
-    `<div class="mks2025-net-cta-section"><h3>${netCtaMatch?.[1]?.trim() ?? "Ready to upgrade your network?"}</h3><p>${netCtaMatch?.[1]?.trim() ? netCtaMatch[2].trim() : "Contact us for a free consultation and custom networking quote."}</p><div class="mks2025-net-contact-form-wrapper" data-mckee-form="true"></div></div></div></div>`,
+    `<div class="mks2025-net-cta-section"><h3>${netCtaMatch?.[1]?.trim() ?? "Ready to upgrade your network?"}</h3><p>${netCtaMatch?.[2]?.trim() ?? "Contact us for a free consultation and custom networking quote."}</p><div class="mks2025-net-contact-form-wrapper" data-mckee-form="true"></div></div></div></div>`,
   {
     wrapperId: "mks2025-net-wrapper",
     mainId: "mks2025-net-main",
