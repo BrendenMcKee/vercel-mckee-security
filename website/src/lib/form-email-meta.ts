@@ -105,7 +105,7 @@ export function buildFormEmailSubject(
   const clean = detail?.replace(/\s+/g, " ").trim();
 
   if (clean) {
-    return `${meta.emoji} ${meta.title} — ${clean}`;
+    return `${meta.emoji} ${meta.title} | ${clean}`;
   }
 
   return `${meta.emoji} ${meta.title}`;

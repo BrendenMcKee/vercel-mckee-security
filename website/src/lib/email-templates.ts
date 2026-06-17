@@ -37,7 +37,7 @@ function escapeHtml(value: string): string {
 function renderFieldValue(field: EmailField): string {
   const safe = escapeHtml(field.value).replace(/\n/g, "<br />");
   if (field.href) {
-    return `<a href="${escapeHtml(field.href)}" style="color:${BRAND_RED};text-decoration:none;font-weight:600;">${safe}</a>`;
+    return `<a href="${escapeHtml(field.href)}" style="color:${TEXT};text-decoration:underline;text-decoration-color:rgba(255,255,255,0.35);">${safe}</a>`;
   }
   return safe;
 }
@@ -145,7 +145,7 @@ export function buildFormEmailText({
     `${meta.emoji} ${siteConfig.name}`,
     meta.title,
     meta.inboxLabel,
-    "—".repeat(36),
+    "-".repeat(36),
     "",
     ...fields.flatMap((field) => [field.label, field.value, ""]),
     `Submitted via ${siteConfig.url}`,
