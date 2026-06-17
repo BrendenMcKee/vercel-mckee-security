@@ -15,7 +15,7 @@ export default function ApplyPage() {
       <Hero
         eyebrow="Careers"
         title="Apply Today"
-        subtitle="Full-time technician positions with onsite training available. Starting wage $18/hr. Senior wage $30/hr and up."
+        subtitle="Full-time technician positions with onsite training available. Starting wage $18/hr. Senior wage $35/hr and up."
         compact
       />
 

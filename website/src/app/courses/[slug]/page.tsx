@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Hero } from "@/components/sections/hero";
-import { CourseSyllabus } from "@/components/sections/course-syllabus";
+import { CoursePlayer } from "@/components/courses/course-player";
 import { FadeIn } from "@/components/motion/fade-in";
 import { getCourseBySlug } from "@/lib/courses";
 
@@ -37,7 +37,7 @@ export default async function CourseDetailPage({ params }: Props) {
           <FadeIn>
             <h2 className="mb-8 text-2xl font-bold text-white">Course Content</h2>
           </FadeIn>
-          <CourseSyllabus course={course} />
+          <CoursePlayer course={course} />
         </div>
       </section>
     </>

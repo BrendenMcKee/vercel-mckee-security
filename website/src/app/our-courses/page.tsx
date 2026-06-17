@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { Hero } from "@/components/sections/hero";
-import { FadeIn } from "@/components/motion/fade-in";
-import { courses } from "@/lib/courses";
+import { CoursesCatalog } from "@/components/courses/courses-catalog";
 
 export const metadata: Metadata = {
   title: "Our Courses",
@@ -21,29 +18,7 @@ export default function CoursesPage() {
       />
 
       <section className="py-20">
-        <div className="mx-auto max-w-3xl space-y-6 px-6">
-          {courses.map((course, i) => (
-            <FadeIn key={course.slug} delay={i * 0.08}>
-              <Link
-                href={course.href}
-                className="group block rounded-2xl border border-white/10 bg-surface-elevated/40 p-8 transition hover:border-primary/40"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-bold uppercase text-green-400">
-                      {course.price}
-                    </span>
-                    <h2 className="mt-3 text-2xl font-bold text-white group-hover:text-primary">
-                      {course.title}
-                    </h2>
-                    <p className="mt-2 text-white/60">{course.description}</p>
-                  </div>
-                  <ArrowRight className="h-6 w-6 shrink-0 text-white/30 transition group-hover:translate-x-1 group-hover:text-primary" />
-                </div>
-              </Link>
-            </FadeIn>
-          ))}
-        </div>
+        <CoursesCatalog />
       </section>
     </>
   );

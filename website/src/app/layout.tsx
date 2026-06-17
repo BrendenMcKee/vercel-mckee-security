@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Lato, Dancing_Script } from "next/font/google";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 import "@/styles/elementor-forms.css";
@@ -58,6 +59,7 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-full flex-col antialiased">
+        <ScrollToTop />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

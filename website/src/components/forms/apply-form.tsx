@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site-config";
+import { cn } from "@/lib/utils";
 
 const schema = z.object({
   firstName: z.string().min(1, "Required"),
@@ -23,6 +25,14 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+const sourceOptions = [
+  { value: "", label: "Select an option..." },
+  { value: "search", label: "Search Engine" },
+  { value: "social", label: "Social Media" },
+  { value: "referral", label: "Referral" },
+  { value: "other", label: "Other" },
+];
+
 export function ApplyForm() {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [resume, setResume] = useState<File | null>(null);
@@ -30,8 +40,11 @@ export function ApplyForm() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  const sourceValue = watch("source");
 
   const onSubmit = async (data: FormData) => {
     if (!resume) return;
@@ -53,7 +66,7 @@ export function ApplyForm() {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:border-primary focus:outline-none";
+    "w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40";
 
   return (
     <form
@@ -88,13 +101,27 @@ export function ApplyForm() {
           <input {...register("postalCode")} className={inputClass} />
         </Field>
       </div>
-      <Field label="How did you find out about this position?" error={errors.source?.message}>
-        <select {...register("source")} className={inputClass}>
-          <option value="">Select...</option>
-          <option value="search">Search Engine</option>
-          <option value="social">Social Media</option>
-          <option value="other">Other</option>
-        </select>
+      <Field
+        label="How did you find out about this position?"
+        error={errors.source?.message}
+      >
+        <div className="relative">
+          <select
+            {...register("source")}
+            className={cn(
+              inputClass,
+              "mckee-select cursor-pointer appearance-none pr-10",
+              !sourceValue && "text-white/45",
+            )}
+          >
+            {sourceOptions.map((option) => (
+              <option key={option.value || "empty"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+        </div>
       </Field>
       <Field label="If other, please specify">
         <input {...register("sourceOther")} className={inputClass} />
@@ -107,7 +134,7 @@ export function ApplyForm() {
           type="file"
           accept=".pdf,.doc,.docx"
           onChange={(e) => setResume(e.target.files?.[0] ?? null)}
-          className="w-full text-sm text-white/60 file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
+          className="w-full cursor-pointer text-sm text-white/60 file:mr-4 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
         />
         {!resume && status !== "success" && (
           <p className="mt-1 text-xs text-white/40">PDF or Word document</p>
@@ -117,10 +144,14 @@ export function ApplyForm() {
         <textarea {...register("additionalInfo")} rows={4} className={inputClass} />
       </Field>
       {status === "success" && (
-        <p className="text-sm text-green-400">Application submitted. We look forward to hearing from you.</p>
+        <p className="text-sm text-green-400">
+          Application submitted. We look forward to hearing from you.
+        </p>
       )}
       {status === "error" && (
-        <p className="text-sm text-primary">Submission failed. Email {siteConfig.email.general} directly.</p>
+        <p className="text-sm text-primary">
+          Submission failed. Email {siteConfig.email.general} directly.
+        </p>
       )}
       <Button type="submit" disabled={isSubmitting || !resume} className="w-full">
         {isSubmitting ? "Submitting..." : "Submit Application"}

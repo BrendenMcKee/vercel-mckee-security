@@ -52,3 +52,18 @@ body {
     scroll-behavior: auto;
   }
 }
+
+.mckee-select {
+  color-scheme: dark;
+}
+
+.mckee-select option {
+  background-color: #141414;
+  color: #ffffff;
+}
+
+.mckee-select option:checked,
+.mckee-select option:hover {
+  background-color: #c91818;
+  color: #ffffff;
+}
