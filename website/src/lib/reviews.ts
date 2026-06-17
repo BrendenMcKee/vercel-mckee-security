@@ -133,3 +133,30 @@ export function filterFiveStarReviews(reviews: GoogleReview[]) {
       return 0;
     });
 }
+
+function reviewDedupeKey(review: GoogleReview): string {
+  return `${review.author.trim().toLowerCase()}|${review.text.trim().slice(0, 96).toLowerCase()}`;
+}
+
+/** Google Places returns at most 5 reviews; merge in curated 5-star reviews for the carousel. */
+export function mergeDisplayReviews(
+  primary: GoogleReview[],
+  supplemental: GoogleReview[] = [],
+): GoogleReview[] {
+  const seen = new Set<string>();
+  const merged: GoogleReview[] = [];
+
+  for (const review of filterFiveStarReviews([...primary, ...supplemental])) {
+    const key = reviewDedupeKey(review);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(review);
+  }
+
+  return merged.sort((a, b) => {
+    if (a.publishTime && b.publishTime) {
+      return b.publishTime.localeCompare(a.publishTime);
+    }
+    return 0;
+  });
+}

@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
+import featuredReviewContent from "@/content/google-reviews-featured.json";
 import {
   fallbackReviews,
   filterFiveStarReviews,
   getGoogleMapsProfileUrl,
   getGoogleWriteReviewUrl,
   googleBusiness,
+  mergeDisplayReviews,
   resolveGooglePlaceId,
   type GoogleReview,
 } from "@/lib/reviews";
 
 export const revalidate = 86400;
+
+const featuredReviews = (featuredReviewContent.reviews ?? []) as GoogleReview[];
 
 type LivePlaceData = {
   rating?: number;
@@ -64,7 +68,7 @@ async function fetchGoogleReviews(): Promise<{
   }));
 
   return {
-    reviews: filterFiveStarReviews(mapped),
+    reviews: mergeDisplayReviews(mapped, featuredReviews),
     rating: data.rating ?? googleBusiness.rating,
     reviewCount: data.userRatingCount ?? googleBusiness.reviewCount,
     placeId,
@@ -89,7 +93,9 @@ export async function GET() {
       googleBusiness.placeId ||
       (apiKey ? await resolveGooglePlaceId(apiKey) : null);
     const links = buildBusinessLinks(resolvedPlaceId);
-    const reviews = live?.reviews ?? filterFiveStarReviews(fallbackReviews);
+    const reviews = live
+      ? mergeDisplayReviews(live.reviews, featuredReviews)
+      : mergeDisplayReviews(filterFiveStarReviews(fallbackReviews), featuredReviews);
 
     return NextResponse.json({
       business: {
@@ -101,6 +107,7 @@ export async function GET() {
       },
       reviews,
       source: live ? "google" : "fallback",
+      displayedReviewCount: reviews.length,
     });
   } catch {
     const links = buildBusinessLinks();
@@ -112,8 +119,12 @@ export async function GET() {
         reviewCount: googleBusiness.reviewCount,
         aiSummaryBullets: googleBusiness.aiSummaryBullets,
       },
-      reviews: filterFiveStarReviews(fallbackReviews),
+      reviews: mergeDisplayReviews(filterFiveStarReviews(fallbackReviews), featuredReviews),
       source: "fallback",
+      displayedReviewCount: mergeDisplayReviews(
+        filterFiveStarReviews(fallbackReviews),
+        featuredReviews,
+      ).length,
     });
   }
 }

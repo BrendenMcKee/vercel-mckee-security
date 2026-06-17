@@ -109,7 +109,8 @@ function AiSummaryCard({
 }) {
   return (
     <article
-      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col overflow-visible rounded-xl border border-[#6366f1]/25 bg-gradient-to-br from-[#1a1830] via-[#141824] to-[#101018] p-5 sm:w-[300px]`}
+      data-review-card
+      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 snap-start flex-col overflow-visible rounded-xl border border-[#6366f1]/25 bg-gradient-to-br from-[#1a1830] via-[#141824] to-[#101018] p-5 sm:w-[300px]`}
     >
       <div className="flex items-start gap-3">
         <AiSummaryIcon />
@@ -147,7 +148,8 @@ function ReviewCard({ review }: { review: GoogleReview }) {
 
   return (
     <article
-      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col overflow-visible rounded-xl border border-white/10 bg-[#1a1a1a] p-5 sm:w-[300px]`}
+      data-review-card
+      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 snap-start flex-col overflow-visible rounded-xl border border-white/10 bg-[#1a1a1a] p-5 sm:w-[300px]`}
     >
       <div className="flex items-start gap-3 overflow-visible">
         <div className="relative h-11 w-11 shrink-0 overflow-visible">
@@ -242,14 +244,27 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
     const ro = new ResizeObserver(syncScrollEdges);
     ro.observe(el);
 
+    const onWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+      event.preventDefault();
+      el.scrollBy({ left: event.deltaY, behavior: "auto" });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+
     return () => {
       el.removeEventListener("scroll", syncScrollEdges);
+      el.removeEventListener("wheel", onWheel);
       ro.disconnect();
     };
   }, [reviews, aiBullets, syncScrollEdges]);
 
   const scroll = (dir: -1 | 1) => {
-    scrollerRef.current?.scrollBy({ left: dir * 312, behavior: "smooth" });
+    const el = scrollerRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>("[data-review-card]");
+    const gap = 12;
+    const delta = card ? card.offsetWidth + gap : 312;
+    el.scrollBy({ left: dir * delta, behavior: "smooth" });
     window.setTimeout(syncScrollEdges, 350);
   };
 
@@ -282,6 +297,18 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
         </div>
 
         <div className="relative bg-[#101010] px-3 py-4 md:px-5">
+          {!atStart && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-10 bg-gradient-to-r from-[#101010] to-transparent md:w-14"
+            />
+          )}
+          {!atEnd && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-10 bg-gradient-to-l from-[#101010] to-transparent md:w-14"
+            />
+          )}
           <button
             type="button"
             aria-label="Previous reviews"
@@ -289,11 +316,11 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
             disabled={atStart}
             onClick={() => scroll(-1)}
             className={cn(
-              "absolute left-1.5 top-1/2 z-10 hidden -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg transition-opacity duration-200 hover:bg-[#252525] md:flex",
+              "absolute left-1 top-1/2 z-10 flex -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a]/95 p-2 shadow-lg backdrop-blur-sm transition-opacity duration-200 hover:bg-[#252525] md:left-1.5 md:p-2.5",
               atStart && "pointer-events-none opacity-0",
             )}
           >
-            <ChevronLeft className="h-5 w-5 text-white/80" />
+            <ChevronLeft className="h-4 w-4 text-white/80 md:h-5 md:w-5" />
           </button>
           <button
             type="button"
@@ -302,16 +329,29 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
             disabled={atEnd}
             onClick={() => scroll(1)}
             className={cn(
-              "absolute right-1.5 top-1/2 z-10 hidden -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg transition-opacity duration-200 hover:bg-[#252525] md:flex",
+              "absolute right-1 top-1/2 z-10 flex -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a]/95 p-2 shadow-lg backdrop-blur-sm transition-opacity duration-200 hover:bg-[#252525] md:right-1.5 md:p-2.5",
               atEnd && "pointer-events-none opacity-0",
             )}
           >
-            <ChevronRight className="h-5 w-5 text-white/80" />
+            <ChevronRight className="h-4 w-4 text-white/80 md:h-5 md:w-5" />
           </button>
+
+          <p className="mb-3 px-1 text-center text-[11px] text-white/40 md:text-xs">
+            Swipe or use the arrows to browse {reviews.length} featured five-star review
+            {reviews.length === 1 ? "" : "s"}.{" "}
+            <a
+              href={data.business.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#8ab4f8] hover:underline"
+            >
+              View all {data.business.reviewCount}+ on Google
+            </a>
+          </p>
 
           <div
             ref={scrollerRef}
-            className="flex items-stretch gap-3 overflow-x-auto overflow-y-visible scroll-smooth px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overflow-y-visible scroll-smooth px-8 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
           >
             <AiSummaryCard bullets={aiBullets} reviewCount={data.business.reviewCount} />
             {reviews.map((review) => (
