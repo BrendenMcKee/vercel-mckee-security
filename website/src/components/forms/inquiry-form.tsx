@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { getFormEmailMeta, getServiceDisplayName } from "@/lib/form-email-meta";
 import { siteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
 
@@ -23,13 +24,17 @@ type FormData = z.infer<typeof schema>;
 
 type InquiryFormProps = {
   serviceLabel?: string;
+  serviceSlug?: string;
   triggerLabel?: string;
 };
 
 export function InquiryForm({
   serviceLabel = "Which custom services are you inquiring about? Or would you like to request a scheduled site visit for a completely custom quote?",
+  serviceSlug,
   triggerLabel = "Get a Free Quote",
 }: InquiryFormProps) {
+  const inquiryMeta = getFormEmailMeta("inquiry", serviceSlug);
+  const serviceName = getServiceDisplayName(serviceSlug);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
@@ -64,7 +69,7 @@ export function InquiryForm({
       const res = await fetch("/api/inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, serviceLabel }),
+        body: JSON.stringify({ ...data, serviceLabel, serviceSlug }),
       });
       if (!res.ok) throw new Error("Submission failed");
       setDone(true);
@@ -93,12 +98,12 @@ export function InquiryForm({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-surface-elevated shadow-2xl"
+              className="mckee-form-modal"
             >
               <button
                 type="button"
                 onClick={close}
-                className="absolute right-4 top-4 rounded-lg p-1 text-white/50 hover:text-white"
+                className="absolute right-4 top-5 z-10 rounded-lg p-1 text-white/50 hover:text-white"
                 aria-label="Close form"
               >
                 <X className="h-5 w-5" />
@@ -118,15 +123,24 @@ export function InquiryForm({
                   </Button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit(onSubmit)} className="p-8">
-                  <div className="mb-6 flex gap-2">
+                <form onSubmit={handleSubmit(onSubmit)} className="p-6 sm:p-8">
+                  <div className="mb-5 flex items-start gap-3 pr-8">
+                    <div className="mckee-form-icon" aria-hidden="true">
+                      {inquiryMeta.emoji}
+                    </div>
+                    <div>
+                      <h3 className="mckee-form-heading">{serviceName} quote</h3>
+                      <p className="mckee-form-subheading">
+                        {inquiryMeta.inboxLabel}. Step {step + 1} of 2.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mckee-form-step-bar">
                     {[0, 1].map((s) => (
                       <div
                         key={s}
-                        className={cn(
-                          "h-1 flex-1 rounded-full transition",
-                          step >= s ? "bg-primary" : "bg-white/10",
-                        )}
+                        className={cn("mckee-form-step", step >= s && "is-active")}
                       />
                     ))}
                   </div>
@@ -135,19 +149,16 @@ export function InquiryForm({
                     <motion.div
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="space-y-4"
+                      className="mckee-form-fields"
                     >
-                      <h3 className="text-xl font-bold text-white">
-                        Your contact details
-                      </h3>
                       <Field label="First and last name" error={errors.name?.message}>
-                        <input {...register("name")} className={inputClass} />
+                        <input {...register("name")} className="mckee-form-input" />
                       </Field>
                       <Field label="Email" error={errors.email?.message}>
-                        <input type="email" {...register("email")} className={inputClass} />
+                        <input type="email" {...register("email")} className="mckee-form-input" />
                       </Field>
                       <Field label="Phone or cell number" error={errors.phone?.message}>
-                        <input type="tel" {...register("phone")} className={inputClass} />
+                        <input type="tel" {...register("phone")} className="mckee-form-input" />
                       </Field>
                       <Button type="button" onClick={nextStep} className="w-full">
                         Continue
@@ -159,7 +170,7 @@ export function InquiryForm({
                     <motion.div
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="space-y-4"
+                      className="mckee-form-fields"
                     >
                       <button
                         type="button"
@@ -168,26 +179,25 @@ export function InquiryForm({
                       >
                         <ChevronLeft className="h-4 w-4" /> Back
                       </button>
-                      <h3 className="text-xl font-bold text-white">
-                        Project details
-                      </h3>
                       <Field label="Full address" error={errors.address?.message}>
-                        <input {...register("address")} className={inputClass} />
+                        <input {...register("address")} className="mckee-form-input" />
                       </Field>
                       <Field label={serviceLabel} error={errors.services?.message}>
-                        <textarea {...register("services")} rows={3} className={inputClass} />
+                        <textarea {...register("services")} rows={3} className="mckee-form-input" />
                       </Field>
                       <Field label="Additional comments (optional)">
-                        <textarea {...register("comments")} rows={2} className={inputClass} />
+                        <textarea {...register("comments")} rows={2} className="mckee-form-input" />
                       </Field>
-                      {error && <p className="text-sm text-primary">{error}</p>}
-                      <Button type="submit" disabled={isSubmitting} className="w-full">
-                        {isSubmitting ? "Submitting..." : "Submit"}
-                      </Button>
+                      {error && (
+                        <p className="mckee-form-status mckee-form-status--error">{error}</p>
+                      )}
+                      <button type="submit" disabled={isSubmitting} className="mckee-form-submit">
+                        {isSubmitting ? "Submitting..." : "Submit Quote Request"}
+                      </button>
                     </motion.div>
                   )}
 
-                  <p className="mt-4 text-center text-xs text-white/40">
+                  <p className="mckee-form-footer-note">
                     Or call {siteConfig.phone.short} · {siteConfig.email.general}
                   </p>
                 </form>
@@ -200,9 +210,6 @@ export function InquiryForm({
   );
 }
 
-const inputClass =
-  "w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-white/30 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
-
 function Field({
   label,
   error,
@@ -213,12 +220,10 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-white/70">
-        {label}
-      </label>
+    <div className="mckee-form-field">
+      <label className="mckee-form-label">{label}</label>
       {children}
-      {error && <p className="mt-1 text-xs text-primary">{error}</p>}
+      {error && <p className="mckee-form-error">{error}</p>}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { getFormEmailMeta } from "@/lib/form-email-meta";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -15,6 +15,8 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+const contactMeta = getFormEmailMeta("contact");
 
 export function ContactForm() {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -42,51 +44,70 @@ export function ContactForm() {
   };
 
   return (
-    <motion.form
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-4 rounded-2xl border border-white/10 bg-surface-elevated/50 p-8"
+      className="mckee-form-panel"
     >
-      <h3 className="text-xl font-bold text-white">Ask a question</h3>
-      {[
-        { name: "name" as const, label: "Your Name", type: "text" },
-        { name: "email" as const, label: "Your Email", type: "email" },
-        { name: "subject" as const, label: "Subject", type: "text" },
-      ].map((field) => (
-        <div key={field.name}>
-          <label className="mb-1 block text-sm text-white/70">{field.label}</label>
-          <input
-            type={field.type}
-            {...register(field.name)}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:border-primary focus:outline-none"
-          />
-          {errors[field.name] && (
-            <p className="mt-1 text-xs text-primary">{errors[field.name]?.message}</p>
-          )}
+      <div className="mckee-form-header">
+        <div className="mckee-form-icon" aria-hidden="true">
+          {contactMeta.emoji}
         </div>
-      ))}
-      <div>
-        <label className="mb-1 block text-sm text-white/70">Your Message</label>
-        <textarea
-          {...register("message")}
-          rows={5}
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white focus:border-primary focus:outline-none"
-        />
-        {errors.message && (
-          <p className="mt-1 text-xs text-primary">{errors.message.message}</p>
-        )}
+        <div>
+          <h3 className="mckee-form-heading">Ask a question</h3>
+          <p className="mckee-form-subheading">
+            Send us a message and we will get back to you as soon as possible.
+          </p>
+        </div>
       </div>
-      {status === "success" && (
-        <p className="text-sm text-green-400">Message sent. We will respond soon.</p>
-      )}
-      {status === "error" && (
-        <p className="text-sm text-primary">Something went wrong. Please call us directly.</p>
-      )}
-      <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Sending..." : "Send Message"}
-      </Button>
-    </motion.form>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="mckee-form-body">
+        <div className="mckee-form-fields">
+          {[
+            { name: "name" as const, label: "Your Name", type: "text" },
+            { name: "email" as const, label: "Your Email", type: "email" },
+            { name: "subject" as const, label: "Subject", type: "text" },
+          ].map((field) => (
+            <div key={field.name} className="mckee-form-field">
+              <label className="mckee-form-label">{field.label}</label>
+              <input
+                type={field.type}
+                {...register(field.name)}
+                className="mckee-form-input"
+              />
+              {errors[field.name] && (
+                <p className="mckee-form-error">{errors[field.name]?.message}</p>
+              )}
+            </div>
+          ))}
+
+          <div className="mckee-form-field">
+            <label className="mckee-form-label">Your Message</label>
+            <textarea {...register("message")} rows={5} className="mckee-form-input" />
+            {errors.message && (
+              <p className="mckee-form-error">{errors.message.message}</p>
+            )}
+          </div>
+        </div>
+
+        {status === "success" && (
+          <p className="mckee-form-status mckee-form-status--success">
+            Message sent. We will respond soon.
+          </p>
+        )}
+        {status === "error" && (
+          <p className="mckee-form-status mckee-form-status--error">
+            Something went wrong. Please call us directly.
+          </p>
+        )}
+
+        <div className="mckee-form-actions">
+          <button type="submit" disabled={isSubmitting} className="mckee-form-submit">
+            {isSubmitting ? "Sending..." : "Send Message"}
+          </button>
+        </div>
+      </form>
+    </motion.div>
   );
 }

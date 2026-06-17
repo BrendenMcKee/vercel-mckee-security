@@ -5,6 +5,7 @@ type ServiceQuoteSectionProps = {
   title: string;
   description: string;
   serviceLabel?: string;
+  serviceSlug?: string;
   id?: string;
   className?: string;
 };
@@ -13,6 +14,7 @@ export function ServiceQuoteSection({
   title,
   description,
   serviceLabel,
+  serviceSlug,
   id = "quote",
   className,
 }: ServiceQuoteSectionProps) {
@@ -25,7 +27,12 @@ export function ServiceQuoteSection({
             <p>{description}</p>
           </header>
           <div className="mckee-service-quote-form-box">
-            <ServiceQuoteForm compact serviceLabel={serviceLabel} />
+            <ServiceQuoteForm
+              compact
+              serviceLabel={serviceLabel}
+              serviceSlug={serviceSlug}
+              showHeader={false}
+            />
           </div>
         </div>
       </div>

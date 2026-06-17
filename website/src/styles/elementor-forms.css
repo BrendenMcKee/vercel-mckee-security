@@ -111,13 +111,13 @@
 .mckee-elementor-form--compact input,
 .mckee-elementor-form--compact textarea {
   width: 100%;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.5);
-  padding: 0.625rem 0.875rem;
+  background: rgba(0, 0, 0, 0.42);
+  padding: 0.75rem 1rem;
   font-size: 0.875rem;
   color: #fff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
 .mckee-elementor-form--compact input::placeholder,
@@ -128,8 +128,9 @@
 .mckee-elementor-form--compact input:focus,
 .mckee-elementor-form--compact textarea:focus {
   outline: none;
-  border-color: #c41e2e;
-  box-shadow: 0 0 0 3px rgba(196, 30, 46, 0.2);
+  border-color: #c91818;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 3px rgba(201, 24, 24, 0.18);
 }
 
 .mckee-elementor-form--compact textarea {
@@ -152,21 +153,21 @@
 .mckee-elementor-form--compact .mckee-elementor-form-submit {
   min-width: 11rem;
   border: none;
-  border-radius: 0.5rem;
-  background: linear-gradient(135deg, #c41e2e 0%, #c41e2e 100%);
-  padding: 0.75rem 2rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #c91818 0%, #a81414 100%);
+  padding: 0.85rem 2rem;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(196, 30, 46, 0.35);
-  transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 8px 22px rgba(201, 24, 24, 0.28);
+  transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;
 }
 
 .mckee-elementor-form--compact .mckee-elementor-form-submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  background: linear-gradient(135deg, #e63946 0%, #ff4757 100%);
-  box-shadow: 0 6px 20px rgba(230, 57, 70, 0.45);
+  filter: brightness(1.05);
+  box-shadow: 0 10px 26px rgba(201, 24, 24, 0.34);
 }
 
 .mckee-elementor-form--compact .mckee-elementor-form-submit:disabled {

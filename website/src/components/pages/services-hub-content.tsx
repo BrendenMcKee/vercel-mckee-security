@@ -287,6 +287,7 @@ export function ServicesHubContent() {
           className="mckee-service-quote-section--hub"
           title="Ready to Get Started?"
           description="Tell us about your project and we will design a custom solution for your property."
+          serviceSlug="services-hub"
         />
       </div>
     </div>

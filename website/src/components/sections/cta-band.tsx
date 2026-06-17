@@ -6,12 +6,14 @@ type CtaBandProps = {
   title?: string;
   subtitle?: string;
   serviceLabel?: string;
+  serviceSlug?: string;
 };
 
 export function CtaBand({
   title = "Ready to protect what matters most?",
   subtitle = "Contact us for a free consultation and custom quote.",
   serviceLabel,
+  serviceSlug,
 }: CtaBandProps) {
   return (
     <section className="relative overflow-hidden py-20">
@@ -21,7 +23,7 @@ export function CtaBand({
           <h2 className="text-3xl font-bold text-white sm:text-4xl">{title}</h2>
           <p className="mt-4 text-lg text-white/65">{subtitle}</p>
           <div className="mt-8 flex flex-col items-center gap-4">
-            <InquiryForm serviceLabel={serviceLabel} />
+            <InquiryForm serviceLabel={serviceLabel} serviceSlug={serviceSlug} />
             <p className="text-sm text-white/50">
               {siteConfig.phone.short} · {siteConfig.email.general}
             </p>

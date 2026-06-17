@@ -62,7 +62,11 @@ export function ElementorServicePage({ slug }: { slug: string }) {
       <div ref={containerRef} dangerouslySetInnerHTML={{ __html: data.html }} />
       {data.includeMonitoring && <MonitoringTiers />}
       {data.ctaTitle && data.ctaText && (
-        <ServiceQuoteSection title={data.ctaTitle} description={data.ctaText} />
+        <ServiceQuoteSection
+          title={data.ctaTitle}
+          description={data.ctaText}
+          serviceSlug={slug}
+        />
       )}
     </>
   );
