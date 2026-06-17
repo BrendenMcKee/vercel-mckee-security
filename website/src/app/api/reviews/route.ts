@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import {
   fallbackReviews,
   filterFiveStarReviews,
+  getGoogleMapsProfileUrl,
+  getGoogleWriteReviewUrl,
   googleBusiness,
+  resolveGooglePlaceId,
   type GoogleReview,
 } from "@/lib/reviews";
 
@@ -25,9 +28,12 @@ async function fetchGoogleReviews(): Promise<{
   reviews: GoogleReview[];
   rating: number;
   reviewCount: number;
+  placeId: string | null;
 } | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  const placeId = process.env.GOOGLE_PLACE_ID;
+  const configuredPlaceId = process.env.GOOGLE_PLACE_ID;
+  const placeId =
+    configuredPlaceId || (apiKey ? await resolveGooglePlaceId(apiKey) : null);
   if (!apiKey || !placeId) return null;
 
   const res = await fetch(
@@ -61,18 +67,34 @@ async function fetchGoogleReviews(): Promise<{
     reviews: filterFiveStarReviews(mapped),
     rating: data.rating ?? googleBusiness.rating,
     reviewCount: data.userRatingCount ?? googleBusiness.reviewCount,
+    placeId,
+  };
+}
+
+function buildBusinessLinks(placeId?: string | null) {
+  const id = placeId ?? googleBusiness.placeId ?? undefined;
+  return {
+    mapsUrl: getGoogleMapsProfileUrl(id),
+    writeReviewUrl: getGoogleWriteReviewUrl(id),
+    placeId: id ?? "",
   };
 }
 
 export async function GET() {
   try {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     const live = await fetchGoogleReviews();
+    const resolvedPlaceId =
+      live?.placeId ||
+      googleBusiness.placeId ||
+      (apiKey ? await resolveGooglePlaceId(apiKey) : null);
+    const links = buildBusinessLinks(resolvedPlaceId);
     const reviews = live?.reviews ?? filterFiveStarReviews(fallbackReviews);
 
     return NextResponse.json({
       business: {
         name: googleBusiness.name,
-        mapsUrl: googleBusiness.mapsUrl,
+        ...links,
         rating: live?.rating ?? googleBusiness.rating,
         reviewCount: live?.reviewCount ?? googleBusiness.reviewCount,
         aiSummaryBullets: googleBusiness.aiSummaryBullets,
@@ -81,10 +103,11 @@ export async function GET() {
       source: live ? "google" : "fallback",
     });
   } catch {
+    const links = buildBusinessLinks();
     return NextResponse.json({
       business: {
         name: googleBusiness.name,
-        mapsUrl: googleBusiness.mapsUrl,
+        ...links,
         rating: googleBusiness.rating,
         reviewCount: googleBusiness.reviewCount,
         aiSummaryBullets: googleBusiness.aiSummaryBullets,

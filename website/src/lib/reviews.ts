@@ -11,8 +11,9 @@ export const googleBusiness = {
   name: "McKee Security & Audio Systems",
   rating: 4.9,
   reviewCount: 47,
-  mapsUrl:
+  mapsSearchUrl:
     "https://www.google.com/maps/search/McKee+Security+Audio+Systems+Haliburton",
+  /** Used by Places API + write-review links when set in Vercel */
   placeId: process.env.GOOGLE_PLACE_ID ?? "",
   aiSummaryBullets: [
     "Professional installation and responsive local support",
@@ -21,6 +22,63 @@ export const googleBusiness = {
     "Fair pricing from a trusted family-owned team",
   ],
 };
+
+const BUSINESS_TEXT_QUERY =
+  "McKee Security & Audio Systems, 4702 Haliburton County Rd 21, Haliburton, ON K0M 1S0, Canada";
+
+/** Direct link from Google Business Profile → Share review form (optional override) */
+export function getGoogleReviewUrlOverride(): string {
+  return process.env.GOOGLE_REVIEW_URL?.trim() ?? "";
+}
+
+export function getGoogleMapsProfileUrl(placeId?: string): string {
+  const id = placeId || googleBusiness.placeId;
+  if (id) {
+    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(id)}`;
+  }
+  return googleBusiness.mapsSearchUrl;
+}
+
+/** Opens Google's star-rating review dialog when a Place ID is available */
+export function getGoogleWriteReviewUrl(placeId?: string): string {
+  const override = getGoogleReviewUrlOverride();
+  if (override) return override;
+
+  const id = placeId || googleBusiness.placeId;
+  if (id) {
+    return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(id)}`;
+  }
+
+  return googleBusiness.mapsSearchUrl;
+}
+
+export async function resolveGooglePlaceId(apiKey?: string): Promise<string | null> {
+  if (googleBusiness.placeId) return googleBusiness.placeId;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "places.id",
+      },
+      body: JSON.stringify({ textQuery: BUSINESS_TEXT_QUERY }),
+      next: { revalidate: 86400 * 7 },
+    });
+
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as { places?: Array<{ id?: string }> };
+    const raw = data.places?.[0]?.id;
+    if (!raw) return null;
+
+    return raw.startsWith("places/") ? raw.slice("places/".length) : raw;
+  } catch {
+    return null;
+  }
+}
 
 export const fallbackReviews: GoogleReview[] = [
   {

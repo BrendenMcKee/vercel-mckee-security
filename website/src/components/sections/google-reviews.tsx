@@ -6,6 +6,8 @@ import type { GoogleReview } from "@/lib/reviews";
 import {
   fallbackReviews,
   filterFiveStarReviews,
+  getGoogleMapsProfileUrl,
+  getGoogleWriteReviewUrl,
   googleBusiness,
 } from "@/lib/reviews";
 import { BrandedStatsBackground } from "@/components/sections/branded-stats-background";
@@ -17,6 +19,7 @@ type ReviewsPayload = {
     rating: number;
     reviewCount: number;
     mapsUrl: string;
+    writeReviewUrl: string;
     aiSummaryBullets?: string[];
   };
   reviews: GoogleReview[];
@@ -29,7 +32,8 @@ const defaultPayload: ReviewsPayload = {
     name: googleBusiness.name,
     rating: googleBusiness.rating,
     reviewCount: googleBusiness.reviewCount,
-    mapsUrl: googleBusiness.mapsUrl,
+    mapsUrl: getGoogleMapsProfileUrl(),
+    writeReviewUrl: getGoogleWriteReviewUrl(),
     aiSummaryBullets: googleBusiness.aiSummaryBullets,
   },
   reviews: filterFiveStarReviews(fallbackReviews),
@@ -194,6 +198,11 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
               payload.business?.aiSummaryBullets?.length
                 ? payload.business.aiSummaryBullets
                 : googleBusiness.aiSummaryBullets,
+            writeReviewUrl:
+              payload.business?.writeReviewUrl ||
+              defaultPayload.business.writeReviewUrl,
+            mapsUrl:
+              payload.business?.mapsUrl || defaultPayload.business.mapsUrl,
           },
           reviews: payload.reviews?.length
             ? filterFiveStarReviews(payload.reviews)
@@ -313,13 +322,13 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
 
         <div className="border-t border-white/10 px-5 py-3.5 text-center md:px-6">
           <a
-            href={data.business.mapsUrl}
+            href={data.business.writeReviewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#1a1a1a] px-5 py-2 text-sm font-medium text-white/85 transition hover:border-white/25 hover:bg-[#222]"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-[#1a1a1a] px-5 py-2 text-sm font-medium text-white/85 transition hover:border-white/25 hover:bg-[#222]"
           >
             <GoogleLogo className="h-4 w-4" />
-            Review us on Google
+            Leave us a review
           </a>
         </div>
       </div>
