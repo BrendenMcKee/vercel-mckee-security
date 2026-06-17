@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import type { GoogleReview } from "@/lib/reviews";
+import { BrandedStatsBackground } from "@/components/sections/branded-stats-background";
 
 type ReviewsPayload = {
   business: {
@@ -111,9 +112,11 @@ export function GoogleReviewsSection() {
   if (!data?.reviews.length) return null;
 
   return (
-    <section className="border-y border-white/5 bg-[#0a0a0a] py-8 md:py-10">
-      <div className="mx-auto max-w-[1400px] px-4 md:px-8">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414] shadow-xl shadow-black/40">
+    <section className="relative overflow-hidden pb-20 pt-6 md:pb-28 md:pt-8">
+      <BrandedStatsBackground />
+
+      <div className="relative z-10 mx-auto max-w-[1400px] px-4 md:px-8">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/95 shadow-xl shadow-black/40 backdrop-blur-sm">
           <div className="flex flex-wrap items-center gap-4 border-b border-white/10 px-5 py-4 md:px-6 md:py-5">
             <GoogleLogo className="h-7 w-7 shrink-0" />
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
