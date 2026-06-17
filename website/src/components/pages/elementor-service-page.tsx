@@ -4,6 +4,10 @@ import { useEffect, useRef } from "react";
 import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
 import { MonitoringTiers } from "@/components/sections/monitoring-tiers";
 import { getElementorPage } from "@/lib/elementor-pages";
+import {
+  enhanceElementorImages,
+  getElementorPreloadImages,
+} from "@/lib/elementor-images";
 
 function getParticleClassName(particleContainerClass: string) {
   if (particleContainerClass.includes("mks2025")) {
@@ -37,8 +41,14 @@ function useParticles(particleContainerClass: string | undefined) {
 export function ElementorServicePage({ slug }: { slug: string }) {
   const data = getElementorPage(slug);
   const containerRef = useRef<HTMLDivElement>(null);
+  const preloadImages = getElementorPreloadImages(slug);
 
   useParticles(data?.particleClass);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    enhanceElementorImages(containerRef.current);
+  }, [slug]);
 
   if (!data) {
     return null;
@@ -46,6 +56,9 @@ export function ElementorServicePage({ slug }: { slug: string }) {
 
   return (
     <>
+      {preloadImages.map((src) => (
+        <link key={src} rel="preload" as="image" href={src} />
+      ))}
       <div ref={containerRef} dangerouslySetInnerHTML={{ __html: data.html }} />
       {data.includeMonitoring && <MonitoringTiers />}
       {data.ctaTitle && data.ctaText && (

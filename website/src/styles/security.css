@@ -229,6 +229,7 @@ body main,
     margin: 40px auto 0 !important;
     border-radius: 12px !important;
     overflow: hidden !important;
+    background: linear-gradient(135deg, #1a1a1a 0%, #121212 100%) !important;
     box-shadow: 0 0 20px rgba(196, 30, 46, 0.4), 0 0 40px rgba(196, 30, 46, 0.1), 0 4px 20px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -297,6 +298,7 @@ body main,
     max-width: 350px !important;
     position: relative !important;
     overflow: hidden !important;
+    background-color: #161616 !important;
     background-size: 120% !important;
     background-position: center 50% !important;
     box-shadow: 0 0 20px rgba(196, 30, 46, 0.4), 0 0 40px rgba(196, 30, 46, 0.08), 0 4px 20px rgba(0, 0, 0, 0.3) !important;

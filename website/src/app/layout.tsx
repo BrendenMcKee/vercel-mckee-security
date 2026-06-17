@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/footer";
 import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 import "@/styles/elementor-forms.css";
+import "@/styles/elementor-cards.css";
 
 const lato = Lato({
   variable: "--font-lato",

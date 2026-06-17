@@ -1,0 +1,55 @@
+/* Equal-height cards in shared grids across Elementor service pages */
+.mks2025-sec-card-grid,
+.mks2025-cam-card-grid,
+.mks2025-net-card-grid,
+.mckee-audio-block .card-grid,
+.mckee-starlink-block .card-grid,
+.mckee-starlink-block .equipment-grid,
+.mckee-audio-block .product-grid,
+.mks2025-ci-values-grid,
+.mks2025-ci-why-grid,
+.mks2025-ci-services-grid {
+  align-items: stretch !important;
+}
+
+.mks2025-sec-card,
+.mks2025-cam-card,
+.mks2025-net-card,
+.mckee-audio-block .card-grid > .card,
+.mckee-starlink-block .card-grid > .card,
+.mckee-starlink-block .equipment-grid > .equipment-item,
+.mckee-audio-block .product-grid > .product-item,
+.mks2025-ci-value-card,
+.mks2025-ci-why-card,
+.mks2025-ci-service-card {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.mks2025-sec-card-image-wrapper,
+.mks2025-cam-card-image-wrapper,
+.mks2025-net-card-image-wrapper {
+  flex-shrink: 0 !important;
+}
+
+/* Reserve space and soften image pop-in on service pages */
+.mks2025-sec-hero-image-wrapper,
+.mks2025-sec-service-visual,
+.mks2025-cam-service-visual,
+.mks2025-net-service-visual,
+.mckee-audio-block .service-visual,
+.mckee-starlink-block .service-visual {
+  background-color: #161616 !important;
+}
+
+.mks2025-sec-hero-image,
+.mckee-starlink-block .hero-image {
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+
+.mks2025-sec-hero-image.mckee-elementor-img-loading,
+.mckee-starlink-block .hero-image.mckee-elementor-img-loading {
+  opacity: 0;
+}
