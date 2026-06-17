@@ -29,7 +29,7 @@ const formKindMeta: Record<FormEmailKind, FormMeta> = {
     inboxLabel: "New service inquiry",
   },
   apply: {
-    emoji: "🧑‍💼",
+    emoji: "🧑‍💼💼",
     title: "Job Application",
     inboxLabel: "New job application",
   },
@@ -37,12 +37,12 @@ const formKindMeta: Record<FormEmailKind, FormMeta> = {
 
 const serviceInquiryMeta: Record<ServiceInquirySlug, FormMeta> = {
   security: {
-    emoji: "🛡️",
+    emoji: "🔒",
     title: "Security Inquiry",
     inboxLabel: "Security quote request",
   },
   "camera-surveillance": {
-    emoji: "📹",
+    emoji: "📸",
     title: "Camera Surveillance Inquiry",
     inboxLabel: "Camera quote request",
   },
