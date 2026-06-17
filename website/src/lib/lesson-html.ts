@@ -105,6 +105,30 @@ export function countEmbeddedCheckboxes(html: string): number {
   return (html.match(/type="checkbox"/gi) ?? []).length;
 }
 
+/** Short academy/link lessons only need progress at the bottom; long guides get top + bottom. */
+export function shouldShowTopLessonProgress(html: string): boolean {
+  if (!html) return false;
+
+  const prepared = prepareLessonHtml(html);
+  const layoutClass = getLessonLayoutClass(prepared);
+  const checkboxCount = countEmbeddedCheckboxes(prepared);
+  const length = prepared.length;
+
+  if (
+    layoutClass === "mckee-lesson-centered" &&
+    length < 5000 &&
+    checkboxCount === 0
+  ) {
+    return false;
+  }
+
+  if (length < 8000 && checkboxCount === 0) {
+    return false;
+  }
+
+  return true;
+}
+
 export function getEmbeddedCheckboxProgress(lessonId: string, html: string) {
   if (typeof window === "undefined") return { checked: 0, total: 0 };
 

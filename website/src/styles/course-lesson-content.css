@@ -77,6 +77,12 @@
   padding-right: 0 !important;
 }
 
+/* Legacy WordPress wrappers add empty space above the first heading */
+.course-lesson-html > div,
+.course-lesson-html > div > div {
+  padding-top: 0 !important;
+}
+
 .course-lesson-html div[style*="background-color: #1a1a1a"],
 .course-lesson-html div[style*="background: #1a1a1a"],
 .course-lesson-html div[style*="background-color: #2d2d2d"],
@@ -116,8 +122,15 @@
 
 .course-lesson-html h2:first-child,
 .course-lesson-html > h2:first-of-type,
-.course-lesson-html h3:first-child {
-  margin-top: 0;
+.course-lesson-html h2:first-of-type,
+.course-lesson-html h3:first-child,
+.course-lesson-html h3:first-of-type {
+  margin-top: 0 !important;
+}
+
+.course-lesson-html > p:first-child,
+.course-lesson-html > div:first-child > p:first-child {
+  margin-top: 0 !important;
 }
 
 .course-lesson-html p,
