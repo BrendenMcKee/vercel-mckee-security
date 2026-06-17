@@ -1,98 +1,30 @@
 {
-  "auditedAt": "2026-06-17",
-  "totalMediaItems": 645,
-  "note": "Full bulk download deferred to build phase. Below: priority assets for v1.",
-  "categories": {
-    "branding": [
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/12/MS_LOGO.png",
-        "filename": "MS_LOGO.png",
-        "width": 11417,
-        "height": 3375,
-        "usage": "Primary logo — header"
-      },
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/12/MS_LOGO-1024x303.png",
-        "filename": "MS_LOGO-1024x303.png",
-        "width": 1024,
-        "height": 303,
-        "usage": "Header logo (current live size)"
-      },
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/12/MS-Icon.png",
-        "filename": "MS-Icon.png",
-        "width": 504,
-        "height": 504,
-        "usage": "Square icon mark"
-      },
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2024/10/cropped-V6-Logo-Shield-192x192.png",
-        "filename": "favicon-192.png",
-        "width": 192,
-        "height": 192,
-        "usage": "Favicon / PWA icon"
-      }
-    ],
-    "hero": [
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2020/08/DSC00541-min.jpg",
-        "filename": "DSC00541-min.jpg",
-        "width": 6000,
-        "height": 4000,
-        "usage": "Homepage hero background"
-      }
-    ],
-    "security": [
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/12/01-honeywell-total-connect-2.jpg",
-        "filename": "honeywell-total-connect-2.jpg",
-        "usage": "Total Connect 2.0"
-      },
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/12/TC2.0.png",
-        "filename": "TC2.0.png",
-        "usage": "Total Connect app"
-      }
-    ],
-    "starlink": [
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/11/Our_STARLINK_Mounting_Kit.jpg",
-        "filename": "starlink-mounting-kit.jpg",
-        "usage": "Starlink mounting product"
-      },
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/11/Our_Gen3_Starlink_150ft_Cable.jpg",
-        "filename": "starlink-150ft-cable.jpg",
-        "usage": "Starlink cable product"
-      }
-    ],
-    "audioVideo": [
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/11/TV_Installation.png",
-        "filename": "TV_Installation.png",
-        "usage": "TV installation service"
-      },
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/11/Home_Theater.png",
-        "filename": "Home_Theater.png",
-        "usage": "Home theater service"
-      }
-    ],
-    "ui": [
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/12/white-phone-icon-with-a-phone-call-icon.png",
-        "filename": "phone-icon.png",
-        "usage": "Header phone icon"
-      },
-      {
-        "url": "https://mckeesecurity.ca/wp-content/uploads/2025/12/email-icon-in-a-flat-shape-shape.png",
-        "filename": "email-icon.png",
-        "usage": "Header email icon"
-      }
-    ]
-  },
-  "downloadStrategy": {
-    "v1": "Download branding + hero + per-page images during component build",
-    "full": "Script bulk download from wp-json media API (645 items) to audit/assets/ before launch QA"
-  }
+  "downloadedAt": "2026-06-17",
+  "source": "https://mckeesecurity.ca",
+  "localRoot": "website/public/images",
+  "files": [
+    { "path": "/images/hero-home.jpg", "usage": "Home hero background" },
+    { "path": "/images/banner-desktop.png", "usage": "Home desktop promo banner" },
+    { "path": "/images/banner-mobile.png", "usage": "Home mobile promo banner" },
+    { "path": "/images/browse-services-bg.jpg", "usage": "Home browse services parallax" },
+    { "path": "/images/hat.png", "usage": "Home why choose us" },
+    { "path": "/images/team-install.jpg", "usage": "Home what we do" },
+    { "path": "/images/sonos-bg.jpg", "usage": "Home thank you section" },
+    { "path": "/images/logo.png", "usage": "Header logo" },
+    { "path": "/images/favicon-192.png", "usage": "Favicon" },
+    { "path": "/images/services/security-wireless.jpg", "usage": "Security service card and hero" },
+    { "path": "/images/services/security-wired.jpg", "usage": "Security page gallery" },
+    { "path": "/images/services/security-facilities.jpg", "usage": "Security and services hub" },
+    { "path": "/images/services/total-connect.png", "usage": "Security Total Connect" },
+    { "path": "/images/services/honeywell.jpg", "usage": "Security Honeywell" },
+    { "path": "/images/services/cameras.png", "usage": "Camera service" },
+    { "path": "/images/services/networking.png", "usage": "Networking service" },
+    { "path": "/images/services/tv-install.png", "usage": "Audio video service" },
+    { "path": "/images/services/home-theater.png", "usage": "Audio video gallery" },
+    { "path": "/images/services/starlink.jpg", "usage": "Starlink service" },
+    { "path": "/images/services/starlink-mount.jpg", "usage": "Starlink gallery" },
+    { "path": "/images/services/starlink-cable.jpg", "usage": "Starlink gallery" },
+    { "path": "/images/services/pre-wire.jpg", "usage": "Services hub" }
+  ],
+  "remainingFromWordPress": "645 total media items in WP. Bulk export can pull team photos and page-specific Elementor assets next."
 }

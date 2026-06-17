@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Hero } from "@/components/sections/hero";
 import { ServiceCardGrid } from "@/components/sections/service-card-grid";
 import { FadeIn } from "@/components/motion/fade-in";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { CtaBand, HeritageBand } from "@/components/sections/cta-band";
+import { images } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Custom Installations and Professional Products",
@@ -52,12 +54,13 @@ export default function ServicesHubPage() {
         eyebrow="Custom Installations"
         title="Professional Solutions Tailored to Your Property"
         subtitle="McKee Security and Audio Systems provides comprehensive technology solutions for residential and commercial properties throughout the Haliburton region."
+        image={images.browseServicesBg}
         compact
         primaryCta={{ label: "Get a Free Quote", href: "#quote" }}
       />
 
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-6">
+      <section className="py-16 lg:py-20">
+        <div className="mx-auto max-w-[1400px] px-6">
           <FadeIn>
             <SectionHeading title="Our Custom Installation Services" />
           </FadeIn>
@@ -67,8 +70,35 @@ export default function ServicesHubPage() {
         </div>
       </section>
 
-      <section className="bg-surface py-20">
-        <div className="mx-auto max-w-7xl px-6">
+      <section className="border-y border-white/5 bg-[#111111] py-16">
+        <div className="mx-auto grid max-w-[1400px] gap-6 px-6 md:grid-cols-2">
+          <FadeIn>
+            <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10">
+              <Image
+                src={images.services.preWire}
+                alt="Structured wiring installation"
+                fill
+                className="object-cover"
+                sizes="50vw"
+              />
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10">
+              <Image
+                src={images.services.securityFacilities}
+                alt="Commercial security installation"
+                fill
+                className="object-cover"
+                sizes="50vw"
+              />
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      <section className="py-16 lg:py-20">
+        <div className="mx-auto max-w-[1400px] px-6">
           <FadeIn>
             <SectionHeading
               eyebrow="The McKee Approach"
@@ -78,9 +108,11 @@ export default function ServicesHubPage() {
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {approach.map((item, i) => (
               <FadeIn key={item.title} delay={i * 0.08}>
-                <div className="rounded-2xl border border-white/10 p-8">
+                <div className="rounded-2xl border border-white/10 bg-[#111111] p-8">
                   <h3 className="text-xl font-bold text-white">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-white/60">{item.text}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-white/60">
+                    {item.text}
+                  </p>
                 </div>
               </FadeIn>
             ))}
@@ -88,15 +120,15 @@ export default function ServicesHubPage() {
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-6">
+      <section className="bg-surface py-16 lg:py-20">
+        <div className="mx-auto max-w-[1400px] px-6">
           <FadeIn>
             <SectionHeading title="Why Choose McKee Security and Audio Systems" />
           </FadeIn>
           <div className="mt-12 grid gap-6 sm:grid-cols-2">
             {whyUs.map((item, i) => (
               <FadeIn key={item.title} delay={i * 0.06}>
-                <div className="rounded-2xl border border-white/10 bg-surface-elevated/30 p-6">
+                <div className="rounded-2xl border border-white/10 bg-[#111111] p-6">
                   <h3 className="font-bold text-white">{item.title}</h3>
                   <p className="mt-2 text-sm text-white/60">{item.text}</p>
                 </div>
@@ -107,7 +139,10 @@ export default function ServicesHubPage() {
       </section>
 
       <div id="quote">
-        <CtaBand title="Ready to Get Started?" subtitle="Tell us about your project and we will design a custom solution for your property." />
+        <CtaBand
+          title="Ready to Get Started?"
+          subtitle="Tell us about your project and we will design a custom solution for your property."
+        />
       </div>
       <HeritageBand />
     </>

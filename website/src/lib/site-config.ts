@@ -1,3 +1,52 @@
+export type NavChild = {
+  label: string;
+  href: string;
+  icon?: "home" | "lock" | "camera" | "network" | "tv" | "satellite";
+};
+
+export type NavItem = {
+  label: string;
+  href: string;
+  children?: NavChild[];
+};
+
+export const mainNav: NavItem[] = [
+  { label: "Home", href: "/" },
+  { label: "Contact Us", href: "/contact-us" },
+  { label: "About Us", href: "/about-us" },
+  {
+    label: "Our Services",
+    href: "/custom-installations-professional-products",
+    children: [
+      {
+        label: "Our Services",
+        href: "/custom-installations-professional-products",
+        icon: "home",
+      },
+      { label: "Security", href: "/security", icon: "lock" },
+      {
+        label: "Camera Surveillance",
+        href: "/camera-surveillance",
+        icon: "camera",
+      },
+      {
+        label: "Networking / Cellular Expansion",
+        href: "/networking-cellular-expansion",
+        icon: "network",
+      },
+      { label: "Audio / Video", href: "/audio-video", icon: "tv" },
+      { label: "Starlink", href: "/starlink", icon: "satellite" },
+    ],
+  },
+];
+
+/** @deprecated Use mainNav instead */
+export const primaryNav = mainNav.flatMap((item) =>
+  item.children
+    ? [{ label: item.label, href: item.href }, ...item.children]
+    : [item],
+);
+
 export const siteConfig = {
   name: "McKee Security & Audio Systems",
   tagline: "A viable technology solution",
@@ -7,6 +56,8 @@ export const siteConfig = {
   foundedYear: 1994,
   yearsInBusiness: 30,
   region: "Haliburton region, Ontario, Canada",
+  hours: "Mon-Fri 8:00am - 4:00pm",
+  topBarTagline: "Leading Industry Professionals",
   address: {
     street: "4702 Haliburton County Rd 21",
     city: "Haliburton",
@@ -53,31 +104,7 @@ export const siteConfig = {
   ],
 } as const;
 
-export type NavItem = {
-  label: string;
-  href: string;
-  icon?: string;
-};
-
-export const primaryNav: NavItem[] = [
-  { label: "Home", href: "/" },
-  { label: "Contact Us", href: "/contact-us" },
-  { label: "About Us", href: "/about-us" },
-  {
-    label: "Our Services",
-    href: "/custom-installations-professional-products",
-  },
-  { label: "Security", href: "/security" },
-  { label: "Camera Surveillance", href: "/camera-surveillance" },
-  {
-    label: "Networking / Cellular Expansion",
-    href: "/networking-cellular-expansion",
-  },
-  { label: "Audio / Video", href: "/audio-video" },
-  { label: "Starlink", href: "/starlink" },
-];
-
-export const footerNav: NavItem[] = [
+export const footerNav = [
   { label: "Our Courses", href: "/our-courses" },
   { label: "Apply Now", href: "/apply-now" },
   { label: "Terms and Conditions", href: "/terms-and-conditions" },
@@ -98,3 +125,29 @@ export const team = [
 
 export const heritageBlurb =
   "For over 30 years, McKee Security has served families and businesses throughout the Haliburton region. Founded by Maurice McKee and now led by third-generation owner Brenden McKee, we have built our reputation on professional installation, honest service, and cutting-edge technology.";
+
+export const images = {
+  heroHome: "/images/hero-home.jpg",
+  bannerDesktop: "/images/banner-desktop.png",
+  bannerMobile: "/images/banner-mobile.png",
+  browseServicesBg: "/images/browse-services-bg.jpg",
+  hat: "/images/hat.png",
+  teamInstall: "/images/team-install.jpg",
+  sonosBg: "/images/sonos-bg.jpg",
+  logo: "/images/logo.png",
+  services: {
+    securityWireless: "/images/services/security-wireless.jpg",
+    securityWired: "/images/services/security-wired.jpg",
+    securityFacilities: "/images/services/security-facilities.jpg",
+    totalConnect: "/images/services/total-connect.png",
+    cameras: "/images/services/cameras.png",
+    networking: "/images/services/networking.png",
+    tvInstall: "/images/services/tv-install.png",
+    homeTheater: "/images/services/home-theater.png",
+    starlink: "/images/services/starlink.jpg",
+    preWire: "/images/services/pre-wire.jpg",
+    honeywell: "/images/services/honeywell.jpg",
+    starlinkMount: "/images/services/starlink-mount.jpg",
+    starlinkCable: "/images/services/starlink-cable.jpg",
+  },
+} as const;

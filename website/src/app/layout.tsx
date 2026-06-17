@@ -29,6 +29,10 @@ export const metadata: Metadata = {
     locale: "en_CA",
     siteName: siteConfig.name,
   },
+  icons: {
+    icon: "/images/favicon-192.png",
+    apple: "/images/favicon-192.png",
+  },
 };
 
 export default function RootLayout({

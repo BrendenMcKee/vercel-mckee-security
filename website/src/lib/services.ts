@@ -6,6 +6,7 @@ import {
   Speaker,
   type LucideIcon,
 } from "lucide-react";
+import { images } from "./site-config";
 
 export type Service = {
   slug: string;
@@ -17,7 +18,7 @@ export type Service = {
   description: string;
   icon: LucideIcon;
   features: string[];
-  image?: string;
+  image: string;
 };
 
 export const services: Service[] = [
@@ -37,6 +38,7 @@ export const services: Service[] = [
       "Smart Alerts",
       "Cellular Communication",
     ],
+    image: images.services.securityWireless,
   },
   {
     slug: "camera-surveillance",
@@ -54,6 +56,7 @@ export const services: Service[] = [
       "Remote Viewing",
       "NDAA Compliant",
     ],
+    image: images.services.cameras,
   },
   {
     slug: "networking-cellular-expansion",
@@ -71,6 +74,7 @@ export const services: Service[] = [
       "Wireless Bridges",
       "Cellular Boosting",
     ],
+    image: images.services.networking,
   },
   {
     slug: "audio-video",
@@ -88,6 +92,7 @@ export const services: Service[] = [
       "Whole-Home Audio",
       "Home Theater",
     ],
+    image: images.services.tvInstall,
   },
   {
     slug: "starlink",
@@ -105,6 +110,7 @@ export const services: Service[] = [
       "All Equipment Provided",
       "UniFi Integration",
     ],
+    image: images.services.starlink,
   },
 ];
 

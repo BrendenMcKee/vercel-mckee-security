@@ -6,7 +6,9 @@ export type FeatureBlock = {
   bullets: string[];
 };
 
-export type ServicePageContent = Service & {
+export type ServicePageContent = Omit<Service, "icon" | "image"> & {
+  icon?: Service["icon"];
+  image?: string;
   heroSubtitle: string;
   intro: string;
   featureIcons: { label: string }[];
