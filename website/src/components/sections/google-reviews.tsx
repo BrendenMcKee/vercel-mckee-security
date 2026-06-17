@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import type { GoogleReview } from "@/lib/reviews";
 import {
@@ -11,7 +11,6 @@ import {
   googleBusiness,
 } from "@/lib/reviews";
 import { BrandedStatsBackground } from "@/components/sections/branded-stats-background";
-import { cn } from "@/lib/utils";
 
 type ReviewsPayload = {
   business: {
@@ -236,10 +235,26 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
   const syncScrollEdges = useCallback(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    const maxScroll = el.scrollWidth - el.clientWidth;
-    setAtStart(el.scrollLeft <= 1);
-    setAtEnd(maxScroll <= 1 || el.scrollLeft >= maxScroll - 1);
+    const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+    const scrollLeft = el.scrollLeft;
+    setAtStart(scrollLeft <= 2);
+    setAtEnd(maxScroll <= 2 || scrollLeft >= maxScroll - 2);
   }, []);
+
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    el.scrollLeft = 0;
+    syncScrollEdges();
+
+    const frame = requestAnimationFrame(() => {
+      syncScrollEdges();
+      requestAnimationFrame(syncScrollEdges);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [reviews, aiBullets, syncScrollEdges]);
 
   useEffect(() => {
     syncScrollEdges();
@@ -247,8 +262,12 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
     if (!el) return;
 
     el.addEventListener("scroll", syncScrollEdges, { passive: true });
+    el.addEventListener("scrollend", syncScrollEdges, { passive: true });
     const ro = new ResizeObserver(syncScrollEdges);
     ro.observe(el);
+    for (const child of el.children) {
+      ro.observe(child);
+    }
 
     const onWheel = (event: WheelEvent) => {
       if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
@@ -272,6 +291,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
 
     return () => {
       el.removeEventListener("scroll", syncScrollEdges);
+      el.removeEventListener("scrollend", syncScrollEdges);
       el.removeEventListener("wheel", onWheel);
       ro.disconnect();
     };
@@ -284,7 +304,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
     const gap = 12;
     const delta = card ? card.offsetWidth + gap : 312;
     el.scrollBy({ left: dir * delta, behavior: "smooth" });
-    window.setTimeout(syncScrollEdges, 350);
+    window.setTimeout(syncScrollEdges, 400);
   };
 
   const widget = (
@@ -316,44 +336,38 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
         </div>
 
         <div className="relative bg-[#101010] px-3 py-4 md:px-5">
-          {!atStart && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-10 bg-gradient-to-r from-[#101010] to-transparent md:w-14"
-            />
-          )}
-          {!atEnd && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-10 bg-gradient-to-l from-[#101010] to-transparent md:w-14"
-            />
-          )}
-          <button
-            type="button"
-            aria-label="Previous reviews"
-            aria-hidden={atStart}
-            disabled={atStart}
-            onClick={() => scroll(-1)}
-            className={cn(
-              "absolute left-1 top-1/2 z-10 flex -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a]/95 p-2 shadow-lg backdrop-blur-sm transition-opacity duration-200 hover:bg-[#252525] md:left-1.5 md:p-2.5",
-              atStart && "pointer-events-none opacity-0",
-            )}
-          >
-            <ChevronLeft className="h-4 w-4 text-white/80 md:h-5 md:w-5" />
-          </button>
-          <button
-            type="button"
-            aria-label="Next reviews"
-            aria-hidden={atEnd}
-            disabled={atEnd}
-            onClick={() => scroll(1)}
-            className={cn(
-              "absolute right-1 top-1/2 z-10 flex -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a]/95 p-2 shadow-lg backdrop-blur-sm transition-opacity duration-200 hover:bg-[#252525] md:right-1.5 md:p-2.5",
-              atEnd && "pointer-events-none opacity-0",
-            )}
-          >
-            <ChevronRight className="h-4 w-4 text-white/80 md:h-5 md:w-5" />
-          </button>
+          {!atStart ? (
+            <>
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-10 bg-gradient-to-r from-[#101010] to-transparent md:w-14"
+              />
+              <button
+                type="button"
+                aria-label="Previous reviews"
+                onClick={() => scroll(-1)}
+                className="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a]/95 p-2 shadow-lg backdrop-blur-sm transition-opacity duration-200 hover:bg-[#252525] md:left-1.5 md:p-2.5"
+              >
+                <ChevronLeft className="h-4 w-4 text-white/80 md:h-5 md:w-5" />
+              </button>
+            </>
+          ) : null}
+          {!atEnd ? (
+            <>
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-10 bg-gradient-to-l from-[#101010] to-transparent md:w-14"
+              />
+              <button
+                type="button"
+                aria-label="Next reviews"
+                onClick={() => scroll(1)}
+                className="absolute right-1 top-1/2 z-10 flex -translate-y-1/2 cursor-pointer rounded-full border border-white/15 bg-[#1a1a1a]/95 p-2 shadow-lg backdrop-blur-sm transition-opacity duration-200 hover:bg-[#252525] md:right-1.5 md:p-2.5"
+              >
+                <ChevronRight className="h-4 w-4 text-white/80 md:h-5 md:w-5" />
+              </button>
+            </>
+          ) : null}
 
           <p className="mb-3 px-1 text-center text-[11px] leading-relaxed text-white/40 md:text-xs">
             Swipe or use the arrows to go through our five latest reviews.{" "}
