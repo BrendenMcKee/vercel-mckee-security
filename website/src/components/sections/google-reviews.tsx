@@ -243,12 +243,17 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
 
     const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
     const scrollLeft = el.scrollLeft;
-    const edgeSlack = 6;
+    const edgeSlack = 8;
     const startTarget = first.offsetLeft;
-    const endTarget = last.offsetLeft + last.offsetWidth - el.clientWidth;
+    const lastRight = last.offsetLeft + last.offsetWidth;
+    const visibleRight = scrollLeft + el.clientWidth;
 
     setAtStart(scrollLeft <= startTarget + edgeSlack);
-    setAtEnd(maxScroll <= edgeSlack || scrollLeft >= endTarget - edgeSlack);
+    setAtEnd(
+      maxScroll <= edgeSlack ||
+        scrollLeft >= maxScroll - edgeSlack ||
+        lastRight <= visibleRight + edgeSlack,
+    );
   }, []);
 
   useLayoutEffect(() => {
