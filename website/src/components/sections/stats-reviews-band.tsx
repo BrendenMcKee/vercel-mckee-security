@@ -7,7 +7,7 @@ import { GoogleReviewsSection } from "@/components/sections/google-reviews";
 /** Stats + reviews share one branded backdrop and red top/bottom rules */
 export function StatsReviewsBand() {
   return (
-    <section className="relative z-20 overflow-hidden border-y-4 border-primary">
+    <section className="relative z-20 overflow-hidden border-y-4 border-primary bg-[#0a0a0a]">
       <BrandedStatsBackground />
       <div className="relative z-10">
         <BannerStatsSection embedded />
