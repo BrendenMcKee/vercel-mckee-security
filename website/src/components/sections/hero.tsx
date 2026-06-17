@@ -14,8 +14,8 @@ type HeroProps = {
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   compact?: boolean;
-  /** dark = contact-style gradient, light = subtle single overlay like live home */
-  overlay?: "dark" | "light";
+  /** medium = lighter gradient for inner pages, dark = slightly stronger */
+  overlay?: "medium" | "dark";
 };
 
 export function Hero({
@@ -26,22 +26,27 @@ export function Hero({
   primaryCta,
   secondaryCta,
   compact = false,
-  overlay = "light",
+  overlay = "medium",
 }: HeroProps) {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
   });
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "45%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.3]);
+
+  const gradientClass =
+    overlay === "dark"
+      ? "bg-gradient-to-b from-black/60 via-black/48 to-background"
+      : "bg-gradient-to-b from-black/52 via-black/40 to-background";
 
   return (
     <section
       ref={ref}
       className={`relative overflow-hidden ${compact ? "min-h-[50vh]" : "min-h-[85vh]"}`}
     >
-      <motion.div style={{ y }} className="absolute inset-0 scale-110">
+      <motion.div style={{ y }} className="absolute inset-0 scale-[1.15]">
         <Image
           src={image}
           alt=""
@@ -51,11 +56,7 @@ export function Hero({
           sizes="100vw"
           quality={90}
         />
-        {overlay === "dark" ? (
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-background" />
-        ) : (
-          <div className="absolute inset-0 bg-[rgba(17,17,17,0.42)]" />
-        )}
+        <div className={`absolute inset-0 ${gradientClass}`} />
       </motion.div>
 
       <motion.div

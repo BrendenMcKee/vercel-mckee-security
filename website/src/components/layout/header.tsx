@@ -39,7 +39,7 @@ function ServiceDropdown({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="min-w-[280px] rounded-lg border border-white/10 bg-[#1a1a1a] py-2 shadow-2xl">
+    <div className="min-w-[360px] rounded-lg border border-white/10 bg-[#1a1a1a] py-2 shadow-2xl">
       {children.map((item) => {
         const Icon = item.icon ? childIcons[item.icon] : Home;
         return (
@@ -47,10 +47,10 @@ function ServiceDropdown({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white/85 transition hover:bg-white/5 hover:text-primary"
+            className="flex items-center gap-3 whitespace-nowrap px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white/85 transition hover:bg-white/5 hover:text-primary"
           >
             <Icon className="h-4 w-4 shrink-0 text-primary" />
-            <span className="leading-tight">{item.label}</span>
+            <span>{item.label}</span>
           </Link>
         );
       })}
@@ -66,7 +66,7 @@ export function Header() {
   const dropdownRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => setScrolled(window.scrollY > 32);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -100,22 +100,24 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50">
       <div
-        className={cn(
-          "hidden overflow-hidden bg-[#660000] transition-all duration-300 ease-out lg:block",
-          scrolled ? "max-h-0 opacity-0" : "max-h-12 opacity-100",
-        )}
+        className="hidden grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] lg:grid"
+        style={{ gridTemplateRows: scrolled ? "0fr" : "1fr" }}
       >
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-1.5 text-xs text-white">
-          <strong className="font-bold uppercase tracking-wide">
-            {siteConfig.topBarTagline}
-          </strong>
-          <SocialIconButtons />
+        <div className="overflow-hidden">
+          <div className="bg-[#660000]">
+            <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-1.5 text-xs text-white">
+              <strong className="font-bold uppercase tracking-wide">
+                {siteConfig.topBarTagline}
+              </strong>
+              <SocialIconButtons />
+            </div>
+          </div>
         </div>
       </div>
 
       <div
         className={cn(
-          "border-b border-white/5 bg-[rgba(10,10,10,0.92)] backdrop-blur-md transition-shadow",
+          "border-b border-white/5 bg-[rgba(10,10,10,0.92)] backdrop-blur-md transition-shadow duration-300",
           scrolled && "shadow-lg shadow-black/40",
         )}
       >
@@ -194,27 +196,25 @@ export function Header() {
       </div>
 
       <div className="hidden border-b border-white/5 bg-[rgba(63,63,63,0.95)] lg:block">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-white">
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-8 gap-y-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-white">
           <span className="flex items-center gap-2 text-white/85">
             <Clock className="h-4 w-4 shrink-0" />
             {siteConfig.hours}
           </span>
-          <div className="flex items-center gap-8">
-            <a
-              href={`mailto:${siteConfig.email.general}`}
-              className="flex items-center gap-2 transition hover:text-primary"
-            >
-              <Mail className="h-4 w-4 shrink-0" />
-              Contact
-            </a>
-            <a
-              href={`tel:${siteConfig.phone.tel}`}
-              className="flex items-center gap-2 transition hover:text-primary"
-            >
-              <Phone className="h-4 w-4 shrink-0" />
-              {siteConfig.phone.display}
-            </a>
-          </div>
+          <a
+            href={`mailto:${siteConfig.email.general}`}
+            className="flex items-center gap-2 transition hover:text-primary"
+          >
+            <Mail className="h-4 w-4 shrink-0" />
+            Contact
+          </a>
+          <a
+            href={`tel:${siteConfig.phone.tel}`}
+            className="flex items-center gap-2 transition hover:text-primary"
+          >
+            <Phone className="h-4 w-4 shrink-0" />
+            {siteConfig.phone.display}
+          </a>
         </div>
       </div>
 

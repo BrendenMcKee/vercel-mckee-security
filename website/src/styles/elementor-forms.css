@@ -1,0 +1,41 @@
+/* Elementor CTA sections: centered layout and form spacing */
+.mks2025-sec-cta-section,
+.mks2025-cam-cta-section,
+.mks2025-net-cta-section,
+.mks2025-ci-cta-section,
+.mckee-audio-block .cta-section,
+.mckee-starlink-block .cta-section {
+  text-align: center !important;
+}
+
+.mks2025-sec-contact-form-wrapper,
+.mks2025-cam-contact-form-wrapper,
+.mks2025-net-contact-form-wrapper,
+.mks2025-ci-contact-form-wrapper,
+.mckee-audio-block .contact-form-wrapper,
+.mckee-starlink-block .contact-form-wrapper {
+  padding-top: 1rem !important;
+  padding-bottom: 2rem !important;
+}
+
+.mckee-elementor-form {
+  padding: 0.5rem 0 1.5rem;
+}
+
+#mks2025-sec-main .mks2025-sec-cta-section h3,
+#mks2025-cam-main .mks2025-cam-cta-section h3,
+#mks2025-net-main .mks2025-net-cta-section h3,
+#mks2025-ci-main .mks2025-ci-cta-section h3 {
+  text-align: center !important;
+}
+
+#mks2025-sec-main .mks2025-sec-cta-section p,
+#mks2025-cam-main .mks2025-cam-cta-section p,
+#mks2025-net-main .mks2025-net-cta-section p,
+#mks2025-ci-main .mks2025-ci-cta-section p {
+  text-align: center !important;
+}
+
+.mks2025-ci-cta-section {
+  padding-bottom: clamp(50px, 8vw, 80px) !important;
+}

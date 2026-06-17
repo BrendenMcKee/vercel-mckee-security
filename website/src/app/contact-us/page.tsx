@@ -18,7 +18,7 @@ export default function ContactPage() {
         title="We would love to hear from you"
         subtitle="Call us for sales and support, or send a message using the form below."
         compact
-        overlay="dark"
+        overlay="medium"
       />
 
       <section className="py-20">

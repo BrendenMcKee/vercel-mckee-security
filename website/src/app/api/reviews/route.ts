@@ -52,13 +52,19 @@ export async function GET() {
     const reviews = live ?? fallbackReviews;
 
     return NextResponse.json({
-      business: googleBusiness,
+      business: {
+        ...googleBusiness,
+        aiSummary: googleBusiness.aiSummary,
+      },
       reviews,
       source: live ? "google" : "fallback",
     });
   } catch {
     return NextResponse.json({
-      business: googleBusiness,
+      business: {
+        ...googleBusiness,
+        aiSummary: googleBusiness.aiSummary,
+      },
       reviews: fallbackReviews,
       source: "fallback",
     });

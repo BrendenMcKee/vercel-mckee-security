@@ -8,7 +8,7 @@ import { serviceCategories } from "@/lib/services";
 import { FadeIn } from "@/components/motion/fade-in";
 import { ParallaxSection } from "@/components/sections/parallax-section";
 import { GoogleReviewsSection } from "@/components/sections/google-reviews";
-import { BannerStatsOverlay } from "@/components/sections/banner-stats";
+import { BannerStatsSection } from "@/components/sections/banner-stats-section";
 
 function ReadMoreLink({ href }: { href: string }) {
   return (
@@ -27,9 +27,10 @@ export function HomePageContent() {
       <ParallaxSection
         image={images.heroHome}
         minHeight="760px"
-        overlay="rgba(17,17,17,0.35)"
+        gradient
         objectPosition="50% 49%"
-        imageScale={1.12}
+        imageScale={1.22}
+        parallaxStrength={55}
         priority
         contentClassName="flex min-h-[760px] items-center"
       >
@@ -68,38 +69,18 @@ export function HomePageContent() {
         </div>
       </ParallaxSection>
 
-      <section className="relative hidden md:block">
-        <Image
-          src={images.bannerDesktop}
-          alt="31 years of dependability"
-          width={5141}
-          height={1287}
-          className="h-auto w-full"
-          priority
-        />
-        <BannerStatsOverlay />
-      </section>
-
-      <section className="relative md:hidden">
-        <Image
-          src={images.bannerMobile}
-          alt="31 years of dependability"
-          width={3184}
-          height={1287}
-          className="h-auto w-full"
-        />
-        <BannerStatsOverlay />
-      </section>
+      <BannerStatsSection />
 
       <GoogleReviewsSection />
 
       <ParallaxSection
         image={images.browseServicesBg}
-        overlay="rgba(0,0,0,0.17)"
-        minHeight="480px"
+        overlay="rgba(0,0,0,0.22)"
+        minHeight="520px"
         objectPosition="49% 52%"
-        imageScale={1.18}
-        contentClassName="flex min-h-[480px] items-center justify-center py-12 lg:min-h-[540px] lg:py-20"
+        imageScale={1.28}
+        parallaxStrength={55}
+        contentClassName="flex min-h-[520px] items-center justify-center py-12 lg:min-h-[580px] lg:py-20"
       >
         <div className="mx-auto w-full max-w-xl px-6">
           <FadeIn>
@@ -220,10 +201,11 @@ export function HomePageContent() {
       <ParallaxSection
         image={images.sonosBg}
         overlay="rgba(0,0,0,0.32)"
-        minHeight="520px"
+        minHeight="540px"
         objectPosition="49% 100%"
-        imageScale={1.08}
-        contentClassName="flex min-h-[520px] items-center justify-center py-16 lg:py-20"
+        imageScale={1.2}
+        parallaxStrength={55}
+        contentClassName="flex min-h-[540px] items-center justify-center py-16 lg:py-20"
       >
         <div className="mx-auto flex w-full max-w-3xl justify-center px-6">
           <FadeIn className="w-full max-w-xl">

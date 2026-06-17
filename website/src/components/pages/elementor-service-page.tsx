@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ContactForm } from "@/components/forms/contact-form";
+import { ServiceQuoteForm } from "@/components/forms/service-quote-form";
 import { MonitoringTiers } from "@/components/sections/monitoring-tiers";
 import {
   elementorStyles,
@@ -29,8 +29,8 @@ function useParticles(particleContainerClass: string | undefined) {
       const particle = document.createElement("div");
       particle.className = particleClass;
       particle.style.left = `${Math.random() * 100}%`;
-      particle.style.animationDuration = `${Math.random() * 20 + 15}s`;
-      particle.style.animationDelay = `${Math.random() * 20}s`;
+      particle.style.animationDuration = `${Math.random() * 10 + 8}s`;
+      particle.style.animationDelay = `-${Math.random() * 15}s`;
       const size = `${Math.random() * 3 + 1}px`;
       particle.style.width = size;
       particle.style.height = size;
@@ -59,12 +59,7 @@ function FormPortal({
   }, [containerRef]);
 
   if (!target) return null;
-  return createPortal(
-    <div className="mx-auto max-w-3xl">
-      <ContactForm />
-    </div>,
-    target,
-  );
+  return createPortal(<ServiceQuoteForm />, target);
 }
 
 function SecurityCta({ data }: { data: ElementorPageData }) {
@@ -76,7 +71,7 @@ function SecurityCta({ data }: { data: ElementorPageData }) {
           <h3>{data.ctaTitle}</h3>
           <p>{data.ctaText}</p>
           <div className={data.formWrapperClass}>
-            <ContactForm />
+            <ServiceQuoteForm />
           </div>
         </div>
       </div>

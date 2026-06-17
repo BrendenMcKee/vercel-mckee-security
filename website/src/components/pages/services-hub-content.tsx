@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { ContactForm } from "@/components/forms/contact-form";
+import { ServiceQuoteForm } from "@/components/forms/service-quote-form";
 import { images } from "@/lib/site-config";
 import "@/styles/mks2025-ci.css";
 
@@ -88,8 +88,8 @@ function useServicesHubEffects() {
         const particle = document.createElement("div");
         particle.className = "mks2025-ci-particle";
         particle.style.left = `${Math.random() * 100}%`;
-        particle.style.animationDuration = `${Math.random() * 20 + 15}s`;
-        particle.style.animationDelay = `${Math.random() * 20}s`;
+        particle.style.animationDuration = `${Math.random() * 10 + 8}s`;
+        particle.style.animationDelay = `-${Math.random() * 15}s`;
         const size = `${Math.random() * 3 + 1}px`;
         particle.style.width = size;
         particle.style.height = size;
@@ -287,7 +287,7 @@ export function ServicesHubContent() {
           <h3>Ready to Get Started?</h3>
           <p>Tell us about your project and we will design a custom solution for your property.</p>
           <div className="mks2025-ci-contact-form-wrapper">
-            <ContactForm />
+            <ServiceQuoteForm />
           </div>
         </div>
       </div>
