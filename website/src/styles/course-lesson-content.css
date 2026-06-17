@@ -1,24 +1,102 @@
-/* Embedded WordPress / LearnDash lesson HTML inside the course player */
+/* McKee dark-theme styling for migrated LearnDash lesson HTML */
+
 .course-lesson-html {
-  color: #222;
-  font-size: 15px;
-  line-height: 1.6;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #141414;
+  padding: 1.25rem 1rem;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.9375rem;
+  line-height: 1.65;
 }
 
-.course-lesson-html .wp-block-spacer {
-  display: none;
+@media (min-width: 768px) {
+  .course-lesson-html {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+/* Neutralize WordPress white/gray wrapper boxes */
+.course-lesson-html div[style*="background-color: #1a1a1a"],
+.course-lesson-html div[style*="background: #1a1a1a"],
+.course-lesson-html div[style*="background-color: #2d2d2d"],
+.course-lesson-html div[style*="background: #2d2d2d"],
+.course-lesson-html div[style*="background-color: white"],
+.course-lesson-html div[style*="background: #fff"],
+.course-lesson-html div[style*="background-color: #fff"],
+.course-lesson-html div[style*="background-color: #f3f3f3"],
+.course-lesson-html div[style*="background: #f3f3f3"],
+.course-lesson-html div[style*="background-color: #f9f9f9"],
+.course-lesson-html div[style*="background: #f9f9f9"],
+.course-lesson-html .step-box,
+.course-lesson-html .dahua-section {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.88) !important;
 }
 
 .course-lesson-html h1,
 .course-lesson-html h2,
 .course-lesson-html h3,
-.course-lesson-html h4 {
-  color: #660000;
+.course-lesson-html h4,
+.course-lesson-html .toc-title {
+  color: #f5f5f5 !important;
+  font-weight: 700;
 }
 
-.course-lesson-html a {
+.course-lesson-html h2,
+.course-lesson-html h3 {
+  border-left: 3px solid #c91818;
+  padding-left: 0.75rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.course-lesson-html p,
+.course-lesson-html li,
+.course-lesson-html label,
+.course-lesson-html span,
+.course-lesson-html td,
+.course-lesson-html th {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* Preserve wiring / safety color semantics from original lessons */
+.course-lesson-html [style*="color: green"],
+.course-lesson-html [style*="color:Green"],
+.course-lesson-html [style*="color:#008000"],
+.course-lesson-html [style*="color: #008000"],
+.course-lesson-html .wire-green {
+  color: #22c55e !important;
+}
+
+.course-lesson-html [style*="color: yellow"],
+.course-lesson-html [style*="color:Yellow"],
+.course-lesson-html [style*="color:#ffff00"],
+.course-lesson-html [style*="color: #ffff00"],
+.course-lesson-html [style*="color:#ff0"],
+.course-lesson-html .wire-yellow {
+  color: #eab308 !important;
+}
+
+.course-lesson-html [style*="color: red"],
+.course-lesson-html [style*="color:Red"],
+.course-lesson-html [style*="color:#ff0000"],
+.course-lesson-html [style*="color: #ff0000"] {
+  color: #f87171 !important;
+}
+
+.course-lesson-html a:not(.wp-block-button__link):not(.wp-element-button) {
   color: #1e99e6;
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.course-lesson-html a:not(.wp-block-button__link):not(.wp-element-button):hover {
+  color: #5eb8f0;
 }
 
 .course-lesson-html iframe {
@@ -26,68 +104,156 @@
   width: 100%;
   max-width: 100%;
   aspect-ratio: 16 / 9;
-  height: auto;
   min-height: 220px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0.75rem;
+  background: #000;
 }
 
 .course-lesson-html .wp-block-embed__wrapper {
-  position: relative;
-  width: 100%;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.course-lesson-html .wp-block-buttons,
+.course-lesson-html .wp-block-button {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  margin: 1.25rem 0 !important;
 }
 
 .course-lesson-html .wp-block-button__link,
-.course-lesson-html a.wp-element-button {
-  display: inline-block;
-  max-width: 100%;
-  word-break: break-word;
-  border-radius: 999px !important;
+.course-lesson-html a.wp-element-button,
+.course-lesson-html .mckee-external-link.wp-block-button__link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 2.75rem !important;
+  max-width: 100% !important;
   padding: 0.75rem 1.25rem !important;
+  border-radius: 9999px !important;
   background: #c91818 !important;
   color: #fff !important;
+  font-size: 0.8125rem !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
   text-decoration: none !important;
+  word-break: break-word !important;
+  box-shadow: 0 4px 14px rgba(201, 24, 24, 0.25) !important;
+  transition: background 0.2s ease, transform 0.2s ease !important;
+}
+
+.course-lesson-html .wp-block-button__link:hover,
+.course-lesson-html a.wp-element-button:hover {
+  background: #a80f0f !important;
+  transform: translateY(-1px);
 }
 
 .course-lesson-html table {
   width: 100%;
   border-collapse: collapse;
+  margin: 1rem 0;
 }
 
 .course-lesson-html th,
 .course-lesson-html td {
-  border: 1px solid #ddd;
-  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.625rem 0.75rem;
+}
+
+.course-lesson-html th {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
 }
 
 .course-lesson-html .table-responsive {
   overflow-x: auto;
+  margin-bottom: 1rem;
 }
 
-.course-lesson-html .checklist-item,
-.course-lesson-html label {
+.course-lesson-html .checklist-item {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.course-lesson-html .checklist-item label {
   cursor: pointer;
+  display: block;
 }
 
 .course-lesson-html input[type="checkbox"] {
-  accent-color: #c91818;
+  width: 1rem;
+  height: 1rem;
   margin-right: 0.5rem;
+  accent-color: #c91818;
+  vertical-align: middle;
+}
+
+.course-lesson-html .tip-box {
+  background: rgba(201, 24, 24, 0.12) !important;
+  border-left: 4px solid #c91818 !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.course-lesson-html .warning-box {
+  background: rgba(234, 179, 8, 0.12) !important;
+  border-left: 4px solid #eab308 !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.course-lesson-html .toc-container,
+.course-lesson-html .toc-list {
+  background: transparent !important;
+}
+
+.course-lesson-html .toc-link {
+  color: #1e99e6 !important;
+}
+
+.course-lesson-html .step-number {
+  background-color: #c91818 !important;
+  color: #fff !important;
 }
 
 .course-lesson-html img {
   max-width: 100%;
   height: auto;
+  border-radius: 0.5rem;
 }
 
 .course-lesson-html #sticky-progress-container,
-.course-lesson-html #original-progress-container {
+.course-lesson-html #original-progress-container,
+.course-lesson-html #progressBar,
+.course-lesson-html #stickyProgressBar {
   display: none !important;
+}
+
+.course-lesson-html ol,
+.course-lesson-html ul {
+  padding-left: 1.25rem;
+}
+
+.course-lesson-html .back-to-top {
+  background: #1e99e6 !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 0.375rem 0.75rem !important;
+  border-radius: 0.375rem !important;
 }
 
 @media (max-width: 768px) {
   .course-lesson-html {
-    font-size: 14px;
+    font-size: 0.875rem;
+  }
+
+  .course-lesson-html .wp-block-button__link,
+  .course-lesson-html a.wp-element-button {
+    width: 100% !important;
   }
 }

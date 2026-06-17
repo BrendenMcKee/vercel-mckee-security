@@ -3,6 +3,7 @@ import { iterLessons } from "@/lib/courses";
 
 const STORAGE_KEY = "mckee-course-progress-v1";
 const HTML_CHECK_PREFIX = "mckee-lesson-html-checks:";
+const PENDING_LINK_PREFIX = "mckee-pending-link:";
 
 type CourseProgressEntry = {
   checklist: Record<string, boolean>;
@@ -101,6 +102,18 @@ export function isLessonComplete(course: Course, lessonId: string) {
   );
 }
 
+export function completeChecklistItem(
+  course: Course,
+  lessonId: string,
+  itemIndex: number,
+) {
+  if (itemIndex < 0) return getCourseProgress(course);
+  if (isChecklistItemComplete(course.slug, lessonId, itemIndex)) {
+    return getCourseProgress(course);
+  }
+  return toggleChecklistItem(course, lessonId, itemIndex, true);
+}
+
 export function toggleChecklistItem(
   course: Course,
   lessonId: string,
@@ -132,7 +145,12 @@ export function resetCourseProgress(courseSlug: string) {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key?.startsWith(HTML_CHECK_PREFIX)) keysToRemove.push(key);
+      if (
+        key &&
+        (key.startsWith(HTML_CHECK_PREFIX) || key.startsWith(PENDING_LINK_PREFIX))
+      ) {
+        keysToRemove.push(key);
+      }
     }
     keysToRemove.forEach((key) => localStorage.removeItem(key));
   }
@@ -153,4 +171,15 @@ export function writeEmbeddedChecklistState(
   state: Record<string, boolean>,
 ) {
   localStorage.setItem(`${HTML_CHECK_PREFIX}${lessonId}`, JSON.stringify(state));
+}
+
+export function markExternalLinkPending(lessonId: string) {
+  sessionStorage.setItem(`${PENDING_LINK_PREFIX}${lessonId}`, "1");
+}
+
+export function consumeExternalLinkPending(lessonId: string) {
+  const key = `${PENDING_LINK_PREFIX}${lessonId}`;
+  const pending = sessionStorage.getItem(key);
+  if (pending) sessionStorage.removeItem(key);
+  return Boolean(pending);
 }

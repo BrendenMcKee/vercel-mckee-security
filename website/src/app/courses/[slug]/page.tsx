@@ -37,8 +37,8 @@ export default async function CourseDetailPage({ params }: Props) {
           <FadeIn>
             <h2 className="mb-2 text-2xl font-bold text-white">Course Content</h2>
             <p className="mb-8 text-sm text-white/55">
-              Expand a module, select a lesson, and work through the embedded training
-              materials from our technician course.
+              Expand a module, open a lesson, and work through the training material.
+              Progress updates as you complete each milestone.
             </p>
           </FadeIn>
           <CoursePlayer course={course} />

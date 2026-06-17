@@ -1,7 +1,15 @@
+export type LessonChecklistItem = {
+  label: string;
+  /** Auto-check when trainee opens an external training link and returns to this tab */
+  autoCompleteOnExternalLink?: boolean;
+  /** Auto-check when every step in the embedded lesson checklist is done */
+  autoCompleteOnEmbeddedSteps?: boolean;
+};
+
 export type CourseLesson = {
   title: string;
   duration?: string;
-  checklist: string[];
+  checklist: LessonChecklistItem[];
 };
 
 export type CourseTopic = {
@@ -24,33 +32,49 @@ export type Course = {
   modules: CourseModule[];
 };
 
-function onlineChecklist(title: string): string[] {
-  return [
-    "Open and review the lesson content below",
-    "Complete the linked e-learning module or training video",
-    "Take notes on tools, wiring, and programming steps",
-    `Confirm you understand the core concepts of: ${title}`,
-  ];
-}
-
-function handsOnChecklist(title: string): string[] {
-  return [
-    "Read the full lesson content and table of contents",
-    "Work through each step in the embedded hands-on checklist",
-    `Verify your completed work for: ${title}`,
-    "Document issues, questions, or follow-up items for your supervisor",
-  ];
-}
-
-function lesson(
+function onlineLesson(
   title: string,
-  handsOn: boolean,
-  duration?: string,
+  duration: string | undefined,
+  academyLabel: string,
 ): CourseLesson {
   return {
     title,
     duration,
-    checklist: handsOn ? handsOnChecklist(title) : onlineChecklist(title),
+    checklist: [
+      {
+        label: `Open the ${academyLabel} training link (opens in a new tab)`,
+        autoCompleteOnExternalLink: true,
+      },
+      {
+        label: `Finish the full ${academyLabel} e-learning module`,
+      },
+      {
+        label: "Return here and confirm you completed the external training",
+      },
+    ],
+  };
+}
+
+function handsOnLesson(
+  title: string,
+  duration: string | undefined,
+  taskSummary: string,
+): CourseLesson {
+  return {
+    title,
+    duration,
+    checklist: [
+      {
+        label: "Complete every step in the hands-on checklist above",
+        autoCompleteOnEmbeddedSteps: true,
+      },
+      {
+        label: taskSummary,
+      },
+      {
+        label: "Supervisor verified the install, programming, or configuration",
+      },
+    ],
   };
 }
 
@@ -70,17 +94,37 @@ export const courses: Course[] = [
             title: "Vista 20P Series (Online E-Learning)",
             duration: "3h 5m",
             lessons: [
-              lesson("Vista 20P Essentials", false, "0h 55m"),
-              lesson("Vista 20P Setup, Programming, and Functionality", false, "2h 10m"),
+              onlineLesson(
+                "Vista 20P Essentials",
+                "0h 55m",
+                "Honeywell Academy Vista-20P Series Essentials",
+              ),
+              onlineLesson(
+                "Vista 20P Setup, Programming, and Functionality",
+                "2h 10m",
+                "Honeywell Academy Vista-20P programming",
+              ),
             ],
           },
           {
             title: "Vista 20P Series (In-Person Training)",
             duration: "8h 0m",
             lessons: [
-              lesson("Vista20P Installation: Wire the Panel and Devices", true),
-              lesson("Vista20P Programming: Program Security System", true),
-              lesson("Vista20P AlarmNet 360: Monitoring and Account Setup", true),
+              handsOnLesson(
+                "Vista20P Installation: Wire the Panel and Devices",
+                undefined,
+                "Panel, keypad, and devices wired, labeled, and tested",
+              ),
+              handsOnLesson(
+                "Vista20P Programming: Program Security System",
+                undefined,
+                "Zones, users, and system options programmed per McKee standards",
+              ),
+              handsOnLesson(
+                "Vista20P AlarmNet 360: Monitoring and Account Setup",
+                undefined,
+                "AlarmNet 360 account active and central station signals verified",
+              ),
             ],
           },
         ],
@@ -92,17 +136,37 @@ export const courses: Course[] = [
             title: "ProSeries (Online E-Learning)",
             duration: "1h 00m",
             lessons: [
-              lesson("Intro to ProSeries", false, "0h 25m"),
-              lesson("ProSeries Applications", false, "0h 35m"),
+              onlineLesson(
+                "Intro to ProSeries",
+                "0h 25m",
+                "Honeywell ProSeries introduction",
+              ),
+              onlineLesson(
+                "ProSeries Applications",
+                "0h 35m",
+                "Honeywell ProSeries applications",
+              ),
             ],
           },
           {
             title: "ProSeries (In-Person Training)",
             duration: "6h 0m",
             lessons: [
-              lesson("Installation: Wire the ProSeries Keypad and Gather Devices", true),
-              lesson("AlarmNet 360 ProSeries: Monitoring and Account Setup", true),
-              lesson("Programming ProSeries: Program Security System", true),
+              handsOnLesson(
+                "Installation: Wire the ProSeries Keypad and Gather Devices",
+                undefined,
+                "ProSeries keypad and devices installed and wired correctly",
+              ),
+              handsOnLesson(
+                "AlarmNet 360 ProSeries: Monitoring and Account Setup",
+                undefined,
+                "ProSeries monitoring account created and communicating",
+              ),
+              handsOnLesson(
+                "Programming ProSeries: Program Security System",
+                undefined,
+                "ProSeries panel programmed and walk-tested successfully",
+              ),
             ],
           },
         ],
@@ -114,15 +178,37 @@ export const courses: Course[] = [
             title: "Dahua (Online E-Learning)",
             duration: "0h 30m",
             lessons: [
-              lesson("E-Learning: NVR / Camera Installation and Device Setup", false),
+              {
+                title: "E-Learning: NVR / Camera Installation and Device Setup",
+                duration: undefined,
+                checklist: [
+                  {
+                    label: "Watch the Dahua NVR and camera setup video in the lesson",
+                  },
+                  {
+                    label: "Review camera mounting, cabling, and NVR network setup steps",
+                  },
+                  {
+                    label: "Confirm you can explain Dahua device commissioning basics",
+                  },
+                ],
+              },
             ],
           },
           {
             title: "Dahua (In-Person Training)",
             duration: "2h 0m",
             lessons: [
-              lesson("Dahua Camera / NVR Installation", true),
-              lesson("Dahua NVR Setup, Programming, and Configuration", true),
+              handsOnLesson(
+                "Dahua Camera / NVR Installation",
+                undefined,
+                "Cameras mounted, cabled, and NVR rack/install completed",
+              ),
+              handsOnLesson(
+                "Dahua NVR Setup, Programming, and Configuration",
+                undefined,
+                "NVR configured, recording verified, and customer demo completed",
+              ),
             ],
           },
         ],
@@ -133,12 +219,34 @@ export const courses: Course[] = [
           {
             title: "Starlink (Online E-Learning)",
             duration: "1h 0m",
-            lessons: [lesson("Learn the Essentials of Installing Starlink", false)],
+            lessons: [
+              {
+                title: "Learn the Essentials of Installing Starlink",
+                duration: undefined,
+                checklist: [
+                  {
+                    label: "Watch the Starlink installation video in the lesson",
+                  },
+                  {
+                    label: "Review mounting, cabling, and app setup sections",
+                  },
+                  {
+                    label: "Confirm you understand obstruction checks and alignment basics",
+                  },
+                ],
+              },
+            ],
           },
           {
             title: "Starlink (In-Person Training)",
             duration: "1h 30m",
-            lessons: [lesson("Starlink Setup and Configuration", true)],
+            lessons: [
+              handsOnLesson(
+                "Starlink Setup and Configuration",
+                undefined,
+                "Dish aligned, router configured, and speed test documented",
+              ),
+            ],
           },
         ],
       },
@@ -148,12 +256,34 @@ export const courses: Course[] = [
           {
             title: "Ubiquiti (Online E-Learning)",
             duration: "1h 0m",
-            lessons: [lesson("Learn the Basics of Network Administration", false)],
+            lessons: [
+              {
+                title: "Learn the Basics of Network Administration",
+                duration: undefined,
+                checklist: [
+                  {
+                    label: "Review the UniFi network administration guide in the lesson",
+                  },
+                  {
+                    label: "Study VLAN, SSID, and firewall concepts covered in the material",
+                  },
+                  {
+                    label: "Confirm you can explain basic UniFi controller workflows",
+                  },
+                ],
+              },
+            ],
           },
           {
             title: "Ubiquiti (In-Person Training)",
             duration: "1h 30m",
-            lessons: [lesson("Setup a Complete Wireless Network", true)],
+            lessons: [
+              handsOnLesson(
+                "Setup a Complete Wireless Network",
+                undefined,
+                "UniFi network adopted, SSIDs live, and coverage validated on site",
+              ),
+            ],
           },
         ],
       },
@@ -202,4 +332,12 @@ export function iterLessons(course: Course) {
 
 export function countLessons(course: Course) {
   return iterLessons(course).length;
+}
+
+export function findAutoLinkChecklistIndex(lesson: CourseLesson) {
+  return lesson.checklist.findIndex((item) => item.autoCompleteOnExternalLink);
+}
+
+export function findEmbeddedSyncChecklistIndex(lesson: CourseLesson) {
+  return lesson.checklist.findIndex((item) => item.autoCompleteOnEmbeddedSteps);
 }
