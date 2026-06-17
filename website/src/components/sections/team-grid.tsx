@@ -52,11 +52,20 @@ function TeamLinkButton({ link }: { link: TeamLink }) {
   );
 }
 
-function TeamLinks({ links }: { links?: TeamLink[] }) {
-  if (!links?.length) return null;
+function TeamLinks({
+  links,
+  align = "end",
+}: {
+  links?: TeamLink[];
+  align?: "end" | "center";
+}) {
   return (
-    <div className="mt-3 flex flex-wrap justify-end gap-2">
-      {links.map((link) => (
+    <div
+      className={`mt-3 flex h-9 shrink-0 items-center gap-2 ${
+        align === "center" ? "justify-center" : "justify-end"
+      }`}
+    >
+      {links?.map((link) => (
         <TeamLinkButton key={link.href} link={link} />
       ))}
     </div>
@@ -101,14 +110,14 @@ export function TeamGrid() {
               description="A family-owned company with deep roots in the Haliburton community."
             />
           </FadeIn>
-          <StaggerContainer className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <StaggerContainer className="mt-12 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {team.map((person, index) => (
-              <StaggerItem key={person.name}>
-                <article className="group overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated/40 transition hover:border-primary/30 hover:bg-surface-elevated">
+              <StaggerItem key={person.name} className="h-full">
+                <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated/40 transition hover:border-primary/30 hover:bg-surface-elevated">
                   <button
                     type="button"
                     onClick={() => setActiveIndex(index)}
-                    className="block w-full text-left"
+                    className="block w-full shrink-0 text-left"
                     aria-label={`View ${person.name} photo`}
                   >
                     <div className="relative aspect-square overflow-hidden bg-[#111111]">
@@ -122,9 +131,11 @@ export function TeamGrid() {
                       />
                     </div>
                   </button>
-                  <div className="p-5">
+                  <div className="flex flex-1 flex-col p-5">
                     <h3 className="font-bold text-white">{person.name}</h3>
-                    <p className="mt-1 text-sm text-white/55">{person.role}</p>
+                    <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm leading-snug text-white/55">
+                      {person.role}
+                    </p>
                     <TeamLinks links={person.links} />
                   </div>
                 </article>
@@ -190,16 +201,10 @@ export function TeamGrid() {
                 priority
               />
             </div>
-            <div className="mt-4 text-center">
+            <div className="mt-4 flex min-h-[132px] flex-col items-center text-center">
               <h3 className="text-xl font-bold text-white">{member.name}</h3>
-              <p className="mt-1 text-white/60">{member.role}</p>
-              {member.links?.length ? (
-                <div className="mt-4 flex justify-center gap-2">
-                  {member.links.map((link) => (
-                    <TeamLinkButton key={link.href} link={link} />
-                  ))}
-                </div>
-              ) : null}
+              <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-white/60">{member.role}</p>
+              <TeamLinks links={member.links} align="center" />
               <p className="mt-3 text-xs text-white/40">
                 {activeIndex + 1} of {team.length}
               </p>
