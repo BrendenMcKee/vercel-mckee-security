@@ -35,10 +35,7 @@ import {
   resetCourseProgress,
   toggleChecklistItem,
 } from "@/lib/course-progress";
-import {
-  getEmbeddedCheckboxProgress,
-  shouldShowTopLessonProgress,
-} from "@/lib/lesson-html";
+import { getEmbeddedCheckboxProgress, isSubstantialLesson } from "@/lib/lesson-html";
 import { celebrateConfetti } from "@/lib/confetti";
 import { cn } from "@/lib/utils";
 import "@/styles/course-lesson-content.css";
@@ -353,7 +350,7 @@ export function CoursePlayer({ course }: { course: Course }) {
                                   ? getLessonProgress(course, lessonId)
                                   : { checked: 0, total: 0, percent: 0 };
                                 const hasContent = hasLessonContent(lessonId);
-                                const showTopProgress = shouldShowTopLessonProgress(
+                                const showBottomProgress = isSubstantialLesson(
                                   getLessonHtml(lessonId),
                                 );
 
@@ -428,22 +425,20 @@ export function CoursePlayer({ course }: { course: Course }) {
                                           className="border-t border-white/5 bg-black/15"
                                         >
                                           <div className="space-y-5 p-4 md:p-5">
-                                            {showTopProgress && (
-                                              <LessonProgressPanel
-                                                checklist={lessonItem.checklist}
-                                                courseSlug={course.slug}
-                                                lessonId={lessonId}
-                                                mounted={mounted}
-                                                placement="top"
-                                                onToggle={(itemIndex, checked) =>
-                                                  handleToggleItem(
-                                                    lessonId,
-                                                    itemIndex,
-                                                    checked,
-                                                  )
-                                                }
-                                              />
-                                            )}
+                                            <LessonProgressPanel
+                                              checklist={lessonItem.checklist}
+                                              courseSlug={course.slug}
+                                              lessonId={lessonId}
+                                              mounted={mounted}
+                                              placement="top"
+                                              onToggle={(itemIndex, checked) =>
+                                                handleToggleItem(
+                                                  lessonId,
+                                                  itemIndex,
+                                                  checked,
+                                                )
+                                              }
+                                            />
 
                                             {hasContent && (
                                               <div>
@@ -460,20 +455,22 @@ export function CoursePlayer({ course }: { course: Course }) {
                                               </div>
                                             )}
 
-                                            <LessonProgressPanel
-                                              checklist={lessonItem.checklist}
-                                              courseSlug={course.slug}
-                                              lessonId={lessonId}
-                                              mounted={mounted}
-                                              placement="bottom"
-                                              onToggle={(itemIndex, checked) =>
-                                                handleToggleItem(
-                                                  lessonId,
-                                                  itemIndex,
-                                                  checked,
-                                                )
-                                              }
-                                            />
+                                            {showBottomProgress && (
+                                              <LessonProgressPanel
+                                                checklist={lessonItem.checklist}
+                                                courseSlug={course.slug}
+                                                lessonId={lessonId}
+                                                mounted={mounted}
+                                                placement="bottom"
+                                                onToggle={(itemIndex, checked) =>
+                                                  handleToggleItem(
+                                                    lessonId,
+                                                    itemIndex,
+                                                    checked,
+                                                  )
+                                                }
+                                              />
+                                            )}
                                           </div>
                                         </motion.div>
                                       )}

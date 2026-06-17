@@ -105,8 +105,8 @@ export function countEmbeddedCheckboxes(html: string): number {
   return (html.match(/type="checkbox"/gi) ?? []).length;
 }
 
-/** Short academy/link lessons only need progress at the bottom; long guides get top + bottom. */
-export function shouldShowTopLessonProgress(html: string): boolean {
+/** Long guides with embedded checklists benefit from a second progress panel after the material. */
+export function isSubstantialLesson(html: string): boolean {
   if (!html) return false;
 
   const prepared = prepareLessonHtml(html);
