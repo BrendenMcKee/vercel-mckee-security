@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import type { GoogleReview } from "@/lib/reviews";
-import { filterFiveStarReviews } from "@/lib/reviews";
+import {
+  fallbackReviews,
+  filterFiveStarReviews,
+  googleBusiness,
+} from "@/lib/reviews";
 import { BrandedStatsBackground } from "@/components/sections/branded-stats-background";
+import { cn } from "@/lib/utils";
 
 type ReviewsPayload = {
   business: {
@@ -18,6 +23,17 @@ type ReviewsPayload = {
 };
 
 const CARD_HEIGHT = "min-h-[248px]";
+
+const defaultPayload: ReviewsPayload = {
+  business: {
+    name: googleBusiness.name,
+    rating: googleBusiness.rating,
+    reviewCount: googleBusiness.reviewCount,
+    mapsUrl: googleBusiness.mapsUrl,
+    aiSummaryBullets: googleBusiness.aiSummaryBullets,
+  },
+  reviews: filterFiveStarReviews(fallbackReviews),
+};
 
 function GoogleLogo({ className = "h-5 w-5" }: { className?: string }) {
   return (
@@ -51,7 +67,7 @@ function GeminiSparkIcon({ className = "h-5 w-5" }: { className?: string }) {
 function VerifiedBadge() {
   return (
     <svg
-      className="h-4 w-4 shrink-0"
+      className="h-[18px] w-[18px] shrink-0"
       viewBox="0 0 16 16"
       aria-label="Verified review"
       role="img"
@@ -93,7 +109,7 @@ function AiSummaryCard({
 }) {
   return (
     <article
-      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col rounded-xl border border-[#6366f1]/25 bg-gradient-to-br from-[#1a1830] via-[#141824] to-[#101018] p-5 sm:w-[300px]`}
+      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col overflow-visible rounded-xl border border-[#6366f1]/25 bg-gradient-to-br from-[#1a1830] via-[#141824] to-[#101018] p-5 sm:w-[300px]`}
     >
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
@@ -133,15 +149,18 @@ function ReviewCard({ review }: { review: GoogleReview }) {
 
   return (
     <article
-      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col rounded-xl border border-white/10 bg-[#1a1a1a] p-5 sm:w-[300px]`}
+      className={`flex ${CARD_HEIGHT} w-[280px] shrink-0 flex-col overflow-visible rounded-xl border border-white/10 bg-[#1a1a1a] p-5 sm:w-[300px]`}
     >
-      <div className="flex items-start gap-3">
-        <div className="relative h-9 w-9 shrink-0">
+      <div className="flex items-start gap-3 overflow-visible">
+        <div className="relative h-11 w-11 shrink-0 overflow-visible">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#4285F4] text-sm font-bold text-white">
             {initial}
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#1a1a1a] ring-2 ring-[#1a1a1a]">
-            <GoogleLogo className="h-3 w-3" />
+          <div
+            className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm ring-2 ring-[#1a1a1a]"
+            aria-hidden="true"
+          >
+            <GoogleLogo className="h-3.5 w-3.5" />
           </div>
         </div>
         <div className="min-w-0 flex-1">
@@ -164,41 +183,85 @@ function ReviewCard({ review }: { review: GoogleReview }) {
 }
 
 export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean }) {
-  const [data, setData] = useState<ReviewsPayload | null>(null);
+  const [data, setData] = useState<ReviewsPayload>(defaultPayload);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
 
   useEffect(() => {
     fetch("/api/reviews")
       .then((r) => r.json())
-      .then(setData)
+      .then((payload: ReviewsPayload) => {
+        setData({
+          business: {
+            ...defaultPayload.business,
+            ...payload.business,
+            aiSummaryBullets:
+              payload.business?.aiSummaryBullets?.length
+                ? payload.business.aiSummaryBullets
+                : googleBusiness.aiSummaryBullets,
+          },
+          reviews: payload.reviews?.length
+            ? filterFiveStarReviews(payload.reviews)
+            : defaultPayload.reviews,
+        });
+      })
       .catch(() => null);
   }, []);
 
   const reviews = useMemo(
-    () => (data ? filterFiveStarReviews(data.reviews) : []),
-    [data],
+    () => (data.reviews.length ? data.reviews : defaultPayload.reviews),
+    [data.reviews],
   );
+
+  const aiBullets = useMemo(
+    () =>
+      data.business.aiSummaryBullets?.length
+        ? data.business.aiSummaryBullets
+        : googleBusiness.aiSummaryBullets,
+    [data.business.aiSummaryBullets],
+  );
+
+  const syncScrollEdges = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setAtStart(el.scrollLeft <= 1);
+    setAtEnd(maxScroll <= 1 || el.scrollLeft >= maxScroll - 1);
+  }, []);
+
+  useEffect(() => {
+    syncScrollEdges();
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    el.addEventListener("scroll", syncScrollEdges, { passive: true });
+    const ro = new ResizeObserver(syncScrollEdges);
+    ro.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", syncScrollEdges);
+      ro.disconnect();
+    };
+  }, [reviews, aiBullets, syncScrollEdges]);
 
   const scroll = (dir: -1 | 1) => {
     scrollerRef.current?.scrollBy({ left: dir * 312, behavior: "smooth" });
+    window.setTimeout(syncScrollEdges, 350);
   };
-
-  if (!data || (!reviews.length && !data.business.aiSummaryBullets?.length)) {
-    return null;
-  }
 
   const widget = (
     <div className="mx-auto max-w-[1400px] px-4 md:px-8">
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141414]/95 shadow-xl shadow-black/40 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-4 border-b border-white/10 px-5 py-4 md:px-6 md:py-5">
           <GoogleLogo className="h-7 w-7 shrink-0" />
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
+          <div className="flex min-w-0 flex-1 flex-wrap items-end gap-x-0 gap-y-2">
+            <div className="min-w-0">
+              <p className="text-sm font-bold uppercase tracking-wider text-white/55 md:text-base lg:text-lg">
                 Google Rating
               </p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2.5">
-                <span className="text-3xl font-bold text-white">
+              <div className="mt-1 flex flex-wrap items-center gap-2.5">
+                <span className="text-3xl font-bold text-white md:text-4xl">
                   {data.business.rating.toFixed(1)}
                 </span>
                 <StarRow rating={Math.round(data.business.rating)} size="md" />
@@ -208,7 +271,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
               href={data.business.mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-[#8ab4f8] hover:underline"
+              className="mb-0.5 border-l border-white/15 pl-5 text-sm text-[#8ab4f8] hover:underline md:pl-8 md:text-base"
             >
               Based on {data.business.reviewCount}+ reviews
             </a>
@@ -219,30 +282,35 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
           <button
             type="button"
             aria-label="Previous reviews"
+            aria-hidden={atStart}
+            disabled={atStart}
             onClick={() => scroll(-1)}
-            className="absolute left-1.5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg hover:bg-[#252525] md:flex"
+            className={cn(
+              "absolute left-1.5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg transition-opacity duration-200 hover:bg-[#252525] md:flex",
+              atStart && "pointer-events-none opacity-0",
+            )}
           >
             <ChevronLeft className="h-5 w-5 text-white/80" />
           </button>
           <button
             type="button"
             aria-label="Next reviews"
+            aria-hidden={atEnd}
+            disabled={atEnd}
             onClick={() => scroll(1)}
-            className="absolute right-1.5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg hover:bg-[#252525] md:flex"
+            className={cn(
+              "absolute right-1.5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/15 bg-[#1a1a1a] p-2 shadow-lg transition-opacity duration-200 hover:bg-[#252525] md:flex",
+              atEnd && "pointer-events-none opacity-0",
+            )}
           >
             <ChevronRight className="h-5 w-5 text-white/80" />
           </button>
 
           <div
             ref={scrollerRef}
-            className="flex items-stretch gap-3 overflow-x-auto scroll-smooth px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex items-stretch gap-3 overflow-x-auto overflow-y-visible scroll-smooth px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {data.business.aiSummaryBullets?.length ? (
-              <AiSummaryCard
-                bullets={data.business.aiSummaryBullets}
-                reviewCount={data.business.reviewCount}
-              />
-            ) : null}
+            <AiSummaryCard bullets={aiBullets} reviewCount={data.business.reviewCount} />
             {reviews.map((review) => (
               <ReviewCard key={review.id} review={review} />
             ))}
