@@ -12,7 +12,7 @@ import {
   RotateCcw,
   Trophy,
 } from "lucide-react";
-import type { Course } from "@/lib/courses";
+import type { Course, LessonChecklistItem } from "@/lib/courses";
 import {
   findAutoLinkChecklistIndex,
   findEmbeddedSyncChecklistIndex,
@@ -41,6 +41,95 @@ import { cn } from "@/lib/utils";
 import "@/styles/course-lesson-content.css";
 
 type OpenLesson = string | null;
+
+function LessonProgressPanel({
+  checklist,
+  courseSlug,
+  lessonId,
+  mounted,
+  placement,
+  onToggle,
+}: {
+  checklist: LessonChecklistItem[];
+  courseSlug: string;
+  lessonId: string;
+  mounted: boolean;
+  placement: "top" | "bottom";
+  onToggle: (itemIndex: number, checked: boolean) => void;
+}) {
+  if (checklist.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-surface/80 p-4 md:p-5">
+      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
+        <ClipboardCheck className="h-3.5 w-3.5" />
+        Lesson Progress
+      </p>
+      <p className="mt-1 text-left text-xs leading-relaxed text-white/45">
+        {placement === "top"
+          ? "Check off each milestone as you work through the material below."
+          : "Some steps complete automatically when you finish hands-on tasks or return from external training links."}
+      </p>
+
+      <ul className="mt-4 space-y-2">
+        {checklist.map((item, itemIndex) => {
+          const checked = mounted
+            ? isChecklistItemComplete(courseSlug, lessonId, itemIndex)
+            : false;
+
+          return (
+            <li key={`${placement}-${lessonId}-${itemIndex}`}>
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 text-left transition",
+                  checked
+                    ? "border-green-500/25 bg-green-500/5"
+                    : "border-white/8 bg-black/20 hover:border-primary/25",
+                )}
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                    checked
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-white/8 text-white/45",
+                  )}
+                >
+                  {itemIndex + 1}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) => onToggle(itemIndex, e.target.checked)}
+                  className="sr-only"
+                />
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={cn(
+                      "block text-sm leading-relaxed",
+                      checked ? "text-white/50 line-through" : "text-white/90",
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                  {item.autoCompleteOnExternalLink && <ChecklistHint type="link" />}
+                  {item.autoCompleteOnEmbeddedSteps && (
+                    <ChecklistHint type="embedded" />
+                  )}
+                </span>
+                {checked ? (
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
+                ) : (
+                  <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/20" />
+                )}
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 export function CoursePlayer({ course }: { course: Course }) {
   const [openModule, setOpenModule] = useState<number | null>(0);
@@ -333,6 +422,21 @@ export function CoursePlayer({ course }: { course: Course }) {
                                           className="border-t border-white/5 bg-black/15"
                                         >
                                           <div className="space-y-5 p-4 md:p-5">
+                                            <LessonProgressPanel
+                                              checklist={lessonItem.checklist}
+                                              courseSlug={course.slug}
+                                              lessonId={lessonId}
+                                              mounted={mounted}
+                                              placement="top"
+                                              onToggle={(itemIndex, checked) =>
+                                                handleToggleItem(
+                                                  lessonId,
+                                                  itemIndex,
+                                                  checked,
+                                                )
+                                              }
+                                            />
+
                                             {hasContent && (
                                               <div>
                                                 <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/50">
@@ -348,90 +452,20 @@ export function CoursePlayer({ course }: { course: Course }) {
                                               </div>
                                             )}
 
-                                            <div className="rounded-xl border border-white/10 bg-surface/80 p-4 md:p-5">
-                                              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
-                                                <ClipboardCheck className="h-3.5 w-3.5" />
-                                                Lesson Progress
-                                              </p>
-                                              <p className="mt-1 text-left text-xs leading-relaxed text-white/45">
-                                                Check off each milestone below. Some steps
-                                                complete automatically when you finish hands-on
-                                                tasks or return from external training links.
-                                              </p>
-
-                                              <ul className="mt-4 space-y-2">
-                                                {lessonItem.checklist.map(
-                                                  (item, itemIndex) => {
-                                                    const checked = mounted
-                                                      ? isChecklistItemComplete(
-                                                          course.slug,
-                                                          lessonId,
-                                                          itemIndex,
-                                                        )
-                                                      : false;
-
-                                                    return (
-                                                      <li key={`${lessonId}-${itemIndex}`}>
-                                                        <label
-                                                          className={cn(
-                                                            "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 text-left transition",
-                                                            checked
-                                                              ? "border-green-500/25 bg-green-500/5"
-                                                              : "border-white/8 bg-black/20 hover:border-primary/25",
-                                                          )}
-                                                        >
-                                                          <span
-                                                            className={cn(
-                                                              "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
-                                                              checked
-                                                                ? "bg-green-500/20 text-green-400"
-                                                                : "bg-white/8 text-white/45",
-                                                            )}
-                                                          >
-                                                            {itemIndex + 1}
-                                                          </span>
-                                                          <input
-                                                            type="checkbox"
-                                                            checked={checked}
-                                                            onChange={(e) =>
-                                                              handleToggleItem(
-                                                                lessonId,
-                                                                itemIndex,
-                                                                e.target.checked,
-                                                              )
-                                                            }
-                                                            className="sr-only"
-                                                          />
-                                                          <span className="min-w-0 flex-1">
-                                                            <span
-                                                              className={cn(
-                                                                "block text-sm leading-relaxed",
-                                                                checked
-                                                                  ? "text-white/50 line-through"
-                                                                  : "text-white/90",
-                                                              )}
-                                                            >
-                                                              {item.label}
-                                                            </span>
-                                                            {item.autoCompleteOnExternalLink && (
-                                                              <ChecklistHint type="link" />
-                                                            )}
-                                                            {item.autoCompleteOnEmbeddedSteps && (
-                                                              <ChecklistHint type="embedded" />
-                                                            )}
-                                                          </span>
-                                                          {checked ? (
-                                                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-                                                          ) : (
-                                                            <Circle className="mt-0.5 h-4 w-4 shrink-0 text-white/20" />
-                                                          )}
-                                                        </label>
-                                                      </li>
-                                                    );
-                                                  },
-                                                )}
-                                              </ul>
-                                            </div>
+                                            <LessonProgressPanel
+                                              checklist={lessonItem.checklist}
+                                              courseSlug={course.slug}
+                                              lessonId={lessonId}
+                                              mounted={mounted}
+                                              placement="bottom"
+                                              onToggle={(itemIndex, checked) =>
+                                                handleToggleItem(
+                                                  lessonId,
+                                                  itemIndex,
+                                                  checked,
+                                                )
+                                              }
+                                            />
                                           </div>
                                         </motion.div>
                                       )}

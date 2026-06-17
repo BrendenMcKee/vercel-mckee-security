@@ -368,10 +368,22 @@
 /* Table of contents */
 .course-lesson-html .toc-container,
 .course-lesson-html .dahua-section,
-.course-lesson-html .ubiquiti-section,
-.course-lesson-html .step-box {
+.course-lesson-html .ubiquiti-section {
   margin-bottom: 1.25rem;
   padding: 1.125rem 1.25rem !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+
+.course-lesson-html .step-box {
+  position: relative;
+  flex: 1 1 200px;
+  margin-bottom: 0;
+  padding: 1.125rem 1.125rem 1rem 1.125rem !important;
+  padding-top: 1.75rem !important;
   border-radius: 0.75rem !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   background: rgba(255, 255, 255, 0.04) !important;
@@ -455,8 +467,37 @@
 }
 
 .course-lesson-html .step-number {
+  position: absolute;
+  top: 0.875rem;
+  left: 0.875rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
   background-color: #c91818 !important;
   color: #fff !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(201, 24, 24, 0.35);
+}
+
+.course-lesson-html .step-box h4 {
+  margin: 0 0 0.5rem !important;
+  padding-left: 2.25rem;
+  border-left: none !important;
+  font-size: 0.9375rem;
+  color: #f5f5f5 !important;
+}
+
+.course-lesson-html .step-box p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.75) !important;
 }
 
 .course-lesson-html .tip-box {
