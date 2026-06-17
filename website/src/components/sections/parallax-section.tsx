@@ -16,6 +16,8 @@ type ParallaxSectionProps = {
   parallaxStrength?: number;
   /** Hero sections should pin at scroll 0; mid-page sections use a wider scroll range */
   scrollMode?: "hero" | "section";
+  /** Override the absolute inset on the image layer (helps avoid edge gaps during parallax) */
+  imageInsetClassName?: string;
   children: React.ReactNode;
   className?: string;
   contentClassName?: string;
@@ -31,6 +33,7 @@ export function ParallaxSection({
   imageScale = 1.06,
   parallaxStrength = 28,
   scrollMode = "section",
+  imageInsetClassName,
   children,
   className = "",
   contentClassName = "",
@@ -51,8 +54,12 @@ export function ParallaxSection({
     [0, 1],
     scrollMode === "hero"
       ? ["0%", `${travel * 0.65}%`]
-      : [`-${travel * 0.5}%`, `${travel}%`],
+      : [`-${travel * 0.35}%`, `${travel * 0.55}%`],
   );
+
+  const insetClassName =
+    imageInsetClassName ??
+    (scrollMode === "hero" ? "-inset-[6%]" : "-inset-x-[8%] -top-[14%] -bottom-[8%]");
 
   return (
     <section
@@ -62,7 +69,7 @@ export function ParallaxSection({
     >
       <motion.div
         style={{ y, scale: imageScale }}
-        className="absolute -inset-[6%] will-change-transform"
+        className={`absolute ${insetClassName} will-change-transform`}
       >
         <Image
           src={image}

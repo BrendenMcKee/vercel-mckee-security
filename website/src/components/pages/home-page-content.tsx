@@ -75,9 +75,10 @@ export function HomePageContent() {
         image={images.browseServicesBg}
         overlay="rgba(0,0,0,0.28)"
         minHeight="520px"
-        objectPosition="50% 50%"
-        imageScale={1.06}
-        parallaxStrength={36}
+        objectPosition="50% 58%"
+        imageScale={1.1}
+        parallaxStrength={28}
+        imageInsetClassName="-inset-x-[8%] -top-[18%] -bottom-[10%]"
         contentClassName="flex min-h-[520px] items-center justify-center py-12 lg:min-h-[580px] lg:py-20"
       >
         <div className="mx-auto w-full max-w-xl px-6">
