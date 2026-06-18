@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Mail, X } from "lucide-react";
 import { team, type TeamLink } from "@/lib/site-config";
@@ -75,6 +75,7 @@ function TeamLinks({
 export function TeamGrid() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const member = activeIndex !== null ? team[activeIndex] : null;
+  const touchStart = useRef({ x: 0, y: 0 });
 
   const close = useCallback(() => setActiveIndex(null), []);
   const prev = useCallback(() => {
@@ -83,6 +84,21 @@ export function TeamGrid() {
   const next = useCallback(() => {
     setActiveIndex((i) => (i === null ? null : (i + 1) % team.length));
   }, []);
+
+  const handleSwipeStart = (event: React.TouchEvent) => {
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleSwipeEnd = (event: React.TouchEvent) => {
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - touchStart.current.x;
+    const dy = touch.clientY - touchStart.current.y;
+
+    if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy)) return;
+    if (dx < 0) next();
+    else prev();
+  };
 
   useEffect(() => {
     if (activeIndex === null) return;
@@ -156,51 +172,58 @@ export function TeamGrid() {
           <button
             type="button"
             onClick={close}
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            className="absolute right-4 top-4 z-20 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
             aria-label="Close"
           >
             <X className="h-6 w-6" />
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              prev();
-            }}
-            className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 md:left-8"
-            aria-label="Previous team member"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              next();
-            }}
-            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 md:right-8"
-            aria-label="Next team member"
-          >
-            <ChevronRight className="h-6 w-6" />
           </button>
 
           <div
             className="relative mx-auto w-full max-w-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/15 bg-[#111111]">
-              <Image
-                src={member.photo}
-                alt={member.name}
-                fill
-                className="object-cover object-top"
-                sizes="512px"
-                quality={95}
-                priority
-              />
+            <div
+              className="relative touch-pan-y"
+              onTouchStart={handleSwipeStart}
+              onTouchEnd={handleSwipeEnd}
+            >
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prev();
+                }}
+                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 md:left-3"
+                aria-label="Previous team member"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  next();
+                }}
+                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 md:right-3"
+                aria-label="Next team member"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+
+              <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/15 bg-[#111111]">
+                <Image
+                  src={member.photo}
+                  alt={member.name}
+                  fill
+                  className="object-cover object-top"
+                  sizes="512px"
+                  quality={95}
+                  priority
+                />
+              </div>
             </div>
+
             <div className="mt-4 flex min-h-[132px] flex-col items-center text-center">
               <h3 className="text-xl font-bold text-white">{member.name}</h3>
               <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-white/60">{member.role}</p>
