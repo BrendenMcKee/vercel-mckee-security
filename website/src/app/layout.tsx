@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileCallFab } from "@/components/layout/mobile-call-fab";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
-import { siteConfig } from "@/lib/site-config";
+import { images, siteConfig } from "@/lib/site-config";
 import "./globals.css";
 import "@/styles/mckee-forms.css";
 import "@/styles/elementor-forms.css";
@@ -36,8 +36,8 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
   },
   icons: {
-    icon: "/images/favicon-192.png",
-    apple: "/images/favicon-192.png",
+    icon: images.favicon,
+    apple: images.favicon,
   },
 };
 

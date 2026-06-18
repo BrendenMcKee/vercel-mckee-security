@@ -19,7 +19,7 @@ import {
   Satellite,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { mainNav, siteConfig, type NavChild } from "@/lib/site-config";
+import { images, mainNav, siteConfig, type NavChild } from "@/lib/site-config";
 import { SocialIconButtons } from "@/components/ui/social-icons";
 import { cn } from "@/lib/utils";
 import { pathsMatch, scrollPageToTop } from "@/lib/navigation";
@@ -260,7 +260,7 @@ export function Header() {
               className="relative h-[86px] w-[210px] shrink-0 justify-self-center sm:w-[220px] lg:h-[70px] lg:w-[200px] lg:justify-self-auto"
             >
               <Image
-                src="/images/logo.png"
+                src={images.logo}
                 alt={siteConfig.name}
                 fill
                 className="object-contain object-center lg:object-left"

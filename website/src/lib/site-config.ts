@@ -201,13 +201,15 @@ export const heritageBlurb =
 
 export const images = {
   heroHome: "/images/hero-home.jpg",
-  bannerDesktop: "/images/banner-desktop.png",
-  bannerMobile: "/images/banner-mobile.png",
+  bannerDesktop: "/images/shield-logo.png",
+  bannerMobile: "/images/shield-logo.png",
   browseServicesBg: "/images/browse-services-bg.jpg",
-  hat: "/images/hat.png",
+  hat: "/images/shield-logo.png",
   teamInstall: "/images/team-install.jpg",
   sonosBg: "/images/sonos-bg.jpg",
   logo: "/images/logo.png",
+  shieldLogo: "/images/shield-logo.png",
+  favicon: "/images/favicon-192.png",
   services: {
     securityWireless: "/images/services/security-wireless.jpg",
     securityWired: "/images/services/security-wired.jpg",
