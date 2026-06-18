@@ -146,6 +146,11 @@ vercel-mckee-security/
 - [ ] Production QA on live Vercel URL
 - [ ] DNS cutover: `mckeesecurity.ca` to Vercel when ready (see [dns-migration-cloudflare-vercel.md](dns-migration-cloudflare-vercel.md))
 
+### Phase 7: Data Drops (internal tool)
+- [x] Native rebuild of the Data Drops network-run-confirmation app at `/data-drops-hhhs` and `/data-drops-mckeesecurity`
+- [x] Server-side password gate (cookie), same-origin proxy to the AWS API (no CORS, backend untouched)
+- [ ] Set `DATA_DROPS_PASSWORD` on Vercel (shared access password; the admin deletion password lives in AWS)
+
 ---
 
 ## Key Decisions Log
@@ -159,12 +164,14 @@ vercel-mckee-security/
 | 2026-06-17 | Improve UX. Not a pixel-perfect WordPress clone. |
 | 2026-06-17 | No em dashes in any project writing |
 | 2026-06-17 | GitHub and Vercel live. Root directory `website/` |
+| 2026-06-18 | Data Drops rebuilt natively in Next (not embedded). AWS backend + RDS untouched, reached via a same-origin proxy. |
 
 ---
 
 ## Open Items
 
 - [ ] Add `RESEND_API_KEY`, `CONTACT_EMAIL`, and `EMAIL_FROM` in Vercel env vars
+- [ ] Add `DATA_DROPS_PASSWORD` in Vercel env vars (Data Drops access gate). Optional: `DATA_DROPS_API_URL` (defaults to `https://app-mckeesecurity.ca/api`)
 - [ ] Team member photos from WordPress media
 - [ ] DNS cutover timing ([runbook](dns-migration-cloudflare-vercel.md))
 

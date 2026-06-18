@@ -1,7 +1,15 @@
+"use client";
+
 import { Phone } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { siteConfig } from "@/lib/site-config";
 
 export function MobileCallFab() {
+  const pathname = usePathname();
+
+  // Hide the floating call button on the internal Data Drops tool.
+  if (pathname?.startsWith("/data-drops-")) return null;
+
   return (
     <a
       href={`tel:${siteConfig.phone.tel}`}
