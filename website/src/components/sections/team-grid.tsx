@@ -61,7 +61,7 @@ function TeamLinks({
 }) {
   return (
     <div
-      className={`mt-3 flex h-9 shrink-0 items-center gap-2 ${
+      className={`mt-1.5 flex h-9 shrink-0 items-center gap-2 ${
         align === "center" ? "justify-center" : "justify-end"
       }`}
     >
@@ -156,9 +156,9 @@ export function TeamGrid() {
                       />
                     </div>
                   </button>
-                  <div className="flex flex-1 flex-col p-5">
+                  <div className="flex flex-1 flex-col px-5 pb-4 pt-4">
                     <h3 className="font-bold text-white">{person.name}</h3>
-                    <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm leading-snug text-white/55">
+                    <p className="mt-1 line-clamp-2 min-h-[2.25rem] text-sm leading-snug text-white/55">
                       {person.role}
                     </p>
                     <TeamLinks links={person.links} />
@@ -227,9 +227,9 @@ export function TeamGrid() {
               </div>
             </div>
 
-            <div className="mt-4 flex min-h-[132px] flex-col items-center text-center">
+            <div className="mt-4 flex min-h-[116px] flex-col items-center text-center">
               <h3 className="text-xl font-bold text-white">{member.name}</h3>
-              <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-white/60">{member.role}</p>
+              <p className="mt-1 line-clamp-2 min-h-[2.25rem] text-white/60">{member.role}</p>
               <TeamLinks links={member.links} align="center" />
               <p className="mt-3 text-xs text-white/40">
                 {activeIndex + 1} of {team.length}
