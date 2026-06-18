@@ -23,7 +23,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 
 /* Collapse the red top bar instantly on refresh when scroll is restored mid-page */
