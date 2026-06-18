@@ -11,6 +11,7 @@ import {
   googleBusiness,
 } from "@/lib/reviews";
 import { BrandedStatsBackground } from "@/components/sections/branded-stats-background";
+import { cn } from "@/lib/utils";
 
 type ReviewsPayload = {
   business: {
@@ -25,6 +26,140 @@ type ReviewsPayload = {
 };
 
 const CARD_HEIGHT = "h-[340px]";
+
+const REVIEW_SCROLLBAR =
+  "overscroll-y-contain pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20";
+
+type TouchAxis = "x" | "y" | null;
+
+function ReviewScrollArea({
+  children,
+  wrapperClassName,
+  className,
+  as = "div",
+}: {
+  children: React.ReactNode;
+  wrapperClassName?: string;
+  className?: string;
+  as?: "div" | "ul";
+}) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement & HTMLUListElement>(null);
+  const [needsScroll, setNeedsScroll] = useState(false);
+  const touchState = useRef({
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    axis: null as TouchAxis,
+  });
+
+  const measure = useCallback(() => {
+    const wrapper = wrapperRef.current;
+    const scroll = scrollRef.current;
+    if (!wrapper || !scroll) return;
+
+    const available = wrapper.clientHeight;
+    if (available <= 0) return;
+
+    scroll.style.maxHeight = `${available}px`;
+    scroll.style.overflow = "hidden";
+    const overflow = scroll.scrollHeight > scroll.clientHeight + 2;
+    setNeedsScroll(overflow);
+    scroll.style.maxHeight = "";
+    scroll.style.overflow = "";
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+    const wrapper = wrapperRef.current;
+    const scroll = scrollRef.current;
+    if (!wrapper || !scroll) return;
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(wrapper);
+    ro.observe(scroll);
+    const mo = new MutationObserver(measure);
+    mo.observe(scroll, { childList: true, subtree: true, characterData: true });
+
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [measure, children]);
+
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll || !needsScroll) return;
+
+    const resetTouch = () => {
+      touchState.current.axis = null;
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      touchState.current = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastX: touch.clientX,
+        axis: null,
+      };
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const scroller = scroll.closest("[data-review-scroller]") as HTMLElement | null;
+      if (!scroller) return;
+
+      const touch = event.touches[0];
+      const state = touchState.current;
+      const dxFromStart = touch.clientX - state.startX;
+      const dyFromStart = touch.clientY - state.startY;
+
+      if (!state.axis) {
+        if (Math.abs(dxFromStart) < 10 && Math.abs(dyFromStart) < 10) return;
+        state.axis = Math.abs(dxFromStart) > Math.abs(dyFromStart) ? "x" : "y";
+      }
+
+      if (state.axis === "x") {
+        event.preventDefault();
+        const dx = touch.clientX - state.lastX;
+        scroller.scrollLeft -= dx;
+        state.lastX = touch.clientX;
+      }
+    };
+
+    scroll.addEventListener("touchstart", onTouchStart, { passive: true });
+    scroll.addEventListener("touchmove", onTouchMove, { passive: false });
+    scroll.addEventListener("touchend", resetTouch);
+    scroll.addEventListener("touchcancel", resetTouch);
+
+    return () => {
+      scroll.removeEventListener("touchstart", onTouchStart);
+      scroll.removeEventListener("touchmove", onTouchMove);
+      scroll.removeEventListener("touchend", resetTouch);
+      scroll.removeEventListener("touchcancel", resetTouch);
+    };
+  }, [needsScroll]);
+
+  const Tag = as;
+
+  return (
+    <div ref={wrapperRef} className={cn("flex min-h-0 flex-1 flex-col", wrapperClassName)}>
+      <Tag
+        ref={scrollRef}
+        data-review-scroll={needsScroll ? "true" : undefined}
+        className={cn(
+          "min-h-0",
+          needsScroll
+            ? cn("max-h-full flex-1 overflow-y-auto", REVIEW_SCROLLBAR)
+            : "overflow-visible",
+          className,
+        )}
+      >
+        {children}
+      </Tag>
+    </div>
+  );
+}
 
 const defaultPayload: ReviewsPayload = {
   business: {
@@ -136,10 +271,7 @@ function AiSummaryCard({
         </div>
       </div>
 
-      <ul
-        data-review-scroll
-        className="mt-4 min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [touch-action:pan-y] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20"
-      >
+      <ReviewScrollArea as="ul" wrapperClassName="mt-4" className="space-y-2.5">
         {bullets.map((bullet) => (
           <li key={bullet} className="flex items-start gap-2.5 text-sm leading-snug text-white/80">
             <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#4285F4]/20 text-[#8ab4f8]">
@@ -148,7 +280,7 @@ function AiSummaryCard({
             <span>{bullet}</span>
           </li>
         ))}
-      </ul>
+      </ReviewScrollArea>
 
       <div className="mt-3 flex shrink-0 items-center gap-2 pt-1">
         <GoogleLogo className="h-4 w-4 opacity-90" />
@@ -205,12 +337,9 @@ function ReviewCard({ review }: { review: GoogleReview }) {
       <div className="mt-2.5 shrink-0">
         <StarRow rating={review.rating} size="sm" />
       </div>
-      <div
-        data-review-scroll
-        className="mt-2.5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [touch-action:pan-y] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20"
-      >
+      <ReviewScrollArea wrapperClassName="mt-2.5">
         <p className="text-sm leading-relaxed text-white/70">{review.text}</p>
-      </div>
+      </ReviewScrollArea>
     </article>
   );
 }
@@ -405,12 +534,14 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
           ) : null}
 
           <p className="mb-3 px-1 text-center text-[11px] leading-relaxed text-white/40 md:text-xs">
-            Swipe or use the arrows to go through our latest reviews.{" "}
+            <span className="block sm:inline">
+              Swipe or use the arrows to go through our latest reviews.
+            </span>
             <a
               href={data.business.mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#8ab4f8] hover:underline"
+              className="mt-1 block text-[#8ab4f8] hover:underline sm:mt-0 sm:inline"
             >
               Click here to read all {data.business.reviewCount}+ reviews on Google.
             </a>
@@ -418,6 +549,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
 
           <div
             ref={scrollerRef}
+            data-review-scroller
             className="flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overflow-y-visible scroll-smooth scroll-px-8 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
           >
             <AiSummaryCard bullets={aiBullets} reviewCount={data.business.reviewCount} />
