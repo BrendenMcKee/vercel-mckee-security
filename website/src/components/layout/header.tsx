@@ -257,7 +257,7 @@ export function Header() {
             <Link
               href="/"
               onClick={(event) => handleSamePageNav(event, "/")}
-              className="relative h-[86px] w-[210px] shrink-0 justify-self-center sm:w-[220px] lg:h-[70px] lg:w-[200px] lg:justify-self-auto"
+              className="relative h-[86px] w-[210px] shrink-0 justify-self-center max-lg:-translate-x-2 sm:w-[220px] lg:h-[70px] lg:w-[200px] lg:translate-x-0 lg:justify-self-auto"
             >
               <Image
                 src={images.logo}
