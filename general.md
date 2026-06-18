@@ -144,7 +144,7 @@ vercel-mckee-security/
 - [x] Metadata, sitemap, robots, redirects
 - [ ] Download remaining images from WordPress media library
 - [ ] Production QA on live Vercel URL
-- [ ] DNS cutover: `mckeesecurity.ca` to Vercel when ready
+- [ ] DNS cutover: `mckeesecurity.ca` to Vercel when ready (see [dns-migration-cloudflare-vercel.md](dns-migration-cloudflare-vercel.md))
 
 ---
 
@@ -166,7 +166,7 @@ vercel-mckee-security/
 
 - [ ] Add `RESEND_API_KEY`, `CONTACT_EMAIL`, and `EMAIL_FROM` in Vercel env vars
 - [ ] Team member photos from WordPress media
-- [ ] DNS cutover timing
+- [ ] DNS cutover timing ([runbook](dns-migration-cloudflare-vercel.md))
 
 ---
 
