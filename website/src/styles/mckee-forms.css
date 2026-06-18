@@ -37,6 +37,7 @@
   background: rgba(201, 24, 24, 0.12);
   font-size: 1.45rem;
   line-height: 1;
+  transform: translateY(-2px);
 }
 
 .mckee-form-heading {
