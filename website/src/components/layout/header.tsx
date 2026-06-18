@@ -243,32 +243,30 @@ export function Header() {
             scrolled && "shadow-lg shadow-black/40",
           )}
         >
-          <div className="mx-auto flex h-[100px] max-w-[1400px] items-center px-4 lg:gap-6 lg:px-6">
-            <div className="flex w-11 shrink-0 items-center justify-start lg:hidden">
+          <div className="mx-auto grid h-[100px] max-w-[1400px] grid-cols-[1fr_auto_1fr] items-center px-4 lg:flex lg:gap-6 lg:px-6">
+            <div className="flex items-center justify-start lg:hidden">
               <a
                 href={`mailto:${siteConfig.email.general}`}
                 aria-label="Email McKee Security"
-                className="rounded-lg p-2 text-primary transition hover:text-[var(--primary-hover)]"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-primary transition hover:text-[var(--primary-hover)]"
               >
                 <Mail className="h-6 w-6" />
               </a>
             </div>
 
-            <div className="flex min-w-0 flex-1 justify-center lg:flex-none lg:justify-start">
-              <Link
-                href="/"
-                onClick={(event) => handleSamePageNav(event, "/")}
-                className="relative h-[62px] w-[170px] shrink-0 sm:h-[70px] sm:w-[180px] lg:w-[200px]"
-              >
-                <Image
-                  src="/images/logo.png"
-                  alt={siteConfig.name}
-                  fill
-                  className="object-contain object-center lg:object-left"
-                  priority
-                />
-              </Link>
-            </div>
+            <Link
+              href="/"
+              onClick={(event) => handleSamePageNav(event, "/")}
+              className="relative h-[86px] w-[210px] shrink-0 justify-self-center sm:w-[220px] lg:h-[70px] lg:w-[200px] lg:justify-self-auto"
+            >
+              <Image
+                src="/images/logo.png"
+                alt={siteConfig.name}
+                fill
+                className="object-contain object-center lg:object-left"
+                priority
+              />
+            </Link>
 
             <nav className="hidden min-w-0 flex-1 items-center lg:flex">
               <ul className="flex items-center gap-0">
@@ -326,12 +324,12 @@ export function Header() {
               </ul>
             </nav>
 
-            <div className="flex w-11 shrink-0 items-center justify-end lg:hidden">
+            <div className="flex items-center justify-end lg:hidden">
               <button
                 type="button"
                 aria-label={mobileOpen ? "Close menu" : "Open menu"}
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="rounded-lg border border-white/15 p-2.5 text-white"
+                className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/15 text-white"
               >
                 {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
