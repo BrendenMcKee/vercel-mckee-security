@@ -61,7 +61,7 @@ function TeamLinks({
 }) {
   return (
     <div
-      className={`mt-1.5 flex h-9 shrink-0 items-center gap-2 ${
+      className={`mt-1 flex h-9 shrink-0 items-center gap-2 ${
         align === "center" ? "justify-center" : "justify-end"
       }`}
     >
