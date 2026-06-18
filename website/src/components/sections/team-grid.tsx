@@ -85,6 +85,13 @@ export function TeamGrid() {
     setActiveIndex((i) => (i === null ? null : (i + 1) % team.length));
   }, []);
 
+  const handleNavPress =
+    (action: () => void) => (event: React.PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      action();
+    };
+
   const handleSwipeStart = (event: React.TouchEvent) => {
     const touch = event.touches[0];
     touchStart.current = { x: touch.clientX, y: touch.clientY };
@@ -96,6 +103,8 @@ export function TeamGrid() {
     const dy = touch.clientY - touchStart.current.y;
 
     if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy)) return;
+
+    event.preventDefault();
     if (dx < 0) next();
     else prev();
   };
@@ -182,36 +191,30 @@ export function TeamGrid() {
             className="relative mx-auto w-full max-w-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="relative touch-pan-y"
-              onTouchStart={handleSwipeStart}
-              onTouchEnd={handleSwipeEnd}
-            >
+            <div className="relative">
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  prev();
-                }}
-                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 md:left-3"
+                onPointerUp={handleNavPress(prev)}
+                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 touch-manipulation rounded-full bg-white/10 p-3 text-white hover:bg-white/20 md:left-3"
                 aria-label="Previous team member"
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ChevronLeft className="h-6 w-6 pointer-events-none" />
               </button>
 
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  next();
-                }}
-                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 md:right-3"
+                onPointerUp={handleNavPress(next)}
+                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 touch-manipulation rounded-full bg-white/10 p-3 text-white hover:bg-white/20 md:right-3"
                 aria-label="Next team member"
               >
-                <ChevronRight className="h-6 w-6" />
+                <ChevronRight className="h-6 w-6 pointer-events-none" />
               </button>
 
-              <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/15 bg-[#111111]">
+              <div
+                className="relative aspect-square touch-pan-y overflow-hidden rounded-2xl border border-white/15 bg-[#111111]"
+                onTouchStart={handleSwipeStart}
+                onTouchEnd={handleSwipeEnd}
+              >
                 <Image
                   src={member.photo}
                   alt={member.name}
