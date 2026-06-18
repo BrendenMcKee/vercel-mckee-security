@@ -9,7 +9,7 @@ const services = [
   {
     id: "ci-security",
     href: "/security",
-    icon: "fa-shield-alt",
+    icon: "fa-lock",
     title: "Security / Home Automation",
     text: "Professional 24/7 monitored security systems with intrusion detection, environmental monitoring, and smartphone control via Total Connect 2.0. Protect your property with ULC-listed monitoring backed by over 30 years of proven reliability.",
     image: images.services.securityWireless,
@@ -28,7 +28,7 @@ const services = [
   {
     id: "ci-networking",
     href: "/networking-cellular-expansion",
-    icon: "fa-wifi",
+    icon: "fa-signal",
     title: "Networking / Cellular Expansion",
     text: "Enterprise-grade Unifi Wi-Fi 7 networking solutions with access points, gateways, POE switches, and IDS/IPS security. Wireless bridges connect multiple buildings, and cellular distribution antennas eliminate dead zones.",
     image: images.services.networking,
@@ -38,7 +38,7 @@ const services = [
   {
     id: "ci-audio",
     href: "/audio-video",
-    icon: "fa-music",
+    icon: "fa-tv",
     title: "Home Audio / Video",
     text: "As a certified Sonos dealer, we specialize in premium audio-visual installations. From TV wall mounts and soundbars to whole-home audio systems, surround sound, and immersive Dolby Atmos home theater experiences.",
     image: images.services.tvInstall,
@@ -153,16 +153,16 @@ export function ServicesHubContent() {
             </p>
             <div className="mks2025-ci-hero-badges">
               <a href="#ci-security" className="mks2025-ci-hero-badge">
-                <i className="fas fa-shield-alt" aria-hidden="true" /> Security Systems
+                <i className="fas fa-lock" aria-hidden="true" /> Security Systems
               </a>
               <a href="#ci-camera" className="mks2025-ci-hero-badge">
                 <i className="fas fa-video" aria-hidden="true" /> Camera Surveillance
               </a>
               <a href="#ci-networking" className="mks2025-ci-hero-badge">
-                <i className="fas fa-wifi" aria-hidden="true" /> Networking / Cellular
+                <i className="fas fa-signal" aria-hidden="true" /> Networking / Cellular
               </a>
               <a href="#ci-audio" className="mks2025-ci-hero-badge">
-                <i className="fas fa-music" aria-hidden="true" /> Audio / Video
+                <i className="fas fa-tv" aria-hidden="true" /> Audio / Video
               </a>
               <a href="#ci-starlink" className="mks2025-ci-hero-badge">
                 <i className="fas fa-satellite" aria-hidden="true" /> Starlink
@@ -242,7 +242,12 @@ export function ServicesHubContent() {
                 </div>
               </div>
               <div className="mks2025-ci-card-body">
-                <h3>{service.title}</h3>
+                <h3>
+                  <span className="mks2025-ci-card-title-icon" aria-hidden="true">
+                    <i className={`fas ${service.icon}`} />
+                  </span>
+                  {service.title}
+                </h3>
                 <p>{service.text}</p>
                 <div className="mks2025-ci-card-features">
                   {service.features.map((feature) => (

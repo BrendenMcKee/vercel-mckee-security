@@ -28,7 +28,7 @@ type ReviewsPayload = {
 const CARD_HEIGHT = "h-[340px]";
 
 const REVIEW_SCROLLBAR =
-  "overscroll-y-contain pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20";
+  "pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20";
 
 type TouchAxis = "x" | "y" | null;
 
@@ -115,15 +115,28 @@ function ReviewScrollArea({
       const dyFromStart = touch.clientY - state.startY;
 
       if (!state.axis) {
-        if (Math.abs(dxFromStart) < 10 && Math.abs(dyFromStart) < 10) return;
-        state.axis = Math.abs(dxFromStart) > Math.abs(dyFromStart) ? "x" : "y";
+        if (Math.abs(dxFromStart) < 4 && Math.abs(dyFromStart) < 4) return;
+        if (
+          Math.abs(dxFromStart) >= 4 &&
+          Math.abs(dxFromStart) >= Math.abs(dyFromStart) * 0.55
+        ) {
+          state.axis = "x";
+        } else if (
+          Math.abs(dyFromStart) >= 8 &&
+          Math.abs(dyFromStart) > Math.abs(dxFromStart) * 1.15
+        ) {
+          state.axis = "y";
+        } else {
+          return;
+        }
       }
+
+      const dx = touch.clientX - state.lastX;
+      state.lastX = touch.clientX;
 
       if (state.axis === "x") {
         event.preventDefault();
-        const dx = touch.clientX - state.lastX;
         scroller.scrollLeft -= dx;
-        state.lastX = touch.clientX;
       }
     };
 
@@ -143,15 +156,20 @@ function ReviewScrollArea({
   const Tag = as;
 
   return (
-    <div ref={wrapperRef} className={cn("flex min-h-0 flex-1 flex-col", wrapperClassName)}>
+    <div
+      ref={wrapperRef}
+      className={cn(
+        needsScroll && "flex min-h-0 flex-1 flex-col",
+        wrapperClassName,
+      )}
+    >
       <Tag
         ref={scrollRef}
         data-review-scroll={needsScroll ? "true" : undefined}
         className={cn(
-          "min-h-0",
           needsScroll
-            ? cn("max-h-full flex-1 overflow-y-auto", REVIEW_SCROLLBAR)
-            : "overflow-visible",
+            ? cn("min-h-0 max-h-full flex-1 overflow-y-auto overscroll-y-auto", REVIEW_SCROLLBAR)
+            : "",
           className,
         )}
       >
@@ -550,7 +568,7 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
           <div
             ref={scrollerRef}
             data-review-scroller
-            className="flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overflow-y-visible scroll-smooth scroll-px-8 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [touch-action:pan-x] [&::-webkit-scrollbar]:hidden"
+            className="flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overflow-y-visible scroll-smooth scroll-px-8 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <AiSummaryCard bullets={aiBullets} reviewCount={data.business.reviewCount} />
             {reviews.map((review) => (

@@ -11,15 +11,10 @@ import {
   Mail,
   Clock,
   ChevronDown,
-  Home,
-  Lock,
-  Camera,
-  Network,
-  Tv,
-  Satellite,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { images, mainNav, siteConfig, type NavChild } from "@/lib/site-config";
+import { NavServiceIcon } from "@/components/layout/nav-service-icon";
 import { SocialIconButtons } from "@/components/ui/social-icons";
 import { cn } from "@/lib/utils";
 import { pathsMatch, scrollPageToTop } from "@/lib/navigation";
@@ -35,15 +30,6 @@ function syncHeaderScrolledClass(scrolled: boolean) {
   document.documentElement.classList.add("header-ready");
 }
 
-const childIcons = {
-  home: Home,
-  lock: Lock,
-  camera: Camera,
-  network: Network,
-  tv: Tv,
-  satellite: Satellite,
-};
-
 function ServiceDropdown({
   children,
   onNavigate,
@@ -55,23 +41,20 @@ function ServiceDropdown({
 }) {
   return (
     <div className="min-w-[360px] rounded-lg border border-white/10 bg-[#1a1a1a] py-2 shadow-2xl">
-      {children.map((item) => {
-        const Icon = item.icon ? childIcons[item.icon] : Home;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={(event) => {
-              onSamePageNav(event, item.href);
-              onNavigate?.();
-            }}
-            className="flex items-center gap-3 whitespace-nowrap px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white/85 transition hover:bg-white/5 hover:text-primary"
-          >
-            <Icon className="h-4 w-4 shrink-0 text-primary" />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
+      {children.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          onClick={(event) => {
+            onSamePageNav(event, item.href);
+            onNavigate?.();
+          }}
+          className="flex items-center gap-3 whitespace-nowrap px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white/85 transition hover:bg-white/5 hover:text-primary"
+        >
+          <NavServiceIcon icon={item.icon} />
+          <span>{item.label}</span>
+        </Link>
+      ))}
     </div>
   );
 }
@@ -410,9 +393,10 @@ export function Header() {
                                   handleSamePageNav(event, child.href);
                                   closeMobile();
                                 }}
-                                className="block px-4 py-2.5 text-xs font-bold uppercase text-white/75 hover:text-primary"
+                                className="flex items-center gap-3 px-4 py-2.5 text-xs font-bold uppercase text-white/75 hover:text-primary"
                               >
-                                {child.label}
+                                <NavServiceIcon icon={child.icon} className="h-3.5 w-3.5 shrink-0 text-primary" />
+                                <span>{child.label}</span>
                               </Link>
                             ))}
                           </div>
