@@ -44,7 +44,7 @@ export function Hero({
   return (
     <section
       ref={ref}
-      className={`relative overflow-hidden ${compact ? "min-h-[50vh]" : "min-h-[85vh]"}`}
+      className={`relative overflow-hidden ${compact ? "min-h-[42vh] sm:min-h-[50vh]" : "min-h-[72vh] sm:min-h-[85vh]"}`}
     >
       <motion.div style={{ y }} className="absolute inset-0 scale-[1.15]">
         <Image
@@ -61,7 +61,7 @@ export function Hero({
 
       <motion.div
         style={{ opacity }}
-        className="relative mx-auto flex max-w-7xl flex-col justify-center px-6 py-24 lg:py-32"
+        className="relative mx-auto flex max-w-7xl flex-col justify-center px-6 py-16 sm:py-20 lg:py-32"
       >
         <FadeIn>
           {eyebrow && (

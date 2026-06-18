@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Lato, Dancing_Script } from "next/font/google";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { MobileCallFab } from "@/components/layout/mobile-call-fab";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
@@ -64,6 +65,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <MobileCallFab />
       </body>
     </html>
   );

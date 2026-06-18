@@ -243,22 +243,34 @@ export function Header() {
             scrolled && "shadow-lg shadow-black/40",
           )}
         >
-          <div className="mx-auto flex h-[100px] max-w-[1400px] items-center gap-6 px-4 lg:px-6">
-            <Link
-              href="/"
-              onClick={(event) => handleSamePageNav(event, "/")}
-              className="relative h-[70px] w-[180px] shrink-0 lg:w-[200px]"
-            >
-              <Image
-                src="/images/logo.png"
-                alt={siteConfig.name}
-                fill
-                className="object-contain object-left"
-                priority
-              />
-            </Link>
+          <div className="mx-auto flex h-[100px] max-w-[1400px] items-center px-4 lg:gap-6 lg:px-6">
+            <div className="flex w-11 shrink-0 items-center justify-start lg:hidden">
+              <a
+                href={`mailto:${siteConfig.email.general}`}
+                aria-label="Email McKee Security"
+                className="rounded-lg p-2 text-primary transition hover:text-[var(--primary-hover)]"
+              >
+                <Mail className="h-6 w-6" />
+              </a>
+            </div>
 
-            <nav className="hidden flex-1 items-center lg:flex">
+            <div className="flex min-w-0 flex-1 justify-center lg:flex-none lg:justify-start">
+              <Link
+                href="/"
+                onClick={(event) => handleSamePageNav(event, "/")}
+                className="relative h-[62px] w-[170px] shrink-0 sm:h-[70px] sm:w-[180px] lg:w-[200px]"
+              >
+                <Image
+                  src="/images/logo.png"
+                  alt={siteConfig.name}
+                  fill
+                  className="object-contain object-center lg:object-left"
+                  priority
+                />
+              </Link>
+            </div>
+
+            <nav className="hidden min-w-0 flex-1 items-center lg:flex">
               <ul className="flex items-center gap-0">
                 {mainNav.map((item) =>
                   item.children ? (
@@ -314,14 +326,16 @@ export function Header() {
               </ul>
             </nav>
 
-            <button
-              type="button"
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="ml-auto rounded-lg border border-white/15 p-2.5 text-white lg:hidden"
-            >
-              {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
+            <div className="flex w-11 shrink-0 items-center justify-end lg:hidden">
+              <button
+                type="button"
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                onClick={() => setMobileOpen(!mobileOpen)}
+                className="rounded-lg border border-white/15 p-2.5 text-white"
+              >
+                {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -434,14 +448,6 @@ export function Header() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        <a
-          href={`tel:${siteConfig.phone.tel}`}
-          className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-2xl lg:hidden"
-          aria-label="Call McKee Security"
-        >
-          <Phone className="h-6 w-6" />
-        </a>
       </header>
 
       <div
