@@ -552,14 +552,14 @@ export function GoogleReviewsSection({ embedded = false }: { embedded?: boolean 
           ) : null}
 
           <p className="mb-3 px-1 text-center text-[11px] leading-relaxed text-white/40 md:text-xs">
-            <span className="block sm:inline">
+            <span className="block">
               Swipe or use the arrows to go through our latest reviews.
             </span>
             <a
               href={data.business.mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1 block text-[#8ab4f8] hover:underline sm:mt-0 sm:inline"
+              className="mt-1 block text-[#8ab4f8] hover:underline"
             >
               Click here to read all {data.business.reviewCount}+ reviews on Google.
             </a>
