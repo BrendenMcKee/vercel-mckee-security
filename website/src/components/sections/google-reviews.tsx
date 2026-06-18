@@ -28,9 +28,7 @@ type ReviewsPayload = {
 const CARD_HEIGHT = "h-[340px]";
 
 const REVIEW_SCROLLBAR =
-  "pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20";
-
-type TouchAxis = "x" | "y" | null;
+  "overscroll-y-contain pr-1 [-ms-overflow-style:none] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [scrollbar-width:thin] [touch-action:pan-y] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20";
 
 function ReviewScrollArea({
   children,
@@ -46,12 +44,7 @@ function ReviewScrollArea({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement & HTMLUListElement>(null);
   const [needsScroll, setNeedsScroll] = useState(false);
-  const touchState = useRef({
-    startX: 0,
-    startY: 0,
-    lastX: 0,
-    axis: null as TouchAxis,
-  });
+  const [maxHeight, setMaxHeight] = useState<number | null>(null);
 
   const measure = useCallback(() => {
     const wrapper = wrapperRef.current;
@@ -61,10 +54,12 @@ function ReviewScrollArea({
     const available = wrapper.clientHeight;
     if (available <= 0) return;
 
-    scroll.style.maxHeight = `${available}px`;
-    scroll.style.overflow = "hidden";
-    const overflow = scroll.scrollHeight > scroll.clientHeight + 2;
+    scroll.style.maxHeight = "none";
+    scroll.style.overflow = "visible";
+    const contentHeight = scroll.scrollHeight;
+    const overflow = contentHeight > available + 2;
     setNeedsScroll(overflow);
+    setMaxHeight(overflow ? available : null);
     scroll.style.maxHeight = "";
     scroll.style.overflow = "";
   }, []);
@@ -87,88 +82,21 @@ function ReviewScrollArea({
     };
   }, [measure, children]);
 
-  useEffect(() => {
-    const scroll = scrollRef.current;
-    if (!scroll || !needsScroll) return;
-
-    const resetTouch = () => {
-      touchState.current.axis = null;
-    };
-
-    const onTouchStart = (event: TouchEvent) => {
-      const touch = event.touches[0];
-      touchState.current = {
-        startX: touch.clientX,
-        startY: touch.clientY,
-        lastX: touch.clientX,
-        axis: null,
-      };
-    };
-
-    const onTouchMove = (event: TouchEvent) => {
-      const scroller = scroll.closest("[data-review-scroller]") as HTMLElement | null;
-      if (!scroller) return;
-
-      const touch = event.touches[0];
-      const state = touchState.current;
-      const dxFromStart = touch.clientX - state.startX;
-      const dyFromStart = touch.clientY - state.startY;
-
-      if (!state.axis) {
-        if (Math.abs(dxFromStart) < 4 && Math.abs(dyFromStart) < 4) return;
-        if (
-          Math.abs(dxFromStart) >= 4 &&
-          Math.abs(dxFromStart) >= Math.abs(dyFromStart) * 0.55
-        ) {
-          state.axis = "x";
-        } else if (
-          Math.abs(dyFromStart) >= 8 &&
-          Math.abs(dyFromStart) > Math.abs(dxFromStart) * 1.15
-        ) {
-          state.axis = "y";
-        } else {
-          return;
-        }
-      }
-
-      const dx = touch.clientX - state.lastX;
-      state.lastX = touch.clientX;
-
-      if (state.axis === "x") {
-        event.preventDefault();
-        scroller.scrollLeft -= dx;
-      }
-    };
-
-    scroll.addEventListener("touchstart", onTouchStart, { passive: true });
-    scroll.addEventListener("touchmove", onTouchMove, { passive: false });
-    scroll.addEventListener("touchend", resetTouch);
-    scroll.addEventListener("touchcancel", resetTouch);
-
-    return () => {
-      scroll.removeEventListener("touchstart", onTouchStart);
-      scroll.removeEventListener("touchmove", onTouchMove);
-      scroll.removeEventListener("touchend", resetTouch);
-      scroll.removeEventListener("touchcancel", resetTouch);
-    };
-  }, [needsScroll]);
-
   const Tag = as;
 
   return (
     <div
       ref={wrapperRef}
-      className={cn(
-        needsScroll && "flex min-h-0 flex-1 flex-col",
-        wrapperClassName,
-      )}
+      className={cn("flex min-h-0 flex-1 flex-col", wrapperClassName)}
     >
       <Tag
         ref={scrollRef}
         data-review-scroll={needsScroll ? "true" : undefined}
+        style={maxHeight ? { maxHeight: `${maxHeight}px` } : undefined}
         className={cn(
+          "w-full self-start",
           needsScroll
-            ? cn("min-h-0 max-h-full flex-1 overflow-y-auto overscroll-y-auto", REVIEW_SCROLLBAR)
+            ? cn("overflow-y-auto", REVIEW_SCROLLBAR)
             : "",
           className,
         )}
