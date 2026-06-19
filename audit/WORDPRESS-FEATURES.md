@@ -77,3 +77,5 @@ Location: `/apply-now/`
 - `/data-drops-mckeesecurity/` — internal Data Drops instance
 
 These should not be migrated to the public Vercel site.
+
+Update (2026-06-19): Data Drops was rebuilt natively in the Next app at these same slugs, behind a password gate and noindex. The AWS backend it talks to now lives in this repo under `data-drops-aws-backend/`. See `docs/DATA-DROPS.md`.

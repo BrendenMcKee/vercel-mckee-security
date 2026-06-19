@@ -31,17 +31,23 @@ A world-class marketing website for McKee Security and Audio Systems. Same brand
 | WordPress admin | Replaced by code and Git deploys. |
 | Database (v1) | Typed TS config files and static content. Supabase optional later. |
 
+Note: Data Drops is a separate internal tool with its own AWS backend and RDS database. The exclusions above apply to the public marketing site, not to Data Drops.
+
 ---
 
 ## Repository Layout
 
 ```
 vercel-mckee-security/
-├── general.md          # This file (master plan + progress)
-├── README.md           # Quick repo intro
-├── audit/              # WordPress audit (reference, not deployed)
-└── website/            # Next.js app. Vercel deploys this folder.
+├── general.md                # This file (master plan + progress)
+├── README.md                 # Quick repo intro
+├── docs/                     # Deployment and architecture docs
+├── audit/                    # WordPress audit (reference, not deployed)
+├── website/                  # Next.js app (marketing site + Data Drops UI). Vercel deploys this folder.
+└── data-drops-aws-backend/   # Express API for Data Drops (AWS Elastic Beanstalk + RDS)
 ```
+
+This is a monorepo: the website deploys to Vercel and the backend deploys to AWS Elastic Beanstalk, independently. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ---
 
@@ -149,7 +155,14 @@ vercel-mckee-security/
 ### Phase 7: Data Drops (internal tool)
 - [x] Native rebuild of the Data Drops network-run-confirmation app at `/data-drops-hhhs` and `/data-drops-mckeesecurity`
 - [x] Server-side password gate (cookie), same-origin proxy to the AWS API (no CORS, backend untouched)
-- [ ] Set `DATA_DROPS_PASSWORD` on Vercel (shared access password; the admin deletion password lives in AWS)
+- [x] `DATA_DROPS_PASSWORD` set on Vercel (shared access password; the admin deletion password lives in AWS)
+- See [docs/DATA-DROPS.md](docs/DATA-DROPS.md) for architecture and findings
+
+### Phase 8: Monorepo and backend
+- [x] Imported the Data Drops AWS backend into the monorepo (`data-drops-aws-backend/`); legacy standalone repos archived as `-old`
+- [x] AWS CLI v2 + EB CLI set up with a dedicated `eb-deployer` IAM user (profile `eb-cli`)
+- [x] Fixed the per-tenant site listing bug and deployed it to the `data-drops-app` EB environment (verified live)
+- [ ] Set the Vercel Ignored Build Step so backend-only commits do not rebuild the site (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))
 
 ---
 
@@ -165,16 +178,31 @@ vercel-mckee-security/
 | 2026-06-17 | No em dashes in any project writing |
 | 2026-06-17 | GitHub and Vercel live. Root directory `website/` |
 | 2026-06-18 | Data Drops rebuilt natively in Next (not embedded). AWS backend + RDS untouched, reached via a same-origin proxy. |
+| 2026-06-19 | Monorepo: brought the Data Drops AWS backend into this repo; archived the standalone repos as `-old`. |
+| 2026-06-19 | Backend deploys via the EB CLI (`eb deploy`) from `data-drops-aws-backend/` to the `data-drops-app` environment. |
+| 2026-06-19 | Fixed per-tenant site listing in the backend (`getAllSites` reads `?domain=`) and deployed it live. |
 
 ---
 
 ## Open Items
 
 - [ ] Add `RESEND_API_KEY`, `CONTACT_EMAIL`, and `EMAIL_FROM` in Vercel env vars
-- [ ] Add `DATA_DROPS_PASSWORD` in Vercel env vars (Data Drops access gate). Optional: `DATA_DROPS_API_URL` (defaults to `https://app-mckeesecurity.ca/api`)
+- [x] Add `DATA_DROPS_PASSWORD` in Vercel env vars (Data Drops access gate). Optional: `DATA_DROPS_API_URL` (defaults to `https://app-mckeesecurity.ca/api`)
+- [ ] Set the Vercel Ignored Build Step: `git diff --quiet HEAD^ HEAD -- ':(top)website'` (skips website rebuilds on backend-only commits)
 - [ ] Team member photos from WordPress media
 - [ ] DNS cutover timing ([runbook](dns-migration-cloudflare-vercel.md))
 
 ---
 
-*Last updated: 2026-06-17*
+## Lessons Learned
+
+- The live deployment can be newer than the local checkout. Reconcile local, remote, and what is actually deployed before treating any source as truth. For Data Drops, the live minified bundle and the deployed backend were both ahead of the local repos.
+- Prefer a same-origin proxy over backend CORS changes when a frontend must call a separate API. It removes CORS everywhere and avoids touching or redeploying the backend.
+- Verify the deploy target before deploying. The EB config had been copied from another project and pointed at the wrong application and environment; the correct target is `data-drops-app`.
+- `.ebignore` makes EB deploys safe from a monorepo subfolder and allows deploying a fix before committing.
+- Next 16 changed several APIs (middleware is now `proxy`, `cookies()` is async, route `params` is a Promise). Check `node_modules/next/dist/docs` for this version.
+- See [docs/DATA-DROPS.md](docs/DATA-DROPS.md) for the full Data Drops write-up.
+
+---
+
+*Last updated: 2026-06-19*

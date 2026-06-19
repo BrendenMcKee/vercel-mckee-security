@@ -1,44 +1,75 @@
-# McKee Security Vercel Edition
+# McKee Security Monorepo
 
-Modern rebuild of [mckeesecurity.ca](https://mckeesecurity.ca). Next.js on Vercel, replacing WordPress and Flatsome.
+Monorepo for [mckeesecurity.ca](https://mckeesecurity.ca): the Next.js marketing site and the Data Drops backend, managed together so the whole product lives in one place.
 
-**Master plan:** see [`general.md`](./general.md)
+- **Master plan and progress:** [`general.md`](./general.md)
+- **Deployment and workflow:** [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)
+- **Data Drops architecture:** [`docs/DATA-DROPS.md`](./docs/DATA-DROPS.md)
 
-## Repository Structure
+## Repository structure
 
 ```
-├── general.md       # Master plan and progress tracker
-├── audit/           # WordPress audit (reference only, not deployed)
-└── website/         # Next.js app. Vercel root directory.
+vercel-mckee-security/
+├── general.md                # Master plan and progress tracker
+├── docs/                     # Deployment and architecture docs
+├── audit/                    # WordPress audit (reference only, not deployed)
+├── website/                  # Next.js app (marketing site + Data Drops UI). Vercel root directory.
+└── data-drops-aws-backend/   # Express API for Data Drops (AWS Elastic Beanstalk + RDS)
 ```
 
-## GitHub
+The two apps deploy independently: the website to Vercel, the backend to AWS Elastic Beanstalk. Keeping them in one repo centralizes everything; it does not couple their deploys.
 
-https://github.com/BrendenMcKee/vercel-mckee-security
+## Apps
 
-## Vercel
+### Website (Vercel)
 
-**Production URL:** https://vercel-mckee-security.vercel.app  
-**Dashboard:** https://vercel.com/brendenmckees-projects/vercel-mckee-security
-
-Root directory is set to `website`. Pushes to `main` auto-deploy.
-
-## Local Development
+Next.js 16 marketing site plus the internal Data Drops tool. The Vercel root directory is `website`. Pushes to `main` auto-deploy.
 
 ```bash
 cd website
 npm install
-npm run dev
+npm run dev    # http://localhost:3000
 ```
 
-Open http://localhost:3000
+Project dashboard: https://vercel.com/brendenmckees-projects/vercel-mckee-security
 
-## Environment Variables (Vercel)
+### Data Drops backend (AWS)
+
+Express + MySQL (RDS) API served at `https://app-mckeesecurity.ca/api`, deployed to the `data-drops-app` Elastic Beanstalk environment in `ca-central-1`. The website never calls it cross-origin; it proxies through `website` at `/api/dd/*`.
+
+```bash
+cd data-drops-aws-backend
+eb deploy      # deploys this folder's working tree to data-drops-app
+```
+
+See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) and [`data-drops-aws-backend/README.md`](./data-drops-aws-backend/README.md).
+
+## Build behavior
+
+Vercel rebuilds on every push by default. To skip website rebuilds on backend-only commits, set the Vercel **Ignored Build Step** (Project Settings -> Git) to:
+
+```bash
+git diff --quiet HEAD^ HEAD -- ':(top)website'
+```
+
+It exits 0 (skip) when nothing under `website/` changed, and 1 (build) when it did.
+
+## Environment variables
+
+### Vercel (website)
 
 | Variable | Purpose |
 |----------|---------|
-| `RESEND_API_KEY` | Sends form notification emails |
+| `RESEND_API_KEY` | Sends form notification emails. Forms still succeed and log to console without it. |
 | `CONTACT_EMAIL` | Inbox for form submissions (default: info@mckeesecurity.ca) |
 | `EMAIL_FROM` | Sender address for Resend |
+| `DATA_DROPS_PASSWORD` | Shared access password for the Data Drops pages |
+| `DATA_DROPS_API_URL` | Optional. Data Drops API base. Defaults to `https://app-mckeesecurity.ca/api` |
 
-Without `RESEND_API_KEY`, forms still succeed and log to the server console.
+### AWS Elastic Beanstalk (backend)
+
+`RDS_ENDPOINT`, `RDS_USERNAME`, `RDS_PASSWORD`, `RDS_DB_NAME` are set on the EB environment, never in the repo.
+
+## GitHub
+
+https://github.com/BrendenMcKee/vercel-mckee-security

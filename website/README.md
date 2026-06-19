@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# McKee Security website
 
-## Getting Started
+Next.js 16 (App Router) marketing site for [mckeesecurity.ca](https://mckeesecurity.ca),
+plus the internal Data Drops tool. This is the `website/` app in the
+[vercel-mckee-security monorepo](../README.md) and is the Vercel root directory.
 
-First, run the development server:
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev    # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Next.js 16 App Router, TypeScript
+- Tailwind CSS 4 (CSS variables), Framer Motion, lucide-react
+- React Hook Form + Zod, Resend for email (via API routes)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Notable areas
 
-## Learn More
+- Marketing pages: `src/app/*` and `src/components/*`
+- Data Drops tool: `src/app/(data-drops)/*`, `src/app/api/dd/*` (proxy),
+  `src/app/api/data-drops/*` (gate), `src/components/data-drops/*`,
+  `src/lib/data-drops/*`. See [../docs/DATA-DROPS.md](../docs/DATA-DROPS.md).
 
-To learn more about Next.js, take a look at the following resources:
+## Environment variables (Vercel)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Purpose |
+|----------|---------|
+| `RESEND_API_KEY` | Form notification emails (forms log to console without it) |
+| `CONTACT_EMAIL` | Inbox for form submissions |
+| `EMAIL_FROM` | Resend sender address |
+| `DATA_DROPS_PASSWORD` | Shared access password for the Data Drops pages |
+| `DATA_DROPS_API_URL` | Optional. Defaults to `https://app-mckeesecurity.ca/api` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Agent note
 
-## Deploy on Vercel
+This project pins a future Next.js with breaking changes. See [`AGENTS.md`](./AGENTS.md):
+read the guides in `node_modules/next/dist/docs/` before writing Next code.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deployment and the monorepo build workflow are documented in
+[../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
