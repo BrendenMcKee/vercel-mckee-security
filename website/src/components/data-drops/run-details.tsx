@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -50,12 +50,14 @@ export function NetworkRunDetails({
   siteName,
   date,
   isNewDay: initialIsNewDay,
+  focusLabel,
   onBack,
 }: {
   tenant: TenantConfig;
   siteName: string;
   date: string;
   isNewDay: boolean;
+  focusLabel?: string | null;
   onBack: (shouldRefresh?: boolean, newDate?: string | null) => void;
 }) {
   const toast = useToast();
@@ -66,6 +68,14 @@ export function NetworkRunDetails({
   const [isLoading, setIsLoading] = useState(true);
   const [runs, setRuns] = useState<Run[]>([]);
   const [dataModified, setDataModified] = useState(false);
+
+  // When arriving from a device search result, scroll to and highlight that exact
+  // run row until the user takes any action. Seeded from the prop on mount.
+  const [highlightedLabel, setHighlightedLabel] = useState<string | null>(
+    focusLabel ?? null,
+  );
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
+  const didFocusRef = useRef(false);
 
   const [signatures, setSignatures] = useState<SignaturePair>({
     signature_tech: null,
@@ -223,10 +233,20 @@ export function NetworkRunDetails({
     fetchSignatures();
   }, [fetchSignatures]);
 
+  // Once the runs have loaded, scroll the focused row into view (centered, so it
+  // clears the fixed header on any screen size). Runs only once per mount.
+  useEffect(() => {
+    if (didFocusRef.current || isLoading || !highlightedLabel) return;
+    didFocusRef.current = true;
+    const el = rowRefs.current.get(highlightedLabel);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [isLoading, highlightedLabel]);
+
   const status = signedStatus(signatures.signature_tech, signatures.signature_admin);
 
   /* ----------------------------- Add run ----------------------------- */
   function openAddRun() {
+    setHighlightedLabel(null);
     setAddForm({ label: "", location: "", techs: "", device: "" });
     setAddError("");
     setShowAddRun(true);
@@ -306,6 +326,7 @@ export function NetworkRunDetails({
 
   /* ----------------------------- Edit run ----------------------------- */
   function openEditRun(run: Run) {
+    setHighlightedLabel(null);
     setOriginalLabel(run.label);
     setEditForm({
       label: run.label,
@@ -508,6 +529,7 @@ export function NetworkRunDetails({
   /* ----------------------------- Notify signer ----------------------------- */
   async function handleNotify(event: React.FormEvent) {
     event.preventDefault();
+    setHighlightedLabel(null);
     const email = signerEmail.trim();
     if (!EMAIL_RE.test(email)) {
       toast({ type: "error", message: "Please enter a valid email address." });
@@ -541,6 +563,7 @@ export function NetworkRunDetails({
 
   /* ----------------------------- Signatures ----------------------------- */
   function openSignature(type: "tech" | "admin") {
+    setHighlightedLabel(null);
     setSignatureType(type);
     setSignatureValue(
       (type === "tech" ? signatures.signature_tech : signatures.signature_admin) || "",
@@ -641,6 +664,7 @@ export function NetworkRunDetails({
           <button
             type="button"
             onClick={() => {
+              setHighlightedLabel(null);
               setDateValue(toYmd(entryDate));
               setShowDateEdit(true);
             }}
@@ -690,7 +714,17 @@ export function NetworkRunDetails({
                 animate={{ opacity: 1 }}
                 className="border-b border-white/5 last:border-0"
               >
-                <div className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5 sm:grid sm:grid-cols-[1fr_1.4fr_1fr_auto]">
+                <div
+                  ref={(el) => {
+                    if (el) rowRefs.current.set(run.label, el);
+                    else rowRefs.current.delete(run.label);
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5 sm:grid sm:grid-cols-[1fr_1.4fr_1fr_auto]",
+                    run.label === highlightedLabel &&
+                      "bg-primary/10 ring-1 ring-inset ring-primary/60",
+                  )}
+                >
                   <button
                     type="button"
                     onClick={() => openEditRun(run)}
@@ -724,6 +758,7 @@ export function NetworkRunDetails({
                     <button
                       type="button"
                       onClick={() => {
+                        setHighlightedLabel(null);
                         setRunToDelete(run.label);
                         setDeletePassword("");
                         setDeleteError("");

@@ -120,6 +120,8 @@ export function SiteOverview({
   const [showDetails, setShowDetails] = useState(Boolean(targetDate));
   const [selectedDate, setSelectedDate] = useState<string | null>(targetDate);
   const [isAddingNewDay, setIsAddingNewDay] = useState(false);
+  // Label of the run to focus/highlight when opening a day from a device result.
+  const [focusLabel, setFocusLabel] = useState<string | null>(null);
 
   const [dayToDelete, setDayToDelete] = useState<RunDay | null>(null);
   const [deletePassword, setDeletePassword] = useState("");
@@ -225,12 +227,14 @@ export function SiteOverview({
   }
 
   function openDay(day: RunDay) {
+    setFocusLabel(null);
     setSelectedDate(longToYmd(day.date));
     setIsAddingNewDay(false);
     setShowDetails(true);
   }
 
   function addNewDay() {
+    setFocusLabel(null);
     setSelectedDate(todayYmd());
     setIsAddingNewDay(true);
     setShowDetails(true);
@@ -247,6 +251,7 @@ export function SiteOverview({
     }
     if (newDate) {
       // Navigating to a specific date opens it as an existing day, not a new one.
+      setFocusLabel(null);
       setSelectedDate(newDate);
       setIsAddingNewDay(false);
       setShowDetails(true);
@@ -404,6 +409,7 @@ export function SiteOverview({
   function openSearchResult(drop: Drop) {
     const ymd = anyToYmd(drop.date);
     if (!ymd) return;
+    setFocusLabel(drop.data_label);
     setSelectedDate(ymd);
     setIsAddingNewDay(false);
     setShowDetails(true);
@@ -451,6 +457,7 @@ export function SiteOverview({
         siteName={siteName}
         date={selectedDate}
         isNewDay={isAddingNewDay}
+        focusLabel={focusLabel}
         onBack={handleBackFromDetails}
       />
     );
