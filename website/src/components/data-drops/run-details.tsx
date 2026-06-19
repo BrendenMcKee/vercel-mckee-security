@@ -94,6 +94,7 @@ export function NetworkRunDetails({
   const [showDateEdit, setShowDateEdit] = useState(false);
   const [dateValue, setDateValue] = useState(toYmd(date));
   const [dateSubmitting, setDateSubmitting] = useState(false);
+  const [dateConflict, setDateConflict] = useState<string | null>(null);
 
   // Delete run modal
   const [runToDelete, setRunToDelete] = useState<string | null>(null);
@@ -338,6 +339,30 @@ export function NetworkRunDetails({
     event.preventDefault();
     const newDate = toYmd(dateValue);
 
+    if (newDate === toYmd(entryDate)) {
+      setShowDateEdit(false);
+      return;
+    }
+
+    setDateSubmitting(true);
+
+    // Prevent duplicate days: if the target date already exists for this site,
+    // do not create or silently merge into it. Offer to open the existing day.
+    try {
+      const existing = await getDates(siteName, domain);
+      if (existing.success && Array.isArray(existing.dateData)) {
+        const targetLong = ymdToLong(newDate);
+        if (existing.dateData.some((entry) => entry.date === targetLong)) {
+          setDateSubmitting(false);
+          setShowDateEdit(false);
+          setDateConflict(newDate);
+          return;
+        }
+      }
+    } catch {
+      // If the existence check fails, fall through to the normal save path.
+    }
+
     // A brand-new day has no saved record yet (the date row is created when the
     // first run is added), so there is nothing to move on the server. Just
     // retarget the new day locally; calling update-date here would fail with
@@ -346,10 +371,10 @@ export function NetworkRunDetails({
       setShowDateEdit(false);
       setEntryDate(newDate);
       setDataModified(true);
+      setDateSubmitting(false);
       return;
     }
 
-    setDateSubmitting(true);
     try {
       await updateDate({
         site_name: siteName,
@@ -912,6 +937,46 @@ export function NetworkRunDetails({
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Date Conflict Modal */}
+      <Modal
+        open={Boolean(dateConflict)}
+        onClose={() => setDateConflict(null)}
+        title="Date already exists"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-white/70">
+            A day already exists for{" "}
+            <span className="font-semibold text-white">
+              {dateConflict ? ymdToLong(dateConflict) : ""}
+            </span>
+            . To avoid duplicate entries, open that day instead?
+          </p>
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const target = dateConflict;
+                setDateConflict(null);
+                if (target) onBack(true, target);
+              }}
+              className="flex-1"
+            >
+              Open that day
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDateConflict(null)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Delete Run Modal */}

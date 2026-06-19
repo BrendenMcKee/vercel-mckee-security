@@ -188,7 +188,10 @@ export function SiteOverview({
       return;
     }
     if (newDate) {
+      // Navigating to a specific date opens it as an existing day, not a new one.
       setSelectedDate(newDate);
+      setIsAddingNewDay(false);
+      setShowDetails(true);
     } else {
       setShowDetails(false);
       setSelectedDate(null);
