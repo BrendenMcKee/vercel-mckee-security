@@ -830,82 +830,76 @@ export const notifySigner = async (req, res) => {
             }
         });
 
-        // HTML email template
+        // Pre-format the run date for the subject and body.
+        const formattedDate = new Date(date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // HTML email template: dark, on-brand with the Data Drops UI.
+        // Table-based with inline styles for broad email-client compatibility.
         const htmlTemplate = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="color-scheme" content="dark">
+            <meta name="supported-color-schemes" content="dark">
             <title>Signature Request</title>
-            <style>
-                body { 
-                    font-family: Arial, sans-serif; 
-                    line-height: 1.6; 
-                    color: #333; 
-                    max-width: 600px; 
-                    margin: 0 auto; 
-                    padding: 20px; 
-                }
-                .header { 
-                    text-align: center; 
-                    margin-bottom: 30px; 
-                }
-                .logo { 
-                    max-width: 200px; 
-                    height: auto; 
-                }
-                .button {
-                    display: inline-block;
-                    background-color: #007bff;
-                    color: white !important;
-                    text-decoration: none;
-                    padding: 12px 24px;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    margin: 20px 0;
-                }
-                .footer {
-                    margin-top: 40px;
-                    font-size: 12px;
-                    color: #666;
-                    border-top: 1px solid #eee;
-                    padding-top: 20px;
-                }
-                .important-note {
-                    background-color: #f8f9fa;
-                    border-left: 4px solid #007bff;
-                    padding: 15px;
-                    margin: 20px 0;
-                }
-            </style>
         </head>
-        <body>
-            <div class="header">
-                <img src="https://mckeesecurity.ca/wp-content/uploads/2021/03/NEW-LOGO-PNG.png" alt="McKee Security Logo" class="logo">
-                <h2>Signature Request</h2>
-            </div>
-            
-            <p>Hello,</p>
-            
-            <p>Your signature is requested for network data collected at <strong>${site_name}</strong> on <strong>${new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
-            
-            <p>Please review the data and provide your digital signature by clicking the button below:</p>
-            
-            <div style="text-align: center;">
-                <a href="${signatureUrl}" class="button">Review and Sign Data</a>
-            </div>
-            
-            <div class="important-note">
-                <p><strong>Important:</strong> You will need to enter the site password to access the page. If you don't have the password, please contact your administrator.</p>
-            </div>
-            
-            <p>If you have any questions or concerns, please contact us at web@mckeesecurity.ca.</p>
-            
-            <div class="footer">
-                <p>McKee Security & Audio Systems Inc.</p>
-                <p>This email was sent automatically. Please do not reply directly to this message.</p>
-            </div>
+        <body style="margin:0; padding:0; background-color:#0a0a0a;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0a0a0a;">
+                <tr>
+                    <td align="center" style="padding:24px 12px;">
+                        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background-color:#1a1a1a; border:1px solid #2a2a2a; border-radius:16px; overflow:hidden;">
+                            <tr>
+                                <td align="center" style="background-color:#141414; padding:28px 24px 22px 24px; border-bottom:3px solid #c91818;">
+                                    <img src="https://vercel-mckee-security.vercel.app/images/logo.png" alt="McKee Security & Audio Systems" width="210" style="display:block; width:210px; max-width:62%; height:auto;">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:32px 32px 8px 32px; font-family:Arial, Helvetica, sans-serif;">
+                                    <p style="margin:0 0 10px 0; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:#e23b3b; font-weight:bold;">Network Run Confirmation</p>
+                                    <h1 style="margin:0 0 18px 0; font-size:24px; line-height:1.3; color:#ffffff;">Signature Request</h1>
+                                    <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#cfcfcf;">Hello,</p>
+                                    <p style="margin:0 0 8px 0; font-size:15px; line-height:1.6; color:#cfcfcf;">Your signature is requested for the network data collected at <strong style="color:#ffffff;">${site_name}</strong> on <strong style="color:#ffffff;">${formattedDate}</strong>. Please review the runs and add your digital signature.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align="center" style="padding:24px 32px 28px 32px;">
+                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td align="center" bgcolor="#c91818" style="border-radius:10px;">
+                                                <a href="${signatureUrl}" target="_blank" style="display:inline-block; padding:14px 34px; font-family:Arial, Helvetica, sans-serif; font-size:16px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:10px;">Review &amp; Sign Data</a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0 32px 26px 32px; font-family:Arial, Helvetica, sans-serif;">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#241113; border-radius:8px;">
+                                        <tr>
+                                            <td style="padding:14px 16px; border-left:4px solid #c91818; font-size:13px; line-height:1.6; color:#d9bcbc;">
+                                                <strong style="color:#ffffff;">Note:</strong> You will be asked for the site access password to open the page. If you do not have it, please contact your administrator.
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <p style="margin:18px 0 0 0; font-size:12px; line-height:1.6; color:#777777;">If the button does not work, copy and paste this link into your browser:<br><a href="${signatureUrl}" style="color:#8ab4f8; word-break:break-all;">${signatureUrl}</a></p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:20px 32px 28px 32px; border-top:1px solid #2a2a2a; font-family:Arial, Helvetica, sans-serif;">
+                                    <p style="margin:0 0 4px 0; font-size:13px; color:#e0e0e0; font-weight:bold;">McKee Security &amp; Audio Systems Inc.</p>
+                                    <p style="margin:0; font-size:12px; line-height:1.6; color:#777777;">Questions? Contact <a href="mailto:web@mckeesecurity.ca" style="color:#8ab4f8;">web@mckeesecurity.ca</a>. This message was sent automatically; please do not reply.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
         </body>
         </html>
         `;
@@ -914,7 +908,7 @@ export const notifySigner = async (req, res) => {
         const mailOptions = {
             from: '"McKee Security" <mckee.network.inquiry@gmail.com>',
             to: email,
-            subject: `Signature Request: ${site_name} - ${new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+            subject: `Signature Request: ${site_name} - ${formattedDate}`,
             html: htmlTemplate
         };
 
