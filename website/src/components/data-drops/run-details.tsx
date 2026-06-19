@@ -336,16 +336,29 @@ export function NetworkRunDetails({
   /* ----------------------------- Edit date ----------------------------- */
   async function handleDateSave(event: React.FormEvent) {
     event.preventDefault();
+    const newDate = toYmd(dateValue);
+
+    // A brand-new day has no saved record yet (the date row is created when the
+    // first run is added), so there is nothing to move on the server. Just
+    // retarget the new day locally; calling update-date here would fail with
+    // "No data found for this site and date".
+    if (isNewDay) {
+      setShowDateEdit(false);
+      setEntryDate(newDate);
+      setDataModified(true);
+      return;
+    }
+
     setDateSubmitting(true);
     try {
       await updateDate({
         site_name: siteName,
         old_date: toYmd(entryDate),
-        new_date: toYmd(dateValue),
+        new_date: newDate,
         site_domain: domain,
       });
       setShowDateEdit(false);
-      setEntryDate(toYmd(dateValue));
+      setEntryDate(newDate);
       setDataModified(true);
       toast({ type: "success", message: "Date updated." });
     } catch (err) {
