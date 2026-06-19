@@ -25,11 +25,19 @@ export function Modal({
   size?: keyof typeof sizes;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
 
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Only react to `open` changing. Depending on `onClose` (a new function each
+  // render) would re-run this on every keystroke and steal focus back to the
+  // dialog, which broke typing in modal inputs. We read onClose via a ref instead.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
     const previousOverflow = document.body.style.overflow;
@@ -39,7 +47,7 @@ export function Modal({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>
