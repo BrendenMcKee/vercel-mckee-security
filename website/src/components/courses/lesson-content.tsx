@@ -32,12 +32,12 @@ export function LessonContentPanel({
 
   const preparedHtml = useMemo(
     () => (entry?.html ? prepareLessonHtml(entry.html) : ""),
-    [entry?.html],
+    [entry],
   );
 
   const layoutClass = useMemo(
     () => (entry?.html ? getLessonLayoutClass(entry.html) : ""),
-    [entry?.html],
+    [entry],
   );
 
   useEffect(() => {

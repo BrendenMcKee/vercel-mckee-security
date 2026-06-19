@@ -203,6 +203,9 @@ export function SiteOverview({
   }, [siteName, domain]);
 
   useEffect(() => {
+    // Data-fetch effect: loads this site's days and drops from the API and
+    // manages its own loading/result state (intended sync with external system).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRunDays();
     fetchAllDrops();
   }, [fetchRunDays, fetchAllDrops]);

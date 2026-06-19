@@ -5,14 +5,10 @@ import { ArrowRight } from "lucide-react";
 import { FadeIn } from "@/components/motion/fade-in";
 import { courses } from "@/lib/courses";
 import { getCourseProgress } from "@/lib/course-progress";
-import { useEffect, useState } from "react";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export function CoursesCatalog() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-6 lg:max-w-7xl xl:max-w-[1280px]">

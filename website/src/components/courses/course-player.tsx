@@ -38,6 +38,7 @@ import {
 import { getEmbeddedCheckboxProgress, isSubstantialLesson } from "@/lib/lesson-html";
 import { celebrateConfetti } from "@/lib/confetti";
 import { cn } from "@/lib/utils";
+import { useHydrated } from "@/lib/use-hydrated";
 import "@/styles/course-lesson-content.css";
 
 type OpenLesson = string | null;
@@ -132,15 +133,19 @@ function LessonProgressPanel({
 }
 
 export function CoursePlayer({ course }: { course: Course }) {
+  const mounted = useHydrated();
   const [openModule, setOpenModule] = useState<number | null>(0);
   const [openLesson, setOpenLesson] = useState<OpenLesson>(null);
   const [progress, setProgress] = useState(() => getCourseProgress(course));
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
+  // Reload saved progress when navigating to a different course without a
+  // remount. Adjusting state during render (rather than in an effect) keeps the
+  // displayed progress in sync with the active course in a single pass.
+  const [trackedCourse, setTrackedCourse] = useState(course);
+  if (trackedCourse !== course) {
+    setTrackedCourse(course);
     setProgress(getCourseProgress(course));
-  }, [course]);
+  }
 
   const applyProgress = useCallback(
     (next: ReturnType<typeof getCourseProgress>) => {

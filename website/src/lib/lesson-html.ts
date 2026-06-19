@@ -6,7 +6,7 @@ export function prepareLessonHtml(html: string): string {
     .replace(/<!--[\s\S]*?-->/g, "");
 
   result = result.replace(/style="([^"]*)"/gi, (_match, styles: string) => {
-    let cleaned = styles
+    const cleaned = styles
       .replace(/background-color:\s*(white|#fff(?:fff)?|#f3f3f3|#f9f9f9|#eeeeee|#eee|#e9e9e9)\s*;?/gi, "")
       .replace(/background:\s*(white|#fff(?:fff)?|#f3f3f3|#f9f9f9|#e9e9e9)\s*;?/gi, "")
       .replace(/box-shadow:\s*[^;]+;?/gi, "")

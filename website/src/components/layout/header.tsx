@@ -31,17 +31,17 @@ function syncHeaderScrolledClass(scrolled: boolean) {
 }
 
 function ServiceDropdown({
-  children,
+  items,
   onNavigate,
   onSamePageNav,
 }: {
-  children: NavChild[];
+  items: NavChild[];
   onNavigate?: () => void;
   onSamePageNav: (event: React.MouseEvent<HTMLAnchorElement>, href: string) => void;
 }) {
   return (
     <div className="min-w-[360px] rounded-lg border border-white/10 bg-[#1a1a1a] py-2 shadow-2xl">
-      {children.map((item) => (
+      {items.map((item) => (
         <Link
           key={item.href}
           href={item.href}
@@ -100,8 +100,15 @@ export function Header() {
     };
   }, []);
 
-  useLayoutEffect(() => {
+  // On route change, reset the collapsed state during render (instead of inside
+  // an effect) so a new page starts expanded without a cascading effect render.
+  const [scrollResetPath, setScrollResetPath] = useState(pathname);
+  if (scrollResetPath !== pathname) {
+    setScrollResetPath(pathname);
     setScrolled(false);
+  }
+
+  useLayoutEffect(() => {
     syncHeaderScrolledClass(false);
     requestAnimationFrame(() => {
       if (headerRef.current) {
@@ -285,7 +292,7 @@ export function Header() {
                             className="absolute left-0 top-full z-50 pt-1"
                           >
                             <ServiceDropdown
-                              children={item.children}
+                              items={item.children}
                               onSamePageNav={handleSamePageNav}
                             />
                           </motion.div>

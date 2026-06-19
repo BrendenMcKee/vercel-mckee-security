@@ -73,7 +73,9 @@ export function NetworkRunDetails({
   });
   const [reqSignatureDate, setReqSignatureDate] = useState<string | null>(null);
   const [reqSignatureEmail, setReqSignatureEmail] = useState<string | null>(null);
-  const [isSignatureRequested, setIsSignatureRequested] = useState(false);
+  // Seeded from the deep-link query param once; the request banner additionally
+  // depends on async-loaded data, so this never differs from the server render.
+  const [isSignatureRequested] = useState(() => getParam("action") === "sign");
 
   // Add run modal
   const [showAddRun, setShowAddRun] = useState(false);
@@ -136,17 +138,23 @@ export function NetworkRunDetails({
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
-    if (getParam("action") === "sign") setIsSignatureRequested(true);
   }, []);
 
-  useEffect(() => {
+  // Re-sync local state when the parent selects a different day or toggles
+  // new-day mode. Adjusting state during render (guarded by the previous prop
+  // value) avoids a setState-in-effect and keeps it to a single pass.
+  const [syncedDate, setSyncedDate] = useState(date);
+  if (syncedDate !== date) {
+    setSyncedDate(date);
     setEntryDate(date);
     setDateValue(toYmd(date));
-  }, [date]);
+  }
 
-  useEffect(() => {
+  const [syncedIsNewDay, setSyncedIsNewDay] = useState(initialIsNewDay);
+  if (syncedIsNewDay !== initialIsNewDay) {
+    setSyncedIsNewDay(initialIsNewDay);
     setIsNewDay(initialIsNewDay);
-  }, [initialIsNewDay]);
+  }
 
   const fetchRuns = useCallback(async () => {
     if (isNewDay) {
@@ -203,10 +211,15 @@ export function NetworkRunDetails({
   }, [siteName, entryDate, domain]);
 
   useEffect(() => {
+    // Data-fetch effect: loads this day's runs from the API and manages its own
+    // loading/result state. This is the intended "sync with external system".
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRuns();
   }, [fetchRuns]);
 
   useEffect(() => {
+    // Data-fetch effect: loads signature state for this day from the API.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSignatures();
   }, [fetchSignatures]);
 
