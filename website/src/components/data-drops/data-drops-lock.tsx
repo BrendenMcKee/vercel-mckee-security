@@ -44,7 +44,7 @@ export function DataDropsLock() {
     <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-surface p-8 shadow-2xl shadow-black/40">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="relative mb-4 h-16 w-16">
+          <div className="relative mb-5 h-24 w-24 sm:h-20 sm:w-20">
             <Image
               src={images.shieldLogo}
               alt="McKee Security"
