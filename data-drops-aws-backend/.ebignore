@@ -1,0 +1,11 @@
+# With this file present, the EB CLI bundles this directory's working tree
+# (ignoring git), so deploys are scoped to the backend only and can include
+# uncommitted changes. Keep dependencies/artifacts out of the upload; the
+# Elastic Beanstalk platform runs `npm install` during deploy.
+node_modules/
+.git/
+*.zip
+npm-debug.log*
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,9 +1,9 @@
 branch-defaults:
   default:
-    environment: nvr-backup
+    environment: data-drops-app
     group_suffix: null
 global:
-  application_name: Express App
+  application_name: data-drops-app
   branch: null
   default_ec2_keyname: null
   default_platform: Node.js 20
