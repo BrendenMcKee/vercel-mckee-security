@@ -46,13 +46,9 @@ See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) and [`data-drops-aws-backend/RE
 
 ## Build behavior
 
-Vercel rebuilds on every push by default. To skip website rebuilds on backend-only commits, set the Vercel **Ignored Build Step** (Project Settings -> Git) to:
+Vercel rebuilds on every push to `main`, including backend-only commits. This is intentional: backend changes are infrequent, and a redundant rebuild just redeploys the same site with no downtime, so we keep it simple.
 
-```bash
-git diff --quiet HEAD^ HEAD -- ':(top)website'
-```
-
-It exits 0 (skip) when nothing under `website/` changed, and 1 (build) when it did.
+Optional (not enabled): if backend-only commits ever become frequent, set the Vercel Ignored Build Step (Project Settings -> Git) to `git diff --quiet HEAD^ HEAD -- ':(top)website'`, which skips the build when nothing under `website/` changed.
 
 ## Environment variables
 

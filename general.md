@@ -162,7 +162,7 @@ This is a monorepo: the website deploys to Vercel and the backend deploys to AWS
 - [x] Imported the Data Drops AWS backend into the monorepo (`data-drops-aws-backend/`); legacy standalone repos archived as `-old`
 - [x] AWS CLI v2 + EB CLI set up with a dedicated `eb-deployer` IAM user (profile `eb-cli`)
 - [x] Fixed the per-tenant site listing bug and deployed it to the `data-drops-app` EB environment (verified live)
-- [ ] Set the Vercel Ignored Build Step so backend-only commits do not rebuild the site (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))
+- [x] Decided to accept Vercel rebuilds on every push (backend changes are rare; redundant rebuilds are harmless). The Ignored Build Step stays documented as an optional future optimization (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))
 
 ---
 
@@ -181,6 +181,7 @@ This is a monorepo: the website deploys to Vercel and the backend deploys to AWS
 | 2026-06-19 | Monorepo: brought the Data Drops AWS backend into this repo; archived the standalone repos as `-old`. |
 | 2026-06-19 | Backend deploys via the EB CLI (`eb deploy`) from `data-drops-aws-backend/` to the `data-drops-app` environment. |
 | 2026-06-19 | Fixed per-tenant site listing in the backend (`getAllSites` reads `?domain=`) and deployed it live. |
+| 2026-06-19 | Skip the Vercel Ignored Build Step for now. Backend changes are rare and redundant rebuilds are harmless. Kept documented as an optional future optimization. |
 
 ---
 
@@ -188,7 +189,6 @@ This is a monorepo: the website deploys to Vercel and the backend deploys to AWS
 
 - [ ] Add `RESEND_API_KEY`, `CONTACT_EMAIL`, and `EMAIL_FROM` in Vercel env vars
 - [x] Add `DATA_DROPS_PASSWORD` in Vercel env vars (Data Drops access gate). Optional: `DATA_DROPS_API_URL` (defaults to `https://app-mckeesecurity.ca/api`)
-- [ ] Set the Vercel Ignored Build Step: `git diff --quiet HEAD^ HEAD -- ':(top)website'` (skips website rebuilds on backend-only commits)
 - [ ] Team member photos from WordPress media
 - [ ] DNS cutover timing ([runbook](dns-migration-cloudflare-vercel.md))
 

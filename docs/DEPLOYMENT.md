@@ -13,25 +13,26 @@ The two deploy to different platforms and should be released independently.
 ## Frontend (Vercel)
 
 Vercel is connected to this repo with the **Root Directory set to `website/`**. It
-auto-deploys on every push to `main`.
+auto-deploys on every push to `main`, including backend-only commits.
 
-> Important: a monorepo does NOT, by itself, stop Vercel from rebuilding on
-> backend-only pushes. A `.gitignore` cannot control this either. To skip website
-> rebuilds when only the backend changed, set the Vercel **Ignored Build Step**.
+We intentionally let every push rebuild the site. Backend changes are infrequent, and
+a redundant rebuild just redeploys the same site with no downtime, so the simplicity is
+worth more than the saved build. Note that a monorepo (or a `.gitignore`) cannot change
+this on its own.
 
-Set it once in **Vercel -> Project -> Settings -> Git -> Ignored Build Step**:
+Optional optimization (not enabled): if backend-only commits ever become frequent, set
+the Vercel **Ignored Build Step** in **Project Settings -> Git** to:
 
 ```bash
 git diff --quiet HEAD^ HEAD -- ':(top)website'
 ```
 
-How it reads: the command exits `0` (cancel build) when nothing under `website/`
-changed, and `1` (build) when it did. So backend-only commits will not trigger a
-website deploy.
+It exits `0` (skip the build) when nothing under `website/` changed, and `1` (build)
+when it did. With it set, backend-only commits would not trigger a website deploy.
 
 ## Backend (AWS Elastic Beanstalk)
 
-- App: `Express App` · Environment: `nvr-backup` · Region: `ca-central-1`
+- Application: `data-drops-app` · Environment: `data-drops-app` · Region: `ca-central-1`
 - Live API: `https://app-mckeesecurity.ca/api`
 - EB CLI profile: `eb-cli`
 
