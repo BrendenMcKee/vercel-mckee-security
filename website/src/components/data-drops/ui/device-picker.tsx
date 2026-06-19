@@ -79,6 +79,7 @@ export function DevicePicker({
         <input
           type="text"
           value={custom}
+          maxLength={120}
           onChange={(event) => setCustom(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {

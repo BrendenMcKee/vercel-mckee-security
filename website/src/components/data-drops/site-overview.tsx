@@ -157,13 +157,17 @@ export function SiteOverview({
   // surfaced as one-click search buttons alongside the presets.
   const extraDevices = useMemo(() => {
     const presetNorm = new Set(DEVICE_PRESETS.map((d) => normalizeDevice(d)));
-    const found = new Set<string>();
+    const seen = new Set<string>();
+    const found: string[] = [];
     for (const drop of allDrops) {
-      if (drop.data_device && !presetNorm.has(normalizeDevice(drop.data_device))) {
-        found.add(drop.data_device);
-      }
+      const raw = drop.data_device;
+      if (!raw) continue;
+      const norm = normalizeDevice(raw);
+      if (presetNorm.has(norm) || seen.has(norm)) continue;
+      seen.add(norm);
+      found.push(raw);
     }
-    return [...found].sort((a, b) => a.localeCompare(b));
+    return found.sort((a, b) => a.localeCompare(b));
   }, [allDrops]);
 
   const displayedResults = useMemo(() => {
@@ -465,7 +469,12 @@ export function SiteOverview({
             <button
               key={type}
               type="button"
-              onClick={() => setSearchType(type)}
+              onClick={() => {
+                setSearchType(type);
+                // Switching search mode discards prior results so the device
+                // sorter never operates on label/description matches.
+                exitSearch();
+              }}
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
                 searchType === type
@@ -540,6 +549,7 @@ export function SiteOverview({
                 className={inputClass}
                 placeholder="Custom device..."
                 value={deviceQuery}
+                maxLength={120}
                 onChange={(event) => setDeviceQuery(event.target.value)}
               />
             </>
