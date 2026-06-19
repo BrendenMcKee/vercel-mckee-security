@@ -8,7 +8,11 @@ import { pool } from '../app.js';
  */
 export const getAllSites = async (req, res) => {
     try {
-        const { site_domain } = req.body;
+        // The frontend lists sites via GET /api/sites?domain=<tenant> (no body),
+        // so read the tenant from the query string first, then fall back to the
+        // request body for backwards compatibility. Without this, the domain
+        // filter never applies and every tenant sees all sites.
+        const site_domain = req.query.domain || req.body?.site_domain;
 
         let query = 'SELECT * FROM site_locations';
         const queryParams = [];
