@@ -1,0 +1,20 @@
+/*
+ * Data Drops cursor affordances.
+ * On desktop pointer devices, show the pointer cursor for interactive controls
+ * (buttons, links, anything with role="button"). Scoped to the .data-drops-app
+ * wrapper so it never affects the marketing site. Disabled controls show
+ * not-allowed. Touch devices have no cursor, so this is naturally desktop-only,
+ * and the media query makes that explicit.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .data-drops-app a[href],
+  .data-drops-app button:not(:disabled),
+  .data-drops-app [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  .data-drops-app button:disabled,
+  .data-drops-app [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
