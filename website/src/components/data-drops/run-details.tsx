@@ -37,6 +37,7 @@ import { LoadingState } from "./ui/states";
 import { StatusDot } from "./ui/status";
 import { DeviceBadge } from "./ui/device-badge";
 import { DevicePicker } from "./ui/device-picker";
+import { deviceColor } from "@/lib/data-drops/devices";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -707,7 +708,12 @@ export function NetworkRunDetails({
             <span className="w-16 text-right">Actions</span>
           </div>
           <ul>
-            {runs.map((run, index) => (
+            {runs.map((run, index) => {
+              const isHighlighted = run.label === highlightedLabel;
+              // Tint the highlight with the selected device's own color; fall
+              // back to the brand primary when the run has no device tag.
+              const highlightHex = run.device ? deviceColor(run.device) : null;
+              return (
               <motion.li
                 key={`${run.label}-${index}`}
                 initial={{ opacity: 0 }}
@@ -721,9 +727,18 @@ export function NetworkRunDetails({
                   }}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5 sm:grid sm:grid-cols-[1fr_1.4fr_1fr_auto]",
-                    run.label === highlightedLabel &&
+                    isHighlighted &&
+                      !highlightHex &&
                       "bg-primary/10 ring-1 ring-inset ring-primary/60",
                   )}
+                  style={
+                    isHighlighted && highlightHex
+                      ? {
+                          backgroundColor: `${highlightHex}1f`,
+                          boxShadow: `inset 0 0 0 1.5px ${highlightHex}`,
+                        }
+                      : undefined
+                  }
                 >
                   <button
                     type="button"
@@ -772,7 +787,8 @@ export function NetworkRunDetails({
                   </div>
                 </div>
               </motion.li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       )}

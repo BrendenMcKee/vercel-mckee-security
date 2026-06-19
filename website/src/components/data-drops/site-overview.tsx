@@ -396,6 +396,10 @@ export function SiteOverview({
     if (searchType === "label") runLabelSearch();
     else if (searchType === "device") searchByDevice(deviceQuery, false);
     else runDescriptionSearch();
+    // Dismiss the mobile on-screen keyboard now that the search has executed.
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
   }
 
   function exitSearch() {
