@@ -112,7 +112,10 @@ export function SiteOverview({
   const [deviceSort, setDeviceSort] = useState<"device" | "newest" | "oldest">(
     "device",
   );
-  const searchResultsRef = useRef<HTMLDivElement>(null);
+  // The device currently being searched, kept so its chip stays highlighted
+  // while you view its results.
+  const [activeDevice, setActiveDevice] = useState<string | null>(null);
+  const searchSectionRef = useRef<HTMLDivElement>(null);
 
   const [showDetails, setShowDetails] = useState(Boolean(targetDate));
   const [selectedDate, setSelectedDate] = useState<string | null>(targetDate);
@@ -365,14 +368,21 @@ export function SiteOverview({
       if (!device) return false;
       return exact ? device === normalized : device.includes(normalized);
     });
+    setActiveDevice(term);
     setSearchResults(results);
     setIsSearchMode(true);
     scrollToResults();
   }
 
   function scrollToResults() {
+    // Scroll to the search panel (not the results list) so the distance scrolled
+    // is the same no matter how many results there are, and the device chips
+    // stay in view. scroll-margin-top keeps it clear of the fixed site header.
     setTimeout(() => {
-      searchResultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      searchSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }, 80);
   }
 
@@ -388,6 +398,7 @@ export function SiteOverview({
     setSearchRange({ start: "", end: "" });
     setDescriptionSearch("");
     setDeviceQuery("");
+    setActiveDevice(null);
   }
 
   function openSearchResult(drop: Drop) {
@@ -466,7 +477,10 @@ export function SiteOverview({
       </header>
 
       {/* Search */}
-      <div className="mb-6 rounded-2xl border border-white/10 bg-surface p-4 sm:p-5">
+      <div
+        ref={searchSectionRef}
+        className="mb-6 scroll-mt-28 rounded-2xl border border-white/10 bg-surface p-4 sm:p-5 lg:scroll-mt-40"
+      >
         <div className="mb-4 inline-flex rounded-lg border border-white/10 bg-black/20 p-1">
           {(["label", "description", "device"] as const).map((type) => (
             <button
@@ -530,16 +544,20 @@ export function SiteOverview({
               <div className="flex flex-wrap gap-1.5">
                 {[...DEVICE_PRESETS, ...extraDevices].map((d) => {
                   const color = deviceColor(d);
+                  const isActive =
+                    normalizeDevice(d) === normalizeDevice(activeDevice);
                   return (
                     <button
                       key={d}
                       type="button"
                       onClick={() => searchByDevice(d, true)}
+                      aria-pressed={isActive}
                       className="rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors"
                       style={{
                         color,
-                        borderColor: `${color}55`,
-                        backgroundColor: `${color}1f`,
+                        borderColor: isActive ? color : `${color}55`,
+                        backgroundColor: `${color}${isActive ? "40" : "1f"}`,
+                        boxShadow: isActive ? `0 0 0 1.5px ${color}` : undefined,
                       }}
                     >
                       {d}
@@ -619,7 +637,7 @@ export function SiteOverview({
 
       {/* Body */}
       {isSearchMode ? (
-        <div ref={searchResultsRef}>
+        <div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h3 className="font-semibold text-white">Search Results</h3>
