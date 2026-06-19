@@ -491,21 +491,27 @@ export const deleteSiteDataByDate = async (req, res) => {
         // Begin transaction
         await pool.query('START TRANSACTION');
 
-        // Check if any drops exist for this site and date
+        // A day can exist with zero drops (after the last drop was deleted), so
+        // check for both the drops and the date_data entry. We only refuse the
+        // delete when neither exists; an empty day must still be removable.
         const [existingDrops] = await pool.query(
             'SELECT * FROM drops_data WHERE site_name = ? AND date = ? AND site_domain = ?',
             [site_name, formattedDate, site_domain]
         );
+        const [existingDateData] = await pool.query(
+            'SELECT * FROM date_data WHERE site_name = ? AND date = ? AND site_domain = ?',
+            [site_name, formattedDate, site_domain]
+        );
 
-        if (existingDrops.length === 0) {
+        if (existingDrops.length === 0 && existingDateData.length === 0) {
             await pool.query('COMMIT');
             return res.status(404).json({
-                message: 'No drops found for this site and date',
+                message: 'No data found for this site and date',
                 success: false
             });
         }
 
-        // Delete all drops for this site and date
+        // Delete all drops for this site and date (no-op when there are none)
         await pool.query(
             'DELETE FROM drops_data WHERE site_name = ? AND date = ? AND site_domain = ?',
             [site_name, formattedDate, site_domain]
