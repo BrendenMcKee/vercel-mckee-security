@@ -36,4 +36,7 @@ router.post('/notify-signer', networkDataController.notifySigner);
 // Update signatures
 router.put('/network-data/signatures', networkDataController.updateSignatures);
 
+// One-time device backfill (admin-protected, supports dryRun)
+router.post('/network-data/backfill-devices', networkDataController.backfillDevices);
+
 export default router;

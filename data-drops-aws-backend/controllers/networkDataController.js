@@ -1,6 +1,6 @@
 // Network data controller for date_data and drops_data tables
 
-import { pool } from '../app.js';
+import { pool, schemaState, ensureDeviceColumn } from '../app.js';
 import nodemailer from 'nodemailer';
 
 export const initializeNewSite = async (req, res) => {
@@ -73,7 +73,7 @@ export const initializeNewSite = async (req, res) => {
 
 export const addDropsData = async (req, res) => {
     try {
-        const { site_name, data_label, data_location, data_techs, date, site_domain } = req.body;
+        const { site_name, data_label, data_location, data_techs, date, site_domain, data_device } = req.body;
 
         // Validate required fields
         if (!site_name || !data_label || !data_location || !date || !site_domain) {
@@ -101,17 +101,18 @@ export const addDropsData = async (req, res) => {
             });
         }
 
-        // Add new entry to drops_data
+        // Add new entry to drops_data. The optional device is included only when
+        // the column is available, so this never fails before the migration runs.
+        const dropColumns = ['site_name', 'data_label', 'data_location', 'data_techs', 'date', 'site_domain'];
+        const dropValues = [site_name, data_label, data_location, data_techs || null, date, site_domain];
+        if (schemaState.deviceColumnReady) {
+            dropColumns.push('data_device');
+            dropValues.push(data_device || null);
+        }
+        const dropPlaceholders = dropColumns.map(() => '?').join(', ');
         const [dropResult] = await pool.query(
-            `INSERT INTO drops_data (
-                site_name,
-                data_label,
-                data_location,
-                data_techs,
-                date,
-                site_domain
-            ) VALUES (?, ?, ?, ?, ?, ?)`,
-            [site_name, data_label, data_location, data_techs || null, date, site_domain]
+            `INSERT INTO drops_data (${dropColumns.join(', ')}) VALUES (${dropPlaceholders})`,
+            dropValues
         );
 
         // Get total count of drops for this site and date
@@ -180,6 +181,89 @@ export const addDropsData = async (req, res) => {
             error: error.message,
             success: false
         });
+    }
+};
+
+/**
+ * Infer a device for an existing drop from its label/location, using confident,
+ * word-boundary keyword rules. Returns null when uncertain (left blank).
+ * Order matters: Monitor is checked before Camera so "Monitor for X camera"
+ * resolves to Monitor.
+ */
+const inferDevice = (label, location) => {
+    const text = `${label || ''} ${location || ''}`.toLowerCase();
+    if (/\bjack\b/.test(text) || /single gang port/.test(text)) return 'Jack';
+    if (/\bmonitor\b/.test(text)) return 'Monitor';
+    if (/\bcamera\b/.test(text)) return 'Camera';
+    if (/card reader/.test(text)) return 'Card Reader';
+    if (/\bdoor\b/.test(text)) return 'Door Access';
+    if (/\bap\b/.test(text) || /access point/.test(text)) return 'Access Point';
+    if (/telemetry/.test(text)) return 'Telemetry';
+    if (/\bphone\b/.test(text) || /\b\d{3}-\d{4}\b/.test(text)) return 'Phone';
+    if (/starlink/.test(text)) return 'Starlink';
+    return null;
+};
+
+/**
+ * One-time, admin-protected backfill that assigns devices to existing drops via
+ * inferDevice. Only fills NULL/empty devices (never overwrites). Defaults to a
+ * dry run that reports proposed assignments; pass { dryRun: false } to apply.
+ */
+export const backfillDevices = async (req, res) => {
+    try {
+        const { admin_password } = req.body;
+        const dryRun = req.body.dryRun !== false; // defaults to a safe dry run
+
+        if (admin_password !== process.env.ADMIN_DELETE_PASSWORD) {
+            return res.status(401).json({ message: 'Invalid administrative password', success: false });
+        }
+
+        await ensureDeviceColumn();
+        if (!schemaState.deviceColumnReady) {
+            return res.status(500).json({ message: 'data_device column is not available', success: false });
+        }
+
+        const [drops] = await pool.query(
+            `SELECT id, site_name, site_domain, data_label, data_location
+             FROM drops_data
+             WHERE data_device IS NULL OR data_device = ''`
+        );
+
+        const assignments = [];
+        for (const drop of drops) {
+            const device = inferDevice(drop.data_label, drop.data_location);
+            if (device) {
+                assignments.push({
+                    id: drop.id,
+                    site_domain: drop.site_domain,
+                    site_name: drop.site_name,
+                    label: drop.data_label,
+                    location: drop.data_location,
+                    device
+                });
+            }
+        }
+
+        if (!dryRun) {
+            for (const a of assignments) {
+                await pool.query(
+                    `UPDATE drops_data SET data_device = ?
+                     WHERE id = ? AND (data_device IS NULL OR data_device = '')`,
+                    [a.device, a.id]
+                );
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            dryRun,
+            scanned: drops.length,
+            assigned: assignments.length,
+            leftBlank: drops.length - assignments.length,
+            assignments
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error backfilling devices', error: error.message, success: false });
     }
 };
 
@@ -658,7 +742,7 @@ export const updateSiteDate = async (req, res) => {
 
 export const updateDropData = async (req, res) => {
     try {
-        const { site_name, old_label, new_label, location, techs_data, date, site_domain } = req.body;
+        const { site_name, old_label, new_label, location, techs_data, date, site_domain, data_device } = req.body;
 
         // Validate required fields
         if (!site_name || !old_label || !new_label || !location || !date || !site_domain) {
@@ -704,12 +788,19 @@ export const updateDropData = async (req, res) => {
         // Get the old date before updating
         const oldDate = existingDrop[0].date;
 
-        // Update the drop with new information
+        // Update the drop with new information. Device is included only when the
+        // column is available.
+        const setClauses = ['data_label = ?', 'data_location = ?', 'data_techs = ?', 'date = ?'];
+        const setValues = [new_label, location, techs_data, date];
+        if (schemaState.deviceColumnReady) {
+            setClauses.push('data_device = ?');
+            setValues.push(data_device || null);
+        }
         await pool.query(
             `UPDATE drops_data 
-             SET data_label = ?, data_location = ?, data_techs = ?, date = ?
+             SET ${setClauses.join(', ')}
              WHERE site_name = ? AND data_label = ? AND site_domain = ?`,
-            [new_label, location, techs_data, date, site_name, old_label, site_domain]
+            [...setValues, site_name, old_label, site_domain]
         );
 
         // Handle date_data table updates
