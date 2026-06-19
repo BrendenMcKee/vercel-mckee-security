@@ -95,6 +95,7 @@ export function NetworkRunDetails({
   const [dateValue, setDateValue] = useState(toYmd(date));
   const [dateSubmitting, setDateSubmitting] = useState(false);
   const [dateConflict, setDateConflict] = useState<string | null>(null);
+  const [dateMerging, setDateMerging] = useState(false);
 
   // Delete run modal
   const [runToDelete, setRunToDelete] = useState<string | null>(null);
@@ -394,6 +395,49 @@ export function NetworkRunDetails({
       });
     } finally {
       setDateSubmitting(false);
+    }
+  }
+
+  // Merge the current day's runs into an existing date. Safe from duplicates
+  // because run labels are unique per site, so the same label cannot exist on
+  // two dates. The backend update-date endpoint moves the runs into the target
+  // date and recomputes its count; we then reset the target's admin signature
+  // since new runs require re-approval.
+  async function handleMergeIntoExisting() {
+    const target = dateConflict;
+    if (!target) return;
+    setDateMerging(true);
+    try {
+      await updateDate({
+        site_name: siteName,
+        old_date: toYmd(entryDate),
+        new_date: target,
+        site_domain: domain,
+      });
+      try {
+        await updateSignature({
+          site_name: siteName,
+          date: target,
+          site_domain: domain,
+          signature_admin: REVOKE_SIGNATURE,
+        });
+      } catch {
+        // Non-fatal: the merge itself succeeded.
+      }
+      setDateConflict(null);
+      setDataModified(true);
+      toast({ type: "success", message: "Runs merged into the existing day." });
+      onBack(true, target);
+    } catch (err) {
+      toast({
+        type: "error",
+        message:
+          err instanceof DataDropsApiError
+            ? err.message
+            : "Failed to merge. Please try again.",
+      });
+    } finally {
+      setDateMerging(false);
     }
   }
 
@@ -946,36 +990,95 @@ export function NetworkRunDetails({
         title="Date already exists"
       >
         <div className="space-y-4">
-          <p className="text-sm text-white/70">
-            A day already exists for{" "}
-            <span className="font-semibold text-white">
-              {dateConflict ? ymdToLong(dateConflict) : ""}
-            </span>
-            . To avoid duplicate entries, open that day instead?
-          </p>
-          <div className="flex gap-3 pt-1">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                const target = dateConflict;
-                setDateConflict(null);
-                if (target) onBack(true, target);
-              }}
-              className="flex-1"
-            >
-              Open that day
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setDateConflict(null)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          </div>
+          {runs.length > 0 ? (
+            <>
+              <p className="text-sm text-white/70">
+                A day already exists for{" "}
+                <span className="font-semibold text-white">
+                  {dateConflict ? ymdToLong(dateConflict) : ""}
+                </span>
+                . You can merge the {runs.length}{" "}
+                {runs.length === 1 ? "run" : "runs"} from this day into it, or open it
+                without merging.
+              </p>
+              <p className="text-xs text-white/40">
+                Run labels are unique per site, so merging will not duplicate any runs
+                already on that date.
+              </p>
+              <div className="space-y-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleMergeIntoExisting}
+                  disabled={dateMerging}
+                  className="w-full"
+                >
+                  {dateMerging
+                    ? "Merging..."
+                    : `Merge ${runs.length} ${runs.length === 1 ? "run" : "runs"} into that day`}
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const target = dateConflict;
+                      setDateConflict(null);
+                      if (target) onBack(true, target);
+                    }}
+                    disabled={dateMerging}
+                    className="flex-1"
+                  >
+                    Open without merging
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDateConflict(null)}
+                    disabled={dateMerging}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-white/70">
+                A day already exists for{" "}
+                <span className="font-semibold text-white">
+                  {dateConflict ? ymdToLong(dateConflict) : ""}
+                </span>
+                . Open that day instead?
+              </p>
+              <div className="flex gap-3 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    const target = dateConflict;
+                    setDateConflict(null);
+                    if (target) onBack(true, target);
+                  }}
+                  className="flex-1"
+                >
+                  Open that day
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDateConflict(null)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 
