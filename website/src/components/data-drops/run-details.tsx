@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Pencil, Trash2, Mail, PenLine } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Pencil,
+  Trash2,
+  Mail,
+  PenLine,
+  Copy,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { TenantConfig } from "@/lib/data-drops/config";
@@ -101,6 +110,19 @@ export function NetworkRunDetails({
   // Notify signer
   const [signerEmail, setSignerEmail] = useState("");
   const [isNotifying, setIsNotifying] = useState(false);
+  const [signerCopied, setSignerCopied] = useState(false);
+  const signer = tenant.signer;
+
+  async function copySignerEmail() {
+    if (!signer) return;
+    try {
+      await navigator.clipboard.writeText(signer.email);
+      setSignerCopied(true);
+      setTimeout(() => setSignerCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable; the address is still visible to copy manually.
+    }
+  }
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -627,6 +649,36 @@ export function NetworkRunDetails({
             {isNotifying ? "Sending..." : "Notify Signer"}
           </Button>
         </form>
+        {signer ? (
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
+            <span>{signer.label}:</span>
+            <button
+              type="button"
+              onClick={() => setSignerEmail(signer.email)}
+              className="font-medium text-secondary hover:underline"
+              title="Use this address"
+            >
+              {signer.email}
+            </button>
+            <button
+              type="button"
+              onClick={copySignerEmail}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Copy email address"
+              title="Copy to clipboard"
+            >
+              {signerCopied ? (
+                <>
+                  <Check className="h-3.5 w-3.5" /> Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5" /> Copy
+                </>
+              )}
+            </button>
+          </p>
+        ) : null}
       </div>
 
       {/* Signatures */}
@@ -793,7 +845,7 @@ export function NetworkRunDetails({
                   setEditForm((prev) => prev && { ...prev, date: event.target.value });
                   setEditError("");
                 }}
-                className={cn(inputClass, "[color-scheme:dark]")}
+                className={cn(inputClass, "scheme-dark")}
               />
             </Field>
             <FormError>{editError}</FormError>
@@ -829,7 +881,7 @@ export function NetworkRunDetails({
               type="date"
               value={dateValue}
               onChange={(event) => setDateValue(event.target.value)}
-              className={cn(inputClass, "[color-scheme:dark]")}
+              className={cn(inputClass, "scheme-dark")}
             />
           </Field>
           <div className="flex gap-3 pt-1">

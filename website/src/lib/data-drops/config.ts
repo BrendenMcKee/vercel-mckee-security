@@ -9,6 +9,8 @@ export type TenantConfig = {
   name: string;
   /** Short label/badge. */
   shortName: string;
+  /** Optional default signer suggested in the "Request Signature" panel. */
+  signer?: { label: string; email: string };
 };
 
 export const DATA_DROPS_TENANTS: Record<DataDropsTenant, TenantConfig> = {
@@ -17,6 +19,7 @@ export const DATA_DROPS_TENANTS: Record<DataDropsTenant, TenantConfig> = {
     slug: "/data-drops-hhhs",
     name: "Haliburton Highlands Health Services",
     shortName: "HHHS",
+    signer: { label: "Hospital IT Administrator", email: "mbangay@hhhs.ca" },
   },
   mckeesecurity: {
     domain: "mckeesecurity",
