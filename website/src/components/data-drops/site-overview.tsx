@@ -28,11 +28,17 @@ import {
   todayYmd,
   ymdToLong,
 } from "@/lib/data-drops/dates";
+import {
+  DEVICE_PRESETS,
+  deviceColor,
+  normalizeDevice,
+} from "@/lib/data-drops/devices";
 import { Modal } from "./ui/modal";
 import { useToast } from "./ui/toast";
 import { Field, FormError, inputClass } from "./ui/field";
 import { LoadingState, EmptyState, ErrorState } from "./ui/states";
 import { StatusDot, StatusPill } from "./ui/status";
+import { DeviceBadge } from "./ui/device-badge";
 import { NetworkRunDetails } from "./run-details";
 
 type SortField = "date" | "signed";
@@ -95,11 +101,17 @@ export function SiteOverview({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const [allDrops, setAllDrops] = useState<Drop[]>([]);
-  const [searchType, setSearchType] = useState<"label" | "description">("label");
+  const [searchType, setSearchType] = useState<
+    "label" | "description" | "device"
+  >("label");
   const [searchRange, setSearchRange] = useState({ start: "", end: "" });
   const [descriptionSearch, setDescriptionSearch] = useState("");
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchResults, setSearchResults] = useState<Drop[]>([]);
+  const [deviceQuery, setDeviceQuery] = useState("");
+  const [deviceSort, setDeviceSort] = useState<"device" | "newest" | "oldest">(
+    "device",
+  );
   const searchResultsRef = useRef<HTMLDivElement>(null);
 
   const [showDetails, setShowDetails] = useState(Boolean(targetDate));
@@ -140,6 +152,42 @@ export function SiteOverview({
     () => sortDays(runDays, sortField, sortDirection),
     [runDays, sortField, sortDirection],
   );
+
+  // Distinct custom devices present in this site's data (not already presets),
+  // surfaced as one-click search buttons alongside the presets.
+  const extraDevices = useMemo(() => {
+    const presetNorm = new Set(DEVICE_PRESETS.map((d) => normalizeDevice(d)));
+    const found = new Set<string>();
+    for (const drop of allDrops) {
+      if (drop.data_device && !presetNorm.has(normalizeDevice(drop.data_device))) {
+        found.add(drop.data_device);
+      }
+    }
+    return [...found].sort((a, b) => a.localeCompare(b));
+  }, [allDrops]);
+
+  const displayedResults = useMemo(() => {
+    if (searchType !== "device") return searchResults;
+    const byDate = (a: Drop, b: Drop, dir: "asc" | "desc") => {
+      const da = anyToYmd(a.date) || "";
+      const db = anyToYmd(b.date) || "";
+      return dir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+    };
+    const sorted = [...searchResults];
+    if (deviceSort === "device") {
+      sorted.sort((a, b) => {
+        const cmp = normalizeDevice(a.data_device).localeCompare(
+          normalizeDevice(b.data_device),
+        );
+        return cmp !== 0 ? cmp : byDate(a, b, "desc");
+      });
+    } else {
+      sorted.sort((a, b) =>
+        byDate(a, b, deviceSort === "oldest" ? "asc" : "desc"),
+      );
+    }
+    return sorted;
+  }, [searchResults, searchType, deviceSort]);
 
   const fetchAllDrops = useCallback(async () => {
     try {
@@ -299,6 +347,22 @@ export function SiteOverview({
     scrollToResults();
   }
 
+  function searchByDevice(term: string, exact: boolean) {
+    const normalized = normalizeDevice(term);
+    if (!normalized) {
+      toast({ type: "info", message: "Pick or type a device to search for." });
+      return;
+    }
+    const results = allDrops.filter((drop) => {
+      const device = normalizeDevice(drop.data_device);
+      if (!device) return false;
+      return exact ? device === normalized : device.includes(normalized);
+    });
+    setSearchResults(results);
+    setIsSearchMode(true);
+    scrollToResults();
+  }
+
   function scrollToResults() {
     setTimeout(() => {
       searchResultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -308,6 +372,7 @@ export function SiteOverview({
   function handleSearch(event: React.FormEvent) {
     event.preventDefault();
     if (searchType === "label") runLabelSearch();
+    else if (searchType === "device") searchByDevice(deviceQuery, false);
     else runDescriptionSearch();
   }
 
@@ -315,6 +380,7 @@ export function SiteOverview({
     setIsSearchMode(false);
     setSearchRange({ start: "", end: "" });
     setDescriptionSearch("");
+    setDeviceQuery("");
   }
 
   function openSearchResult(drop: Drop) {
@@ -395,19 +461,23 @@ export function SiteOverview({
       {/* Search */}
       <div className="mb-6 rounded-2xl border border-white/10 bg-surface p-4 sm:p-5">
         <div className="mb-4 inline-flex rounded-lg border border-white/10 bg-black/20 p-1">
-          {(["label", "description"] as const).map((type) => (
+          {(["label", "description", "device"] as const).map((type) => (
             <button
               key={type}
               type="button"
               onClick={() => setSearchType(type)}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
+                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
                 searchType === type
                   ? "bg-primary text-white"
                   : "text-white/50 hover:text-white",
               )}
             >
-              {type === "label" ? "By Label" : "By Description"}
+              {type === "label"
+                ? "By Label"
+                : type === "description"
+                  ? "By Description"
+                  : "By Device"}
             </button>
           ))}
         </div>
@@ -439,6 +509,39 @@ export function SiteOverview({
                   }
                 />
               </div>
+            </>
+          ) : searchType === "device" ? (
+            <>
+              <p className="text-xs text-white/50">
+                Pick a device, or type a custom one, to find all matching drops.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {[...DEVICE_PRESETS, ...extraDevices].map((d) => {
+                  const color = deviceColor(d);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => searchByDevice(d, true)}
+                      className="rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors"
+                      style={{
+                        color,
+                        borderColor: `${color}55`,
+                        backgroundColor: `${color}1f`,
+                      }}
+                    >
+                      {d}
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="Custom device..."
+                value={deviceQuery}
+                onChange={(event) => setDeviceQuery(event.target.value)}
+              />
             </>
           ) : (
             <>
@@ -517,6 +620,35 @@ export function SiteOverview({
               Back to dates
             </Button>
           </div>
+          {searchType === "device" && searchResults.length > 0 ? (
+            <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="flex items-center gap-1 text-white/40">
+                <ArrowDownUp className="h-3.5 w-3.5" />
+                Sort
+              </span>
+              {(
+                [
+                  ["device", "Device A-Z"],
+                  ["newest", "Newest"],
+                  ["oldest", "Oldest"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setDeviceSort(key)}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1.5 font-semibold transition-colors",
+                    deviceSort === key
+                      ? "bg-white/10 text-white"
+                      : "text-white/50 hover:text-white",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {searchResults.length === 0 ? (
             <EmptyState
               icon={Search}
@@ -525,7 +657,7 @@ export function SiteOverview({
             />
           ) : (
             <ul className="space-y-2">
-              {searchResults.map((drop) => {
+              {displayedResults.map((drop) => {
                 const ymd = anyToYmd(drop.date);
                 return (
                   <li key={drop.id}>
@@ -542,6 +674,12 @@ export function SiteOverview({
                           {drop.data_location}
                         </span>
                       </span>
+                      {drop.data_device ? (
+                        <DeviceBadge
+                          device={drop.data_device}
+                          className="shrink-0"
+                        />
+                      ) : null}
                       <span className="shrink-0 text-xs text-white/40">
                         {ymd ? ymdToLong(ymd) : drop.date}
                       </span>

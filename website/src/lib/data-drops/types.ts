@@ -27,6 +27,7 @@ export type Drop = {
   data_location: string;
   data_techs: string | null;
   data_description?: string | null;
+  data_device?: string | null;
   date: string;
   site_domain: string;
   signature_tech?: string | null;
@@ -47,6 +48,7 @@ export type Run = {
   label: string;
   location: string;
   techs: string;
+  device: string;
 };
 
 export type SignaturePair = {

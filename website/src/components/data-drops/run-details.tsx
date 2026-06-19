@@ -35,6 +35,8 @@ import { useToast } from "./ui/toast";
 import { Field, FormError, inputClass } from "./ui/field";
 import { LoadingState } from "./ui/states";
 import { StatusDot } from "./ui/status";
+import { DeviceBadge } from "./ui/device-badge";
+import { DevicePicker } from "./ui/device-picker";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -75,7 +77,12 @@ export function NetworkRunDetails({
 
   // Add run modal
   const [showAddRun, setShowAddRun] = useState(false);
-  const [addForm, setAddForm] = useState({ label: "", location: "", techs: "" });
+  const [addForm, setAddForm] = useState({
+    label: "",
+    location: "",
+    techs: "",
+    device: "",
+  });
   const [addError, setAddError] = useState("");
   const [addSubmitting, setAddSubmitting] = useState(false);
 
@@ -84,6 +91,7 @@ export function NetworkRunDetails({
     label: string;
     location: string;
     techs: string;
+    device: string;
     date: string;
   } | null>(null);
   const [originalLabel, setOriginalLabel] = useState("");
@@ -158,6 +166,7 @@ export function NetworkRunDetails({
             label: drop.data_label,
             location: drop.data_location,
             techs: drop.data_techs || "",
+            device: drop.data_device || "",
           })),
         );
       } else {
@@ -205,7 +214,7 @@ export function NetworkRunDetails({
 
   /* ----------------------------- Add run ----------------------------- */
   function openAddRun() {
-    setAddForm({ label: "", location: "", techs: "" });
+    setAddForm({ label: "", location: "", techs: "", device: "" });
     setAddError("");
     setShowAddRun(true);
   }
@@ -242,6 +251,7 @@ export function NetworkRunDetails({
         data_techs: techs || null,
         date: entryDate,
         site_domain: domain,
+        data_device: addForm.device.trim() || null,
       });
 
       setShowAddRun(false);
@@ -288,6 +298,7 @@ export function NetworkRunDetails({
       label: run.label,
       location: run.location,
       techs: run.techs,
+      device: run.device,
       date: toYmd(entryDate),
     });
     setEditError("");
@@ -316,6 +327,7 @@ export function NetworkRunDetails({
         techs_data: editForm.techs.trim(),
         date: toYmd(editForm.date),
         site_domain: domain,
+        data_device: editForm.device.trim() || null,
       });
       setDataModified(true);
       await fetchRuns();
@@ -671,8 +683,13 @@ export function NetworkRunDetails({
                     onClick={() => openEditRun(run)}
                     className="flex min-w-0 flex-1 flex-col text-left sm:contents"
                   >
-                    <span className="truncate font-semibold text-white">
-                      {run.label}
+                    <span className="flex min-w-0 flex-col gap-1">
+                      <span className="truncate font-semibold text-white">
+                        {run.label}
+                      </span>
+                      {run.device ? (
+                        <DeviceBadge device={run.device} className="self-start" />
+                      ) : null}
                     </span>
                     <span className="truncate text-sm text-white/60">
                       {run.location}
@@ -854,6 +871,14 @@ export function NetworkRunDetails({
               placeholder="e.g. AR, TD, BM"
             />
           </Field>
+          <Field label="Device (optional)">
+            <DevicePicker
+              value={addForm.device}
+              onChange={(value) =>
+                setAddForm((prev) => ({ ...prev, device: value }))
+              }
+            />
+          </Field>
           <FormError>{addError}</FormError>
           <div className="flex gap-3 pt-1">
             <Button type="submit" size="sm" disabled={addSubmitting} className="flex-1">
@@ -916,6 +941,14 @@ export function NetworkRunDetails({
                   setEditError("");
                 }}
                 className={inputClass}
+              />
+            </Field>
+            <Field label="Device (optional)">
+              <DevicePicker
+                value={editForm.device}
+                onChange={(value) =>
+                  setEditForm((prev) => (prev ? { ...prev, device: value } : prev))
+                }
               />
             </Field>
             <Field label="Date" htmlFor="dd-edit-date">

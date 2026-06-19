@@ -141,6 +141,7 @@ export function addDrop(input: {
   data_techs: string | null;
   date: string;
   site_domain: string;
+  data_device?: string | null;
 }): Promise<Ok> {
   return request("/network-data/drops", { method: "POST", body: input });
 }
@@ -153,6 +154,7 @@ export function updateDrop(input: {
   techs_data: string;
   date: string;
   site_domain: string;
+  data_device?: string | null;
 }): Promise<Ok> {
   return request("/network-data/drops", { method: "PUT", body: input });
 }
