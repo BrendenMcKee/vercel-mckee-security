@@ -984,7 +984,7 @@ export const notifySigner = async (req, res) => {
                             <tr>
                                 <td style="padding:20px 32px 28px 32px; border-top:1px solid #2a2a2a; font-family:Arial, Helvetica, sans-serif;">
                                     <p style="margin:0 0 4px 0; font-size:13px; color:#e0e0e0; font-weight:bold;">McKee Security &amp; Audio Systems Inc.</p>
-                                    <p style="margin:0; font-size:12px; line-height:1.6; color:#777777;">Questions? Contact <a href="mailto:web@mckeesecurity.ca" style="color:#8ab4f8;">web@mckeesecurity.ca</a>. This message was sent automatically; please do not reply.</p>
+                                    <p style="margin:0; font-size:12px; line-height:1.6; color:#777777;">Questions? Contact <a href="mailto:brenden@mckeesecurity.ca" style="color:#8ab4f8;">brenden@mckeesecurity.ca</a>. This message was sent automatically; please do not reply.</p>
                                 </td>
                             </tr>
                         </table>
