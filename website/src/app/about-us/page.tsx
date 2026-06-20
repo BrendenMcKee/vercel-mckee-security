@@ -18,6 +18,7 @@ export default function AboutPage() {
         title="Meet The Team"
         subtitle="Three generations of security and technology excellence in the Haliburton region."
         image={images.heroAbout}
+        objectPosition="50% 62%"
         compact
         overlay="medium"
       />

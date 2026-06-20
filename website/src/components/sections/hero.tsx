@@ -11,6 +11,7 @@ type HeroProps = {
   title: string;
   subtitle?: string;
   image?: string;
+  objectPosition?: string;
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   compact?: boolean;
@@ -23,6 +24,7 @@ export function Hero({
   title,
   subtitle,
   image = "/images/hero-home.jpg",
+  objectPosition = "50% 50%",
   primaryCta,
   secondaryCta,
   compact = false,
@@ -53,6 +55,7 @@ export function Hero({
           fill
           priority
           className="object-cover"
+          style={{ objectPosition }}
           sizes="100vw"
           quality={90}
         />
