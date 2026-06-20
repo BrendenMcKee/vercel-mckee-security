@@ -12,8 +12,8 @@ export function BrandedStatsBackground() {
         sizes="100vw"
         quality={90}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/40 via-[#660000]/55 to-[#0a0a0a]" />
-      <div className="absolute inset-0 bg-black/45" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-[#660000]/42 to-[#0a0a0a]" />
+      <div className="absolute inset-0 bg-black/50" />
     </div>
   );
 }
