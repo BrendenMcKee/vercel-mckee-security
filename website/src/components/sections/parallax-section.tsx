@@ -79,7 +79,7 @@ export function ParallaxSection({
           className="object-cover"
           style={{ objectPosition }}
           sizes="100vw"
-          quality={90}
+          quality={priority ? 95 : 90}
         />
         {gradient ? (
           <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/38 to-[#0a0a0a]" />
