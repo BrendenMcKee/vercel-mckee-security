@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
 import { MonitoringTiers } from "@/components/sections/monitoring-tiers";
+import { ServiceGallery } from "@/components/sections/service-gallery";
 import { getElementorPage } from "@/lib/elementor-pages";
 import {
   enhanceElementorImages,
@@ -60,6 +61,7 @@ export function ElementorServicePage({ slug }: { slug: string }) {
         <link key={src} rel="preload" as="image" href={src} />
       ))}
       <div ref={containerRef} dangerouslySetInnerHTML={{ __html: data.html }} />
+      <ServiceGallery slug={slug} />
       {data.includeMonitoring && <MonitoringTiers />}
       {data.ctaTitle && data.ctaText && (
         <ServiceQuoteSection

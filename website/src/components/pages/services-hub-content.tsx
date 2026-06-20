@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
-import { images } from "@/lib/site-config";
 
 const services = [
   {
@@ -12,7 +11,7 @@ const services = [
     icon: "fa-lock",
     title: "Security / Home Automation",
     text: "Professional 24/7 monitored security systems with intrusion detection, environmental monitoring, and smartphone control via Total Connect 2.0. Protect your property with ULC-listed monitoring backed by over 30 years of proven reliability.",
-    image: images.services.securityWireless,
+    image: "/images/services/work/security-panel-build.jpg",
     features: ["24/7 Monitoring", "Intrusion Detection", "Smart Alerts", "Cellular Communication"],
   },
   {
@@ -21,8 +20,7 @@ const services = [
     icon: "fa-video",
     title: "Camera Surveillance",
     text: "Uniview UNV 4K UHD camera systems with AI smart detection, remote viewing access, and professional-grade NVR recording. Complete property visibility from anywhere in the world using your smartphone or computer.",
-    image: images.services.cameras,
-    imageContain: true,
+    image: "/images/services/work/camera-ceiling-install.jpg",
     features: ["4K Ultra HD", "AI Detection", "Remote Viewing", "NDAA Compliant"],
   },
   {
@@ -31,8 +29,7 @@ const services = [
     icon: "fa-signal",
     title: "Networking / Cellular Expansion",
     text: "Enterprise-grade Unifi Wi-Fi 7 networking solutions with access points, gateways, POE switches, and IDS/IPS security. Wireless bridges connect multiple buildings, and cellular distribution antennas eliminate dead zones.",
-    image: images.services.networking,
-    imageContain: true,
+    image: "/images/services/work/network-cat6-equipment-room.jpg",
     features: ["Wi-Fi 7", "Unifi Equipment", "Wireless Bridges", "Cellular Boosting"],
   },
   {
@@ -41,7 +38,7 @@ const services = [
     icon: "fa-tv",
     title: "Home Audio / Video",
     text: "As a certified Sonos dealer, we specialize in premium audio-visual installations. From TV wall mounts and soundbars to whole-home audio systems, surround sound, and immersive Dolby Atmos home theater experiences.",
-    image: images.services.tvInstall,
+    image: "/images/services/work/av-outdoor-tv-lakeside.jpg",
     features: ["Certified Sonos Dealer", "TV Mounting", "Whole-Home Audio", "Home Theater"],
   },
   {
@@ -50,7 +47,7 @@ const services = [
     icon: "fa-satellite",
     title: "Starlink Installation",
     text: "Professional Starlink Gen 3 satellite internet installation with no roof penetration. We supply all mounting hardware, extended cables, and accessories. You purchase the kit from Starlink, and we handle the rest with expert installation and optional UniFi network integration.",
-    image: images.services.starlink,
+    image: "/images/services/work/starlink-lakefront-pole.jpg",
     fullWidth: true,
     features: ["Gen 3 Compatible", "No Roof Penetration", "All Equipment Provided", "UniFi Integration"],
   },
@@ -226,16 +223,7 @@ export function ServicesHubContent() {
               <div className="mks2025-ci-card-image">
                 <div
                   className="mks2025-ci-card-image-bg"
-                  style={{
-                    backgroundImage: `url('${service.image}')`,
-                    ...(service.imageContain
-                      ? {
-                          backgroundSize: "contain",
-                          backgroundRepeat: "no-repeat",
-                          backgroundColor: "#0a0a0a",
-                        }
-                      : {}),
-                  }}
+                  style={{ backgroundImage: `url('${service.image}')` }}
                 />
                 <div className="mks2025-ci-card-image-icon">
                   <i className={`fas ${service.icon}`} aria-hidden="true" />
