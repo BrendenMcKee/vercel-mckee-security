@@ -5,10 +5,10 @@ export function BrandedStatsBackground() {
   return (
     <div className="pointer-events-none absolute -inset-x-0 -top-8 bottom-0">
       <Image
-        src="/images/stats-bg.jpg"
+        src="/images/hero-home.jpg"
         alt=""
         fill
-        className="object-cover object-[50%_80%]"
+        className="object-cover object-[50%_28%]"
         sizes="100vw"
         quality={85}
       />

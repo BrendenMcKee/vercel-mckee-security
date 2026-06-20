@@ -24,11 +24,11 @@ export function HomePageContent() {
   return (
     <>
       <ParallaxSection
-        image={images.heroHome}
+        image="/images/stats-bg.jpg"
         className="min-h-[640px] lg:min-h-[760px]"
         gradient
         scrollMode="hero"
-        objectPosition="50% 42%"
+        objectPosition="50% 45%"
         imageScale={0.92}
         imageInsetClassName="-inset-[12%]"
         parallaxStrength={32}
