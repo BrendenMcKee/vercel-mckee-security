@@ -77,9 +77,9 @@ export function HomePageContent() {
         overlay="rgba(0,0,0,0.28)"
         minHeight="520px"
         objectPosition="50% 54%"
-        imageScale={1.07}
+        imageScale={0.92}
         parallaxStrength={28}
-        imageInsetClassName="-inset-x-[7%] -top-[16%] -bottom-[8%]"
+        imageInsetClassName="-inset-[12%]"
         contentClassName="flex min-h-[520px] items-center justify-center py-12 lg:min-h-[580px] lg:py-20"
       >
         <div className="mx-auto w-full max-w-xl px-6">
@@ -203,7 +203,8 @@ export function HomePageContent() {
         overlay="rgba(0,0,0,0.35)"
         minHeight="540px"
         objectPosition="50% 60%"
-        imageScale={1.06}
+        imageScale={0.92}
+        imageInsetClassName="-inset-[12%]"
         parallaxStrength={36}
         contentClassName="flex min-h-[540px] items-center justify-center py-16 lg:py-20"
       >
