@@ -136,11 +136,11 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         caption: "Three generations, still on the tools",
       },
       {
-        src: `${WORK}/network-cat6-equipment-room.jpg`,
+        src: `${WORK}/network-cat6-termination.jpg`,
         width: 901,
         height: 1600,
-        alt: "McKee team running Cat6 cabling in an equipment room",
-        caption: "Structured cabling in the equipment room",
+        alt: "McKee technician hand-terminating a Cat6 connector",
+        caption: "Hand-terminated, tested connections",
       },
       {
         src: `${WORK}/network-centex-panel-cabling.jpg`,

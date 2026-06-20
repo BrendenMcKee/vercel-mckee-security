@@ -136,13 +136,13 @@ export const galleryImages: GalleryImage[] = [
       "A familiar local crew shows up, installs cleanly, and walks you through your new system.",
   },
   {
-    src: `${WORK}/network-cat6-equipment-room.jpg`,
+    src: `${WORK}/network-cat6-termination.jpg`,
     width: 901,
     height: 1600,
     category: "networking",
-    title: "Structured Cabling",
+    title: "Hand-Terminated Connections",
     description:
-      "Neat Cat6 runs in the equipment room form the backbone of a fast, reliable network.",
+      "Every Cat6 run is terminated and tested by hand for a fast, reliable connection.",
   },
   {
     src: `${WORK}/camera-monitor-wall.jpg`,
