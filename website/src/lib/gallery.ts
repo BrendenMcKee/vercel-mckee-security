@@ -73,15 +73,6 @@ export const galleryImages: GalleryImage[] = [
       "Our crew designed and installed a complete surveillance system for a busy Centex commercial site.",
   },
   {
-    src: `${WORK}/camera-monitors-live.jpg`,
-    width: 900,
-    height: 1600,
-    category: "camera-surveillance",
-    title: "The Whole Site on One Wall",
-    description:
-      "A live multi-monitor wall showing every camera across a commercial gas-station site.",
-  },
-  {
     src: `${WORK}/security-panel-build.jpg`,
     width: 1600,
     height: 901,
@@ -253,13 +244,13 @@ export const galleryImages: GalleryImage[] = [
       "Cameras blended into the property to quietly watch over cottages and homes.",
   },
   {
-    src: `${WORK}/camera-centex-ladder-team.jpg`,
+    src: `${WORK}/camera-centex-camera-mount.jpg`,
     width: 901,
     height: 1600,
     category: "camera-surveillance",
-    title: "Camera Installs, As a Team",
+    title: "Mounting Cameras as a Team",
     description:
-      "Running and terminating ceiling cameras together at a commercial build.",
+      "Lining up and mounting exterior cameras together on a commercial build.",
   },
   {
     src: `${GAL}/security-equipment-board.jpg`,
