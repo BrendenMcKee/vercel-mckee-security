@@ -91,6 +91,15 @@ export const galleryImages: GalleryImage[] = [
       "Every alarm panel is assembled, programmed, and tested on our bench before it protects your property.",
   },
   {
+    src: `${WORK}/security-alarm-package.jpg`,
+    width: 1600,
+    height: 1067,
+    category: "security",
+    title: "A Complete Alarm Package",
+    description:
+      "Panel, keypad, sensors, and siren — the full alarm system staged and ready to install.",
+  },
+  {
     src: `${GAL}/network-utility-pole-climb.jpg`,
     width: 900,
     height: 1600,
@@ -136,6 +145,15 @@ export const galleryImages: GalleryImage[] = [
       "Mounting cameras from a lift to cover an entire community ice rink, end to end.",
   },
   {
+    src: `${WORK}/camera-dome-ceiling.jpg`,
+    width: 1600,
+    height: 828,
+    category: "camera-surveillance",
+    title: "Crystal-Clear 4K Cameras",
+    description:
+      "The 4K Uniview dome cameras we install capture sharp, detailed footage day and night.",
+  },
+  {
     src: `${WORK}/starlink-mounting.jpg`,
     width: 1536,
     height: 1024,
@@ -161,6 +179,15 @@ export const galleryImages: GalleryImage[] = [
     title: "Hand-Terminated Connections",
     description:
       "Every Cat6 run is terminated and tested by hand for a fast, reliable connection.",
+  },
+  {
+    src: `${WORK}/network-unifi-ap.jpg`,
+    width: 1600,
+    height: 900,
+    category: "networking",
+    title: "Enterprise Wi-Fi, Unboxed",
+    description:
+      "Deploying UniFi access points for fast, seamless wireless coverage across the whole property.",
   },
   {
     src: "/images/services/pre-wire-topaz.jpg",
@@ -260,6 +287,15 @@ export const galleryImages: GalleryImage[] = [
     title: "Clear-Sky Pole Mounts",
     description:
       "Pole mounts position the dish for an unobstructed view of the sky and a stronger signal.",
+  },
+  {
+    src: `${WORK}/starlink-snow-pole.jpg`,
+    width: 1280,
+    height: 850,
+    category: "starlink",
+    title: "Connected Through Winter",
+    description:
+      "A pole-mounted Starlink dish standing clear above the snow for reliable service all year.",
   },
   {
     src: `${GAL}/team-office-planning.jpg`,
