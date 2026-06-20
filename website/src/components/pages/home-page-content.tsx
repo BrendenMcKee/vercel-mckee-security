@@ -28,7 +28,7 @@ export function HomePageContent() {
         className="min-h-[640px] lg:min-h-[760px]"
         gradient
         scrollMode="hero"
-        objectPosition="50% 28%"
+        objectPosition="50% 22%"
         imageScale={0.86}
         imageInsetClassName="-inset-[18%]"
         parallaxStrength={32}
