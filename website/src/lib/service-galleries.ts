@@ -200,13 +200,6 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         caption: "Game day, outdoors",
       },
       {
-        src: `${WORK}/av-outdoor-tv-trees.jpg`,
-        width: 901,
-        height: 1600,
-        alt: "Outdoor television mounted among the trees",
-        caption: "Built for the backyard",
-      },
-      {
         src: `${WORK}/av-system-design.jpg`,
         width: 1600,
         height: 901,

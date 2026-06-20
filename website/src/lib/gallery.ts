@@ -262,15 +262,6 @@ export const galleryImages: GalleryImage[] = [
       "Hubs, panels, and power are organized on a board before installation for a tidy finish.",
   },
   {
-    src: `${WORK}/av-outdoor-tv-trees.jpg`,
-    width: 901,
-    height: 1600,
-    category: "audio-video",
-    title: "Built for the Backyard",
-    description:
-      "Outdoor displays that shrug off the elements, mounted right among the trees.",
-  },
-  {
     src: `${WORK}/starlink-gable-install.jpg`,
     width: 747,
     height: 1600,

@@ -13,8 +13,8 @@ const slugPreloadImages: Record<string, string[]> = {
     "/images/services/gateways.png",
   ],
   "audio-video": [
-    "/images/services/work/av-outdoor-tv-mount.jpg",
-    "/images/services/work/av-system-design.jpg",
+    "/images/services/av/arc-ultra.jpg",
+    "/images/services/av/sonance-in-ceiling.jpg",
   ],
   starlink: ["/images/services/work/starlink-mounting.jpg"],
 };
