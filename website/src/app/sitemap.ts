@@ -5,6 +5,7 @@ const routes = [
   "",
   "/contact-us",
   "/about-us",
+  "/gallery",
   "/custom-installations-professional-products",
   "/security",
   "/camera-surveillance",
