@@ -3,6 +3,7 @@ import { Hero } from "@/components/sections/hero";
 import { TeamGrid } from "@/components/sections/team-grid";
 import { FadeIn } from "@/components/motion/fade-in";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { images } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -16,6 +17,7 @@ export default function AboutPage() {
         eyebrow="About Us"
         title="Meet The Team"
         subtitle="Three generations of security and technology excellence in the Haliburton region."
+        image={images.heroAbout}
         compact
         overlay="medium"
       />

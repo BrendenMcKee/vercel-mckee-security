@@ -3,7 +3,7 @@ import { MapPin, Phone, Mail } from "lucide-react";
 import { Hero } from "@/components/sections/hero";
 import { ContactForm } from "@/components/forms/contact-form";
 import { FadeIn } from "@/components/motion/fade-in";
-import { siteConfig } from "@/lib/site-config";
+import { images, siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -17,6 +17,7 @@ export default function ContactPage() {
         eyebrow="Get in touch"
         title="We would love to hear from you"
         subtitle="Call us for sales and support, or send a message using the form below."
+        image={images.heroContact}
         compact
         overlay="medium"
       />

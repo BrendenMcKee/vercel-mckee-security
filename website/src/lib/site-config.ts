@@ -202,6 +202,8 @@ export const heritageBlurb =
 
 export const images = {
   heroHome: "/images/hero-home.jpg",
+  heroAbout: "/images/hero-about.jpg",
+  heroContact: "/images/hero-contact.jpg",
   bannerDesktop: "/images/shield-logo.png",
   bannerMobile: "/images/shield-logo.png",
   browseServicesBg: "/images/browse-services-bg.jpg",
