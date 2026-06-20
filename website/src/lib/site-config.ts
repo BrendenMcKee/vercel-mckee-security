@@ -221,12 +221,7 @@ export const images = {
     totalConnect: "/images/services/total-connect.png",
     cameras: "/images/services/cameras.png",
     networking: "/images/services/networking.png",
-    tvInstall: "/images/services/tv-install.png",
-    homeTheater: "/images/services/home-theater.png",
     starlink: "/images/services/starlink.jpg",
-    preWire: "/images/services/pre-wire.jpg",
     honeywell: "/images/services/honeywell.jpg",
-    starlinkMount: "/images/services/starlink-mount.jpg",
-    starlinkCable: "/images/services/starlink-cable.jpg",
   },
 } as const;

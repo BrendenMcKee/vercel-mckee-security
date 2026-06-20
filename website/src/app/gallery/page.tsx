@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/sections/hero";
 import { GalleryGrid } from "@/components/gallery/gallery-grid";
+import { StatsReviewsBand } from "@/components/sections/stats-reviews-band";
 import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
 
 export const metadata: Metadata = {
@@ -16,8 +17,8 @@ export default function GalleryPage() {
         eyebrow="Our Work"
         title="Project Gallery"
         subtitle="Real installs by our own crew across cottage country. Filter by service, then tap any photo to take a closer look."
-        image="/images/gallery/team-crew-trucks.jpg"
-        objectPosition="50% 40%"
+        image="/images/gallery/team-centex-rooftop-group.jpg"
+        objectPosition="50% 38%"
         imageScale={1.05}
         compact
         overlay="dark"
@@ -28,6 +29,8 @@ export default function GalleryPage() {
           <GalleryGrid />
         </div>
       </section>
+
+      <StatsReviewsBand />
 
       <ServiceQuoteSection
         title="Like What You See?"

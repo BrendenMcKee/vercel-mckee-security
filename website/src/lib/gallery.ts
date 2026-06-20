@@ -73,6 +73,15 @@ export const galleryImages: GalleryImage[] = [
       "Our crew designed and installed a complete surveillance system for a busy Centex commercial site.",
   },
   {
+    src: `${WORK}/camera-monitors-live.jpg`,
+    width: 900,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "The Whole Site on One Wall",
+    description:
+      "A live multi-monitor wall showing every camera across a commercial gas-station site.",
+  },
+  {
     src: `${WORK}/security-panel-build.jpg`,
     width: 1600,
     height: 901,
@@ -89,6 +98,15 @@ export const galleryImages: GalleryImage[] = [
     title: "Whatever It Takes",
     description:
       "Climbing a utility pole to land a clean wireless link exactly where it's needed.",
+  },
+  {
+    src: `${WORK}/network-multigen-cabling.jpg`,
+    width: 901,
+    height: 1600,
+    category: "networking",
+    title: "Three Generations On the Job",
+    description:
+      "Family-run since 1994 and still hands-on, pulling structured cabling together.",
   },
   {
     src: `${WORK}/av-outdoor-tv-lakeside.jpg`,
@@ -208,6 +226,15 @@ export const galleryImages: GalleryImage[] = [
       "Jobs are scoped and planned in the shop before we ever arrive on site.",
   },
   {
+    src: `${GAL}/team-construction-house.jpg`,
+    width: 900,
+    height: 1600,
+    category: "team",
+    title: "The Crew On Site",
+    description:
+      "Our technicians at a lakeside new-build, ready to wire it from the ground up.",
+  },
+  {
     src: `${WORK}/network-ubiquiti-bridge.jpg`,
     width: 720,
     height: 1280,
@@ -224,6 +251,15 @@ export const galleryImages: GalleryImage[] = [
     title: "Discreet Residential Coverage",
     description:
       "Cameras blended into the property to quietly watch over cottages and homes.",
+  },
+  {
+    src: `${WORK}/camera-centex-ladder-team.jpg`,
+    width: 901,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "Camera Installs, As a Team",
+    description:
+      "Running and terminating ceiling cameras together at a commercial build.",
   },
   {
     src: `${GAL}/security-equipment-board.jpg`,
@@ -307,13 +343,13 @@ export const galleryImages: GalleryImage[] = [
       "Rooftop airMAX antennas bridge the distance between separate sites.",
   },
   {
-    src: `${WORK}/av-outdoor-tv-tennis.jpg`,
+    src: `${WORK}/network-centex-panel-cabling.jpg`,
     width: 901,
     height: 1600,
-    category: "audio-video",
-    title: "Game Day, Outdoors",
+    category: "networking",
+    title: "Cabling to the Panel",
     description:
-      "A crisp picture for the big game, right in the backyard.",
+      "Clean structured-cabling runs landed neatly at the commercial electrical panel.",
   },
   {
     src: `${GAL}/team-truck-airfield.jpg`,

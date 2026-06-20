@@ -92,7 +92,7 @@ export const services: Service[] = [
       "Whole-Home Audio",
       "Home Theater",
     ],
-    image: images.services.tvInstall,
+    image: "/images/services/work/av-outdoor-tv-lakeside.jpg",
   },
   {
     slug: "starlink",

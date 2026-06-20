@@ -1,11 +1,40 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { getServiceGallery } from "@/lib/service-galleries";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/motion/fade-in";
+import { Lightbox, type LightboxPhoto } from "@/components/gallery/lightbox";
+import type { GalleryCategoryId } from "@/lib/gallery";
+
+const SLUG_TO_CATEGORY: Record<string, GalleryCategoryId> = {
+  security: "security",
+  "camera-surveillance": "camera-surveillance",
+  "networking-cellular-expansion": "networking",
+  "audio-video": "audio-video",
+  starlink: "starlink",
+};
 
 export function ServiceGallery({ slug }: { slug: string }) {
   const gallery = getServiceGallery(slug);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  const photos: LightboxPhoto[] = useMemo(() => {
+    if (!gallery) return [];
+    const category = SLUG_TO_CATEGORY[slug];
+    return gallery.photos.map((photo) => ({
+      src: photo.src,
+      width: photo.width,
+      height: photo.height,
+      title: photo.caption,
+      category,
+    }));
+  }, [gallery, slug]);
+
+  useEffect(() => {
+    setLightboxIndex(null);
+  }, [slug]);
+
   if (!gallery || gallery.photos.length === 0) return null;
 
   return (
@@ -24,7 +53,12 @@ export function ServiceGallery({ slug }: { slug: string }) {
         <StaggerContainer className="mt-12 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
           {gallery.photos.map((photo, i) => (
             <StaggerItem key={photo.src}>
-              <figure className="group relative aspect-4/5 overflow-hidden rounded-2xl border border-white/10 bg-black">
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(i)}
+                aria-label={`View ${photo.caption}`}
+                className="group relative block aspect-4/5 w-full overflow-hidden rounded-2xl border border-white/10 bg-black text-left"
+              >
                 <Image
                   src={photo.src}
                   alt={photo.alt}
@@ -34,11 +68,11 @@ export function ServiceGallery({ slug }: { slug: string }) {
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
-                <figcaption className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
+                <span className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
                   <span className="block text-xs font-semibold leading-snug text-white drop-shadow sm:text-sm">
                     {photo.caption}
                   </span>
-                </figcaption>
+                </span>
                 <span
                   className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/0 transition group-hover:ring-secondary/60"
                   aria-hidden="true"
@@ -48,11 +82,19 @@ export function ServiceGallery({ slug }: { slug: string }) {
                     Our Work
                   </span>
                 )}
-              </figure>
+              </button>
             </StaggerItem>
           ))}
         </StaggerContainer>
       </div>
+
+      <Lightbox
+        photos={photos}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onIndex={setLightboxIndex}
+        hideCategoryLink
+      />
     </section>
   );
 }
