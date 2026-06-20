@@ -76,6 +76,13 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         alt: "McKee technician wiring and programming an alarm panel on the workbench",
         caption: "Bench-wired and programmed before install",
       },
+      {
+        src: "/images/gallery/security-gear-lineup.jpg",
+        width: 1600,
+        height: 1067,
+        alt: "Lineup of Yale and Honeywell security hardware including locks, sensors, panels, and keypads",
+        caption: "The proven hardware we install",
+      },
     ],
   },
   "camera-surveillance": {
@@ -247,6 +254,13 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         alt: "McKee technicians running structured cabling across a commercial parking garage",
         caption: "Large-scale commercial cable runs",
       },
+      {
+        src: "/images/services/pre-wire-topaz.jpg",
+        width: 1600,
+        height: 1600,
+        alt: "Structured-cabling backboard with neatly coiled wiring during a commercial rough-in",
+        caption: "Pre-wired backboard, ready for anything",
+      },
     ],
   },
   "audio-video": {
@@ -255,6 +269,20 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
     intro:
       "Real installs from around the Haliburton lakes, from weatherproof outdoor TVs to whole-home systems we design with you.",
     photos: [
+      {
+        src: `${WORK}/av-living-room-aquarium.jpg`,
+        width: 1600,
+        height: 1067,
+        alt: "Living room with a wall-mounted TV and floor-standing speakers above an aquarium, installed by McKee",
+        caption: "A whole-room TV and sound setup",
+      },
+      {
+        src: "/images/sonos-bg.jpg",
+        width: 1499,
+        height: 860,
+        alt: "Rack of Sonos amplifiers wired for whole-home audio",
+        caption: "Whole-home audio, racked and wired",
+      },
       {
         src: `${WORK}/av-outdoor-tv-lakeside.jpg`,
         width: 901,

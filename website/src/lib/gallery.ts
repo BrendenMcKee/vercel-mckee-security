@@ -55,6 +55,15 @@ export const galleryImages: GalleryImage[] = [
       "A local crew that has served families and businesses across the Haliburton region since 1994.",
   },
   {
+    src: "/images/hero-home.jpg",
+    width: 2400,
+    height: 1351,
+    category: "team",
+    title: "Just Another Morning",
+    description:
+      "Talking through the day's installs between the trucks before heading out.",
+  },
+  {
     src: `${GAL}/starlink-dock-red-chairs.jpg`,
     width: 901,
     height: 1600,
@@ -109,6 +118,15 @@ export const galleryImages: GalleryImage[] = [
       "Weatherproof outdoor televisions built to live on the patio, right by the water.",
   },
   {
+    src: `${WORK}/av-living-room-aquarium.jpg`,
+    width: 1600,
+    height: 1067,
+    category: "audio-video",
+    title: "Where the Living Room Comes Alive",
+    description:
+      "A wall-mounted TV and floor-standing speakers tuned to fill the whole room — even the aquarium got a front-row seat.",
+  },
+  {
     src: `${GAL}/camera-arena-scissor-lift.jpg`,
     width: 1600,
     height: 747,
@@ -145,6 +163,15 @@ export const galleryImages: GalleryImage[] = [
       "Every Cat6 run is terminated and tested by hand for a fast, reliable connection.",
   },
   {
+    src: "/images/services/pre-wire-topaz.jpg",
+    width: 1600,
+    height: 1600,
+    category: "networking",
+    title: "Pre-Wired for Anything",
+    description:
+      "A structured-cabling backboard roughed in during construction, ready for whatever the space needs.",
+  },
+  {
     src: `${WORK}/camera-monitor-wall.jpg`,
     width: 900,
     height: 1600,
@@ -161,6 +188,15 @@ export const galleryImages: GalleryImage[] = [
     title: "Designed Around You",
     description:
       "We design each audio-video system to fit how you actually live in and use your space.",
+  },
+  {
+    src: "/images/sonos-bg.jpg",
+    width: 1499,
+    height: 860,
+    category: "audio-video",
+    title: "Whole-Home Audio, Racked",
+    description:
+      "Banks of Sonos amplifiers neatly wired to drive music into every room of the home.",
   },
   {
     src: `${WORK}/camera-centex-store-walk.jpg`,
@@ -199,6 +235,15 @@ export const galleryImages: GalleryImage[] = [
       "We assemble and verify every keypad so it's ready to arm the day we hand it over.",
   },
   {
+    src: `${GAL}/security-gear-lineup.jpg`,
+    width: 1600,
+    height: 1067,
+    category: "security",
+    title: "Built on Proven Hardware",
+    description:
+      "The locks, sensors, panels, and keypads we trust to protect homes and businesses.",
+  },
+  {
     src: `${WORK}/camera-ceiling-install.jpg`,
     width: 1600,
     height: 901,
@@ -226,6 +271,15 @@ export const galleryImages: GalleryImage[] = [
       "Jobs are scoped and planned in the shop before we ever arrive on site.",
   },
   {
+    src: "/images/hero-about.jpg",
+    width: 2400,
+    height: 1351,
+    category: "team",
+    title: "The Whole Crew",
+    description:
+      "The team that shows up — local technicians who treat your property like their own.",
+  },
+  {
     src: `${GAL}/team-construction-house.jpg`,
     width: 900,
     height: 1600,
@@ -233,6 +287,15 @@ export const galleryImages: GalleryImage[] = [
     title: "The Crew On Site",
     description:
       "Our technicians at a lakeside new-build, ready to wire it from the ground up.",
+  },
+  {
+    src: "/images/hero-contact.jpg",
+    width: 2400,
+    height: 1351,
+    category: "team",
+    title: "Back at the Shop",
+    description:
+      "Planning jobs, programming systems, and talking shop around the table at HQ.",
   },
   {
     src: `${WORK}/network-ubiquiti-bridge.jpg`,
