@@ -57,7 +57,7 @@ export function ServiceGallery({ slug }: { slug: string }) {
                 type="button"
                 onClick={() => setLightboxIndex(i)}
                 aria-label={`View ${photo.caption}`}
-                className="group relative block aspect-4/5 w-full overflow-hidden rounded-2xl border border-white/10 bg-black text-left"
+                className="group relative block aspect-4/5 w-full cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-black text-left"
               >
                 <Image
                   src={photo.src}

@@ -63,7 +63,7 @@ export function GalleryGrid() {
               key={img.src}
               type="button"
               onClick={() => setLightboxIndex(index)}
-              className="group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-2xl border border-white/10 bg-black text-left"
+              className="group relative mb-4 block w-full cursor-pointer break-inside-avoid overflow-hidden rounded-2xl border border-white/10 bg-black text-left"
               aria-label={`View ${img.title}`}
             >
               <Image
@@ -137,24 +137,38 @@ function FilterPill({
   onClick: () => void;
   count: number;
 }) {
+  const [hovered, setHovered] = useState(false);
+
+  // active = definitive solid color; hovered = faint preview of that color;
+  // resting = neutral translucent white.
+  const style: React.CSSProperties = active
+    ? {
+        backgroundColor: color ?? "#ffffff",
+        borderColor: color ?? "#ffffff",
+        color: color ? "#fff" : "#0a0a0a",
+      }
+    : hovered
+      ? color
+        ? { backgroundColor: `${color}26`, borderColor: `${color}80`, color: "#fff" }
+        : {
+            backgroundColor: "rgba(255,255,255,0.12)",
+            borderColor: "rgba(255,255,255,0.30)",
+            color: "#fff",
+          }
+      : {
+          backgroundColor: "rgba(255,255,255,0.04)",
+          borderColor: "rgba(255,255,255,0.15)",
+          color: "rgba(255,255,255,0.72)",
+        };
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200"
-      style={
-        active
-          ? {
-              backgroundColor: color ?? "#ffffff",
-              borderColor: color ?? "#ffffff",
-              color: color ? "#fff" : "#0a0a0a",
-            }
-          : {
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderColor: "rgba(255,255,255,0.15)",
-              color: "rgba(255,255,255,0.72)",
-            }
-      }
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200"
+      style={style}
     >
       {color && (
         <span

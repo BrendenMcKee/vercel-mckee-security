@@ -82,7 +82,7 @@ export function Lightbox({
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:bg-white/15"
+            className="absolute right-4 top-4 z-10 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:bg-white/15"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -100,7 +100,7 @@ export function Lightbox({
                   e.stopPropagation();
                   prev();
                 }}
-                className="absolute left-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:bg-white/15 sm:left-6"
+                className="absolute left-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:bg-white/15 sm:left-6"
                 aria-label="Previous image"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -111,7 +111,7 @@ export function Lightbox({
                   e.stopPropagation();
                   next();
                 }}
-                className="absolute right-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:bg-white/15 sm:right-6"
+                className="absolute right-3 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition hover:bg-white/15 sm:right-6"
                 aria-label="Next image"
               >
                 <ChevronRight className="h-6 w-6" />
