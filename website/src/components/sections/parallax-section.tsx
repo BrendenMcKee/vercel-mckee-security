@@ -18,6 +18,8 @@ type ParallaxSectionProps = {
   scrollMode?: "hero" | "section";
   /** Override the absolute inset on the image layer (helps avoid edge gaps during parallax) */
   imageInsetClassName?: string;
+  /** Override the default gradient overlay when gradient is true */
+  gradientClassName?: string;
   children: React.ReactNode;
   className?: string;
   contentClassName?: string;
@@ -34,6 +36,7 @@ export function ParallaxSection({
   parallaxStrength = 28,
   scrollMode = "section",
   imageInsetClassName,
+  gradientClassName,
   children,
   className = "",
   contentClassName = "",
@@ -82,7 +85,12 @@ export function ParallaxSection({
           quality={priority ? 95 : 90}
         />
         {gradient ? (
-          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/38 to-[#0a0a0a]" />
+          <div
+            className={
+              gradientClassName ??
+              "absolute inset-0 bg-gradient-to-b from-black/55 via-black/38 to-[#0a0a0a]"
+            }
+          />
         ) : (
           <div className="absolute inset-0" style={{ backgroundColor: overlay }} />
         )}
