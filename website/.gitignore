@@ -40,4 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Local photo/video library (stored elsewhere; only public/ bundled assets are tracked)
+/src/assets/photos/**
+!/src/assets/photos/.gitkeep
+
 .vercel

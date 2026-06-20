@@ -221,9 +221,18 @@ export function Header() {
         >
           <div className="mx-auto flex h-9 max-w-[1400px] items-center justify-between px-6 text-xs text-white">
             <strong className="font-bold uppercase tracking-wide">
-              {siteConfig.topBarTagline}
+              {siteConfig.topBarLeftTagline}
             </strong>
-            <SocialIconButtons />
+            <div className="flex items-center gap-3">
+              <span
+                className="h-4 w-px shrink-0 bg-white/50"
+                aria-hidden="true"
+              />
+              <strong className="font-bold uppercase tracking-wide">
+                {siteConfig.topBarRightTagline}
+              </strong>
+              <SocialIconButtons />
+            </div>
           </div>
         </motion.div>
 

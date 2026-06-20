@@ -25,9 +25,27 @@ function YoutubeIcon({ className }: { className?: string }) {
 }
 
 const links = [
-  { href: siteConfig.social.facebook, label: "Facebook", Icon: FacebookIcon },
-  { href: siteConfig.social.instagram, label: "Instagram", Icon: InstagramIcon },
-  { href: siteConfig.social.youtube, label: "YouTube", Icon: YoutubeIcon },
+  {
+    href: siteConfig.social.facebook,
+    label: "Facebook",
+    Icon: FacebookIcon,
+    hoverClass:
+      "hover:border-[#1877F2] hover:bg-[#1877F2] hover:text-white",
+  },
+  {
+    href: siteConfig.social.instagram,
+    label: "Instagram",
+    Icon: InstagramIcon,
+    hoverClass:
+      "hover:border-[#E4405F] hover:bg-[#E4405F] hover:text-white",
+  },
+  {
+    href: siteConfig.social.youtube,
+    label: "YouTube",
+    Icon: YoutubeIcon,
+    hoverClass:
+      "hover:border-[#FF0000] hover:bg-[#FF0000] hover:text-white",
+  },
 ];
 
 export function SocialIconButtons({ size = "sm" }: { size?: "sm" | "md" }) {
@@ -36,7 +54,7 @@ export function SocialIconButtons({ size = "sm" }: { size?: "sm" | "md" }) {
 
   return (
     <div className="flex items-center gap-2">
-      {links.map(({ href, label, Icon }) => (
+      {links.map(({ href, label, Icon, hoverClass }) => (
         <a
           key={label}
           href={href}
@@ -44,7 +62,7 @@ export function SocialIconButtons({ size = "sm" }: { size?: "sm" | "md" }) {
           rel="noopener noreferrer"
           aria-label={label}
           title={label}
-          className={`${dim} flex items-center justify-center rounded-full border border-white text-white transition hover:border-white hover:bg-white/10`}
+          className={`${dim} flex shrink-0 items-center justify-center rounded-full border-2 border-white text-white antialiased transition-colors duration-200 ${hoverClass}`}
         >
           <Icon className={icon} />
         </a>

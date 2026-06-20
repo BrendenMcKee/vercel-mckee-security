@@ -57,7 +57,8 @@ export const siteConfig = {
   yearsInBusiness: 30,
   region: "Haliburton region, Ontario, Canada",
   hours: "Mon-Fri 8:00am - 4:00pm",
-  topBarTagline: "Leading Industry Professionals",
+  topBarLeftTagline: "Specialists in Quality Service Since 1994",
+  topBarRightTagline: "Leading Industry Professionals",
   address: {
     street: "4702 Haliburton County Rd 21",
     city: "Haliburton",
