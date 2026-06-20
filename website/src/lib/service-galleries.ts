@@ -4,6 +4,8 @@ export type GalleryPhoto = {
   height: number;
   alt: string;
   caption: string;
+  /** object-position for the cropped thumbnail (defaults to center) */
+  objectPosition?: string;
 };
 
 export type ServiceGalleryContent = {
@@ -30,18 +32,20 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         caption: "Bench-building and programming a security panel",
       },
       {
-        src: `${WORK}/security-panel-wiring.jpg`,
-        width: 1600,
-        height: 901,
-        alt: "Technician wiring an alarm control panel",
-        caption: "Wiring a control panel by hand",
+        src: `${WORK}/security-board-tech.jpg`,
+        width: 901,
+        height: 1600,
+        alt: "McKee technician standing beside a wall-mounted security and equipment board",
+        caption: "Building out the security equipment board",
+        objectPosition: "50% 35%",
       },
       {
-        src: `${WORK}/security-keypad.jpg`,
-        width: 1600,
-        height: 901,
-        alt: "Technician assembling an alarm keypad",
-        caption: "Assembling and testing keypads",
+        src: `${WORK}/security-rough-in.jpg`,
+        width: 901,
+        height: 1600,
+        alt: "Two McKee technicians running low-voltage wiring during a construction rough-in",
+        caption: "Low-voltage rough-in during the build",
+        objectPosition: "50% 30%",
       },
       {
         src: `${WORK}/security-panel-install.jpg`,
@@ -63,6 +67,7 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         height: 1600,
         alt: "Two McKee Security technicians on a residential job site",
         caption: "Our technicians on site",
+        objectPosition: "50% 78%",
       },
     ],
   },

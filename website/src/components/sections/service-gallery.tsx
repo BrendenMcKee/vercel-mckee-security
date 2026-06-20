@@ -64,6 +64,7 @@ export function ServiceGallery({ slug }: { slug: string }) {
                   alt={photo.alt}
                   fill
                   loading="lazy"
+                  style={{ objectPosition: photo.objectPosition }}
                   className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.06]"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
                 />

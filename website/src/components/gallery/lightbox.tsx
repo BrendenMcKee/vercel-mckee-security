@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, ArrowUpRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ArrowUpRight, Loader2 } from "lucide-react";
 import { galleryCategoryMap, type GalleryCategoryId } from "@/lib/gallery";
+import { cn } from "@/lib/utils";
 
 export type LightboxPhoto = {
   src: string;
@@ -33,6 +34,15 @@ export function Lightbox({
   hideCategoryLink = false,
 }: LightboxProps) {
   const open = index !== null && index >= 0 && index < photos.length;
+  const [loaded, setLoaded] = useState(false);
+
+  // Show the shimmer placeholder until each new image is ready, with a
+  // fallback so it can never get stuck if onLoad doesn't fire.
+  useEffect(() => {
+    setLoaded(false);
+    const t = setTimeout(() => setLoaded(true), 2500);
+    return () => clearTimeout(t);
+  }, [index]);
 
   const next = useCallback(() => {
     if (index !== null) onIndex((index + 1) % photos.length);
@@ -121,28 +131,47 @@ export function Lightbox({
 
           <motion.div
             key={active.src}
-            className="flex max-h-full w-full max-w-5xl flex-col items-center"
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="flex w-full max-w-5xl flex-col items-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             onClick={(e) => e.stopPropagation()}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.5}
             onDragEnd={onDragEnd}
           >
-            <Image
-              src={active.src}
-              alt={active.title}
-              width={active.width}
-              height={active.height}
-              sizes="100vw"
-              priority
-              draggable={false}
-              className="max-h-[72vh] w-auto rounded-xl object-contain shadow-2xl select-none"
-            />
+            {/* Fixed-height stage keeps the layout stable between images */}
+            <div className="relative flex h-[58vh] w-full items-center justify-center overflow-hidden rounded-xl sm:h-[68vh]">
+              {!loaded && (
+                <div className="absolute inset-0 overflow-hidden rounded-xl bg-white/5">
+                  <motion.div
+                    className="absolute inset-y-0 left-0 w-1/2 bg-linear-to-r from-transparent via-white/10 to-transparent"
+                    initial={{ x: "-150%" }}
+                    animate={{ x: "350%" }}
+                    transition={{ duration: 1.1, repeat: Infinity, ease: "linear" }}
+                  />
+                  <div className="absolute inset-0 grid place-items-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-white/40" />
+                  </div>
+                </div>
+              )}
+              <Image
+                src={active.src}
+                alt={active.title}
+                fill
+                sizes="(max-width: 1024px) 100vw, 1024px"
+                priority
+                draggable={false}
+                onLoad={() => setLoaded(true)}
+                className={cn(
+                  "object-contain transition-opacity duration-300 select-none",
+                  loaded ? "opacity-100" : "opacity-0",
+                )}
+              />
+            </div>
 
-            <div className="mt-4 w-full max-w-2xl text-center">
+            <div className="mt-4 min-h-29 w-full max-w-2xl text-center">
               {category && (
                 <div className="flex justify-center">
                   <span
