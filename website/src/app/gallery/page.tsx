@@ -17,8 +17,8 @@ export default function GalleryPage() {
         eyebrow="Our Work"
         title="Project Gallery"
         subtitle="Real installs by our own crew across cottage country. Filter by service, then tap any photo to take a closer look."
-        image="/images/gallery/team-centex-rooftop-group.jpg"
-        objectPosition="50% 38%"
+        image="/images/gallery/gallery-hero-crew-truck.jpg"
+        objectPosition="50% 42%"
         imageScale={1.05}
         compact
         overlay="dark"

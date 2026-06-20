@@ -127,13 +127,13 @@ export const galleryImages: GalleryImage[] = [
       "Professional Starlink installations with clean cable runs and no roof penetration.",
   },
   {
-    src: `${WORK}/security-team-onsite.jpg`,
+    src: `${GAL}/team-shop-inventory.jpg`,
     width: 900,
     height: 1600,
-    category: "security",
-    title: "Our Technicians On Site",
+    category: "team",
+    title: "Stocked for Every Install",
     description:
-      "A familiar local crew shows up, installs cleanly, and walks you through your new system.",
+      "Cat6, cameras, and surveillance gear staged in the shop before the crew heads out.",
   },
   {
     src: `${WORK}/network-cat6-termination.jpg`,
@@ -161,6 +161,15 @@ export const galleryImages: GalleryImage[] = [
     title: "Designed Around You",
     description:
       "We design each audio-video system to fit how you actually live in and use your space.",
+  },
+  {
+    src: `${WORK}/camera-centex-store-walk.jpg`,
+    width: 901,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "A Local Crew On the Job",
+    description:
+      "Friendly, familiar technicians on site for a commercial camera install.",
   },
   {
     src: `${GAL}/starlink-lake-panorama.jpg`,
@@ -368,5 +377,449 @@ export const galleryImages: GalleryImage[] = [
     title: "Monitored & Protected",
     description:
       "ULC-listed monitoring backs every install, clearly marked to deter intruders.",
+  },
+  {
+    src: `${GAL}/camera-pole-dome-install.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "camera-surveillance",
+    title: "Multi-Sensor Coverage",
+    description:
+      "Mounting multi-sensor dome cameras high on a lamp post to cover an entire parking area.",
+  },
+  {
+    src: `${GAL}/team-harness-drill.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "Safety First, Every Climb",
+    description:
+      "Harnessed and tied off before heading up — fall protection on every job at height.",
+  },
+  {
+    src: `${WORK}/network-equipment-closet.jpg`,
+    width: 1600,
+    height: 901,
+    category: "networking",
+    title: "The Brains of the Build",
+    description:
+      "Structured wiring, networking, and camera monitoring centralized in one tidy equipment closet.",
+  },
+  {
+    src: `${WORK}/starlink-dish-closeup.jpg`,
+    width: 901,
+    height: 1600,
+    category: "starlink",
+    title: "Dialed-In Hardware",
+    description:
+      "A clean look at a mounted Starlink dish and its low-profile bracket.",
+  },
+  {
+    src: `${WORK}/camera-placement-consult.jpg`,
+    width: 1600,
+    height: 747,
+    category: "camera-surveillance",
+    title: "Planned Around Your Property",
+    description:
+      "Walking a client through camera placement with a live demo before anything goes up.",
+  },
+  {
+    src: `${GAL}/team-group-restaurant.jpg`,
+    width: 1030,
+    height: 1104,
+    category: "team",
+    title: "More Than Coworkers",
+    description:
+      "The crew off the clock — the people behind every install.",
+  },
+  {
+    src: `${WORK}/network-cable-pull-framing.jpg`,
+    width: 901,
+    height: 1600,
+    category: "networking",
+    title: "Wired Before the Walls",
+    description:
+      "Structured cabling pulled through open framing during a new-build rough-in.",
+  },
+  {
+    src: `${GAL}/camera-tree-driveway.jpg`,
+    width: 1600,
+    height: 747,
+    category: "camera-surveillance",
+    title: "Watching the Driveway",
+    description:
+      "A discreet camera tucked into a tree, quietly covering a long estate driveway.",
+  },
+  {
+    src: `${GAL}/team-shovel-portrait.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "Whatever the Job Needs",
+    description:
+      "From trenching cable to mounting dishes, our crew handles it all.",
+  },
+  {
+    src: `${WORK}/network-data-jacks.jpg`,
+    width: 747,
+    height: 1600,
+    category: "networking",
+    title: "Labeled to the Last Jack",
+    description:
+      "Clearly labeled data jacks make future moves, adds, and changes painless.",
+  },
+  {
+    src: `${WORK}/security-alarm-bench-wiring.jpg`,
+    width: 900,
+    height: 1600,
+    category: "security",
+    title: "Wired on the Bench",
+    description:
+      "Alarm panels are wired and programmed on the bench before they ever reach your wall.",
+  },
+  {
+    src: `${WORK}/camera-centex-ceiling-harness.jpg`,
+    width: 1600,
+    height: 901,
+    category: "camera-surveillance",
+    title: "Harnessed and Working Overhead",
+    description:
+      "Technicians in fall-arrest harnesses installing ceiling cameras at a commercial site.",
+  },
+  {
+    src: `${GAL}/team-two-techs-rain.jpg`,
+    width: 900,
+    height: 1600,
+    category: "team",
+    title: "Rain or Shine",
+    description:
+      "Show up, suit up, and get it done — whatever the weather throws at us.",
+  },
+  {
+    src: `${WORK}/network-patch-panel-blue.jpg`,
+    width: 747,
+    height: 1600,
+    category: "networking",
+    title: "Color-Coded & Labeled",
+    description:
+      "A neatly dressed patch panel with color-coded Cat6 for easy maintenance.",
+  },
+  {
+    src: `${WORK}/camera-gate-post.jpg`,
+    width: 1600,
+    height: 747,
+    category: "camera-surveillance",
+    title: "Coverage at the Gate",
+    description:
+      "A camera on the gate post keeps watch over everyone who comes and goes.",
+  },
+  {
+    src: `${GAL}/team-hard-hat-portrait.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "Geared Up",
+    description: "Hard hat on and ready for a day on the tools.",
+  },
+  {
+    src: `${WORK}/network-parking-garage-cable.jpg`,
+    width: 900,
+    height: 1600,
+    category: "networking",
+    title: "Commercial Cable Runs",
+    description:
+      "Running structured cabling across a full commercial parking garage.",
+  },
+  {
+    src: `${GAL}/av-luxury-prewire.jpg`,
+    width: 747,
+    height: 1600,
+    category: "audio-video",
+    title: "Wired From the Studs",
+    description:
+      "Pre-wiring a grand room for audio and video during a luxury new build.",
+  },
+  {
+    src: `${WORK}/camera-pole-team-install.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "camera-surveillance",
+    title: "A Two-Person Job",
+    description:
+      "Two technicians working together to mount cameras high on a parking-lot pole.",
+  },
+  {
+    src: `${GAL}/team-harness-snow.jpg`,
+    width: 747,
+    height: 1600,
+    category: "team",
+    title: "Geared Up, Even in Winter",
+    description:
+      "Harnessed and ready for a cold-weather install — safety gear on, whatever the season.",
+  },
+  {
+    src: `${GAL}/network-tower-snow.jpg`,
+    width: 481,
+    height: 1024,
+    category: "networking",
+    title: "Towers in the Snow",
+    description:
+      "Building out a wireless tower link in the middle of winter.",
+  },
+  {
+    src: `${GAL}/camera-laptop-review.jpg`,
+    width: 1600,
+    height: 747,
+    category: "camera-surveillance",
+    title: "Tuned to Perfection",
+    description:
+      "Reviewing live camera feeds on site to dial in every angle.",
+  },
+  {
+    src: `${GAL}/team-centex-harness-clipboard.jpg`,
+    width: 1600,
+    height: 901,
+    category: "team",
+    title: "Planning the Install",
+    description:
+      "The crew in fall-arrest harnesses reviewing the plan before heading up.",
+  },
+  {
+    src: `${WORK}/network-staircase-rough-in.jpg`,
+    width: 901,
+    height: 1600,
+    category: "networking",
+    title: "Floor to Floor",
+    description:
+      "Running low-voltage cabling up the staircase during a construction rough-in.",
+  },
+  {
+    src: `${GAL}/starlink-gable-real.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "starlink",
+    title: "Gable-Mounted Starlink",
+    description:
+      "Installing a Starlink dish at the gable end, well clear of the roof surface.",
+  },
+  {
+    src: `${GAL}/camera-centex-cable-drop.jpg`,
+    width: 901,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "A Drop to Every Camera",
+    description:
+      "Ceiling cable drops feeding each camera location in a commercial store.",
+  },
+  {
+    src: `${GAL}/team-crew-tool-bags.jpg`,
+    width: 1600,
+    height: 901,
+    category: "team",
+    title: "Game Plan",
+    description: "Talking through the day's work before the tools come out.",
+  },
+  {
+    src: `${WORK}/network-basement-wiring.jpg`,
+    width: 900,
+    height: 1600,
+    category: "networking",
+    title: "Tidy From the Start",
+    description:
+      "Network equipment mounted and wired cleanly in a mechanical room.",
+  },
+  {
+    src: `${GAL}/camera-rooftop-ladder.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "camera-surveillance",
+    title: "Eyes on Every Angle",
+    description:
+      "Mounting a rooftop camera to cover the approach to a property.",
+  },
+  {
+    src: `${GAL}/team-respirator-portrait.jpg`,
+    width: 747,
+    height: 1600,
+    category: "team",
+    title: "The Dirty Work",
+    description:
+      "Respirator and headlamp on for the dusty, tight-space jobs others skip.",
+  },
+  {
+    src: `${GAL}/network-tower-climb.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "networking",
+    title: "Up the Tower",
+    description:
+      "Climbing an antenna tower to land a long-range wireless link.",
+  },
+  {
+    src: `${GAL}/camera-centex-store-cooler.jpg`,
+    width: 901,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "Coverage Down Every Aisle",
+    description:
+      "Camera coverage planned right down to the cooler aisle of a busy store.",
+  },
+  {
+    src: `${GAL}/team-harness-ascending.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "On the Way Up",
+    description:
+      "Tied off and climbing — fall protection in place before the work begins.",
+  },
+  {
+    src: `${GAL}/network-antenna-roof-install.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "networking",
+    title: "Up on the Roof",
+    description:
+      "Installing a rooftop antenna to extend coverage across a property.",
+  },
+  {
+    src: `${GAL}/starlink-ladder-dish-house.jpg`,
+    width: 901,
+    height: 1600,
+    category: "starlink",
+    title: "Reaching the Roofline",
+    description:
+      "Ladders up to mount a satellite dish cleanly at the roofline.",
+  },
+  {
+    src: `${WORK}/camera-portable-monitor.jpg`,
+    width: 747,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "A Demo You Can See",
+    description:
+      "Our portable monitor lets clients see the camera system live before it's installed.",
+  },
+  {
+    src: `${GAL}/team-centex-harness-portrait.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "Suited Up",
+    description:
+      "A technician in full fall-arrest harness before climbing on a commercial site.",
+  },
+  {
+    src: `${GAL}/network-roof-cable-route.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "networking",
+    title: "Clean Runs, Even Up High",
+    description: "Routing antenna cable neatly along the roofline.",
+  },
+  {
+    src: `${GAL}/camera-centex-ceiling-cable.jpg`,
+    width: 901,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "Running Cable Overhead",
+    description:
+      "Pulling camera cable through the ceiling at a busy commercial site.",
+  },
+  {
+    src: `${GAL}/team-shop-enclosure-build.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "Built in the Shop",
+    description: "Fabricating a custom equipment enclosure back at the shop.",
+  },
+  {
+    src: `${GAL}/network-panel-antenna-mast.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "networking",
+    title: "Cellular Where There Was None",
+    description:
+      "Mounting a panel antenna on a rooftop mast to boost cellular signal.",
+  },
+  {
+    src: `${GAL}/camera-wood-post.jpg`,
+    width: 901,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "Mounted Where It Matters",
+    description:
+      "Fixing a camera to a wood post to cover an entry to the property.",
+  },
+  {
+    src: `${GAL}/team-two-techs-framing.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "The A-Team",
+    description: "Two of our technicians at a new-build rough-in.",
+  },
+  {
+    src: `${GAL}/network-trench-splice.jpg`,
+    width: 901,
+    height: 1600,
+    category: "networking",
+    title: "Underground & Buried",
+    description:
+      "Splicing and burying cable in a trench for a clean, protected run.",
+  },
+  {
+    src: `${GAL}/camera-centex-store-cabling.jpg`,
+    width: 901,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "Cabling the Store",
+    description:
+      "Running camera cabling through a commercial store during a full-system install.",
+  },
+  {
+    src: `${GAL}/team-centex-harness-truck.jpg`,
+    width: 1600,
+    height: 901,
+    category: "team",
+    title: "On Site, Suited Up",
+    description:
+      "Arriving on a commercial job in fall protection, ready to get to work.",
+  },
+  {
+    src: `${GAL}/camera-eave-mount-winter.jpg`,
+    width: 901,
+    height: 1600,
+    category: "camera-surveillance",
+    title: "Year-Round Installs",
+    description:
+      "Drilling an exterior eave mount in the dead of winter — we install in any season.",
+  },
+  {
+    src: `${GAL}/team-crew-break-jobsite.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "A Quick Breather",
+    description: "Taking a break at a new-build before getting back to it.",
+  },
+  {
+    src: `${GAL}/team-shop-hardware-bins.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "Every Part in Its Place",
+    description:
+      "Sorting hardware in the shop so nothing slows down the install.",
+  },
+  {
+    src: `${GAL}/team-gable-ladders-setup.jpg`,
+    width: 901,
+    height: 1600,
+    category: "team",
+    title: "Ladders Up",
+    description:
+      "Staging ladders and fall-arrest gear for a gable-end install.",
   },
 ];

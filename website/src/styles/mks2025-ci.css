@@ -462,7 +462,7 @@ a.mks2025-ci-hero-badge {
     width: 100% !important;
     height: 100% !important;
     background-size: cover !important;
-    background-position: center !important;
+    background-position: center;
     transition: transform 0.5s ease !important;
 }
 
