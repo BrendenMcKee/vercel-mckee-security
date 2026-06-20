@@ -216,9 +216,9 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
     photos: [
       {
         src: `${WORK}/starlink-mounting.jpg`,
-        width: 747,
-        height: 1600,
-        alt: "McKee technician mounting a Starlink dish from a ladder",
+        width: 1536,
+        height: 1024,
+        alt: "McKee technician in a hard hat and fall-arrest harness mounting a Starlink dish from a ladder",
         caption: "Mounted by hand, no roof penetration",
       },
       {
@@ -230,16 +230,16 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
       },
       {
         src: `${WORK}/starlink-gable-install.jpg`,
-        width: 747,
-        height: 1600,
-        alt: "Technician installing a Starlink dish on a gable end",
+        width: 1536,
+        height: 1024,
+        alt: "McKee technician in a hard hat and fall-arrest harness installing a Starlink dish at a gable end from a ladder",
         caption: "Gable-end installs that stay clear of the roof",
       },
       {
         src: `${WORK}/starlink-dock.jpg`,
-        width: 901,
-        height: 1600,
-        alt: "Starlink dish mounted near a dock on the lake",
+        width: 900,
+        height: 1522,
+        alt: "Starlink dish mounted on a dock post overlooking the lake",
         caption: "Connectivity right down to the dock",
       },
       {

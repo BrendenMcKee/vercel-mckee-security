@@ -119,8 +119,8 @@ export const galleryImages: GalleryImage[] = [
   },
   {
     src: `${WORK}/starlink-mounting.jpg`,
-    width: 747,
-    height: 1600,
+    width: 1536,
+    height: 1024,
     category: "starlink",
     title: "Mounted by Hand",
     description:
@@ -263,8 +263,8 @@ export const galleryImages: GalleryImage[] = [
   },
   {
     src: `${WORK}/starlink-gable-install.jpg`,
-    width: 747,
-    height: 1600,
+    width: 1536,
+    height: 1024,
     category: "starlink",
     title: "Gable-End Installs",
     description:
@@ -299,8 +299,8 @@ export const galleryImages: GalleryImage[] = [
   },
   {
     src: `${WORK}/starlink-dock.jpg`,
-    width: 901,
-    height: 1600,
+    width: 900,
+    height: 1522,
     category: "starlink",
     title: "Internet Down to the Dock",
     description:
