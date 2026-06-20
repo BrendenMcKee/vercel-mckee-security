@@ -12,6 +12,8 @@ type HeroProps = {
   subtitle?: string;
   image?: string;
   objectPosition?: string;
+  /** Scale on the background layer; lower values show more of the photo */
+  imageScale?: number;
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   compact?: boolean;
@@ -25,6 +27,7 @@ export function Hero({
   subtitle,
   image = "/images/hero-home.jpg",
   objectPosition = "50% 50%",
+  imageScale = 1.15,
   primaryCta,
   secondaryCta,
   compact = false,
@@ -48,7 +51,10 @@ export function Hero({
       ref={ref}
       className={`relative overflow-hidden ${compact ? "min-h-[42vh] sm:min-h-[50vh]" : "min-h-[72vh] sm:min-h-[85vh]"}`}
     >
-      <motion.div style={{ y }} className="absolute inset-0 scale-[1.15]">
+      <motion.div
+        style={{ y, scale: imageScale }}
+        className="absolute inset-0 will-change-transform"
+      >
         <Image
           src={image}
           alt=""
