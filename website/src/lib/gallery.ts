@@ -620,7 +620,7 @@ export const galleryImages: GalleryImage[] = [
     description: "Talking through the day's work before the tools come out.",
   },
   {
-    src: `${WORK}/network-basement-wiring.jpg`,
+    src: `${GAL}/network-basement-wiring.jpg`,
     width: 900,
     height: 1600,
     category: "networking",
@@ -692,7 +692,7 @@ export const galleryImages: GalleryImage[] = [
       "Ladders up to mount a satellite dish cleanly at the roofline.",
   },
   {
-    src: `${WORK}/camera-portable-monitor.jpg`,
+    src: `${GAL}/camera-portable-monitor.jpg`,
     width: 747,
     height: 1600,
     category: "camera-surveillance",
