@@ -53,7 +53,7 @@ export function HomePageContent() {
             </h2>
             <Link
               href="/custom-installations-professional-products"
-              className="mt-8 inline-flex items-center justify-center rounded-xl bg-secondary px-10 py-4 text-base font-bold lowercase text-white shadow-lg transition hover:bg-[#157ab8]"
+              className="mt-8 inline-flex items-center justify-center rounded-xl bg-primary px-10 py-4 text-base font-bold lowercase text-white shadow-lg transition hover:bg-[var(--primary-hover)]"
             >
               Learn More
             </Link>
