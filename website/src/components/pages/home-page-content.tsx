@@ -8,6 +8,7 @@ import { serviceCategories } from "@/lib/services";
 import { FadeIn } from "@/components/motion/fade-in";
 import { ParallaxSection } from "@/components/sections/parallax-section";
 import { StatsReviewsBand } from "@/components/sections/stats-reviews-band";
+import { heroCopyShadow, heroCtaShadow } from "@/lib/hero-text-styles";
 
 function ReadMoreLink({ href }: { href: string }) {
   return (
@@ -19,10 +20,6 @@ function ReadMoreLink({ href }: { href: string }) {
     </Link>
   );
 }
-
-/** Layered shadow so hero copy stays legible over busy photos without backdrop boxes */
-const heroCopyShadow =
-  "[text-shadow:0_1px_2px_rgb(0_0_0/1),0_2px_12px_rgb(0_0_0/0.95),0_4px_32px_rgb(0_0_0/0.85),0_8px_56px_rgb(0_0_0/0.55)]";
 
 export function HomePageContent() {
   return (
@@ -63,7 +60,7 @@ export function HomePageContent() {
             </h2>
             <Link
               href="/custom-installations-professional-products"
-              className="mt-8 inline-flex items-center justify-center rounded-xl bg-primary px-10 py-4 text-base font-bold lowercase text-white shadow-[0_4px_24px_rgb(0_0_0/0.55)] transition hover:bg-[var(--primary-hover)]"
+              className={`mt-8 inline-flex items-center justify-center rounded-xl bg-primary px-10 py-4 text-base font-bold lowercase text-white transition hover:bg-[var(--primary-hover)] ${heroCtaShadow}`}
             >
               Learn More
             </Link>

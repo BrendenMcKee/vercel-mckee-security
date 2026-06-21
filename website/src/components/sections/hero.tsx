@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/motion/fade-in";
+import { heroCopyShadow } from "@/lib/hero-text-styles";
 
 type HeroProps = {
   eyebrow?: string;
@@ -74,15 +75,21 @@ export function Hero({
       >
         <FadeIn>
           {eyebrow && (
-            <p className="mb-4 text-sm font-bold uppercase tracking-[0.25em] text-primary">
+            <p
+              className={`mb-4 text-sm font-bold uppercase tracking-[0.25em] text-primary ${heroCopyShadow}`}
+            >
               {eyebrow}
             </p>
           )}
-          <h1 className="max-w-4xl text-4xl font-bold leading-tight text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
+          <h1
+            className={`max-w-4xl text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl ${heroCopyShadow}`}
+          >
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/85 sm:text-xl">
+            <p
+              className={`mt-6 max-w-2xl text-lg leading-relaxed text-white sm:text-xl ${heroCopyShadow}`}
+            >
               {subtitle}
             </p>
           )}
