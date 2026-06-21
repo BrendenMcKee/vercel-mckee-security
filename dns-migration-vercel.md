@@ -139,13 +139,24 @@ Remove only after confirming WordPress/WP Cloud no longer sends mail for this do
 |------|------|---------|
 | TXT | `mailo._domainkey` | `k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCyeMioUFY+A1KYj+gGQ5kP8BVDsXxmdvJhFjG1DNTF9eY05FeVbuhBHYpSJfnH5OOk5HYlbCq43SGHIODgV097miEw/gIGGe2oFrpApN9ynV9++8xOPck+du7USjURlRb8h7utzrIeG6iMrEpHloq/OTaaqbH3R++lIOTPEzIfkwIDAQAB` |
 
-### DMARC
+### DMARC (with aggregate reporting)
 
 | Type | Name | Content |
 |------|------|---------|
-| TXT | `_dmarc` | `v=DMARC1;p=none;` |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@mckeesecurity.ca; fo=1` |
 
-Leave DMARC at `p=none` during migration. Do not tighten to quarantine or reject until Vercel, Google Workspace, Resend, Mailchimp, and any other senders are confirmed authenticating properly.
+**Why this exact record:**
+
+- `p=none` — monitor only. No mail is quarantined or rejected during migration, so a misconfigured sender can't cause lost email.
+- `rua=mailto:dmarc@mckeesecurity.ca` — daily **aggregate reports** so you can see every source sending as your domain and whether SPF/DKIM align. This is what tells you when it's safe to tighten the policy. The address is on your own domain, so **no external-authorization record is needed**.
+- `fo=1` — request a failure signal whenever SPF or DKIM fails, for richer reporting.
+
+**Set up the reporting mailbox first:**
+
+- Create `dmarc@mckeesecurity.ca` in Google Workspace as a **group or alias** that routes to a monitored inbox (e.g. forward to `brenden@` / `info@`). It does not need to be a full paid mailbox — an alias/group is fine.
+- Reports arrive as XML attachments. They are hard to read raw, so optionally point `rua` at a **free DMARC analyzer** instead (e.g. Postmark DMARC, dmarcian, or Valimail) and use that service's provided `mailto:` address. This is the most production-grade option and turns the XML into a readable dashboard.
+
+**Ramp-up path (do NOT do during migration — see Phase 6):** once aggregate reports confirm Google Workspace and Resend consistently pass SPF + DKIM alignment, tighten in stages: `p=none` → `p=quarantine; pct=25` → increase `pct` to 100 → `p=reject`. Move one step at a time and watch reports between steps.
 
 ### Root SPF (one TXT record at `@` only)
 
@@ -206,6 +217,7 @@ Before changing nameservers at HostPapa:
 - [ ] No restrictive CAA record (or one that includes `letsencrypt.org`)
 - [ ] Both domains attached to the Vercel project, primary = apex
 - [ ] `EMAIL_FROM` domain confirmed **Verified** in Resend
+- [ ] DMARC `rua` mailbox/group (`dmarc@mckeesecurity.ca`) created and routing to a monitored inbox (or analyzer)
 - [ ] Screenshot/export the Vercel DNS table for reference
 - [ ] Optional: lower TTLs on critical records 24 hours ahead
 
@@ -258,6 +270,7 @@ Run from a terminal after cutover:
 nslookup -type=ns mckeesecurity.ca
 nslookup -type=mx mckeesecurity.ca
 nslookup -type=txt mckeesecurity.ca
+nslookup -type=txt _dmarc.mckeesecurity.ca
 nslookup -type=txt send.mckeesecurity.ca
 nslookup mckeesecurity.ca
 nslookup www.mckeesecurity.ca
@@ -268,8 +281,10 @@ Expected:
 - NS resolves to Vercel (`ns1.vercel-dns.com`, `ns2.vercel-dns.com`)
 - MX resolves to Google
 - One SPF TXT at `@` (Google + WP Cloud during transition)
+- DMARC TXT at `_dmarc` with `p=none` and the `rua` address
 - Resend records on `send` subdomain
 - Apex and `www` resolve to Vercel targets
+- A first DMARC aggregate report should arrive within ~24–48 hours
 
 ---
 
@@ -290,7 +305,8 @@ After WordPress is cancelled and WP Cloud no longer sends mail:
 - [ ] Remove `wpcloud1._domainkey` and `wpcloud2._domainkey` CNAME records
 - [ ] Remove `include:_spf.wpcloud.com` from root SPF
 - [ ] Re-verify Resend and Google Workspace sending
-- [ ] Consider tightening DMARC from `p=none` only after all senders pass authentication
+- [ ] Review DMARC aggregate (`rua`) reports — confirm Google Workspace and Resend pass SPF + DKIM alignment with no unexpected senders
+- [ ] Only then ramp DMARC enforcement one step at a time: `p=none` → `p=quarantine; pct=25` → `pct=100` → `p=reject`, watching reports between each step
 
 ---
 
