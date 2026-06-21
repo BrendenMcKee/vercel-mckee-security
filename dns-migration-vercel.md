@@ -143,17 +143,17 @@ Remove only after confirming WordPress/WP Cloud no longer sends mail for this do
 
 | Type | Name | Content |
 |------|------|---------|
-| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@mckeesecurity.ca; fo=1` |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:web@mckeesecurity.ca; fo=1` |
 
 **Why this exact record:**
 
 - `p=none` — monitor only. No mail is quarantined or rejected during migration, so a misconfigured sender can't cause lost email.
-- `rua=mailto:dmarc@mckeesecurity.ca` — daily **aggregate reports** so you can see every source sending as your domain and whether SPF/DKIM align. This is what tells you when it's safe to tighten the policy. The address is on your own domain, so **no external-authorization record is needed**.
+- `rua=mailto:web@mckeesecurity.ca` — daily **aggregate reports** so you can see every source sending as your domain and whether SPF/DKIM align. This is what tells you when it's safe to tighten the policy. The address is on your own domain, so **no external-authorization record is needed**.
 - `fo=1` — request a failure signal whenever SPF or DKIM fails, for richer reporting.
 
-**Set up the reporting mailbox first:**
+**Reporting mailbox:**
 
-- Create `dmarc@mckeesecurity.ca` in Google Workspace as a **group or alias** that routes to a monitored inbox (e.g. forward to `brenden@` / `info@`). It does not need to be a full paid mailbox — an alias/group is fine.
+- Reports go to `web@mckeesecurity.ca`, which already exists and handles website matters — no new mailbox needed.
 - Reports arrive as XML attachments. They are hard to read raw, so optionally point `rua` at a **free DMARC analyzer** instead (e.g. Postmark DMARC, dmarcian, or Valimail) and use that service's provided `mailto:` address. This is the most production-grade option and turns the XML into a readable dashboard.
 
 **Ramp-up path (do NOT do during migration — see Phase 6):** once aggregate reports confirm Google Workspace and Resend consistently pass SPF + DKIM alignment, tighten in stages: `p=none` → `p=quarantine; pct=25` → increase `pct` to 100 → `p=reject`. Move one step at a time and watch reports between steps.
@@ -217,7 +217,7 @@ Before changing nameservers at HostPapa:
 - [ ] No restrictive CAA record (or one that includes `letsencrypt.org`)
 - [ ] Both domains attached to the Vercel project, primary = apex
 - [ ] `EMAIL_FROM` domain confirmed **Verified** in Resend
-- [ ] DMARC `rua` mailbox/group (`dmarc@mckeesecurity.ca`) created and routing to a monitored inbox (or analyzer)
+- [x] DMARC `rua` mailbox (`web@mckeesecurity.ca`) already exists and is monitored
 - [ ] Screenshot/export the Vercel DNS table for reference
 - [ ] Optional: lower TTLs on critical records 24 hours ahead
 
