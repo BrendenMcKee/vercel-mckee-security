@@ -2,7 +2,7 @@
 
 > **Purpose:** Move `mckeesecurity.ca` from WordPress.com DNS and hosting to **Vercel DNS** and Vercel hosting, using a single vendor, without breaking Google Workspace email, Resend, or other sender authentication.
 
-**Last updated:** 2026-06-21
+**Last updated:** 2026-06-21 (Phase 4 cutover initiated — awaiting DNS propagation)
 **Related:** Vercel project root directory is `website/`. Repo: `BrendenMcKee/vercel-mckee-security`.
 
 ---
@@ -25,8 +25,8 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
 | Role | Current | Target |
 |------|---------|--------|
 | Registrar | HostPapa | HostPapa (no transfer) |
-| DNS host | WordPress.com nameservers | **Vercel DNS** |
-| Website | WordPress.com | Vercel (Next.js) |
+| DNS host | Propagating → **Vercel DNS** (HostPapa NS updated 2026-06-21) | **Vercel DNS** |
+| Website | WordPress.com (until propagation completes) | Vercel (Next.js) |
 | Email | Google Workspace | Google Workspace (unchanged) |
 | Transactional email | Resend (via `send` subdomain) | Resend (unchanged) |
 
@@ -40,20 +40,22 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
 
 ---
 
-## Phase 1: Vercel project + domains (before touching nameservers)
+## Phase 1: Vercel project + domains (before touching nameservers) — ✅ COMPLETE (2026-06-21)
 
-1. Open the Vercel project → **Settings → Domains**.
-2. Add both domains:
+1. ✅ Open the Vercel project → **Settings → Domains**.
+2. ✅ Add both domains:
    - `mckeesecurity.ca`
    - `www.mckeesecurity.ca`
-3. When prompted for a setup method, choose **Nameservers (Vercel DNS)** — not the A/CNAME method. Vercel will show two nameservers to use later, e.g.:
+3. ✅ When prompted for a setup method, choose **Nameservers (Vercel DNS)** — not the A/CNAME method. Vercel will show two nameservers to use later, e.g.:
    - `ns1.vercel-dns.com`
    - `ns2.vercel-dns.com`
    - **Use whatever Vercel displays for this project.**
-4. Set **primary domain** to `mckeesecurity.ca` (matches `website/src/lib/site-config.ts` canonical URL).
-5. Configure Vercel to redirect `www` → apex (or the reverse if you deliberately choose otherwise).
-6. Confirm **Root Directory** is `website`.
-7. Production environment variables — **already configured in Vercel (verified 2026-06-21):**
+4. ✅ **Primary domain = apex (`mckeesecurity.ca`).** Vercel may not show a separate “Set primary domain” button. You achieve this by:
+   - **`mckeesecurity.ca`** → **Connect to Production** (serves the site; no redirect).
+   - **`www.mckeesecurity.ca`** → click **Edit** → **Redirect to** `mckeesecurity.ca`. Choose **308 Permanent Redirect** (or **301** if offered — avoid **307 Temporary**). That makes apex canonical and matches `website/src/lib/site-config.ts`.
+5. ✅ Confirm both domains show **Invalid Configuration / Pending Nameservers** on the **Vercel DNS** tab — that is normal until Phase 4. **Copy and save the two nameservers** Vercel shows (e.g. `ns1.vercel-dns.com`, `ns2.vercel-dns.com`) for HostPapa later.
+6. ✅ Confirm **Root Directory** is `website`. In the current Vercel UI this is under **Settings → Build and Deployment** (not General). It was set when the GitHub repo was first connected. Quick sanity check: `vercel-mckee-security.vercel.app` should show the McKee Security site — if it does, root directory is already correct.
+7. ✅ Production environment variables — **already configured in Vercel (verified 2026-06-21):**
 
    | Variable | Purpose | Status |
    |----------|---------|--------|
@@ -81,13 +83,17 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
 
 ---
 
-## Phase 2: Build records in Vercel DNS (before cutover)
+## Phase 2: Build records in Vercel DNS (before cutover) — ✅ COMPLETE (2026-06-21)
 
 > **Vercel does not import your existing records.** Inventory them first so nothing is lost.
 
-1. **Capture the current zone.** In the WordPress.com DNS panel (and/or by querying live DNS), list every existing record: A, CNAME, MX, TXT, and any subdomains. Save a screenshot/export. Cross-check against the records below.
-2. In Vercel → **Settings → Domains → `mckeesecurity.ca` → DNS Records** (or `vercel dns` CLI), add the records in the tables below.
-3. The **website records (apex A + `www`) are created and managed automatically by Vercel** once the domain is attached and nameservers point to Vercel. You do **not** add these manually.
+1. ✅ **Capture the current zone.** In the WordPress.com DNS panel (and/or by querying live DNS), list every existing record: A, CNAME, MX, TXT, and any subdomains. Save a screenshot/export. Cross-check against the records below.
+2. ✅ Add records in **Vercel’s DNS zone**. On the team **Domains** page, select **`mckeesecurity.ca`**, then open the **Vercel DNS** tab — **not** the **DNS Records** tab (that tab only lists the A/CNAME records your *current* provider would need; there is no Add button). On **Vercel DNS** you should see the nameservers plus an **Add** form (or **Enable Vercel DNS** first). Alternatives:
+   - CLI: `vercel dns add mckeesecurity.ca …` / `vercel dns import mckeesecurity.ca zonefile.txt` — **all 17 records added via CLI 2026-06-21**
+   
+   Records can be added **before** nameserver cutover; verify with `dig MX mckeesecurity.ca @ns1.vercel-dns.com +short`.
+3. ✅ Add the records in the tables below.
+4. ✅ The **website records (apex A + `www`) are created and managed automatically by Vercel** once the domain is attached and nameservers point to Vercel. You do **not** add these manually.
 
 ### Google Workspace MX (critical)
 
@@ -101,22 +107,19 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
 
 Do not delete or modify unless Google Workspace admin requires a newer configuration.
 
-### Google Workspace DKIM (recommended — currently missing)
+### Google Workspace DKIM — ✅ ADDED (2026-06-21)
 
-Your zone has DKIM for Mailchimp, WP Cloud, Resend, and mailo, but **no Google Workspace DKIM**. That means routine Google Workspace mail is not DKIM-signed by your domain, which weakens deliverability and means it can only pass DMARC via SPF alignment. Setting it up is recommended before you eventually tighten DMARC.
+TXT record `google._domainkey` added to Vercel DNS via CLI. **Google Admin → Start authentication** must be clicked **after** public DNS propagates to Vercel (Google queries live DNS, not Vercel’s staging NS alone).
 
 | Type | Name | Content |
 |------|------|---------|
-| TXT | `google._domainkey` | **Generate in Google Admin — do not guess** |
+| TXT | `google._domainkey` | `v=DKIM1; k=rsa; p=MIIBIjAN…` (2048-bit, generated in Google Admin) |
 
-How to get the value:
+How to finish authentication:
 
 1. Google Admin console → **Apps → Google Workspace → Gmail → Authenticate email**.
-2. Select the domain `mckeesecurity.ca`, **Generate new record** (2048-bit).
-3. Copy the TXT host (`google._domainkey`) and the long `v=DKIM1; k=rsa; p=...` value.
-4. Add it as a TXT record in Vercel DNS, then click **Start authentication** in Admin.
-
-This is optional for cutover (email keeps working without it) but should be done for a fully hardened setup.
+2. Select the domain `mckeesecurity.ca`.
+3. After NS propagation (see Phase 4), click **Start authentication** again. Ignore the “48 hours” message if propagation just started — retry once `nslookup -type=ns mckeesecurity.ca` shows Vercel nameservers.
 
 ### Resend / SES on `send` subdomain
 
@@ -200,9 +203,17 @@ Rules:
 - Do **not** create multiple SPF TXT records at `@`. There must be exactly one.
 - Do **not** add Resend's `amazonses.com` include to root SPF. Resend uses the `send` subdomain; keep its SPF on `send.mckeesecurity.ca`.
 
-### SSL / CAA
+### SSL / CAA — automatic, no extra Vercel config
 
-Vercel issues and renews SSL automatically once the domain resolves to it. **Do not add a restrictive CAA record.** If you add a CAA record at all, it must authorize Vercel's CA:
+Vercel issues and renews SSL (Let’s Encrypt) **automatically** once both custom domains show **Valid Configuration** in the dashboard. No SSL toggle or certificate upload is required.
+
+**How to confirm SSL after propagation:**
+
+1. Vercel → project **Domains** → both `mckeesecurity.ca` and `www.mckeesecurity.ca` show **Valid** (not Invalid Configuration).
+2. Visit `https://mckeesecurity.ca` and `https://www.mckeesecurity.ca` — padlock icon, no certificate warnings.
+3. Optional CLI check: `curl -I https://mckeesecurity.ca` should return `HTTP/2 200` (or `308` for www → apex).
+
+Default Vercel CAA records already include `letsencrypt.org`. Do not add a restrictive CAA record. If you add one manually, it must authorize Vercel’s CA:
 
 ```
 @  CAA  0 issue "letsencrypt.org"
@@ -224,35 +235,43 @@ If no CAA record exists, do nothing — any CA is allowed by default, which is w
 
 ---
 
-## Phase 3: Pre-cutover verification (still on WordPress nameservers)
+## Phase 3: Pre-cutover verification (still on WordPress nameservers) — ✅ COMPLETE (2026-06-21)
 
 Before changing nameservers at HostPapa:
 
-- [ ] Current WordPress.com records inventoried and saved
-- [ ] Vercel DNS contains all required email/auth records above
-- [ ] Exactly one SPF TXT record at `@`
-- [ ] No restrictive CAA record (or one that includes `letsencrypt.org`)
-- [ ] Both domains attached to the Vercel project, primary = apex
+- [x] Current WordPress.com records inventoried and saved
+- [x] Vercel DNS contains all required email/auth records above (17 custom records + Vercel defaults)
+- [x] Exactly one SPF TXT record at `@`
+- [x] No restrictive CAA record (Vercel defaults include `letsencrypt.org`)
+- [x] Both domains attached to the Vercel project, primary = apex; www → apex 308 redirect
 - [x] `EMAIL_FROM` domain confirmed **Verified** in Resend (mckeesecurity.ca verified 2026-06-21; DKIM + SPF on `send` both green)
 - [x] DMARC `rua` mailbox (`web@mckeesecurity.ca`) already exists and is monitored
-- [ ] Screenshot/export the Vercel DNS table for reference
-- [ ] Optional: lower TTLs on critical records 24 hours ahead
+- [x] Vercel DNS zone verified via CLI against `ns1.vercel-dns.com`
+- [ ] Optional: lower TTLs on critical records 24 hours ahead (skipped — not required)
 
 ---
 
-## Phase 4: Nameserver cutover at HostPapa
+## Phase 4: Nameserver cutover at HostPapa — ⏳ IN PROGRESS (2026-06-21)
 
-1. In Vercel → **Settings → Domains**, copy the two assigned nameservers (e.g. `ns1.vercel-dns.com`, `ns2.vercel-dns.com`).
-2. Log into **HostPapa** → domain management for `mckeesecurity.ca`.
-3. Replace the WordPress.com nameservers with Vercel's two nameservers.
-4. **Do not transfer the registrar.**
-5. Wait for Vercel to show the domains as **Valid** and the nameservers as active (usually minutes to a few hours).
+1. ✅ In Vercel → **Settings → Domains**, copy the two assigned nameservers (`ns1.vercel-dns.com`, `ns2.vercel-dns.com`).
+2. ✅ Log into **HostPapa** → domain management for `mckeesecurity.ca`.
+3. ✅ Replace the WordPress.com nameservers with Vercel's two nameservers. HostPapa confirmed: “Name Server information successfully updated.”
+4. ✅ **Do not transfer the registrar.**
+5. ⏳ **Wait for propagation** — Vercel to show both domains as **Valid** (usually minutes to a few hours; up to 48h in rare cases).
+
+**While waiting (nothing broken on your end):**
+
+- Vercel **Invalid Configuration** is expected until public DNS shows Vercel nameservers.
+- The project **DNS Records** tab may still show the old A-record method — ignore it; you use **Vercel DNS** nameservers, not that A record.
+- Google Admin **Start authentication** for DKIM will fail until public DNS serves `google._domainkey` from Vercel — retry after propagation.
+- Click **Refresh** on each domain in Vercel every 15–30 minutes.
+- Verify propagation: `nslookup -type=ns mckeesecurity.ca` should return `ns1.vercel-dns.com` and `ns2.vercel-dns.com` (not `ns*.wordpress.com`).
 
 During propagation, some users may still hit WordPress briefly. That is normal.
 
 ---
 
-## Phase 5: Post-cutover testing
+## Phase 5: Post-cutover testing — pending (run after Vercel shows Valid)
 
 ### Website
 
@@ -330,15 +349,21 @@ After WordPress is cancelled and WP Cloud no longer sends mail:
 
 ## Quick execution order
 
-1. Add both domains in Vercel → choose **Nameservers (Vercel DNS)** → note the Vercel nameservers
-2. Inventory current WordPress.com DNS records
-3. Recreate all email/auth records in Vercel DNS (single SPF at `@`)
-4. Verify records and Resend `EMAIL_FROM` domain
-5. Switch nameservers at HostPapa to Vercel
-6. Wait for Vercel to show domains **Valid**
-7. Run post-cutover tests (website, email, DNS)
-8. Keep WordPress running until all checks pass
-9. Clean up WP-only DNS and SPF later
+1. ✅ Add both domains in Vercel → choose **Nameservers (Vercel DNS)** → note the Vercel nameservers
+2. ✅ Inventory current WordPress.com DNS records
+3. ✅ Recreate all email/auth records in Vercel DNS (single SPF at `@`, incl. `google._domainkey`)
+4. ✅ Verify records and Resend `EMAIL_FROM` domain
+5. ✅ Switch nameservers at HostPapa to Vercel
+6. ⏳ Wait for Vercel to show domains **Valid**
+7. ⏳ Run post-cutover tests (website, email, DNS)
+8. ⏳ Keep WordPress running until all checks pass
+9. ⏳ Clean up WP-only DNS and SPF later
+
+---
+
+## Default Vercel URL (`vercel-mckee-security.vercel.app`)
+
+**Leave it enabled.** Every Vercel project gets a `*.vercel.app` URL. It does not conflict with the custom domain, does not hurt SEO (your site uses `mckeesecurity.ca` as canonical in code), and is useful for smoke-testing deploys before DNS changes propagate. No action required unless you explicitly want to remove it from the project Domains list (not recommended).
 
 ---
 
@@ -346,8 +371,8 @@ After WordPress is cancelled and WP Cloud no longer sends mail:
 
 - [ ] Pre-cutover integration work complete (see project notes)
 - [x] Production env vars set in Vercel (9 confirmed 2026-06-21, incl. `DATA_DROPS_AUTH_SECRET` + `GOOGLE_REVIEWS_URL`)
-- [ ] Production QA on preview URL complete
-- [ ] This runbook reviewed against the live Vercel DNS zone before nameserver change
+- [x] Phase 1–3 complete; Phase 4 nameservers updated at HostPapa (2026-06-21)
+- [ ] Production QA on custom domain after propagation (Phase 5)
 
 ---
 
