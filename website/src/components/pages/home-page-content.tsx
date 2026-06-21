@@ -20,6 +20,10 @@ function ReadMoreLink({ href }: { href: string }) {
   );
 }
 
+/** Layered shadow so hero copy stays legible over busy photos without backdrop boxes */
+const heroCopyShadow =
+  "[text-shadow:0_1px_2px_rgb(0_0_0/1),0_2px_12px_rgb(0_0_0/0.95),0_4px_32px_rgb(0_0_0/0.85),0_8px_56px_rgb(0_0_0/0.55)]";
+
 export function HomePageContent() {
   return (
     <>
@@ -31,29 +35,35 @@ export function HomePageContent() {
         objectPosition="50% 34%"
         imageScale={0.86}
         imageInsetClassName="-inset-[18%]"
-        gradientClassName="absolute inset-0 bg-gradient-to-b from-black/80 via-black/62 to-[#0a0a0a]"
+        gradientClassName="absolute inset-0 bg-gradient-to-b from-black/52 via-black/40 to-[#0a0a0a]"
         parallaxStrength={32}
         priority
         contentClassName="relative min-h-[640px] lg:min-h-[760px]"
       >
         <div className="mx-auto flex min-h-[640px] w-full max-w-[1400px] items-center px-6 pb-8 pt-14 lg:min-h-[760px] lg:px-10 lg:pb-20 lg:pt-36">
           <FadeIn>
-            <h6 className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-white">
+            <h6
+              className={`mb-3 text-sm font-bold uppercase tracking-[0.2em] text-white ${heroCopyShadow}`}
+            >
               Specialized Security
             </h6>
-            <h1 className="max-w-3xl text-4xl font-bold leading-tight text-white drop-shadow-md sm:text-5xl lg:text-6xl">
+            <h1
+              className={`max-w-3xl text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl ${heroCopyShadow}`}
+            >
               Full Home Integration
             </h1>
-            <p className="mt-6 max-w-2xl text-lg text-white/90">
+            <p className={`mt-6 max-w-2xl text-lg text-white ${heroCopyShadow}`}>
               We are your one stop technology solution! You can have peace of mind
               knowing that our systems are custom designed to fit your needs.
             </p>
-            <h2 className="mt-8 text-3xl font-bold text-white drop-shadow sm:text-4xl">
+            <h2
+              className={`mt-8 text-3xl font-bold text-white sm:text-4xl ${heroCopyShadow}`}
+            >
               Home <span className="font-bold">Technology</span>
             </h2>
             <Link
               href="/custom-installations-professional-products"
-              className="mt-8 inline-flex items-center justify-center rounded-xl bg-primary px-10 py-4 text-base font-bold lowercase text-white shadow-lg transition hover:bg-[var(--primary-hover)]"
+              className="mt-8 inline-flex items-center justify-center rounded-xl bg-primary px-10 py-4 text-base font-bold lowercase text-white shadow-[0_4px_24px_rgb(0_0_0/0.55)] transition hover:bg-[var(--primary-hover)]"
             >
               Learn More
             </Link>
