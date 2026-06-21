@@ -233,7 +233,7 @@ Before changing nameservers at HostPapa:
 - [ ] Exactly one SPF TXT record at `@`
 - [ ] No restrictive CAA record (or one that includes `letsencrypt.org`)
 - [ ] Both domains attached to the Vercel project, primary = apex
-- [ ] `EMAIL_FROM` domain confirmed **Verified** in Resend
+- [x] `EMAIL_FROM` domain confirmed **Verified** in Resend (mckeesecurity.ca verified 2026-06-21; DKIM + SPF on `send` both green)
 - [x] DMARC `rua` mailbox (`web@mckeesecurity.ca`) already exists and is monitored
 - [ ] Screenshot/export the Vercel DNS table for reference
 - [ ] Optional: lower TTLs on critical records 24 hours ahead
