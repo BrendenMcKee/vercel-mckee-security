@@ -8,7 +8,7 @@ export function BrandedStatsBackground() {
         src="/images/hero-home.jpg"
         alt=""
         fill
-        className="object-cover object-[50%_54%]"
+        className="object-cover object-[50%_58%]"
         sizes="100vw"
         quality={90}
       />
