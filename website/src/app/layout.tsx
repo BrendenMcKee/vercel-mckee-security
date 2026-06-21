@@ -5,7 +5,6 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileCallFab } from "@/components/layout/mobile-call-fab";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
-import { MotionProvider } from "@/components/motion/motion-provider";
 import { images, siteConfig } from "@/lib/site-config";
 import "./globals.css";
 import "@/styles/mckee-forms.css";
@@ -62,13 +61,11 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-full flex-col antialiased">
-        <MotionProvider>
-          <ScrollToTop />
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <MobileCallFab />
-        </MotionProvider>
+        <ScrollToTop />
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
+        <MobileCallFab />
       </body>
     </html>
   );

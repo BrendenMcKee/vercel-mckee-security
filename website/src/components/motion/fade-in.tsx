@@ -6,8 +6,6 @@ import { cn } from "@/lib/utils";
 type FadeInProps = HTMLMotionProps<"div"> & {
   delay?: number;
   direction?: "up" | "down" | "left" | "right" | "none";
-  /** mount = animate once on load (hero copy); inView = scroll-triggered (default) */
-  when?: "inView" | "mount";
 };
 
 export function FadeIn({
@@ -15,7 +13,6 @@ export function FadeIn({
   className,
   delay = 0,
   direction = "up",
-  when = "inView",
   ...props
 }: FadeInProps) {
   const offset = {
@@ -26,33 +23,12 @@ export function FadeIn({
     none: { x: 0, y: 0 },
   }[direction];
 
-  const heroOffset = when === "mount" ? { y: 18, x: 0 } : offset;
-  const transition = {
-    duration: when === "mount" ? 0.38 : 0.55,
-    delay,
-    ease: [0.22, 1, 0.36, 1] as const,
-  };
-
-  if (when === "mount") {
-    return (
-      <motion.div
-        initial={{ opacity: 0, ...heroOffset }}
-        animate={{ opacity: 1, x: 0, y: 0 }}
-        transition={transition}
-        className={cn(className)}
-        {...props}
-      >
-        {children}
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, ...offset }}
       whileInView={{ opacity: 1, x: 0, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
-      transition={transition}
+      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
       className={cn(className)}
       {...props}
     >
