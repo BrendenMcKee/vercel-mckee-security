@@ -2,7 +2,7 @@
 
 > **Purpose:** Move `mckeesecurity.ca` from WordPress.com DNS and hosting to Cloudflare DNS and Vercel hosting without breaking Google Workspace email, Resend, or other sender authentication.
 
-**Last updated:** 2026-06-17  
+**Last updated:** 2026-06-21  
 **Related:** Vercel project root directory is `website/`. Repo: `BrendenMcKee/vercel-mckee-security`.
 
 ---
@@ -42,19 +42,33 @@
 4. Set **primary domain** to `mckeesecurity.ca` (matches `website/src/lib/site-config.ts` canonical URL).
 5. Configure Vercel to redirect `www` → apex (or the reverse if you deliberately choose otherwise).
 6. Confirm **Root Directory** is `website`.
-7. Confirm Production environment variables:
+7. Production environment variables.
 
-   | Variable | Purpose |
-   |----------|---------|
-   | `RESEND_API_KEY` | Form email delivery |
-   | `CONTACT_EMAIL` | Inbox for form submissions |
-   | `EMAIL_FROM` | From address (e.g. `McKee Security <noreply@mckeesecurity.ca>`) |
-   | `GOOGLE_PLACES_API_KEY` | Google reviews |
-   | `GOOGLE_PLACE_ID` | Google reviews |
-   | `GOOGLE_REVIEWS_URL` | Optional override for read-reviews link |
-   | `GOOGLE_REVIEW_URL` | Optional override for write-review link |
+   **Already configured in Vercel (verified 2026-06-21):**
+
+   | Variable | Purpose | Status |
+   |----------|---------|--------|
+   | `RESEND_API_KEY` | Form email delivery | ✅ Set (Sensitive) |
+   | `CONTACT_EMAIL` | Inbox for form submissions | ✅ Set |
+   | `EMAIL_FROM` | From address (e.g. `McKee Security <noreply@mckeesecurity.ca>`) | ✅ Set |
+   | `GOOGLE_PLACES_API_KEY` | Google reviews | ✅ Set (Sensitive) |
+   | `GOOGLE_PLACE_ID` | Google reviews | ✅ Set |
+   | `GOOGLE_REVIEW_URL` | Override for write-review link | ✅ Set |
+   | `DATA_DROPS_PASSWORD` | Password gate for the Data Drops tool | ✅ Set |
+
+   **Optional / not currently set (only add if needed):**
+
+   | Variable | Purpose | Recommendation |
+   |----------|---------|----------------|
+   | `GOOGLE_REVIEWS_URL` | Override for the read-reviews link | Optional — code falls back gracefully |
+   | `DATA_DROPS_AUTH_SECRET` | Extra salt for the Data Drops unlock cookie | Recommended — add a random string to harden session tokens |
+   | `DATA_DROPS_API_URL` | Data Drops AWS backend base URL | Only set if it differs from the default `https://app-mckeesecurity.ca/api` |
+
+   > **EMAIL_FROM must use the Resend-verified domain.** It is already set, but before cutover confirm the From address domain matches a **Verified** domain in Resend (DKIM `resend._domainkey` aligns with `mckeesecurity.ca`). The code default `onboarding@resend.dev` is only a dev placeholder — production must send from `mckeesecurity.ca`.
 
 8. Expect domains to show **Invalid Configuration** until Cloudflare records exist. That is normal.
+
+9. If Vercel prompts for a `_vercel` **TXT verification record** (happens when a domain was previously attached to another Vercel project/account), note the value now — you will add it as a TXT record in Cloudflare during Phase 2.
 
 ---
 
@@ -159,11 +173,35 @@ Rules:
 - Do **not** create multiple SPF TXT records at `@`. There must be exactly one.
 - Do **not** add Resend's `amazonses.com` include to root SPF. Resend uses the `send` subdomain; keep its SPF on `send.mckeesecurity.ca`.
 
+### CAA records (check during scan, critical for SSL)
+
+CAA records restrict which Certificate Authorities may issue certs for the domain. If a restrictive CAA record exists that does **not** authorize Vercel's CA, SSL issuance on Vercel will silently fail.
+
+| Type | Name | Content | Action |
+|------|------|---------|--------|
+| CAA | `@` | (any existing) | **Either remove all CAA records, or ensure they include Let's Encrypt** |
+
+Recommended if you keep CAA at all (Vercel issues via Let's Encrypt):
+
+```
+@  CAA  0 issue "letsencrypt.org"
+```
+
+If no CAA record exists, do nothing — any CA is allowed by default, which is fine.
+
+### Vercel domain verification (only if Vercel asked for it)
+
+| Type | Name | Content | Notes |
+|------|------|---------|-------|
+| TXT | `_vercel` | value shown in Vercel dashboard | Only needed if Vercel showed a verification challenge in Phase 1 step 9 |
+
 ### Optional records
 
 | Type | Name | Content | Notes |
 |------|------|---------|-------|
 | TXT | `_domainconnect` | `public-api.wordpress.com/rest/v1.3/domain-connect` | Not critical once Cloudflare is authoritative |
+
+> **Data Drops backend is out of scope.** The Data Drops tool talks to `app-mckeesecurity.ca` (a separate domain, not a subdomain of `mckeesecurity.ca`). It has its own DNS zone and is **not** affected by this nameserver change. No record for it is needed in this Cloudflare zone — just confirm the tool still works post-cutover (see Phase 5).
 
 ### Records to remove or avoid
 
@@ -195,6 +233,9 @@ Before changing nameservers at HostPapa:
 - [ ] No duplicate SPF TXT records at `@`
 - [ ] No WordPress website A/CNAME records remain
 - [ ] Vercel website records match dashboard exactly
+- [ ] CAA records either removed or include `letsencrypt.org` (so Vercel SSL can issue)
+- [ ] `_vercel` TXT verification record added if Vercel requested one
+- [ ] `EMAIL_FROM` domain confirmed Verified in Resend
 - [ ] Screenshot or export the Cloudflare DNS table for reference
 - [ ] Optional: lower TTLs on critical records 24 hours ahead
 
@@ -226,6 +267,8 @@ During propagation, some users may still hit WordPress briefly. That is normal.
 - [ ] Job application form works (including resume upload if used)
 - [ ] Course pages load
 - [ ] Google reviews section loads live data
+- [ ] Data Drops tools unlock and load (`/data-drops-mckeesecurity`, `/data-drops-hhhs`)
+- [ ] SSL padlock valid on apex and `www` (confirms CAA did not block issuance)
 - [ ] Embedded scripts, analytics, and pixels still work
 
 ### Email
@@ -295,7 +338,7 @@ After WordPress is cancelled and WP Cloud no longer sends mail:
 ## Pre-cutover checklist (website project)
 
 - [ ] Pre-cutover integration work complete (see project notes)
-- [ ] Production env vars set in Vercel
+- [x] Production env vars set in Vercel (7 confirmed 2026-06-21; `DATA_DROPS_AUTH_SECRET` optional add)
 - [ ] Production QA on preview URL complete
 - [ ] This DNS runbook reviewed against live Cloudflare zone before nameserver change
 
