@@ -41,10 +41,10 @@ export function HomePageContent() {
         priority
         contentClassName="relative min-h-[640px] lg:min-h-[760px]"
       >
-        <div className="mx-auto flex min-h-[640px] w-full max-w-[1400px] items-center px-6 pb-8 pt-14 lg:min-h-[760px] lg:px-10 lg:pb-20 lg:pt-36">
+        <div className="mx-auto flex min-h-[640px] w-full max-w-[1400px] items-center px-6 pb-8 pt-14 lg:min-h-[760px] lg:px-10 lg:pb-28 lg:pt-28">
           <div className="hero-rise" onAnimationEnd={clearWillChangeOnEnd}>
             <h6
-              className={`mb-3 text-sm font-bold uppercase tracking-[0.2em] text-white ${heroCopyShadow}`}
+              className={`mb-3 text-sm font-bold uppercase tracking-[0.25em] text-primary ${heroCopyShadow}`}
             >
               Specialized Security
             </h6>
