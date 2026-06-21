@@ -1,6 +1,12 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useReducedMotion,
+  useInView,
+} from "framer-motion";
 import Image from "next/image";
 import { useRef } from "react";
 
@@ -43,6 +49,11 @@ export function ParallaxSection({
   priority = false,
 }: ParallaxSectionProps) {
   const ref = useRef<HTMLElement>(null);
+  const reduceMotion = useReducedMotion();
+  // Only promote the image to its own compositor layer while the section is on
+  // (or near) screen. Keeping `will-change` on permanently pins a large GPU
+  // layer for the page lifetime, which is a major scroll-jank source.
+  const inView = useInView(ref, { margin: "200px 0px" });
   const scrollOffset: ["start start", "end start"] | ["start end", "end start"] =
     scrollMode === "hero" ? ["start start", "end start"] : ["start end", "end start"];
 
@@ -60,6 +71,8 @@ export function ParallaxSection({
       : [`-${travel * 0.35}%`, `${travel * 0.55}%`],
   );
 
+  const animate = !reduceMotion;
+
   const insetClassName =
     imageInsetClassName ??
     (scrollMode === "hero" ? "-inset-[6%]" : "-inset-x-[8%] -top-[14%] -bottom-[8%]");
@@ -71,8 +84,12 @@ export function ParallaxSection({
       style={{ minHeight }}
     >
       <motion.div
-        style={{ y, scale: imageScale }}
-        className={`absolute ${insetClassName} will-change-transform`}
+        style={{
+          y: animate ? y : undefined,
+          scale: imageScale,
+          willChange: animate && inView ? "transform" : "auto",
+        }}
+        className={`absolute ${insetClassName}`}
       >
         <Image
           src={image}

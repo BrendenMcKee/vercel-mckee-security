@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { motion, useScroll, useTransform } from "framer-motion";
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useReducedMotion,
+  useInView,
+} from "framer-motion";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { heroCopyShadow, clearWillChangeOnEnd } from "@/lib/hero-text-styles";
@@ -34,6 +40,11 @@ export function Hero({
   overlay = "medium",
 }: HeroProps) {
   const ref = useRef<HTMLElement>(null);
+  const reduceMotion = useReducedMotion();
+  // Promote the scroll-linked layers only while the hero is on screen so we
+  // don't keep large GPU layers pinned for the page lifetime.
+  const inView = useInView(ref, { margin: "200px 0px" });
+  const animate = !reduceMotion;
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
@@ -52,8 +63,12 @@ export function Hero({
       className={`relative overflow-hidden ${compact ? "min-h-[42vh] sm:min-h-[50vh]" : "min-h-[72vh] sm:min-h-[85vh]"}`}
     >
       <motion.div
-        style={{ y, scale: imageScale }}
-        className="absolute inset-0 will-change-transform"
+        style={{
+          y: animate ? y : undefined,
+          scale: imageScale,
+          willChange: animate && inView ? "transform" : "auto",
+        }}
+        className="absolute inset-0"
       >
         <Image
           src={image}
@@ -69,7 +84,10 @@ export function Hero({
       </motion.div>
 
       <motion.div
-        style={{ opacity }}
+        style={{
+          opacity: animate ? opacity : undefined,
+          willChange: animate && inView ? "opacity" : "auto",
+        }}
         className="relative mx-auto flex max-w-7xl flex-col justify-center px-6 py-16 sm:py-20 lg:py-32"
       >
         <div className="hero-rise" onAnimationEnd={clearWillChangeOnEnd}>

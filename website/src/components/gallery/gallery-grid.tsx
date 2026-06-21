@@ -73,7 +73,7 @@ export function GalleryGrid() {
                 height={img.height}
                 loading="lazy"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                className="h-auto w-full transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.04]"
+                className="h-auto w-full transition-transform duration-500 ease-out group-hover:scale-[1.04]"
               />
 
               {/* Always-on gradient + title so each tile is identifiable */}

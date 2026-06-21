@@ -65,7 +65,7 @@ export function ServiceGallery({ slug }: { slug: string }) {
                   fill
                   loading="lazy"
                   style={{ objectPosition: photo.objectPosition }}
-                  className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.06]"
+                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
