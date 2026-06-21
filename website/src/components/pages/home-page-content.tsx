@@ -33,6 +33,7 @@ export function HomePageContent() {
         imageInsetClassName="-inset-[18%]"
         gradientClassName="absolute inset-0 bg-gradient-to-b from-black/80 via-black/62 to-[#0a0a0a]"
         parallaxStrength={32}
+        flipImage
         priority
         contentClassName="relative min-h-[640px] lg:min-h-[760px]"
       >

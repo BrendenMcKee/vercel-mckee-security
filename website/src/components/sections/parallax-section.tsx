@@ -20,6 +20,8 @@ type ParallaxSectionProps = {
   imageInsetClassName?: string;
   /** Override the default gradient overlay when gradient is true */
   gradientClassName?: string;
+  /** Mirror the background photo horizontally (content stays unchanged) */
+  flipImage?: boolean;
   children: React.ReactNode;
   className?: string;
   contentClassName?: string;
@@ -37,6 +39,7 @@ export function ParallaxSection({
   scrollMode = "section",
   imageInsetClassName,
   gradientClassName,
+  flipImage = false,
   children,
   className = "",
   contentClassName = "",
@@ -71,7 +74,11 @@ export function ParallaxSection({
       style={{ minHeight }}
     >
       <motion.div
-        style={{ y, scale: imageScale }}
+        style={{
+          y,
+          scaleX: flipImage ? -imageScale : imageScale,
+          scaleY: imageScale,
+        }}
         className={`absolute ${insetClassName} will-change-transform`}
       >
         <Image
