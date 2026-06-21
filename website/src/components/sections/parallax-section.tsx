@@ -3,6 +3,8 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
 import { useRef } from "react";
+import { usePathname } from "next/navigation";
+import { useMotionReady } from "@/hooks/use-motion-ready";
 
 type ParallaxSectionProps = {
   image: string;
@@ -42,6 +44,8 @@ export function ParallaxSection({
   contentClassName = "",
   priority = false,
 }: ParallaxSectionProps) {
+  const pathname = usePathname();
+  const motionReady = useMotionReady(pathname);
   const ref = useRef<HTMLElement>(null);
   const scrollOffset: ["start start", "end start"] | ["start end", "end start"] =
     scrollMode === "hero" ? ["start start", "end start"] : ["start end", "end start"];
@@ -71,8 +75,8 @@ export function ParallaxSection({
       style={{ minHeight }}
     >
       <motion.div
-        style={{ y, scale: imageScale }}
-        className={`absolute ${insetClassName} will-change-transform`}
+        style={{ y: motionReady ? y : 0, scale: imageScale }}
+        className={`absolute ${insetClassName} transform-gpu backface-hidden will-change-transform`}
       >
         <Image
           src={image}

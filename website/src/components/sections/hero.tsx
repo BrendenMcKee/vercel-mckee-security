@@ -1,11 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { motion, useScroll, useTransform } from "framer-motion";
+import Image from "next/image";
 import { useRef } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/motion/fade-in";
 import { heroCopyShadow } from "@/lib/hero-text-styles";
+import { useMotionReady } from "@/hooks/use-motion-ready";
 
 type HeroProps = {
   eyebrow?: string;
@@ -34,6 +36,8 @@ export function Hero({
   compact = false,
   overlay = "medium",
 }: HeroProps) {
+  const pathname = usePathname();
+  const motionReady = useMotionReady(pathname);
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -53,8 +57,8 @@ export function Hero({
       className={`relative overflow-hidden ${compact ? "min-h-[42vh] sm:min-h-[50vh]" : "min-h-[72vh] sm:min-h-[85vh]"}`}
     >
       <motion.div
-        style={{ y, scale: imageScale }}
-        className="absolute inset-0 will-change-transform"
+        style={{ y: motionReady ? y : 0, scale: imageScale }}
+        className="absolute inset-0 transform-gpu backface-hidden will-change-transform"
       >
         <Image
           src={image}
@@ -70,10 +74,10 @@ export function Hero({
       </motion.div>
 
       <motion.div
-        style={{ opacity }}
-        className="relative mx-auto flex max-w-7xl flex-col justify-center px-6 py-16 sm:py-20 lg:py-32"
+        style={{ opacity: motionReady ? opacity : 1 }}
+        className="relative mx-auto flex max-w-7xl transform-gpu flex-col justify-center px-6 py-16 sm:py-20 lg:py-32"
       >
-        <FadeIn>
+        <FadeIn when="mount">
           {eyebrow && (
             <p
               className={`mb-4 text-sm font-bold uppercase tracking-[0.25em] text-primary ${heroCopyShadow}`}
