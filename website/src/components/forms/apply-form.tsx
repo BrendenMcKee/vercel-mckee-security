@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ChevronDown } from "lucide-react";
 import { getFormEmailMeta } from "@/lib/form-email-meta";
+import { FormIcon } from "@/components/forms/form-icon";
 import { siteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
 
@@ -70,9 +71,7 @@ export function ApplyForm() {
   return (
     <div className="mckee-form-panel">
       <div className="mckee-form-header">
-        <div className="mckee-form-icon" aria-hidden="true">
-          {applyMeta.emoji}
-        </div>
+        <FormIcon emoji={applyMeta.emoji} emojis={applyMeta.iconEmojis} />
         <div>
           <h3 className="mckee-form-heading">Apply for a technician position</h3>
           <p className="mckee-form-subheading">

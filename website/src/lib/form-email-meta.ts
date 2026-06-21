@@ -13,6 +13,8 @@ export type ServiceInquirySlug =
 
 type FormMeta = {
   emoji: string;
+  /** Optional multi-glyph header icon (e.g. careers form). */
+  iconEmojis?: string[];
   title: string;
   inboxLabel: string;
 };
@@ -30,6 +32,7 @@ const formKindMeta: Record<FormEmailKind, FormMeta> = {
   },
   apply: {
     emoji: "🧑‍💼💼",
+    iconEmojis: ["🧑‍💼", "💼"],
     title: "Job Application",
     inboxLabel: "New job application",
   },

@@ -154,6 +154,15 @@ export const galleryImages: GalleryImage[] = [
       "The 4K Uniview dome cameras we install capture sharp, detailed footage day and night.",
   },
   {
+    src: "/images/hero-apply-now.jpg",
+    width: 4000,
+    height: 1868,
+    category: "camera-surveillance",
+    title: "Bench-Tested NVR Systems",
+    description:
+      "Programming Dahua recorders and dome cameras at the workbench before they go out to protect your property.",
+  },
+  {
     src: `${WORK}/starlink-mounting.jpg`,
     width: 1536,
     height: 1024,

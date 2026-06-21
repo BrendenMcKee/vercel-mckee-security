@@ -6,6 +6,7 @@ import {
   ExternalLink,
   GraduationCap,
   ClipboardPen,
+  Database,
   Scale,
   ShieldCheck,
   type LucideIcon,
@@ -21,6 +22,7 @@ const socialLinks = [
 const quickLinkIcons: Record<string, LucideIcon> = {
   "/our-courses": GraduationCap,
   "/apply-now": ClipboardPen,
+  "/data-drops-mckeesecurity": Database,
   "/terms-and-conditions": Scale,
   "/privacy-policy": ShieldCheck,
 };

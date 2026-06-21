@@ -106,6 +106,14 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         caption: "Every camera on one live monitoring wall",
       },
       {
+        src: "/images/hero-apply-now.jpg",
+        width: 4000,
+        height: 1868,
+        alt: "McKee workbench with a Dahua NVR, dome camera, and live monitoring software on screen",
+        caption: "Programming and testing NVR systems at the bench",
+        objectPosition: "8% 50%",
+      },
+      {
         src: `${WORK}/camera-commercial-team.jpg`,
         width: 1600,
         height: 901,

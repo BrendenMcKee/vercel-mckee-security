@@ -109,6 +109,7 @@ export const siteConfig = {
 export const footerNav = [
   { label: "Our Courses", href: "/our-courses" },
   { label: "Apply Now", href: "/apply-now" },
+  { label: "Data Drops", href: "/data-drops-mckeesecurity" },
   { label: "Terms and Conditions", href: "/terms-and-conditions" },
   { label: "Privacy Policy", href: "/privacy-policy" },
 ];
