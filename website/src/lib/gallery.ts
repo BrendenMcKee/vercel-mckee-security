@@ -55,6 +55,15 @@ export const galleryImages: GalleryImage[] = [
       "A local crew that has served families and businesses across the Haliburton region since 1994.",
   },
   {
+    src: `${GAL}/gallery-hero-crew-truck.jpg`,
+    width: 2000,
+    height: 1126,
+    category: "team",
+    title: "Crew and Company Truck",
+    description:
+      "McKee Security technicians on site with the company truck — the team behind every install.",
+  },
+  {
     src: "/images/hero-home.jpg",
     width: 2400,
     height: 1351,
@@ -62,6 +71,24 @@ export const galleryImages: GalleryImage[] = [
     title: "Just Another Morning",
     description:
       "Talking through the day's installs between the trucks before heading out.",
+  },
+  {
+    src: "/images/hero-crew-backs.jpg",
+    width: 2400,
+    height: 1600,
+    category: "team",
+    title: "Industry Professionals",
+    description:
+      "Our crew in McKee gear, ready to install security, cameras, networking, and more at your property.",
+  },
+  {
+    src: "/images/browse-services-bg.jpg",
+    width: 6000,
+    height: 4000,
+    category: "team",
+    title: "Every Service, One Team",
+    description:
+      "Security, cameras, networking, audio and video, and Starlink — all installed by the same local crew.",
   },
   {
     src: `${GAL}/starlink-dock-red-chairs.jpg`,
