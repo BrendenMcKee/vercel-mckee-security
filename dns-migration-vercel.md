@@ -64,18 +64,18 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
    | `GOOGLE_PLACE_ID` | Google reviews | ✅ Set |
    | `GOOGLE_REVIEW_URL` | Write-review link | ✅ Set |
    | `DATA_DROPS_PASSWORD` | Password gate for the Data Drops tool | ✅ Set |
+   | `DATA_DROPS_AUTH_SECRET` | Salt for the Data Drops login cookie | ✅ Set (generated random hex) |
+   | `GOOGLE_REVIEWS_URL` | Read-reviews link override | ✅ Set |
 
    > **EMAIL_FROM must use the Resend-verified domain.** It is already set, but before cutover confirm the From-address domain matches a **Verified** domain in Resend (DKIM `resend._domainkey` aligns with `mckeesecurity.ca`). The code default `onboarding@resend.dev` is only a dev placeholder.
 
-   **Optional (supported) variables — add now in Phase 1 if you want them.** The site works without all three (the code has safe fallbacks), so these are quality/hardening extras, not migration blockers. To add any of them: Vercel → **Settings → Environment Variables → Add** → set scope to **Production** (and **Preview** if you want it on preview deploys) → paste the value → redeploy.
+   **Intentionally not set (no action needed):**
 
-   | Variable | What it does | Exact value to use / where to find it |
-   |----------|--------------|----------------------------------------|
-   | `DATA_DROPS_AUTH_SECRET` | Extra salt mixed into the Data Drops login cookie so the session token isn't derived from the password alone. Recommended. | A random string **you generate**. Run `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` (or `openssl rand -hex 32`) and paste the output. Any 32+ char random hex is fine. Note: adding/changing it logs out current Data Drops sessions (they just re-enter the password). |
-   | `GOOGLE_REVIEWS_URL` | Overrides the **read-reviews** link. The default builds a Google search URL that usually works; set this only if you want the link to point somewhere exact. | Open your Google Business listing (search "McKee Security Audio Systems Haliburton"), click the **"47 Google reviews"** count to open the reviews panel, then copy the full URL from the browser address bar and paste it here. |
-   | `DATA_DROPS_API_URL` | Base URL of the Data Drops AWS backend. | Leave **unset** — the code already defaults to `https://app-mckeesecurity.ca/api`, which is correct. Only set it if that backend ever moves, using the new base URL (no trailing slash). |
+   | Variable | Why it's skipped |
+   |----------|------------------|
+   | `DATA_DROPS_API_URL` | The code already defaults to `https://app-mckeesecurity.ca/api`, which is correct. Only set it if that backend ever moves (use the new base URL, no trailing slash). |
 
-   > `GOOGLE_REVIEW_URL` (singular, the **write-a-review** link) is already set, so you don't need to touch it.
+   > `GOOGLE_REVIEW_URL` (singular, the **write-a-review** link) is also already set.
 
 8. Expect both domains to show **Invalid Configuration / Pending Nameservers** until the nameservers are changed in Phase 4. That is normal.
 
@@ -327,7 +327,7 @@ After WordPress is cancelled and WP Cloud no longer sends mail:
 ## Pre-cutover checklist (website project)
 
 - [ ] Pre-cutover integration work complete (see project notes)
-- [x] Production env vars set in Vercel (7 confirmed 2026-06-21)
+- [x] Production env vars set in Vercel (9 confirmed 2026-06-21, incl. `DATA_DROPS_AUTH_SECRET` + `GOOGLE_REVIEWS_URL`)
 - [ ] Production QA on preview URL complete
 - [ ] This runbook reviewed against the live Vercel DNS zone before nameserver change
 
