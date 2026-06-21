@@ -83,8 +83,8 @@ export const galleryImages: GalleryImage[] = [
   },
   {
     src: "/images/browse-services-bg.jpg",
-    width: 6000,
-    height: 4000,
+    width: 2560,
+    height: 1707,
     category: "team",
     title: "Every Service, One Team",
     description:
@@ -182,8 +182,8 @@ export const galleryImages: GalleryImage[] = [
   },
   {
     src: "/images/hero-apply-now.jpg",
-    width: 4000,
-    height: 1868,
+    width: 2400,
+    height: 1121,
     category: "camera-surveillance",
     title: "Bench-Tested NVR Systems",
     description:

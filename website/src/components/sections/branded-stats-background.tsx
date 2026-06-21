@@ -10,7 +10,7 @@ export function BrandedStatsBackground() {
         fill
         className="object-cover object-[50%_50%]"
         sizes="100vw"
-        quality={90}
+        quality={82}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-[#660000]/42 to-[#0a0a0a]" />
       <div className="absolute inset-0 bg-black/50" />

@@ -78,7 +78,7 @@ export function Hero({
           className="object-cover"
           style={{ objectPosition }}
           sizes="100vw"
-          quality={90}
+          quality={82}
         />
         <div className={`absolute inset-0 ${gradientClass}`} />
       </motion.div>

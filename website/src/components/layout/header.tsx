@@ -67,7 +67,7 @@ export function Header() {
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [collapseMotionEnabled, setCollapseMotionEnabled] = useState(false);
-  const [spacerHeight, setSpacerHeight] = useState(0);
+  const [spacerHeight, setSpacerHeight] = useState<number | undefined>(undefined);
   const headerRef = useRef<HTMLElement>(null);
   const dropdownRef = useRef<HTMLLIElement>(null);
 
@@ -450,7 +450,12 @@ export function Header() {
 
       <div
         aria-hidden
-        className="pointer-events-none shrink-0"
+        // The min-heights reserve the collapsed header height on first paint
+        // (before JS measures the real height) so content doesn't jump down
+        // once the spacer is sized — keeps CLS near zero on load. The values
+        // are <= the actual header height, so the measured inline height always
+        // takes over cleanly with no gap.
+        className="pointer-events-none shrink-0 min-h-[100px] lg:min-h-[140px]"
         style={{ height: spacerHeight }}
       />
     </>

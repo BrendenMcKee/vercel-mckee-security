@@ -99,7 +99,7 @@ export function ParallaxSection({
           className="object-cover"
           style={{ objectPosition }}
           sizes="100vw"
-          quality={priority ? 95 : 90}
+          quality={priority ? 85 : 80}
         />
         {gradient ? (
           <div

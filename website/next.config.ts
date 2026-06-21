@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    // AVIF first (smaller than WebP) with WebP fallback. `qualities` is left
+    // unset on purpose: setting it makes the optimizer reject any quality not
+    // in the list, and we use a range of per-image quality values.
+    formats: ["image/avif", "image/webp"],
+  },
   async redirects() {
     return [
       { source: "/shop", destination: "/custom-installations-professional-products", permanent: true },
