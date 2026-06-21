@@ -152,7 +152,7 @@ export function TeamGrid() {
                         fill
                         className="object-cover object-top transition duration-500 group-hover:scale-105"
                         sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 400px"
-                        quality={92}
+                        quality={85}
                       />
                     </div>
                   </button>
@@ -221,7 +221,7 @@ export function TeamGrid() {
                   fill
                   className="object-cover object-top"
                   sizes="512px"
-                  quality={95}
+                  quality={85}
                   priority
                 />
               </div>

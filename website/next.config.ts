@@ -2,10 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    // AVIF first (smaller than WebP) with WebP fallback. `qualities` is left
-    // unset on purpose: setting it makes the optimizer reject any quality not
-    // in the list, and we use a range of per-image quality values.
+    // AVIF first (smaller than WebP) with WebP fallback.
     formats: ["image/avif", "image/webp"],
+    // Defining `images` serializes the resolved image config (incl. qualities)
+    // into the build output, and the Vercel optimizer then REJECTS any quality
+    // not listed here with a 400. So this must contain every `quality` value
+    // used across the app: 75 (next/image default), 80, 82, 85.
+    qualities: [75, 80, 82, 85],
   },
   async redirects() {
     return [
