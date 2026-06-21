@@ -37,10 +37,6 @@ export function HomePageContent() {
         priority
         contentClassName="relative min-h-[640px] lg:min-h-[760px]"
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent"
-        />
         <div className="relative mx-auto flex min-h-[640px] w-full max-w-[1400px] items-center px-6 pb-8 pt-14 lg:min-h-[760px] lg:px-10 lg:pb-20 lg:pt-36">
           <FadeIn>
             <h6 className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
