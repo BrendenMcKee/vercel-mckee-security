@@ -101,6 +101,23 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
 
 Do not delete or modify unless Google Workspace admin requires a newer configuration.
 
+### Google Workspace DKIM (recommended — currently missing)
+
+Your zone has DKIM for Mailchimp, WP Cloud, Resend, and mailo, but **no Google Workspace DKIM**. That means routine Google Workspace mail is not DKIM-signed by your domain, which weakens deliverability and means it can only pass DMARC via SPF alignment. Setting it up is recommended before you eventually tighten DMARC.
+
+| Type | Name | Content |
+|------|------|---------|
+| TXT | `google._domainkey` | **Generate in Google Admin — do not guess** |
+
+How to get the value:
+
+1. Google Admin console → **Apps → Google Workspace → Gmail → Authenticate email**.
+2. Select the domain `mckeesecurity.ca`, **Generate new record** (2048-bit).
+3. Copy the TXT host (`google._domainkey`) and the long `v=DKIM1; k=rsa; p=...` value.
+4. Add it as a TXT record in Vercel DNS, then click **Start authentication** in Admin.
+
+This is optional for cutover (email keeps working without it) but should be done for a fully hardened setup.
+
 ### Resend / SES on `send` subdomain
 
 | Type | Name | Content | Priority |
@@ -261,6 +278,7 @@ During propagation, some users may still hit WordPress briefly. That is normal.
 - [ ] Resend domain still **Verified** in Resend dashboard
 - [ ] Send a test Resend form email
 - [ ] Check SPF, DKIM, and DMARC alignment for Google Workspace and Resend mail
+- [ ] (If set up) Google Workspace DKIM (`google._domainkey`) shows authenticating in Google Admin
 
 ### DNS verification commands
 
