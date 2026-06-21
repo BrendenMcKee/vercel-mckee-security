@@ -2,7 +2,7 @@
 
 > **Purpose:** Move `mckeesecurity.ca` from WordPress.com DNS and hosting to **Vercel DNS** and Vercel hosting, using a single vendor, without breaking Google Workspace email, Resend, or other sender authentication.
 
-**Last updated:** 2026-06-21 (Phase 4 cutover initiated — awaiting DNS propagation)
+**Last updated:** 2026-06-21 (Phase 4 complete — site live on `mckeesecurity.ca`; Phase 5 post-cutover QA in progress)
 **Related:** Vercel project root directory is `website/`. Repo: `BrendenMcKee/vercel-mckee-security`.
 
 ---
@@ -25,8 +25,8 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
 | Role | Current | Target |
 |------|---------|--------|
 | Registrar | HostPapa | HostPapa (no transfer) |
-| DNS host | Propagating → **Vercel DNS** (HostPapa NS updated 2026-06-21) | **Vercel DNS** |
-| Website | WordPress.com (until propagation completes) | Vercel (Next.js) |
+| DNS host | **Vercel DNS** ✅ | **Vercel DNS** |
+| Website | **Vercel (Next.js)** ✅ | Vercel (Next.js) |
 | Email | Google Workspace | Google Workspace (unchanged) |
 | Transactional email | Resend (via `send` subdomain) | Resend (unchanged) |
 
@@ -251,36 +251,34 @@ Before changing nameservers at HostPapa:
 
 ---
 
-## Phase 4: Nameserver cutover at HostPapa — ⏳ IN PROGRESS (2026-06-21)
+## Phase 4: Nameserver cutover at HostPapa — ✅ COMPLETE (2026-06-21)
 
 1. ✅ In Vercel → **Settings → Domains**, copy the two assigned nameservers (`ns1.vercel-dns.com`, `ns2.vercel-dns.com`).
 2. ✅ Log into **HostPapa** → domain management for `mckeesecurity.ca`.
 3. ✅ Replace the WordPress.com nameservers with Vercel's two nameservers. HostPapa confirmed: “Name Server information successfully updated.”
 4. ✅ **Do not transfer the registrar.**
-5. ⏳ **Wait for propagation** — Vercel to show both domains as **Valid** (usually minutes to a few hours; up to 48h in rare cases).
+5. ✅ **Propagation complete** — Vercel shows both domains as **Valid Configuration**; `https://mckeesecurity.ca` serves the new Next.js site.
 
-**While waiting (nothing broken on your end):**
+**Confirmed 2026-06-21:**
 
-- Vercel **Invalid Configuration** is expected until public DNS shows Vercel nameservers.
-- The project **DNS Records** tab may still show the old A-record method — ignore it; you use **Vercel DNS** nameservers, not that A record.
-- Google Admin **Start authentication** for DKIM will fail until public DNS serves `google._domainkey` from Vercel — retry after propagation.
-- Click **Refresh** on each domain in Vercel every 15–30 minutes.
-- Verify propagation: `nslookup -type=ns mckeesecurity.ca` should return `ns1.vercel-dns.com` and `ns2.vercel-dns.com` (not `ns*.wordpress.com`).
+- Vercel Domains: `mckeesecurity.ca` (Production), `www.mckeesecurity.ca` (308 → apex), both **Valid Configuration**
+- Public site loads the Vercel build (not WordPress)
+- SSL active (padlock on apex)
 
-During propagation, some users may still hit WordPress briefly. That is normal.
+During propagation, some users may still hit WordPress briefly. That is normal and should be over now.
 
 ---
 
-## Phase 5: Post-cutover testing — pending (run after Vercel shows Valid)
+## Phase 5: Post-cutover testing — ⏳ IN PROGRESS (2026-06-21)
 
 ### Website
 
-- [ ] `https://mckeesecurity.ca` loads the Vercel site
-- [ ] `https://www.mckeesecurity.ca` loads or redirects correctly
-- [ ] HTTP redirects to HTTPS
-- [ ] `www` / non-`www` canonical behavior is correct
-- [ ] Vercel Domains shows both domains as **Valid**
-- [ ] SSL padlock valid on apex and `www`
+- [x] `https://mckeesecurity.ca` loads the Vercel site
+- [x] `https://www.mckeesecurity.ca` loads or redirects correctly (308 → apex)
+- [x] HTTP redirects to HTTPS
+- [x] `www` / non-`www` canonical behavior is correct (apex primary)
+- [x] Vercel Domains shows both domains as **Valid**
+- [x] SSL padlock valid on apex and `www`
 - [ ] Contact form submits and email arrives
 - [ ] Service inquiry forms work (security, cameras, etc.)
 - [ ] Job application form works (including resume upload if used)
@@ -288,6 +286,7 @@ During propagation, some users may still hit WordPress briefly. That is normal.
 - [ ] Google reviews section loads live data
 - [ ] Data Drops tools unlock and load (`/data-drops-mckeesecurity`, `/data-drops-hhhs`)
 - [ ] Embedded scripts, analytics, and pixels still work
+- [ ] Social link preview shows OG image (Discord / Facebook — may need cache refresh after deploy)
 
 ### Email
 
@@ -297,7 +296,7 @@ During propagation, some users may still hit WordPress briefly. That is normal.
 - [ ] Resend domain still **Verified** in Resend dashboard
 - [ ] Send a test Resend form email
 - [ ] Check SPF, DKIM, and DMARC alignment for Google Workspace and Resend mail
-- [ ] (If set up) Google Workspace DKIM (`google._domainkey`) shows authenticating in Google Admin
+- [ ] (If set up) Google Workspace DKIM (`google._domainkey`) shows authenticating in Google Admin — **record is in Vercel DNS; click Start authentication in Google Admin now that NS have propagated**
 
 ### DNS verification commands
 
@@ -354,8 +353,8 @@ After WordPress is cancelled and WP Cloud no longer sends mail:
 3. ✅ Recreate all email/auth records in Vercel DNS (single SPF at `@`, incl. `google._domainkey`)
 4. ✅ Verify records and Resend `EMAIL_FROM` domain
 5. ✅ Switch nameservers at HostPapa to Vercel
-6. ⏳ Wait for Vercel to show domains **Valid**
-7. ⏳ Run post-cutover tests (website, email, DNS)
+6. ✅ Wait for Vercel to show domains **Valid**
+7. ⏳ Run post-cutover tests (website, email, DNS) — site live; forms/email/DKIM still to verify
 8. ⏳ Keep WordPress running until all checks pass
 9. ⏳ Clean up WP-only DNS and SPF later
 
@@ -369,10 +368,21 @@ After WordPress is cancelled and WP Cloud no longer sends mail:
 
 ## Pre-cutover checklist (website project)
 
-- [ ] Pre-cutover integration work complete (see project notes)
+- [x] Pre-cutover integration work complete
 - [x] Production env vars set in Vercel (9 confirmed 2026-06-21, incl. `DATA_DROPS_AUTH_SECRET` + `GOOGLE_REVIEWS_URL`)
-- [x] Phase 1–3 complete; Phase 4 nameservers updated at HostPapa (2026-06-21)
-- [ ] Production QA on custom domain after propagation (Phase 5)
+- [x] Phase 1–4 complete; site live on custom domain (2026-06-21)
+- [x] Performance pass complete — see [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) (scroll, CLS, AVIF, image policy)
+- [ ] Production QA on custom domain (Phase 5 — forms, email, Data Drops, Google DKIM auth)
+
+---
+
+## Related docs
+
+| Doc | Purpose |
+|-----|---------|
+| [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) | Scroll performance, image delivery, `images.qualities` rules, OG image |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Monorepo deploy workflow (Vercel + AWS) |
+| [`docs/DATA-DROPS.md`](docs/DATA-DROPS.md) | Data Drops password gate and backend |
 
 ---
 

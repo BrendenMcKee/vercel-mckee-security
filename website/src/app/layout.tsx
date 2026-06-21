@@ -34,6 +34,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_CA",
     siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteConfig.name,
+    description: siteConfig.description,
   },
   icons: {
     icon: images.favicon,
