@@ -39,8 +39,13 @@ This document captures the performance work completed during the WordPress → V
 
 ### Social link previews (Open Graph)
 
-- **Problem:** Discord / social shares showed title + description only — no preview image (`og:image` was missing).
-- **Fix:** `website/src/app/opengraph-image.tsx` generates a 1200×630 branded PNG at build time (logo, Apply Now photo backdrop, on-brand copy). Root layout sets `twitter:card` to `summary_large_image`.
+- **Problem:** Discord / social shares showed title + description only — no preview image (`og:image` was missing). Some clients still cached **WordPress Jetpack** OG images (cropped red serif `logo.png` wordmark with `&AMP;` text) until DNS fully propagated.
+- **Fix:** `website/src/app/opengraph-image.tsx` generates a **1200×630** branded PNG at build time:
+  - Uses **`shield-logo.png`** (not `logo.png` — the old serif wordmark crops badly in link previews)
+  - Clean dark layout matching site colors; **no ampersands** in rendered text (Satori/clients can show `&AMP;` literally)
+  - No busy photo background (keeps file ~70 KB vs ~1 MB)
+- Root layout sets explicit `openGraph.images` and `twitter:card` = `summary_large_image`.
+- **After changing OG:** messaging apps cache previews — re-share with `?v=2` or wait for cache expiry. Confirm HTML shows `og:image` pointing at your domain’s `/opengraph-image`, not `s0.wp.com`.
 
 ---
 

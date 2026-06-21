@@ -36,6 +36,14 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     title: siteConfig.name,
     description: siteConfig.description,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "McKee Security and Audio Systems — Haliburton, Ontario",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
