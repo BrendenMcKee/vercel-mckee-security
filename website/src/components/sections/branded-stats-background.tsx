@@ -8,7 +8,7 @@ export function BrandedStatsBackground() {
         src="/images/services/work/camera-dome-ceiling.jpg"
         alt=""
         fill
-        className="object-cover object-[50%_50%]"
+        className="object-cover object-[50%_100%]"
         sizes="100vw"
         quality={90}
       />
