@@ -8,7 +8,11 @@ import { serviceCategories } from "@/lib/services";
 import { FadeIn } from "@/components/motion/fade-in";
 import { ParallaxSection } from "@/components/sections/parallax-section";
 import { StatsReviewsBand } from "@/components/sections/stats-reviews-band";
-import { heroCopyShadow, heroCtaShadow } from "@/lib/hero-text-styles";
+import {
+  heroCopyShadow,
+  heroCtaShadow,
+  clearWillChangeOnEnd,
+} from "@/lib/hero-text-styles";
 
 function ReadMoreLink({ href }: { href: string }) {
   return (
@@ -38,7 +42,7 @@ export function HomePageContent() {
         contentClassName="relative min-h-[640px] lg:min-h-[760px]"
       >
         <div className="mx-auto flex min-h-[640px] w-full max-w-[1400px] items-center px-6 pb-8 pt-14 lg:min-h-[760px] lg:px-10 lg:pb-20 lg:pt-36">
-          <FadeIn>
+          <div className="hero-rise" onAnimationEnd={clearWillChangeOnEnd}>
             <h6
               className={`mb-3 text-sm font-bold uppercase tracking-[0.2em] text-white ${heroCopyShadow}`}
             >
@@ -64,7 +68,7 @@ export function HomePageContent() {
             >
               Learn More
             </Link>
-          </FadeIn>
+          </div>
         </div>
         <button
           type="button"

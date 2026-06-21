@@ -4,8 +4,7 @@ import Image from "next/image";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { FadeIn } from "@/components/motion/fade-in";
-import { heroCopyShadow } from "@/lib/hero-text-styles";
+import { heroCopyShadow, clearWillChangeOnEnd } from "@/lib/hero-text-styles";
 
 type HeroProps = {
   eyebrow?: string;
@@ -73,7 +72,7 @@ export function Hero({
         style={{ opacity }}
         className="relative mx-auto flex max-w-7xl flex-col justify-center px-6 py-16 sm:py-20 lg:py-32"
       >
-        <FadeIn>
+        <div className="hero-rise" onAnimationEnd={clearWillChangeOnEnd}>
           {eyebrow && (
             <p
               className={`mb-4 text-sm font-bold uppercase tracking-[0.25em] text-primary ${heroCopyShadow}`}
@@ -107,7 +106,7 @@ export function Hero({
               )}
             </div>
           )}
-        </FadeIn>
+        </div>
       </motion.div>
     </section>
   );
