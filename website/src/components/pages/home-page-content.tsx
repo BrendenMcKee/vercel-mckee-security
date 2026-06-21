@@ -36,19 +36,23 @@ export function HomePageContent() {
         priority
         contentClassName="relative min-h-[640px] lg:min-h-[760px]"
       >
-        <div className="mx-auto flex min-h-[640px] w-full max-w-[1400px] items-center px-6 pb-8 pt-14 lg:min-h-[760px] lg:px-10 lg:pb-20 lg:pt-36">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent"
+        />
+        <div className="relative mx-auto flex min-h-[640px] w-full max-w-[1400px] items-center px-6 pb-8 pt-14 lg:min-h-[760px] lg:px-10 lg:pb-20 lg:pt-36">
           <FadeIn>
-            <h6 className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-white">
+            <h6 className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
               Specialized Security
             </h6>
-            <h1 className="max-w-3xl text-4xl font-bold leading-tight text-white drop-shadow-md sm:text-5xl lg:text-6xl">
+            <h1 className="max-w-3xl text-4xl font-bold leading-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] sm:text-5xl lg:text-6xl">
               Full Home Integration
             </h1>
-            <p className="mt-6 max-w-2xl text-lg text-white/90">
+            <p className="mt-6 max-w-2xl text-lg text-white/90 drop-shadow-[0_2px_16px_rgba(0,0,0,0.85)]">
               We are your one stop technology solution! You can have peace of mind
               knowing that our systems are custom designed to fit your needs.
             </p>
-            <h2 className="mt-8 text-3xl font-bold text-white drop-shadow sm:text-4xl">
+            <h2 className="mt-8 text-3xl font-bold text-white drop-shadow-[0_3px_18px_rgba(0,0,0,0.85)] sm:text-4xl">
               Home <span className="font-bold">Technology</span>
             </h2>
             <Link
