@@ -363,7 +363,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Hands-on checklist blocks */
+/* Hands-on checklist blocks — stacked on mobile so content uses full card width */
 .course-lesson-html .checklist-item {
   display: flex;
   align-items: flex-start;
@@ -648,6 +648,7 @@
     text-align: left !important;
   }
 
+  /* All embedded lesson checklists: checkbox on top, full-width body below */
   .course-lesson-html .checklist-item {
     display: grid;
     grid-template-columns: 1fr;
@@ -668,6 +669,31 @@
   .course-lesson-html .checklist-item label > span {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
+  }
+
+  /* Lesson Progress panel checklists (React) — same stacked mobile layout */
+  .course-progress-checklist label {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.5rem 0.625rem;
+    align-items: start;
+  }
+
+  .course-progress-checklist label > span:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .course-progress-checklist label > svg {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .course-progress-checklist label > span.min-w-0 {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
   }
 
   .course-lesson-html .toc-container,

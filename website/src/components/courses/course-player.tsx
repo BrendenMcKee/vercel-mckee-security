@@ -72,7 +72,7 @@ function LessonProgressPanel({
           : "Some steps complete automatically when you finish hands-on tasks or return from external training links."}
       </p>
 
-      <ul className="mt-4 space-y-2">
+      <ul className="course-progress-checklist mt-4 space-y-2">
         {checklist.map((item, itemIndex) => {
           const checked = mounted
             ? isChecklistItemComplete(courseSlug, lessonId, itemIndex)
