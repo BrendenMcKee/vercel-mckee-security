@@ -33,12 +33,21 @@ async function loadLatoFonts() {
 }
 
 export default async function Image() {
-  const [logoData, fonts] = await Promise.all([
+  const [shieldData, titleData, sublineData, fonts] = await Promise.all([
     readFile(join(process.cwd(), "public/images/shield-logo.png")),
+    readFile(join(process.cwd(), "public/images/og-logo-title.png")),
+    readFile(join(process.cwd(), "public/images/og-wordmark-subline.png")),
     loadLatoFonts(),
   ]);
 
-  const logoSrc = `data:image/png;base64,${logoData.toString("base64")}`;
+  const toSrc = (data: Buffer) =>
+    `data:image/png;base64,${data.toString("base64")}`;
+
+  // Title crop: 2740×395. Subline composite: built at 88px tall (see scripts/build-og-subline.mjs).
+  const titleDisplayWidth = 700;
+  const titleDisplayHeight = Math.round((395 / 2740) * titleDisplayWidth);
+  const sublineDisplayHeight = 88;
+  const sublineDisplayWidth = 678;
 
   return new ImageResponse(
     (
@@ -52,7 +61,6 @@ export default async function Image() {
           fontFamily: "Lato",
         }}
       >
-        {/* Site header accent */}
         <div style={{ display: "flex", width: "100%", height: 14, background: "#660000" }} />
 
         <div
@@ -61,16 +69,15 @@ export default async function Image() {
             flex: 1,
             flexDirection: "column",
             justifyContent: "space-between",
-            padding: "40px 52px 36px 52px",
+            padding: "36px 48px 32px",
           }}
         >
-          {/* Hero row — large shield + wordmark */}
-          <div style={{ display: "flex", alignItems: "center", gap: 44 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
             <img
-              src={logoSrc}
+              src={toSrc(shieldData)}
               alt=""
-              width={300}
-              height={300}
+              width={280}
+              height={280}
               style={{ objectFit: "contain", flexShrink: 0 }}
             />
 
@@ -78,51 +85,34 @@ export default async function Image() {
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 6,
+                gap: 8,
                 flex: 1,
               }}
             >
-              <div
-                style={{
-                  fontSize: 78,
-                  fontWeight: 700,
-                  color: "#ffffff",
-                  lineHeight: 1,
-                  letterSpacing: "-0.025em",
-                }}
-              >
-                McKee Security
-              </div>
-              <div
-                style={{
-                  fontSize: 58,
-                  fontWeight: 700,
-                  color: "#ffffff",
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Audio Systems
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  width: 120,
-                  height: 4,
-                  background: "#c91818",
-                  marginTop: 14,
-                  marginBottom: 10,
-                }}
+              {/* Serif wordmark — raster crops from logo.png for exact brand typography */}
+              <img
+                src={toSrc(titleData)}
+                alt=""
+                width={titleDisplayWidth}
+                height={titleDisplayHeight}
+                style={{ objectFit: "contain", objectPosition: "left center" }}
+              />
+              <img
+                src={toSrc(sublineData)}
+                alt=""
+                width={sublineDisplayWidth}
+                height={sublineDisplayHeight}
+                style={{ objectFit: "contain", objectPosition: "left center" }}
               />
 
               <div
                 style={{
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: 700,
                   color: "#c91818",
                   letterSpacing: "0.22em",
                   textTransform: "uppercase",
+                  marginTop: 8,
                 }}
               >
                 Specialists Since 1994
@@ -130,17 +120,10 @@ export default async function Image() {
             </div>
           </div>
 
-          {/* Services + location */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div
               style={{
-                fontSize: 38,
+                fontSize: 36,
                 fontWeight: 700,
                 color: "#ffffff",
                 lineHeight: 1.3,
@@ -150,7 +133,7 @@ export default async function Image() {
             </div>
             <div
               style={{
-                fontSize: 30,
+                fontSize: 28,
                 fontWeight: 400,
                 color: "rgba(255,255,255,0.72)",
                 lineHeight: 1.3,
@@ -160,19 +143,18 @@ export default async function Image() {
             </div>
           </div>
 
-          {/* Footer */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               borderTop: "3px solid rgba(201,24,24,0.45)",
-              paddingTop: 20,
+              paddingTop: 18,
             }}
           >
             <div
               style={{
-                fontSize: 30,
+                fontSize: 28,
                 fontWeight: 700,
                 color: "#ffffff",
                 letterSpacing: "0.04em",
@@ -182,7 +164,7 @@ export default async function Image() {
             </div>
             <div
               style={{
-                fontSize: 30,
+                fontSize: 28,
                 fontWeight: 700,
                 color: "rgba(255,255,255,0.75)",
               }}
