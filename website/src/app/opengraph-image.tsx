@@ -13,14 +13,31 @@ export const size = {
 
 export const contentType = "image/png";
 
-/** Avoid `&` in ImageResponse text — Satori can render it as literal &AMP; in some clients. */
 const servicesLine =
   "Security  ·  Cameras  ·  Networking  ·  Audio and Video  ·  Starlink";
 
+async function loadLatoFonts() {
+  const [bold, regular] = await Promise.all([
+    fetch(
+      "https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh6UVSwiPHA.ttf",
+    ).then((res) => res.arrayBuffer()),
+    fetch(
+      "https://fonts.gstatic.com/s/lato/v24/S6uyw4BMUTPHjx4wWw.ttf",
+    ).then((res) => res.arrayBuffer()),
+  ]);
+
+  return [
+    { name: "Lato", data: bold, weight: 700 as const, style: "normal" as const },
+    { name: "Lato", data: regular, weight: 400 as const, style: "normal" as const },
+  ];
+}
+
 export default async function Image() {
-  const logoData = await readFile(
-    join(process.cwd(), "public/images/shield-logo.png"),
-  );
+  const [logoData, fonts] = await Promise.all([
+    readFile(join(process.cwd(), "public/images/shield-logo.png")),
+    loadLatoFonts(),
+  ]);
+
   const logoSrc = `data:image/png;base64,${logoData.toString("base64")}`;
 
   return new ImageResponse(
@@ -32,18 +49,11 @@ export default async function Image() {
           display: "flex",
           flexDirection: "column",
           background: "#0a0a0a",
-          fontFamily: "sans-serif",
+          fontFamily: "Lato",
         }}
       >
-        {/* Top brand bar — matches site header accent */}
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            height: 10,
-            background: "#660000",
-          }}
-        />
+        {/* Site header accent */}
+        <div style={{ display: "flex", width: "100%", height: 14, background: "#660000" }} />
 
         <div
           style={{
@@ -51,25 +61,38 @@ export default async function Image() {
             flex: 1,
             flexDirection: "column",
             justifyContent: "space-between",
-            padding: "48px 56px 44px",
+            padding: "40px 52px 36px 52px",
           }}
         >
-          {/* Logo + wordmark row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
+          {/* Hero row — large shield + wordmark */}
+          <div style={{ display: "flex", alignItems: "center", gap: 44 }}>
             <img
               src={logoSrc}
               alt=""
-              width={200}
-              height={200}
+              width={300}
+              height={300}
               style={{ objectFit: "contain", flexShrink: 0 }}
             />
+
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 10,
+                gap: 6,
+                flex: 1,
               }}
             >
+              <div
+                style={{
+                  fontSize: 78,
+                  fontWeight: 700,
+                  color: "#ffffff",
+                  lineHeight: 1,
+                  letterSpacing: "-0.025em",
+                }}
+              >
+                McKee Security
+              </div>
               <div
                 style={{
                   fontSize: 58,
@@ -79,29 +102,30 @@ export default async function Image() {
                   letterSpacing: "-0.02em",
                 }}
               >
-                McKee Security
-              </div>
-              <div
-                style={{
-                  fontSize: 40,
-                  fontWeight: 700,
-                  color: "#1e99e6",
-                  lineHeight: 1.1,
-                }}
-              >
                 Audio Systems
               </div>
+
               <div
                 style={{
-                  marginTop: 8,
-                  fontSize: 20,
+                  display: "flex",
+                  width: 120,
+                  height: 4,
+                  background: "#c91818",
+                  marginTop: 14,
+                  marginBottom: 10,
+                }}
+              />
+
+              <div
+                style={{
+                  fontSize: 26,
                   fontWeight: 700,
                   color: "#c91818",
-                  letterSpacing: "0.18em",
+                  letterSpacing: "0.22em",
                   textTransform: "uppercase",
                 }}
               >
-                Specialists since 1994
+                Specialists Since 1994
               </div>
             </div>
           </div>
@@ -111,8 +135,39 @@ export default async function Image() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 16,
-              maxWidth: 980,
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 38,
+                fontWeight: 700,
+                color: "#ffffff",
+                lineHeight: 1.3,
+              }}
+            >
+              {servicesLine}
+            </div>
+            <div
+              style={{
+                fontSize: 30,
+                fontWeight: 400,
+                color: "rgba(255,255,255,0.72)",
+                lineHeight: 1.3,
+              }}
+            >
+              Homes and businesses in Haliburton, Ontario
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              borderTop: "3px solid rgba(201,24,24,0.45)",
+              paddingTop: 20,
             }}
           >
             <div
@@ -120,48 +175,16 @@ export default async function Image() {
                 fontSize: 30,
                 fontWeight: 700,
                 color: "#ffffff",
-                lineHeight: 1.35,
-              }}
-            >
-              {servicesLine}
-            </div>
-            <div
-              style={{
-                fontSize: 24,
-                fontWeight: 400,
-                color: "rgba(255,255,255,0.72)",
-                lineHeight: 1.35,
-              }}
-            >
-              Homes and businesses in Haliburton, Ontario
-            </div>
-          </div>
-
-          {/* Footer strip */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              borderTop: "2px solid rgba(255,255,255,0.12)",
-              paddingTop: 22,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 22,
-                fontWeight: 700,
-                color: "#ffffff",
-                letterSpacing: "0.06em",
+                letterSpacing: "0.04em",
               }}
             >
               mckeesecurity.ca
             </div>
             <div
               style={{
-                fontSize: 22,
+                fontSize: 30,
                 fontWeight: 700,
-                color: "rgba(255,255,255,0.65)",
+                color: "rgba(255,255,255,0.75)",
               }}
             >
               {siteConfig.phone.short}
@@ -170,6 +193,6 @@ export default async function Image() {
         </div>
       </div>
     ),
-    { ...size },
+    { ...size, fonts },
   );
 }
