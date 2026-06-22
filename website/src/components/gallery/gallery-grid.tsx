@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import {
@@ -10,12 +10,18 @@ import {
   type GalleryCategoryId,
 } from "@/lib/gallery";
 import { Lightbox } from "@/components/gallery/lightbox";
+import { cn } from "@/lib/utils";
 
 type Filter = GalleryCategoryId | "all";
+
+/** Mobile header height — keep in sync with sticky top offset below */
+const MOBILE_HEADER_OFFSET = "100px";
 
 export function GalleryGrid() {
   const [filter, setFilter] = useState<Filter>("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [isCompact, setIsCompact] = useState(false);
+  const stickySentinelRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(
     () =>
@@ -30,15 +36,51 @@ export function GalleryGrid() {
     setLightboxIndex(null);
   }, [filter]);
 
+  // When the sentinel scrolls past the sticky line, collapse filters for more gallery space.
+  useEffect(() => {
+    const sentinel = stickySentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsCompact(!entry.isIntersecting),
+      {
+        threshold: 0,
+        rootMargin: `-${MOBILE_HEADER_OFFSET} 0px 0px 0px`,
+      },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
-      {/* Color-coded filter bar — compact 4-col grid on mobile (2 rows), flex wrap on sm+ */}
+      {/* Sentinel sits just above the bar; when it leaves the sticky zone, filters compact */}
+      <div
+        ref={stickySentinelRef}
+        className="pointer-events-none h-px w-full lg:hidden"
+        aria-hidden="true"
+      />
+
       <div className="sticky top-25 z-40 mb-6 lg:top-36 lg:mb-10">
-        <div className="rounded-xl border border-white/10 bg-[#0a0a0a]/90 px-2 py-2 backdrop-blur-md sm:rounded-2xl sm:px-3 sm:py-3">
-          <div className="grid grid-cols-4 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2">
+        <div
+          className={cn(
+            "border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-md transition-[border-radius,padding] duration-300 ease-out sm:rounded-2xl sm:px-3 sm:py-3",
+            isCompact
+              ? "rounded-b-xl rounded-t-none px-2 py-2"
+              : "rounded-xl px-2.5 py-2.5",
+          )}
+        >
+          <div
+            className={cn(
+              "grid transition-[gap] duration-300 ease-out sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2",
+              isCompact ? "grid-cols-4 gap-1.5" : "grid-cols-3 gap-2",
+            )}
+          >
             <FilterPill
               label="All Work"
               shortLabel="All"
+              compact={isCompact}
               active={filter === "all"}
               onClick={() => setFilter("all")}
               count={galleryImages.length}
@@ -57,6 +99,7 @@ export function GalleryGrid() {
                         : undefined
                 }
                 color={cat.color}
+                compact={isCompact}
                 active={filter === cat.id}
                 onClick={() => setFilter(cat.id)}
                 count={galleryImages.filter((i) => i.category === cat.id).length}
@@ -141,6 +184,7 @@ function FilterPill({
   shortLabel,
   color,
   active,
+  compact,
   onClick,
   count,
 }: {
@@ -148,11 +192,12 @@ function FilterPill({
   shortLabel?: string;
   color?: string;
   active: boolean;
+  compact: boolean;
   onClick: () => void;
   count: number;
 }) {
   const [hovered, setHovered] = useState(false);
-  const displayLabel = shortLabel ?? label;
+  const mobileLabel = compact && shortLabel ? shortLabel : label;
 
   // active = definitive solid color; hovered = faint preview of that color;
   // resting = neutral translucent white.
@@ -182,16 +227,24 @@ function FilterPill({
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="inline-flex w-full min-w-0 cursor-pointer items-center justify-center gap-0.5 rounded-full border px-1.5 py-1 text-[10px] font-bold uppercase leading-none tracking-wide whitespace-nowrap transition-colors duration-200 sm:w-auto sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
+      className={cn(
+        "inline-flex w-full min-w-0 cursor-pointer items-center justify-center rounded-full border font-bold uppercase tracking-wide whitespace-nowrap transition-all duration-300 ease-out sm:w-auto sm:gap-2 sm:px-4 sm:py-2 sm:text-sm",
+        compact
+          ? "gap-0.5 px-1.5 py-1 text-[10px] leading-none"
+          : "gap-1 px-2 py-1.5 text-[11px] leading-tight",
+      )}
       style={style}
     >
       {color && (
         <span
-          className="h-1.5 w-1.5 shrink-0 rounded-full sm:h-2.5 sm:w-2.5"
+          className={cn(
+            "shrink-0 rounded-full sm:h-2.5 sm:w-2.5",
+            compact ? "h-1.5 w-1.5" : "h-2 w-2",
+          )}
           style={{ backgroundColor: active ? "#fff" : color }}
         />
       )}
-      <span className="sm:hidden">{displayLabel}</span>
+      <span className="sm:hidden">{mobileLabel}</span>
       <span className="hidden sm:inline">{label}</span>
       <span className={active ? "opacity-80" : "opacity-50"}>{count}</span>
     </button>
