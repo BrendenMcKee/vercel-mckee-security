@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { siteConfig } from "@/lib/site-config";
 
 export const alt =
-  "McKee Security and Audio Systems — security, cameras, networking, audio and video, and Starlink in Haliburton, Ontario";
+  "McKee Security and Audio Systems. Security, cameras, networking, audio and video, and Starlink in Haliburton, Ontario.";
 
 export const size = {
   width: 1200,

@@ -45,7 +45,7 @@ export default function NotFound() {
           </h2>
           <p className="mx-auto mt-4 max-w-md text-white/70 leading-relaxed md:mx-0">
             The page you&apos;re looking for has scurried off, or never existed in the first
-            place. Don&apos;t worry though — our crew (and our trusty steed) will point you back in
+            place. Don&apos;t worry though. Our crew (and our trusty steed) will point you back in
             the right direction.
           </p>
 
