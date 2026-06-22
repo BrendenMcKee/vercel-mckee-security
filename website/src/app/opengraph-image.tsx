@@ -14,7 +14,7 @@ export const size = {
 export const contentType = "image/png";
 
 const servicesLine =
-  "Security  ·  Cameras  ·  Networking  ·  Audio and Video  ·  Starlink";
+  "Security  ·  Cameras  ·  Networking  ·  Audio & Video  ·  Starlink";
 
 /** Both wordmark crops share this width so they scale 1:1 and stay aligned. */
 const WORDMARK_WIDTH = 720;
@@ -113,15 +113,23 @@ export default async function Image() {
 
               <div
                 style={{
-                  fontSize: 24,
-                  fontWeight: 700,
-                  color: "#c91818",
-                  letterSpacing: "0.22em",
-                  textTransform: "uppercase",
+                  display: "flex",
+                  width: WORDMARK_WIDTH,
+                  justifyContent: "center",
                   marginTop: 10,
                 }}
               >
-                Specialists Since 1994
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 700,
+                    color: "#c91818",
+                    letterSpacing: "0.22em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Specialists Since 1994
+                </div>
               </div>
             </div>
           </div>
