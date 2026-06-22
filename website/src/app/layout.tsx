@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileCallFab } from "@/components/layout/mobile-call-fab";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
-import { images, siteConfig } from "@/lib/site-config";
+import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 import "@/styles/mckee-forms.css";
 import "@/styles/elementor-forms.css";
@@ -50,10 +50,7 @@ export const metadata: Metadata = {
     title: siteConfig.name,
     description: siteConfig.description,
   },
-  icons: {
-    icon: images.favicon,
-    apple: images.favicon,
-  },
+  // Favicon / app icons: src/app/favicon.ico, icon.png, apple-icon.png (Next file convention)
 };
 
 export default function RootLayout({
