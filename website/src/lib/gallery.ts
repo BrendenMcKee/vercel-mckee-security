@@ -113,9 +113,9 @@ export const galleryImages: GalleryImage[] = [
     width: 1600,
     height: 901,
     category: "security",
-    title: "Bench-Built Security Panels",
+    title: "Advanced Security Training",
     description:
-      "Every alarm panel is assembled, programmed, and tested on our bench before it protects your property.",
+      "Hands-on bench training where our technicians sharpen programming and troubleshooting skills on real alarm equipment.",
   },
   {
     src: `${WORK}/security-alarm-package.jpg`,

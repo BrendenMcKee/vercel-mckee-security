@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import {
@@ -17,11 +17,33 @@ type Filter = GalleryCategoryId | "all";
 /** Mobile header height — keep in sync with sticky top offset below */
 const MOBILE_HEADER_OFFSET = "100px";
 
+/** Scroll so the hero sits just behind the header and filters + first row are in view */
+function scrollToGalleryFilters() {
+  const header = document.querySelector("header");
+  const headerOffset = header?.getBoundingClientRect().height ?? 100;
+  const gallerySection = document.getElementById("gallery-content");
+  const hero = gallerySection?.previousElementSibling;
+  if (!(hero instanceof HTMLElement)) return;
+
+  const heroBottom = hero.offsetTop + hero.offsetHeight;
+  const target = heroBottom - headerOffset;
+
+  window.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+}
+
 export function GalleryGrid() {
   const [filter, setFilter] = useState<Filter>("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isCompact, setIsCompact] = useState(false);
   const stickySentinelRef = useRef<HTMLDivElement>(null);
+
+  const selectFilter = useCallback((next: Filter) => {
+    setFilter((current) => {
+      if (current === next) return current;
+      requestAnimationFrame(scrollToGalleryFilters);
+      return next;
+    });
+  }, []);
 
   const filtered = useMemo(
     () =>
@@ -84,7 +106,7 @@ export function GalleryGrid() {
               shortLabel="All"
               compact={isCompact}
               active={filter === "all"}
-              onClick={() => setFilter("all")}
+              onClick={() => selectFilter("all")}
               count={galleryImages.length}
             />
             {galleryCategories.map((cat) => (
@@ -106,7 +128,7 @@ export function GalleryGrid() {
                 color={cat.color}
                 compact={isCompact}
                 active={filter === cat.id}
-                onClick={() => setFilter(cat.id)}
+                onClick={() => selectFilter(cat.id)}
                 count={galleryImages.filter((i) => i.category === cat.id).length}
               />
             ))}

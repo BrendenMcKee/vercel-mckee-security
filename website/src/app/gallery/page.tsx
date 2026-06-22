@@ -24,7 +24,7 @@ export default function GalleryPage() {
         overlay="dark"
       />
 
-      <section className="bg-background pt-6 pb-16 lg:py-20">
+      <section id="gallery-content" className="bg-background pt-6 pb-16 lg:py-20">
         <div className="mx-auto max-w-375 px-4 sm:px-6">
           <GalleryGrid />
         </div>

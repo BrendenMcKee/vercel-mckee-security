@@ -22,14 +22,14 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
     eyebrow: "On the Job",
     title: "Real Security Installs by Our Team",
     intro:
-      "Every panel is bench-built, programmed, and tested by our own technicians before it protects your home or business.",
+      "Real installs and ongoing training from technicians who know these systems inside and out.",
     photos: [
       {
         src: `${WORK}/security-panel-build.jpg`,
         width: 1600,
         height: 901,
-        alt: "McKee technician assembling and programming a security panel at the workbench",
-        caption: "Bench-building and programming a security panel",
+        alt: "McKee technician in advanced security panel training at the workbench",
+        caption: "Advanced bench training to refine security skills",
       },
       {
         src: `${WORK}/security-board-tech.jpg`,
