@@ -32,25 +32,37 @@ export function GalleryGrid() {
 
   return (
     <>
-      {/* Color-coded filter bar */}
-      <div className="sticky top-20 z-30 mb-10">
-        <div className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#0a0a0a]/80 px-3 py-3 backdrop-blur-md">
-          <FilterPill
-            label="All Work"
-            active={filter === "all"}
-            onClick={() => setFilter("all")}
-            count={galleryImages.length}
-          />
-          {galleryCategories.map((cat) => (
+      {/* Color-coded filter bar — compact 4-col grid on mobile (2 rows), flex wrap on sm+ */}
+      <div className="sticky top-25 z-40 mb-6 lg:top-36 lg:mb-10">
+        <div className="rounded-xl border border-white/10 bg-[#0a0a0a]/90 px-2 py-2 backdrop-blur-md sm:rounded-2xl sm:px-3 sm:py-3">
+          <div className="grid grid-cols-4 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2">
             <FilterPill
-              key={cat.id}
-              label={cat.label}
-              color={cat.color}
-              active={filter === cat.id}
-              onClick={() => setFilter(cat.id)}
-              count={galleryImages.filter((i) => i.category === cat.id).length}
+              label="All Work"
+              shortLabel="All"
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
+              count={galleryImages.length}
             />
-          ))}
+            {galleryCategories.map((cat) => (
+              <FilterPill
+                key={cat.id}
+                label={cat.label}
+                shortLabel={
+                  cat.id === "audio-video"
+                    ? "A/V"
+                    : cat.id === "team"
+                      ? "Team"
+                      : cat.id === "networking"
+                        ? "Net"
+                        : undefined
+                }
+                color={cat.color}
+                active={filter === cat.id}
+                onClick={() => setFilter(cat.id)}
+                count={galleryImages.filter((i) => i.category === cat.id).length}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -126,18 +138,21 @@ export function GalleryGrid() {
 
 function FilterPill({
   label,
+  shortLabel,
   color,
   active,
   onClick,
   count,
 }: {
   label: string;
+  shortLabel?: string;
   color?: string;
   active: boolean;
   onClick: () => void;
   count: number;
 }) {
   const [hovered, setHovered] = useState(false);
+  const displayLabel = shortLabel ?? label;
 
   // active = definitive solid color; hovered = faint preview of that color;
   // resting = neutral translucent white.
@@ -167,16 +182,17 @@ function FilterPill({
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200"
+      className="inline-flex w-full min-w-0 cursor-pointer items-center justify-center gap-0.5 rounded-full border px-1.5 py-1 text-[10px] font-bold uppercase leading-none tracking-wide whitespace-nowrap transition-colors duration-200 sm:w-auto sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
       style={style}
     >
       {color && (
         <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          className="h-1.5 w-1.5 shrink-0 rounded-full sm:h-2.5 sm:w-2.5"
           style={{ backgroundColor: active ? "#fff" : color }}
         />
       )}
-      {label}
+      <span className="sm:hidden">{displayLabel}</span>
+      <span className="hidden sm:inline">{label}</span>
       <span className={active ? "opacity-80" : "opacity-50"}>{count}</span>
     </button>
   );
