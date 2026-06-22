@@ -61,7 +61,7 @@ export const galleryImages: GalleryImage[] = [
     category: "team",
     title: "Crew and Company Truck",
     description:
-      "McKee Security technicians on site with the company truck — the team behind every install.",
+      "McKee Security technicians on site with the company truck. They are the team behind every install.",
   },
   {
     src: "/images/hero-home.jpg",
@@ -88,7 +88,7 @@ export const galleryImages: GalleryImage[] = [
     category: "team",
     title: "Every Service, One Team",
     description:
-      "Security, cameras, networking, audio and video, and Starlink — all installed by the same local crew.",
+      "Security, cameras, networking, audio and video, and Starlink are all installed by the same local crew.",
   },
   {
     src: `${GAL}/starlink-dock-red-chairs.jpg`,
@@ -124,7 +124,7 @@ export const galleryImages: GalleryImage[] = [
     category: "security",
     title: "A Complete Alarm Package",
     description:
-      "Panel, keypad, sensors, and siren — the full alarm system staged and ready to install.",
+      "The full alarm system includes the panel, keypad, sensors, and siren, staged and ready to install.",
   },
   {
     src: `${GAL}/network-utility-pole-climb.jpg`,
@@ -160,7 +160,7 @@ export const galleryImages: GalleryImage[] = [
     category: "audio-video",
     title: "Where the Living Room Comes Alive",
     description:
-      "A wall-mounted TV and floor-standing speakers tuned to fill the whole room — even the aquarium got a front-row seat.",
+      "A wall-mounted TV and floor-standing speakers tuned to fill the whole room. Even the aquarium got a front-row seat.",
   },
   {
     src: `${GAL}/camera-arena-scissor-lift.jpg`,
@@ -349,7 +349,7 @@ export const galleryImages: GalleryImage[] = [
     category: "team",
     title: "The Whole Crew",
     description:
-      "The team that shows up — local technicians who treat your property like their own.",
+      "The team that shows up. Local technicians who treat your property like their own.",
   },
   {
     src: `${GAL}/team-construction-house.jpg`,
@@ -371,12 +371,12 @@ export const galleryImages: GalleryImage[] = [
   },
   {
     src: `${WORK}/network-ubiquiti-bridge.jpg`,
-    width: 720,
-    height: 1280,
+    width: 1536,
+    height: 1024,
     category: "networking",
     title: "Rooftop Wireless Bridges",
     description:
-      "Point-to-point links extend a single network across multiple buildings and properties.",
+      "A technician in a hard hat and harness mounts a Ubiquiti bridge on the rooftop. Point-to-point links extend a single network across multiple buildings and properties.",
   },
   {
     src: `${GAL}/camera-bullet-tree.jpg`,
@@ -529,7 +529,7 @@ export const galleryImages: GalleryImage[] = [
     category: "team",
     title: "Safety First, Every Climb",
     description:
-      "Harnessed and tied off before heading up — fall protection on every job at height.",
+      "Harnessed and tied off before heading up. Fall protection goes on every job at height.",
   },
   {
     src: `${WORK}/network-equipment-closet.jpg`,
@@ -565,7 +565,7 @@ export const galleryImages: GalleryImage[] = [
     category: "team",
     title: "More Than Coworkers",
     description:
-      "The crew off the clock — the people behind every install.",
+      "The crew off the clock. These are the people behind every install.",
   },
   {
     src: `${WORK}/network-cable-pull-framing.jpg`,
@@ -628,7 +628,7 @@ export const galleryImages: GalleryImage[] = [
     category: "team",
     title: "Rain or Shine",
     description:
-      "Show up, suit up, and get it done — whatever the weather throws at us.",
+      "Show up, suit up, and get it done in whatever weather we face.",
   },
   {
     src: `${WORK}/network-patch-panel-blue.jpg`,
@@ -690,7 +690,7 @@ export const galleryImages: GalleryImage[] = [
     category: "team",
     title: "Geared Up, Even in Winter",
     description:
-      "Harnessed and ready for a cold-weather install — safety gear on, whatever the season.",
+      "Harnessed and ready for a cold-weather install. Safety gear stays on in every season.",
   },
   {
     src: `${GAL}/network-tower-snow.jpg`,
@@ -806,7 +806,7 @@ export const galleryImages: GalleryImage[] = [
     category: "team",
     title: "On the Way Up",
     description:
-      "Tied off and climbing — fall protection in place before the work begins.",
+      "Tied off and climbing with fall protection in place before the work begins.",
   },
   {
     src: `${GAL}/network-antenna-roof-install.jpg`,
@@ -929,7 +929,7 @@ export const galleryImages: GalleryImage[] = [
     category: "camera-surveillance",
     title: "Year-Round Installs",
     description:
-      "Drilling an exterior eave mount in the dead of winter — we install in any season.",
+      "Drilling an exterior eave mount in the dead of winter. We install in any season.",
   },
   {
     src: `${GAL}/team-crew-break-jobsite.jpg`,

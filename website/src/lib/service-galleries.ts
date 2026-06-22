@@ -215,9 +215,9 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
       },
       {
         src: `${WORK}/network-ubiquiti-bridge.jpg`,
-        width: 720,
-        height: 1280,
-        alt: "Technician mounting a Ubiquiti wireless bridge antenna on a rooftop",
+        width: 1536,
+        height: 1024,
+        alt: "McKee technician in a hard hat and fall-arrest harness mounting a Ubiquiti wireless bridge antenna on a rooftop",
         caption: "Rooftop wireless bridges for property-wide coverage",
       },
       {

@@ -15,6 +15,7 @@ const jobs = [
   ["ppe-network-panel-mast.png", path.join(GAL, "network-panel-antenna-mast.jpg")],
   ["ppe-network-tower-snow.png", path.join(GAL, "network-tower-snow.jpg"), { trim: true }],
   ["ppe-network-tower-climb.png", path.join(GAL, "network-tower-climb.jpg")],
+  ["ppe-network-ubiquiti-bridge.png", path.join(WORK, "network-ubiquiti-bridge.jpg")],
   ["ppe-camera-rooftop-ladder.png", path.join(GAL, "camera-rooftop-ladder.jpg")],
   ["ppe-starlink-gable.png", path.join(GAL, "starlink-gable-real.jpg")],
 ];
