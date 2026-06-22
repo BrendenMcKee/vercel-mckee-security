@@ -16,6 +16,11 @@ export const contentType = "image/png";
 const servicesLine =
   "Security  ·  Cameras  ·  Networking  ·  Audio and Video  ·  Starlink";
 
+/** Both wordmark crops share this width so they scale 1:1 and stay aligned. */
+const WORDMARK_WIDTH = 720;
+const TITLE_ASPECT = 360 / 2740;
+const SUBLINE_ASPECT = 451 / 2740;
+
 async function loadLatoFonts() {
   const [bold, regular] = await Promise.all([
     fetch(
@@ -36,18 +41,15 @@ export default async function Image() {
   const [shieldData, titleData, sublineData, fonts] = await Promise.all([
     readFile(join(process.cwd(), "public/images/shield-logo.png")),
     readFile(join(process.cwd(), "public/images/og-logo-title.png")),
-    readFile(join(process.cwd(), "public/images/og-wordmark-subline.png")),
+    readFile(join(process.cwd(), "public/images/og-logo-subline.png")),
     loadLatoFonts(),
   ]);
 
   const toSrc = (data: Buffer) =>
     `data:image/png;base64,${data.toString("base64")}`;
 
-  // Title crop: 2740×395. Subline composite: built at 88px tall (see scripts/build-og-subline.mjs).
-  const titleDisplayWidth = 700;
-  const titleDisplayHeight = Math.round((395 / 2740) * titleDisplayWidth);
-  const sublineDisplayHeight = 88;
-  const sublineDisplayWidth = 678;
+  const titleDisplayHeight = Math.round(WORDMARK_WIDTH * TITLE_ASPECT);
+  const sublineDisplayHeight = Math.round(WORDMARK_WIDTH * SUBLINE_ASPECT);
 
   return new ImageResponse(
     (
@@ -85,24 +87,28 @@ export default async function Image() {
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
                 flex: 1,
               }}
             >
-              {/* Serif wordmark — raster crops from logo.png for exact brand typography */}
+              {/* Stacked logo.png crops — same width keeps serif wordmark aligned */}
               <img
                 src={toSrc(titleData)}
                 alt=""
-                width={titleDisplayWidth}
+                width={WORDMARK_WIDTH}
                 height={titleDisplayHeight}
-                style={{ objectFit: "contain", objectPosition: "left center" }}
+                style={{ display: "flex", objectFit: "contain", objectPosition: "left top" }}
               />
               <img
                 src={toSrc(sublineData)}
                 alt=""
-                width={sublineDisplayWidth}
+                width={WORDMARK_WIDTH}
                 height={sublineDisplayHeight}
-                style={{ objectFit: "contain", objectPosition: "left center" }}
+                style={{
+                  display: "flex",
+                  objectFit: "contain",
+                  objectPosition: "left top",
+                  marginTop: -2,
+                }}
               />
 
               <div
@@ -112,7 +118,7 @@ export default async function Image() {
                   color: "#c91818",
                   letterSpacing: "0.22em",
                   textTransform: "uppercase",
-                  marginTop: 8,
+                  marginTop: 10,
                 }}
               >
                 Specialists Since 1994
