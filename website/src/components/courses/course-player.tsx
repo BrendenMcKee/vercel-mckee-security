@@ -61,7 +61,7 @@ function LessonProgressPanel({
   if (checklist.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-surface/80 p-3 sm:p-4 md:p-5">
+    <div className="rounded-xl border border-white/10 bg-surface/80 p-2.5 sm:p-4 md:p-5">
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
         <ClipboardCheck className="h-3.5 w-3.5" />
         Lesson Progress
@@ -82,7 +82,7 @@ function LessonProgressPanel({
             <li key={`${placement}-${lessonId}-${itemIndex}`}>
               <label
                 className={cn(
-                  "flex cursor-pointer items-start gap-2.5 rounded-lg border px-2.5 py-2.5 text-left transition sm:gap-3 sm:px-3 sm:py-3",
+                  "flex cursor-pointer items-start gap-2 rounded-lg border px-2 py-2.5 text-left transition sm:gap-3 sm:px-3 sm:py-3",
                   checked
                     ? "border-green-500/25 bg-green-500/5"
                     : "border-white/8 bg-black/20 hover:border-primary/25",
@@ -214,7 +214,7 @@ export function CoursePlayer({ course }: { course: Course }) {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-2xl border border-white/10 bg-surface-elevated/50 p-3 sm:p-4 md:p-8">
+      <div className="rounded-2xl border border-white/10 bg-surface-elevated/50 p-2.5 sm:p-4 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-primary">
@@ -293,7 +293,7 @@ export function CoursePlayer({ course }: { course: Course }) {
                 onClick={() =>
                   setOpenModule(openModule === moduleIndex ? null : moduleIndex)
                 }
-                className="flex w-full cursor-pointer items-center justify-between gap-3 p-3 text-left transition hover:bg-white/[0.02] sm:gap-4 sm:p-6"
+                className="flex w-full cursor-pointer items-center justify-between gap-3 p-2.5 text-left transition hover:bg-white/[0.02] sm:gap-4 sm:p-6"
               >
                 <div>
                   <span className="text-lg font-bold text-white">{mod.title}</span>
@@ -319,7 +319,7 @@ export function CoursePlayer({ course }: { course: Course }) {
                     exit={{ height: 0, opacity: 0 }}
                     className="border-t border-white/5"
                   >
-                    <div className="space-y-4 p-2 sm:space-y-6 sm:p-4 md:p-6 md:pt-2">
+                    <div className="space-y-4 p-1.5 sm:space-y-6 sm:p-4 md:p-6 md:pt-2">
                       {mod.topics.map((topic, topicIndex) => {
                         const topicLessons = lessonEntries.filter(
                           (entry) =>
@@ -374,7 +374,7 @@ export function CoursePlayer({ course }: { course: Course }) {
                                       onClick={() =>
                                         setOpenLesson(expanded ? null : lessonId)
                                       }
-                                      className="flex w-full cursor-pointer items-start gap-2.5 p-3 text-left transition hover:bg-white/[0.03] sm:gap-3 sm:p-4"
+                                      className="flex w-full cursor-pointer items-start gap-2 p-2.5 text-left transition hover:bg-white/[0.03] sm:gap-3 sm:p-4"
                                     >
                                       {complete ? (
                                         <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />
@@ -429,7 +429,7 @@ export function CoursePlayer({ course }: { course: Course }) {
                                           exit={{ height: 0, opacity: 0 }}
                                           className="border-t border-white/5 bg-black/15"
                                         >
-                                          <div className="space-y-4 p-2 sm:space-y-5 sm:p-4 md:p-5">
+                                          <div className="space-y-3 p-1.5 sm:space-y-5 sm:p-4 md:p-5">
                                             <LessonProgressPanel
                                               checklist={lessonItem.checklist}
                                               courseSlug={course.slug}
