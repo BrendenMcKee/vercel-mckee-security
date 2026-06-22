@@ -11,9 +11,12 @@ export function prepareLessonHtml(html: string): string {
       .replace(/background:\s*(white|#fff(?:fff)?|#f3f3f3|#f9f9f9|#e9e9e9)\s*;?/gi, "")
       .replace(/box-shadow:\s*[^;]+;?/gi, "")
       .replace(/color:\s*#(?:333|666|660000)\s*;?/gi, "")
+      .replace(/max-width:\s*[^;]+;?/gi, "")
+      .replace(/margin:\s*0\s+auto\s*;?/gi, "")
       .replace(/margin-left:\s*-[\d.]+px\s*;?/gi, "")
       .replace(/margin-bottom:\s*-[\d.]+px\s*;?/gi, "")
       .replace(/margin-top:\s*-[\d.]+px\s*;?/gi, "")
+      .replace(/display:\s*inline-block\s*;?/gi, "")
       .replace(/;\s*;/g, ";")
       .trim()
       .replace(/^;+|;+$/g, "");

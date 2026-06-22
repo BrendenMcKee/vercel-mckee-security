@@ -24,7 +24,7 @@ const jobs = [
 
   // Starlink
   ["OLD - Brenden/old-brenden-starlink-dish-roof-lake-panorama.jpg", "starlink-lake-panorama.jpg"],
-  ["OLD - Brenden/old-brenden-starlink-dish-dock-red-chairs.jpg", "starlink-dock-red-chairs.jpg"],
+  ["OLD - Brenden/old-brenden-starlink-dish-dock-post-light.jpg", "starlink-dock-red-chairs.jpg"],
 
   // Security
   ["NEW - Brenden/new-brenden-equipment-board-overview.jpg", "security-equipment-board.jpg"],

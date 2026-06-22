@@ -56,11 +56,18 @@
 }
 
 .course-lesson-html.mckee-lesson-centered ol {
-  display: inline-block;
-  list-style-position: inside;
-  padding-left: 0;
+  display: block;
+  width: 100%;
+  list-style-position: outside;
+  padding-left: 1.25rem;
   margin-left: 0;
   max-width: 100%;
+  text-align: left;
+}
+
+.course-lesson-html.mckee-lesson-centered ol li {
+  text-align: left !important;
+  margin-bottom: 0.75rem;
 }
 
 /* Flatten nested WordPress wrapper boxes — no white/light panels */
@@ -68,7 +75,8 @@
 .course-lesson-html > div > div,
 .course-lesson-html div[style*="text-align: center"],
 .course-lesson-html div[style*="max-width: 800px"],
-.course-lesson-html div[style*="max-width: 100%"] {
+.course-lesson-html div[style*="max-width: 100%"],
+.course-lesson-html [style*="max-width"] {
   background: transparent !important;
   box-shadow: none !important;
   max-width: 100% !important;
@@ -595,14 +603,69 @@
 
 @media (max-width: 768px) {
   .course-lesson-html {
-    font-size: 0.875rem;
-    padding: 1.25rem 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    padding: 0.875rem 0.625rem;
+    overflow-x: visible;
+  }
+
+  .course-lesson-html > div,
+  .course-lesson-html > div > div,
+  .course-lesson-html div[style*="font-family"],
+  .course-lesson-html div[style*="text-align: center"] {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .course-lesson-html.mckee-lesson-centered {
+    text-align: left;
+  }
+
+  .course-lesson-html.mckee-lesson-centered h2.has-text-align-center,
+  .course-lesson-html.mckee-lesson-centered h2[style*="text-align: center"] {
+    text-align: center !important;
+  }
+
+  .course-lesson-html.mckee-lesson-centered p,
+  .course-lesson-html.mckee-lesson-centered ol,
+  .course-lesson-html.mckee-lesson-centered li {
+    text-align: left !important;
+  }
+
+  .course-lesson-html .checklist-item {
+    padding: 0.75rem 0.875rem;
+    gap: 0.75rem;
+  }
+
+  .course-lesson-html .toc-container,
+  .course-lesson-html .dahua-section,
+  .course-lesson-html .ubiquiti-section,
+  .course-lesson-html .step-box {
+    padding: 0.875rem !important;
+  }
+
+  .course-lesson-html .step-container {
+    flex-direction: column;
+  }
+
+  .course-lesson-html .step-box {
+    flex: 1 1 auto;
+    width: 100%;
   }
 
   .course-lesson-html .wp-block-button__link,
   .course-lesson-html a.wp-element-button {
     width: 100% !important;
     max-width: 100% !important;
+    padding: 0.875rem 1rem !important;
+    font-size: 0.75rem !important;
+    line-height: 1.4 !important;
+    white-space: normal !important;
+    word-break: break-all !important;
   }
 
   .course-lesson-html .wire-badge {

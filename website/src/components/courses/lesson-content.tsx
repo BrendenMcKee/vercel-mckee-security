@@ -87,7 +87,7 @@ export function LessonContentPanel({
   return (
     <div
       ref={containerRef}
-      className={cn("course-lesson-html", layoutClass)}
+      className={cn("course-lesson-html min-w-0 w-full max-w-none", layoutClass)}
       dangerouslySetInnerHTML={{ __html: preparedHtml }}
     />
   );
