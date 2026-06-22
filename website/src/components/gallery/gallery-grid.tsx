@@ -73,8 +73,10 @@ export function GalleryGrid() {
         >
           <div
             className={cn(
-              "grid transition-[gap] duration-300 ease-out sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2",
-              isCompact ? "grid-cols-4 gap-1.5" : "grid-cols-3 gap-2",
+              "transition-[gap] duration-300 ease-out sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2",
+              isCompact
+                ? "grid grid-cols-4 gap-1.5"
+                : "flex flex-wrap items-center justify-center gap-x-1.5 gap-y-2",
             )}
           >
             <FilterPill
@@ -89,6 +91,9 @@ export function GalleryGrid() {
               <FilterPill
                 key={cat.id}
                 label={cat.label}
+                expandedLabel={
+                  cat.id === "audio-video" ? "Audio & Video" : undefined
+                }
                 shortLabel={
                   cat.id === "audio-video"
                     ? "A/V"
@@ -182,6 +187,7 @@ export function GalleryGrid() {
 function FilterPill({
   label,
   shortLabel,
+  expandedLabel,
   color,
   active,
   compact,
@@ -190,6 +196,7 @@ function FilterPill({
 }: {
   label: string;
   shortLabel?: string;
+  expandedLabel?: string;
   color?: string;
   active: boolean;
   compact: boolean;
@@ -197,7 +204,9 @@ function FilterPill({
   count: number;
 }) {
   const [hovered, setHovered] = useState(false);
-  const mobileLabel = compact && shortLabel ? shortLabel : label;
+  const mobileLabel = compact
+    ? (shortLabel ?? label)
+    : (expandedLabel ?? label);
 
   // active = definitive solid color; hovered = faint preview of that color;
   // resting = neutral translucent white.
@@ -228,10 +237,10 @@ function FilterPill({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        "inline-flex w-full min-w-0 cursor-pointer items-center justify-center rounded-full border font-bold uppercase tracking-wide whitespace-nowrap transition-all duration-300 ease-out sm:w-auto sm:gap-2 sm:px-4 sm:py-2 sm:text-sm",
+        "inline-flex min-w-0 cursor-pointer items-center justify-center rounded-full border font-bold uppercase transition-all duration-300 ease-out sm:w-auto sm:gap-2 sm:px-4 sm:py-2 sm:text-sm sm:tracking-wide sm:whitespace-nowrap",
         compact
-          ? "gap-0.5 px-1.5 py-1 text-[10px] leading-none"
-          : "gap-1 px-2 py-1.5 text-[11px] leading-tight",
+          ? "w-full gap-0.5 px-1.5 py-1 text-[10px] leading-none tracking-wide whitespace-nowrap"
+          : "w-auto max-w-full shrink-0 gap-1 px-2.5 py-1.5 text-[10px] leading-none tracking-tight whitespace-nowrap",
       )}
       style={style}
     >
