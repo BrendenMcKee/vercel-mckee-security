@@ -67,6 +67,7 @@ export default function RootLayout({
         <Script id="header-scroll-sync" strategy="beforeInteractive">
           {`(function(){function syncHeaderScroll(){var y=window.scrollY||document.documentElement.scrollTop||0;document.documentElement.classList.toggle("header-scrolled",y>56);}syncHeaderScroll();window.addEventListener("load",syncHeaderScroll);window.addEventListener("pageshow",syncHeaderScroll);})();`}
         </Script>
+        <GoogleAdsTag />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
@@ -81,7 +82,6 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <MobileCallFab />
-        <GoogleAdsTag />
         <Analytics />
         <SpeedInsights />
       </body>
