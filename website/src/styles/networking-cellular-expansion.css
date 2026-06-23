@@ -503,11 +503,11 @@ body main,
     flex-shrink: 0 !important;
     border-radius: 8px !important;
     box-shadow: 0 0 15px rgba(196, 30, 46, 0.12), 0 0 30px rgba(196, 30, 46, 0.06) !important;
-    transition: transform 0.3s ease !important;
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .mks2025-net-card:hover .mks2025-net-card-image {
-    transform: scale(1.05) !important;
+    transform: translate3d(0, -2px, 0) scale(1.03) !important;
 }
 
 /* CTA Section */

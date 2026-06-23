@@ -714,11 +714,11 @@
     max-height: 100%;
     object-fit: contain;
     filter: brightness(1.1);
-    transition: transform 0.3s ease;
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .mckee-audio-block .product-item:hover .product-image {
-    transform: scale(1.1);
+    transform: scale(1.06);
 }
 
 .mckee-audio-block .product-placeholder {

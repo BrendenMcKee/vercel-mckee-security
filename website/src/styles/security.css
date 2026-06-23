@@ -239,7 +239,7 @@ body main,
     object-fit: cover !important;
     object-position: center 55% !important;
     display: block !important;
-    transition: transform 0.3s ease !important;
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) !important;
     transform: scale(1.05) !important;
 }
 
@@ -534,12 +534,12 @@ body main,
     height: 100% !important;
     object-fit: cover !important;
     object-position: center 58% !important;
-    transition: transform 0.3s ease !important;
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) !important;
     transform: scale(1.1) !important;
 }
 
 .mks2025-sec-card:hover .mks2025-sec-card-image {
-    transform: scale(1.15) !important;
+    transform: scale(1.12) !important;
 }
 
 /* Monitoring Disclaimer */

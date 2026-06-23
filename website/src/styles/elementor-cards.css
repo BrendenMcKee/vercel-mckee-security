@@ -86,121 +86,181 @@
   .mckee-audio-block .service-visual,
   .mks2025-sec-service-visual,
   .mks2025-cam-service-visual,
+  .mks2025-net-service-visual,
+  .mckee-starlink-block .hero-image,
+  .mks2025-sec-hero-image-wrapper,
+  .mckee-starlink-block .card-image,
+  .mckee-starlink-block .equipment-image,
+  .mckee-audio-block .card-image,
+  .mks2025-sec-card-image-wrapper,
+  .mks2025-cam-card-image,
+  .mks2025-net-card-image,
+  .mckee-audio-block .product-image-wrapper {
+    --service-hover-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Alternating service-row panels: lift + border + glow (no background-size snap) */
+  .mckee-starlink-block .service-visual,
+  .mckee-audio-block .service-visual,
+  .mks2025-sec-service-visual,
+  .mks2025-cam-service-visual,
   .mks2025-net-service-visual {
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
     transition:
-      background-size 0.55s ease,
-      box-shadow 0.35s ease,
-      transform 0.35s ease !important;
+      transform 0.55s var(--service-hover-ease),
+      box-shadow 0.55s var(--service-hover-ease),
+      border-color 0.55s var(--service-hover-ease),
+      filter 0.55s var(--service-hover-ease) !important;
   }
 
   .mckee-starlink-block .service-visual:hover {
-    background-size: 108% !important;
+    transform: translate3d(0, -4px, 0) !important;
+    border-color: rgba(255, 255, 255, 0.42) !important;
+    filter: brightness(1.05);
     box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.35),
-      0 0 28px rgba(255, 255, 255, 0.16),
-      0 10px 30px rgba(0, 0, 0, 0.45) !important;
-    transform: translateY(-4px);
+      0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 0 28px rgba(255, 255, 255, 0.14),
+      0 14px 36px rgba(0, 0, 0, 0.42) !important;
   }
 
   .mckee-audio-block .service-visual:hover,
   .mks2025-sec-service-visual:hover,
   .mks2025-cam-service-visual:hover,
   .mks2025-net-service-visual:hover {
-    background-size: 108% !important;
+    transform: translate3d(0, -4px, 0) !important;
+    border-color: rgba(196, 30, 46, 0.52) !important;
+    filter: brightness(1.05);
     box-shadow:
-      0 0 0 1px rgba(196, 30, 46, 0.55),
-      0 0 26px rgba(196, 30, 46, 0.28),
-      0 10px 30px rgba(0, 0, 0, 0.45) !important;
-    transform: translateY(-4px);
+      0 0 0 1px rgba(196, 30, 46, 0.28),
+      0 0 26px rgba(196, 30, 46, 0.22),
+      0 14px 36px rgba(0, 0, 0, 0.42) !important;
   }
 
+  /* Hero photos */
   .mckee-starlink-block .hero-image {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
     transition:
-      transform 0.5s ease,
-      box-shadow 0.35s ease,
+      transform 0.55s var(--service-hover-ease),
+      box-shadow 0.55s var(--service-hover-ease),
+      border-color 0.55s var(--service-hover-ease),
       opacity 0.35s ease;
   }
 
   .mckee-starlink-block .hero-image:hover {
-    transform: scale(1.04);
+    transform: translate3d(0, -3px, 0) scale(1.015);
+    border-color: rgba(255, 255, 255, 0.5);
     box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.18),
       0 18px 44px rgba(0, 0, 0, 0.5),
       0 0 32px rgba(255, 255, 255, 0.14);
   }
 
   .mks2025-sec-hero-image-wrapper {
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     transition:
-      box-shadow 0.35s ease,
-      transform 0.35s ease !important;
+      box-shadow 0.55s var(--service-hover-ease),
+      border-color 0.55s var(--service-hover-ease) !important;
   }
 
   .mks2025-sec-hero-image-wrapper:hover {
+    border-color: rgba(196, 30, 46, 0.52) !important;
     box-shadow:
-      0 0 0 1px rgba(196, 30, 46, 0.55),
-      0 0 28px rgba(196, 30, 46, 0.32),
-      0 12px 36px rgba(0, 0, 0, 0.45) !important;
-    transform: translateY(-3px);
+      0 0 0 1px rgba(196, 30, 46, 0.24),
+      0 0 28px rgba(196, 30, 46, 0.24),
+      0 14px 36px rgba(0, 0, 0, 0.42) !important;
   }
 
+  .mks2025-sec-hero-image-wrapper:hover .mks2025-sec-hero-image {
+    transform: scale(1.08) !important;
+    transition: transform 0.55s var(--service-hover-ease) !important;
+  }
+
+  /* In-content card and equipment photos */
   .mckee-starlink-block .card-image,
   .mckee-starlink-block .equipment-image,
-  .mckee-audio-block .card-image {
-    transition: transform 0.5s ease, box-shadow 0.35s ease;
+  .mckee-audio-block .card-image,
+  .mks2025-cam-card-image,
+  .mks2025-net-card-image {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    transition:
+      transform 0.55s var(--service-hover-ease),
+      box-shadow 0.55s var(--service-hover-ease),
+      border-color 0.55s var(--service-hover-ease) !important;
   }
 
   .mckee-starlink-block .card:hover .card-image,
   .mckee-starlink-block .card-image:hover,
   .mckee-starlink-block .equipment-item:hover .equipment-image,
   .mckee-starlink-block .equipment-image:hover {
-    transform: scale(1.06);
+    transform: translate3d(0, -2px, 0) scale(1.03);
+    border-color: rgba(255, 255, 255, 0.38);
     box-shadow:
-      0 14px 34px rgba(0, 0, 0, 0.45),
-      0 0 26px rgba(255, 255, 255, 0.12);
+      0 0 0 1px rgba(255, 255, 255, 0.12),
+      0 14px 34px rgba(0, 0, 0, 0.42),
+      0 0 22px rgba(255, 255, 255, 0.1);
   }
 
   .mckee-audio-block .card:hover .card-image,
-  .mckee-audio-block .card-image:hover {
-    transform: scale(1.06);
-    box-shadow:
-      0 14px 34px rgba(0, 0, 0, 0.45),
-      0 0 24px rgba(196, 30, 46, 0.2);
-  }
-
-  .mks2025-sec-card-image-wrapper {
-    transition: box-shadow 0.35s ease !important;
-  }
-
-  .mks2025-sec-card:hover .mks2025-sec-card-image-wrapper,
-  .mks2025-sec-card-image-wrapper:hover {
-    box-shadow:
-      0 0 0 1px rgba(196, 30, 46, 0.45),
-      0 0 22px rgba(196, 30, 46, 0.22),
-      0 10px 28px rgba(0, 0, 0, 0.4) !important;
-  }
-
-  .mks2025-cam-card-image:hover,
-  .mks2025-net-card-image:hover {
-    transform: scale(1.05) !important;
-  }
-
+  .mckee-audio-block .card-image:hover,
   .mks2025-cam-card:hover .mks2025-cam-card-image,
   .mks2025-cam-card-image:hover,
   .mks2025-net-card:hover .mks2025-net-card-image,
   .mks2025-net-card-image:hover {
+    transform: translate3d(0, -2px, 0) scale(1.03) !important;
+    border-color: rgba(196, 30, 46, 0.42) !important;
     box-shadow:
-      0 14px 34px rgba(0, 0, 0, 0.45),
-      0 0 24px rgba(196, 30, 46, 0.2) !important;
+      0 0 0 1px rgba(196, 30, 46, 0.18),
+      0 14px 34px rgba(0, 0, 0, 0.42),
+      0 0 22px rgba(196, 30, 46, 0.16) !important;
+  }
+
+  .mks2025-sec-card-image-wrapper {
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition:
+      box-shadow 0.55s var(--service-hover-ease),
+      border-color 0.55s var(--service-hover-ease) !important;
+  }
+
+  .mks2025-sec-card:hover .mks2025-sec-card-image-wrapper,
+  .mks2025-sec-card-image-wrapper:hover {
+    border-color: rgba(196, 30, 46, 0.42) !important;
+    box-shadow:
+      0 0 0 1px rgba(196, 30, 46, 0.16),
+      0 0 22px rgba(196, 30, 46, 0.18),
+      0 10px 28px rgba(0, 0, 0, 0.38) !important;
+  }
+
+  .mks2025-sec-card-image-wrapper .mks2025-sec-card-image {
+    transition: transform 0.55s var(--service-hover-ease) !important;
   }
 
   .mckee-audio-block .product-image-wrapper {
-    transition: box-shadow 0.35s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
+    transition:
+      box-shadow 0.55s var(--service-hover-ease),
+      border-color 0.55s var(--service-hover-ease);
   }
 
   .mckee-audio-block .product-item:hover .product-image-wrapper,
   .mckee-audio-block .product-image-wrapper:hover {
+    border-color: rgba(196, 30, 46, 0.42);
     box-shadow:
-      0 0 0 1px rgba(196, 30, 46, 0.45),
-      0 0 20px rgba(196, 30, 46, 0.2);
+      0 0 0 1px rgba(196, 30, 46, 0.16),
+      0 0 20px rgba(196, 30, 46, 0.16);
+  }
+
+  .mckee-audio-block .product-image {
+    transition: transform 0.55s var(--service-hover-ease) !important;
+  }
+
+  .mckee-audio-block .product-item:hover .product-image {
+    transform: scale(1.06) !important;
   }
 }
