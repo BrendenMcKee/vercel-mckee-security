@@ -289,6 +289,15 @@ export const galleryImages: GalleryImage[] = [
       "Color-coded cabling and clean terminations keep a live server rack easy to maintain.",
   },
   {
+    src: `${WORK}/network-unifi-rack-install.jpg`,
+    width: 1536,
+    height: 1024,
+    category: "networking",
+    title: "UniFi Racks, Wired Right",
+    description:
+      "Hand-dressed Cat6, patch panels, and UniFi switching in a wall-mounted rack built for reliable whole-property coverage.",
+  },
+  {
     src: `${WORK}/security-keypad.jpg`,
     width: 1600,
     height: 901,

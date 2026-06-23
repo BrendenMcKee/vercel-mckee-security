@@ -228,6 +228,13 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         caption: "Tidy racks, patch panels, and battery backup",
       },
       {
+        src: `${WORK}/network-unifi-rack-install.jpg`,
+        width: 1536,
+        height: 1024,
+        alt: "McKee technician dressing Ethernet into a wall-mounted UniFi rack with patch panels, switches, and battery backup",
+        caption: "UniFi racks built clean from patch panel to switch",
+      },
+      {
         src: `${WORK}/network-unifi-board.jpg`,
         width: 901,
         height: 1600,
