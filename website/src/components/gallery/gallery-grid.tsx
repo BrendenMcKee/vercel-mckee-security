@@ -63,11 +63,19 @@ export function GalleryGrid() {
     const sentinel = stickySentinelRef.current;
     if (!sentinel) return;
 
+    const headerOffset = (() => {
+      const raw = getComputedStyle(document.documentElement)
+        .getPropertyValue("--site-header-height")
+        .trim();
+      const parsed = parseFloat(raw);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 100;
+    })();
+
     const observer = new IntersectionObserver(
       ([entry]) => setIsCompact(!entry.isIntersecting),
       {
         threshold: 0,
-        rootMargin: `calc(-1 * var(--site-header-height, 100px)) 0px 0px 0px`,
+        rootMargin: `-${headerOffset}px 0px 0px 0px`,
       },
     );
 
@@ -84,7 +92,7 @@ export function GalleryGrid() {
         aria-hidden="true"
       />
 
-      <div className="sticky top-[var(--site-header-height,100px)] z-40 mb-6 lg:mb-10">
+      <div className="sticky top-[var(--site-header-height,100px)] z-40 mb-6 pt-6">
         <div
           className={cn(
             "border-x border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-md transition-[padding] duration-300 ease-out rounded-t-none rounded-b-xl sm:px-3 sm:py-3 lg:rounded-b-2xl",

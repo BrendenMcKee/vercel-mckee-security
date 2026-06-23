@@ -23,6 +23,8 @@ type HeroProps = {
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   compact?: boolean;
+  /** Shorter hero with less dead space below copy (gallery filter bar sits closer). */
+  tightFooter?: boolean;
   /** medium = lighter gradient for inner pages, dark = slightly stronger */
   overlay?: "medium" | "dark";
 };
@@ -37,6 +39,7 @@ export function Hero({
   primaryCta,
   secondaryCta,
   compact = false,
+  tightFooter = false,
   overlay = "medium",
 }: HeroProps) {
   const ref = useRef<HTMLElement>(null);
@@ -57,10 +60,22 @@ export function Hero({
       ? "bg-gradient-to-b from-black/60 via-black/48 to-background"
       : "bg-gradient-to-b from-black/52 via-black/40 to-background";
 
+  const sectionHeightClass = compact
+    ? tightFooter
+      ? "min-h-[38vh] sm:min-h-[42vh] lg:min-h-[40vh]"
+      : "min-h-[42vh] sm:min-h-[50vh]"
+    : "min-h-[72vh] sm:min-h-[85vh]";
+
+  const contentPaddingClass = tightFooter
+    ? "py-10 sm:py-12 lg:py-14"
+    : compact
+      ? "py-12 sm:py-16 lg:py-20"
+      : "py-16 sm:py-20 lg:py-32";
+
   return (
     <section
       ref={ref}
-      className={`relative overflow-hidden ${compact ? "min-h-[42vh] sm:min-h-[50vh]" : "min-h-[72vh] sm:min-h-[85vh]"}`}
+      className={`relative overflow-hidden ${sectionHeightClass}`}
     >
       <motion.div
         style={{
@@ -88,7 +103,7 @@ export function Hero({
           opacity: animate ? opacity : undefined,
           willChange: animate && inView ? "opacity" : "auto",
         }}
-        className="relative mx-auto flex max-w-7xl flex-col justify-center px-6 py-16 sm:py-20 lg:py-32"
+        className={`relative mx-auto flex max-w-7xl flex-col justify-center px-6 ${contentPaddingClass}`}
       >
         <div className="hero-rise" onAnimationEnd={clearWillChangeOnEnd}>
           {eyebrow && (
