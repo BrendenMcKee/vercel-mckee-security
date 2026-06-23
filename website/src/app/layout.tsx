@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Lato, Dancing_Script } from "next/font/google";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -78,6 +80,8 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <MobileCallFab />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
