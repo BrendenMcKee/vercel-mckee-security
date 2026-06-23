@@ -7,6 +7,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileCallFab } from "@/components/layout/mobile-call-fab";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
+import { GoogleAdsTag } from "@/components/analytics/google-ads-tag";
 import { siteConfig } from "@/lib/site-config";
 import "./globals.css";
 import "@/styles/mckee-forms.css";
@@ -80,6 +81,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <MobileCallFab />
+        <GoogleAdsTag />
         <Analytics />
         <SpeedInsights />
       </body>

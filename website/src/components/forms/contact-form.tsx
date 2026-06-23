@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { getFormEmailMeta } from "@/lib/form-email-meta";
+import { trackGoogleAdsConversion } from "@/lib/google-ads";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -36,6 +37,7 @@ export function ContactForm() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("failed");
+      trackGoogleAdsConversion("contact");
       setStatus("success");
       reset();
     } catch {
