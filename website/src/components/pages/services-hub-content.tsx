@@ -62,7 +62,7 @@ const services: ServiceCard[] = [
     href: "/voip-phone-service",
     icon: "fa-phone",
     title: "VoIP Phone Service",
-    text: "Fully hosted VoIP phone service with Yealink hardware for homes and businesses. We handle setup, provisioning, number porting, and E911 registration — with local support from our Haliburton team, not a distant call centre.",
+    text: "Fully hosted VoIP phone service with Yealink hardware for homes and businesses. We handle setup, provisioning, number porting, and E911 registration with local support from our Haliburton team, not a distant call centre.",
     image: "/images/services/voip/voip-hero.jpg",
     imagePosition: "center 40%",
     features: ["Yealink Hardware", "Managed Number Porting", "Residential & Commercial", "Local McKee Support"],

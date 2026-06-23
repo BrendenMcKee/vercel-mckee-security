@@ -103,7 +103,7 @@ export const services: Service[] = [
     eyebrow: "Professional Hosted VoIP Phone Service",
     headline: "Hosted VoIP Phone Service",
     description:
-      "Fully hosted VoIP phone service with Yealink hardware, managed number porting, and local support from our Haliburton team — for homes and businesses across cottage country.",
+      "Fully hosted VoIP phone service with Yealink hardware, managed number porting, and local support from our Haliburton team for homes and businesses across cottage country.",
     icon: Phone,
     features: [
       "Yealink Hardware",
