@@ -2,7 +2,7 @@
 
 > **Domain:** [mckeesecurity.ca](https://mckeesecurity.ca)  
 > **Last updated:** 2026-06-23  
-> **Status:** All 7 campaigns live · Search Console linked · Conversion tracking live (Website lead form + Calls from ads)
+> **Status:** 7 campaigns live · Campaign 8 (Audio / Video) setting up · All at **$2.50/day** · Conversion tracking live
 
 This document captures budget plans, campaign structure, setup decisions, and integration steps for Google Ads and related SEO work after the WordPress → Vercel migration. Update this file as campaigns launch and performance data comes in.
 
@@ -18,8 +18,8 @@ This document captures budget plans, campaign structure, setup decisions, and in
 | **Selected tier** | **Spend CA$600 → get CA$600 in Google Ads credits** ✓ |
 | **Why not CA$1,800 → CA$1,200** | Requires **CA$1,800 real spend** to unlock (~6 months at $300/mo; promo windows are often **60 days**, so likely unachievable |
 | **Why not CA$3,600 → CA$1,800** | Same issue at 12+ months of spend; lower match rate (50%) |
-| **Recommended pace** | **~$300/month**, which hits CA$600 spend in **~2 months**, then CA$600 credit funds **~2 more months** |
-| **Campaign 1 only ($1.50/day)** | ~$45/mo; would take **~13 months** to hit CA$600; **add campaigns** or raise spend to hit tier before promo expires |
+| **Recommended pace** | **~$600/month** (8 campaigns × $2.50/day) hits CA$600 spend in **~1 month**, then credit funds **~1 more month** |
+| **Earlier $300/month plan** | Lower spend stretched learning; current **$2.50/day each** prioritizes hitting promo tier faster |
 
 **Check promo fine print:** deadline to spend CA$600, when credits expire after grant, and whether credits apply to Search only.
 
@@ -37,30 +37,29 @@ Haliburton and cottage country is a **small search market**. At $600/month Googl
 
 Google’s **lowest daily budget per active campaign is $1.50/day** (~**$45/month** per campaign). You cannot set $1.00/day. Any campaign you turn on must be at least $1.50/day.
 
-**Implication:** Running all six campaigns at once requires a **$270/month floor** (6 × $45). Stagger launches or pause seasonal campaigns (Starlink Rental) to stay within $300/month.
+**Implication:** Platform minimum is **$1.50/day**, but all McKee campaigns run at **$2.50/day** (~**$75/month** each). Eight campaigns at $2.50 = **~$600/month** total.
 
-### Monthly budget allocation ($300/month, revised for $1.50/day minimum)
+### Monthly budget allocation (current: $2.50/day per campaign)
 
 | Campaign | Daily | Monthly | Status / notes |
 |----------|-------|---------|----------------|
-| **Brand** | **$1.50** | **$45** | **Live** |
+| **Brand** | **$2.50** | **$75** | **Live** |
 | Security & Monitoring | $2.50 | $75 | **Live** |
-| Camera Surveillance | $1.83 | $55 | **Live** |
-| Starlink Installation | $1.83 | $55 | **Live** |
-| Networking | $1.50 | $45 | **Live** |
-| VoIP Phone Service | $1.50 | $45 | **Live** |
-| Starlink Rental | $1.50 | $45 | **Live** (pause Nov–Apr) |
-| **Total (all 7 live)** | **~$12.16** | **~$365** | Over $300 plan; acceptable during promo sprint to hit CA$600 spend |
+| Camera Surveillance | $2.50 | $75 | **Live** |
+| Starlink Installation | $2.50 | $75 | **Live** |
+| Starlink Rental | $2.50 | $75 | **Live** (pause Nov–Apr) |
+| Networking & Wi-Fi | $2.50 | $75 | **Live** |
+| VoIP Phone Service | $2.50 | $75 | **Live** |
+| Home Audio & Video | $2.50 | $75 | **Setting up** (Campaign 8) |
+| **Total (all 8 at $2.50/day)** | **$20.00** | **~$600** | Matches CA$600 promo spend tier in ~1 month |
 
-**Current:** All 7 campaigns running at **~$12.16/day (~$365/mo)**. Slightly over the $300 target; fine short term while chasing the CA$600 promo tier.
-
-**Deferred for now:** Home Audio / Video (Sonos). Lower urgency vs security, Starlink, cameras.
+**Current:** Every campaign set to **$2.50/day**. With all 8 active, expect **~$600/month** total spend.
 
 ### Seasonal adjustments
 
 | Period | Action |
 |--------|--------|
-| **May–September** | Starlink Rental on at **$1.50/day min** ($45/mo); fund by pausing a lower-priority campaign or accept ~$320/mo briefly |
+| **May–September** | Starlink Rental on at **$2.50/day**; pause a lower-priority campaign if you need to trim spend |
 | **November–April** | Reduce or pause Starlink Rental |
 | **Peak cottage season** | Consider extending ad schedule to 6:00 PM on weekdays |
 
@@ -98,7 +97,7 @@ Lindsay, Fenelon Falls, Bobcaygeon, Bancroft, Maynooth, Apsley, Kinmount, Carnar
 
 ## Creating campaigns (Google Ads admin panel)
 
-Actual screen order when clicking **+ New campaign**. Campaign 1 (Brand) is already live. Use this for **Campaigns 2–7**.
+Actual screen order when clicking **+ New campaign**. Campaign 1 (Brand) is already live. Use this for **Campaigns 2–8**.
 
 ### Wizard screen order
 
@@ -106,7 +105,7 @@ Actual screen order when clicking **+ New campaign**. Campaign 1 (Brand) is alre
 |------|--------|------------|
 | **1** | **What's your campaign objective?** | Select **Leads** |
 | **2** | **Use these conversion goals to improve Leads** | **Auto-populated**; appears as soon as you pick Leads. **Do not remove rows.** Verify both account-default goals below, then click **Continue** (dismiss “Get started” popup if shown) |
-| **3** | **Select a campaign type** | **Search** for Campaigns 2–7 (see per-campaign table). Campaign 1 was **Performance Max** |
+| **3** | **Select a campaign type** | **Search** for Campaigns 2–8 (see per-campaign table). Campaign 1 was **Performance Max** |
 | **3b** | **Select the ways you'd like to reach your goal** *(Search only; appears right under Step 3)* | See table below, then **Continue** |
 | **4** | **Ad destination** | “Where should people go after clicking your ads?” → campaign landing URL |
 | **5** | **Campaign name** | e.g. `Security & Monitoring` |
@@ -114,12 +113,12 @@ Actual screen order when clicking **+ New campaign**. Campaign 1 (Brand) is alre
 | **7** | **Campaign settings** | Networks, Locations, Languages (see below) |
 | **8** | **Audience segments** | **None selected** · **Observation** (default) → **Next** |
 | **9** | **AI Max for search campaigns** *(if shown)* | **AI Max Off** (see below) |
-| **10** | **Keyword and asset generation** *(if shown)* | Paste **Step 10** blurb from the campaign section you are building (2–7 below) → **Generate** or **Skip** |
+| **10** | **Keyword and asset generation** *(if shown)* | Paste **Step 10** blurb from the campaign section you are building (2–8 below) → **Generate** or **Skip** |
 | **11+** | Budget, ad groups, keywords, RSA, extensions | Budget in **Campaign setup** table · then **Step 10 → Ad group → Ad copy** in campaign section |
 
 ### Step 3b: Reach your goal checkboxes (Search only)
 
-Right after you select **Search**, Google shows **“Select the ways you'd like to reach your goal.”** Use the same choices for **every Search campaign** (Campaigns 2–7):
+Right after you select **Search**, Google shows **“Select the ways you'd like to reach your goal.”** Use the same choices for **every Search campaign** (Campaigns 2–8):
 
 | Checkbox | Select? | Why |
 |----------|---------|-----|
@@ -172,7 +171,7 @@ Resulting strategy: **Maximise conversions** (not Maximise conversion value).
 
 ### Campaign settings screen (Networks, Locations, Languages)
 
-Defaults are wrong for local Search campaigns; change **every** Search campaign (2–7) the same way.
+Defaults are wrong for local Search campaigns; change **every** Search campaign (2–8) the same way.
 
 #### Networks
 
@@ -229,7 +228,7 @@ Do **not** use “Presence or interest”; it shows ads to people merely searchi
 
 ### Audience segments screen
 
-| Field | Default | **Use for Search campaigns 2–7** |
+| Field | Default | **Use for Search campaigns 2–8** |
 |-------|---------|-------------------------------------|
 | **Segments selected** | None | **Leave empty** (do not add segments) at launch |
 | **Targeting setting** | **Observation** (recommended) | **Keep Observation** (do **not** switch to Targeting) to Targeting |
@@ -253,7 +252,7 @@ Google may show this **after** audience segments. Defaults are **not** right for
 
 **Simplest path:** Turn the main **AI Max toggle Off**; sub-options disappear. Click **Next**.
 
-**If you leave AI Max on:** at minimum uncheck **Final URL expansion** and **Text customisation**, and add URL exclusions for `/apply-now` if expansion stays on. Still prefer **AI Max Off** for Campaigns 2–7.
+**If you leave AI Max on:** at minimum uncheck **Final URL expansion** and **Text customisation**, and add URL exclusions for `/apply-now` if expansion stays on. Still prefer **AI Max Off** for Campaigns 2–8.
 
 **Optional later:** Revisit AI Max after 4–6 weeks if a campaign has stable conversions and you want Google to test broader queries, not at launch.
 
@@ -263,7 +262,7 @@ Google may show this **after** audience segments. Defaults are **not** right for
 
 Google may show **“Get help creating your ad”** after AI Max. This is an **optional AI helper**, not your final ad.
 
-**Do this for every Search campaign (2–7):**
+**Do this for every Search campaign (2–8):**
 
 | Field | Action |
 |-------|--------|
@@ -274,11 +273,11 @@ Google may show **“Get help creating your ad”** after AI Max. This is an **o
 
 **Do not** paste the Google Business Profile description for service campaigns (too broad: “Serving Ontario”, mixed services). Save GBP-style copy for **Campaign 1 (Brand)** only.
 
-**Google Business Profile reference** (Brand / general, not for Campaigns 2–7):
+**Google Business Profile reference** (Brand / general, not for Campaigns 2–8):
 
 > At McKee Security & Audio Systems, we provide customized solutions to protect and enhance your home or business. Serving Ontario with integrity and innovation, we specialize in professional security system installation, smart surveillance, access control, alarm monitoring, and premium audio distribution systems…
 
-Use the **campaign-specific Step 10 blurbs below**, not this paragraph, for Search campaigns 2–7.
+Use the **campaign-specific Step 10 blurbs below**, not this paragraph, for Search campaigns 2–8.
 
 **Paste rules:** Full sentences only. No em dashes. Positive framing only (describe what you offer, not what you exclude). Each blurb is unique to that campaign’s service.
 
@@ -297,7 +296,7 @@ Use the **campaign-specific Step 10 blurbs below**, not this paragraph, for Sear
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
 | Ad schedule | Mon–Fri, 8:00 AM–4:00 PM |
-| Daily budget | See per-campaign table (min **$1.50/day**) |
+| Daily budget | **$2.50/day** per campaign (see per-campaign table) |
 | Campaign URL options | **Leave blank** |
 | Call asset | **7054572156** · Canada · call reporting **On** · **Use account settings (Calls from ads)** |
 | Location asset | 4702 County Road 21, Haliburton, ON |
@@ -316,7 +315,7 @@ Use the **campaign-specific Step 10 blurbs below**, not this paragraph, for Sear
 | You see this in the wizard | Campaign type | Applies to |
 |----------------------------|---------------|------------|
 | **Asset group** (headlines + long headlines + images + videos + Signals) | **Performance Max** | Campaign 1 (Brand) only |
-| **Ad groups → Keywords → Responsive search ad** | **Search** | Campaigns 2–7 |
+| **Ad groups → Keywords → Responsive search ad** | **Search** | Campaigns 2–8 |
 
 **If Security (Campaign 2) shows “Asset group”:** you likely picked **Performance Max** at Step 3. Go **Back** and select **Search**; otherwise you lose keyword control and pay for Display/YouTube too.
 
@@ -336,7 +335,7 @@ Use the **campaign-specific Step 10 blurbs below**, not this paragraph, for Sear
 | **Sitelinks** | Add at **Account → Assets** once; applies to all campaigns; or re-enter from sitelink table in this doc |
 | **Headlines / descriptions** | Copy from this doc or Brand campaign; paste and tweak per service |
 
-**Search campaigns (2–7):** reuse account extensions + copy/paste RSA text from each campaign section below. No separate “asset group” to duplicate.
+**Search campaigns (2–8):** reuse account extensions + copy/paste RSA text from each campaign section below. No separate “asset group” to duplicate.
 
 ---
 
@@ -403,7 +402,7 @@ Delete AI junk (**Apply Now**, **Project Gallery**). Use the **6 sitelinks table
 
 ---
 
-### Search campaign structure (Campaigns 2–7)
+### Search campaign structure (Campaigns 2–8)
 
 No asset group. Structure each campaign like this:
 
@@ -456,7 +455,7 @@ Limits: **25** chars sitelink text · **35** chars per description line.
 
 **Rule:** Do not use a sitelink that points to the **same URL** as that campaign’s ad landing page.
 
-Each campaign section below includes its own **6 sitelinks**. Campaign 1 (Brand) uses the core services table. Campaigns 2–7 cross-link other services plus **Contact Us**.
+Each campaign section below includes its own **6 sitelinks**. Campaign 1 (Brand) uses the core services table. Campaigns 2–8 cross-link other services plus **Contact Us**.
 
 #### 6 core services (Campaign 1 Brand only)
 
@@ -471,7 +470,7 @@ Each campaign section below includes its own **6 sitelinks**. Campaign 1 (Brand)
 
 **Not on Brand sitelinks:** Starlink Installation (has its own campaign). **Contact Us** is optional on Brand later → `/contact-us`.
 
-#### Reusable sitelink copy (service campaigns 2–7)
+#### Reusable sitelink copy (service campaigns 2–8)
 
 | Sitelink text | Description line 1 | Description line 2 | Final URL |
 |---------------|-------------------|-------------------|-----------|
@@ -480,7 +479,7 @@ Each campaign section below includes its own **6 sitelinks**. Campaign 1 (Brand)
 
 ---
 
-## Campaign specs (1–7)
+## Campaign specs (1–8)
 
 Each campaign below includes **full setup** (objective, type, bidding, goals, network, etc.) plus ad copy and keywords. Shared admin-panel flow summary is at the top of this section.
 
@@ -488,13 +487,14 @@ Each campaign below includes **full setup** (objective, type, bidding, goals, ne
 
 | Order | Campaign | Daily | When |
 |-------|----------|-------|------|
-| 1 | Brand | $1.50 | **Live** |
+| 1 | Brand | $2.50 | **Live** |
 | 2 | Security & Monitoring | $2.50 | **Live** |
-| 3 | Starlink Installation | $1.83 | **Live** |
-| 4 | Camera Surveillance | $1.83 | **Live** |
-| 5 | Networking | $1.50 | **Live** |
-| 6 | VoIP Phone Service | $1.50 | **Live** |
-| 7 | Starlink Rental | $1.50 | **Live** (pause Nov–Apr) |
+| 3 | Camera Surveillance | $2.50 | **Live** |
+| 4 | Starlink Installation | $2.50 | **Live** |
+| 5 | Starlink Rental | $2.50 | **Live** (pause Nov–Apr) |
+| 6 | Networking & Wi-Fi | $2.50 | **Live** |
+| 7 | VoIP Phone Service | $2.50 | **Live** |
+| 8 | Home Audio & Video | $2.50 | **Setting up now** |
 
 ---
 
@@ -509,10 +509,11 @@ Each campaign below includes **full setup** (objective, type, bidding, goals, ne
 | 5 | Starlink Rental | Leads | **Search** | `https://mckeesecurity.ca/starlink-rental` | Starlink Rental | Phone call leads + Submit lead forms |
 | 6 | Networking | Leads | **Search** | `https://mckeesecurity.ca/networking-cellular-expansion` | Networking & Wi-Fi | Phone call leads + Submit lead forms |
 | 7 | VoIP | Leads | **Search** | `https://mckeesecurity.ca/voip-phone-service` | VoIP Phone Service | Phone call leads + Submit lead forms |
+| 8 | Audio / Video | Leads | **Search** | `https://mckeesecurity.ca/audio-video` | Home Audio & Video | Phone call leads + Submit lead forms |
 
 ---
 
-### How to follow each campaign section (Search 2–7)
+### How to follow each campaign section (Search 2–8)
 
 Work **top to bottom** within the campaign you are building. Section order matches the wizard:
 
@@ -552,7 +553,7 @@ Steps **3b, 6–9** use the **same settings every time**; documented once under 
 | **Bidding focus** | **Conversions** (not Conversion value) |
 | **Bidding strategy** | Maximise conversions · **no target CPA** (optional box off) |
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
-| **Budget** | **$1.50/day · ~$45/mo** (platform minimum) |
+| **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | Performance Max (Search, Display, YouTube, etc.); cannot limit to Search only |
 | **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
@@ -795,7 +796,7 @@ Do not add a sitelink to `/security` (same as this campaign’s landing page). D
 | **Bidding focus** | **Conversions** (not Conversion value) |
 | **Bidding strategy** | Maximise conversions · **no target CPA** (optional box off) |
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
-| **Budget** | **$1.83/day · ~$55/mo** |
+| **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
 | **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
@@ -918,7 +919,7 @@ Do not add a sitelink to `/camera-surveillance` (same as this campaign’s landi
 | **Bidding focus** | **Conversions** (not Conversion value) |
 | **Bidding strategy** | Maximise conversions · **no target CPA** (optional box off) |
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
-| **Budget** | **$1.83/day · ~$55/mo** |
+| **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
 | **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
@@ -1041,7 +1042,7 @@ Do not add a sitelink to `/starlink` (same as this campaign’s landing page). D
 | **Bidding focus** | **Conversions** (not Conversion value) |
 | **Bidding strategy** | Maximise conversions · **no target CPA** (optional box off) |
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
-| **Budget** | **$1.50/day · ~$45/mo** when active |
+| **Budget** | **$2.50/day · ~$75/mo** (pause Nov–Apr) |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
 | **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
@@ -1158,7 +1159,7 @@ Do not add a sitelink to `/starlink-rental` (same as this campaign’s landing p
 | **Bidding focus** | **Conversions** (not Conversion value) |
 | **Bidding strategy** | Maximise conversions · **no target CPA** (optional box off) |
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
-| **Budget** | **$1.50/day · ~$45/mo** (minimum) |
+| **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
 | **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
@@ -1275,7 +1276,7 @@ Do not add a sitelink to `/networking-cellular-expansion` (same as this campaign
 | **Bidding focus** | **Conversions** (not Conversion value) |
 | **Bidding strategy** | Maximise conversions · **no target CPA** (optional box off) |
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
-| **Budget** | **$1.50/day · ~$45/mo** (minimum) |
+| **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
 | **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
@@ -1371,6 +1372,138 @@ Do not add a sitelink to `/voip-phone-service` (same as this campaign’s landin
 
 ---
 
+### Campaign 8: Home Audio & Video
+
+**Status:** Setting up now
+
+#### Admin panel wizard (Steps 1–5)
+
+| Step | This campaign |
+|------|----------------|
+| 1 Objective | **Leads** |
+| 2 Conversion goals | **Auto-selected**; leave both account-default rows |
+| 3 Campaign type | **Search** |
+| 3b Reach your goal | **Website visits** ✓ · **Phone calls** ✓ · Shop visits ✗ · Lead form submissions ✗ |
+| 4 Ad destination | `https://mckeesecurity.ca/audio-video` |
+| 5 Campaign name | Home Audio & Video |
+| 6+ | Shared Steps 6–9 at top of doc · then **Step 10** and **Ad group** below |
+
+#### Campaign setup (Steps 6–9)
+
+| Setting | Value |
+|---------|--------|
+| **Bidding focus** | **Conversions** (not Conversion value) |
+| **Bidding strategy** | Maximise conversions · **no target CPA** (optional box off) |
+| **Conversion goals** | Account default (auto at Step 2; do not change) |
+| **Budget** | **$2.50/day · ~$75/mo** |
+| **Network** | **Google Search only** (turn off Search Partners and Display |
+| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
+| **Languages** | **English** only (skip French) |
+| **Audience segments** | **None** · **Observation** (default) |
+| **AI Max** | **Off** (text customisation off · final URL expansion off) |
+| **Ad schedule** | Mon–Fri, 8:00 AM–4:00 PM |
+| **Campaign URL options** | Leave blank |
+| **Call asset** | **7054572156** · Canada · call reporting **On** · **Use account settings (Calls from ads)** |
+| **Location asset** | 4702 County Road 21, Haliburton, ON |
+| **Brand guidelines** | Main `#c91818` · Accent `#000000` · Font **Playfair Display** |
+| **Differentiators** | Certified Sonos dealer, whole-home audio, TV mounting, Dolby Atmos home theater |
+
+#### Step 10: Keyword and asset generation
+
+| Field | Value |
+|-------|--------|
+| **Final URL** | `https://mckeesecurity.ca/audio-video` |
+| **Generate or Skip** | Either option works. Then use **Ad copy & targeting** below as final copy |
+
+**Describe the product or service** (paste):
+
+```
+Certified Sonos dealer for whole-home audio, TV mounting, soundbars, and home theater in Haliburton and cottage country, Ontario. Since 1994. Professional install of Sonos, Paradigm, and Anthem systems. Dolby Atmos, in-ceiling speakers, surround sound, and TV wall mounting with cable concealment. Local design, install, and support from McKee Security.
+```
+
+**After Generate:** Remove retail/DIY keywords (`buy sonos`, `amazon`, `best buy`, `diy tv mount`). Replace the AI keyword list with the **Keywords** block below.
+
+**AI defaults vs guide keywords:**
+
+| AI suggested (example) | Action |
+|------------------------|--------|
+| `sonos`, `soundbar`, `tv mount` alone | **Delete** (too broad or retail shopping) |
+| `sonos arc`, `sonos beam` | **Delete** (product shopping, not install intent) |
+| `tv mounting`, `home theater installation` | **Included** in guide list below |
+| Guide list below | **Use this full set**. Delete all other AI defaults |
+
+#### Ad group & responsive search ad
+
+| Field | Value |
+|-------|--------|
+| **Ad group name** | `Home Audio & Video` |
+| **Final URL (RSA)** | `https://mckeesecurity.ca/audio-video` |
+| **Display path** (optional) | `Audio` · `Haliburton` |
+| **Headlines** | Add all **15** · **30 chars** max · no phone numbers · see below |
+| **Descriptions** | Add all **4** · **90 chars** max · see below |
+| **Extensions** | Call + location · see **Sitelinks** below |
+
+#### Ad copy & targeting
+
+**Headlines (add all 15 · 30 characters max · no phone numbers)**
+
+```
+Certified Sonos Dealer
+Home Audio Installation
+Whole-Home Audio
+TV Mounting Haliburton
+Home Theater Install
+Dolby Atmos Systems
+Sonos Soundbar Install
+Haliburton Since 1994
+In-Ceiling Speakers
+Surround Sound Install
+Cottage Audio Systems
+Professional TV Mount
+Local Install & Support
+Request a Free Quote
+Free Quote Today
+```
+
+**Descriptions** (RSA ad copy · add all 4 · 90 characters max)
+
+| # | Description |
+|---|-------------|
+| 1 | Certified Sonos dealer. TV mounting and whole-home audio in Haliburton. |
+| 2 | Home theater and surround sound installed locally since 1994. |
+| 3 | In-ceiling speakers, soundbars, and Dolby Atmos. Free quote. |
+| 4 | Professional design and install. Ongoing local support. |
+
+**Keywords** (comma-separated)
+
+```
+sonos installer ontario, sonos dealer haliburton, tv mounting haliburton, home theater installation ontario, whole home audio installer, surround sound installation, tv wall mount installer, home audio installation cottage country, dolby atmos installer ontario, in ceiling speaker installation
+```
+
+**Campaign negatives** (comma-separated)
+
+```
+buy sonos, sonos sale, diy tv mount, amazon, best buy, refurbished
+```
+
+#### Sitelinks (add all 6)
+
+Do not add a sitelink to `/audio-video` (same as this campaign’s landing page). Delete AI sitelinks like **Apply Now** or **Project Gallery**.
+
+| # | Sitelink text | Description line 1 | Description line 2 | Final URL |
+|---|---------------|-------------------|-------------------|-----------|
+| 1 | Security Systems | ULC monitoring. No long contracts. | Installed locally in Haliburton. | `https://mckeesecurity.ca/security` |
+| 2 | Camera Surveillance | 4K systems with remote viewing. | Professional NVR installation. | `https://mckeesecurity.ca/camera-surveillance` |
+| 3 | Networking & Wi-Fi | UniFi Wi-Fi 7 for home and cottage. | Cell boosters and wireless bridges. | `https://mckeesecurity.ca/networking-cellular-expansion` |
+| 4 | VoIP Phone Service | Hosted phone service with Yealink. | Managed porting. Local support. | `https://mckeesecurity.ca/voip-phone-service` |
+| 5 | Starlink Installation | Professional Gen 3 installs. | No roof penetration mounts. | `https://mckeesecurity.ca/starlink` |
+| 6 | Contact Us | Get a free quote today. | Local Haliburton support. | `https://mckeesecurity.ca/contact-us` |
+
+**Extensions:** Call button ✓ · Location ✓ · Phone `7054572156`
+
+---
+
 ## Account-level negative keywords
 
 Add early; expand weekly from Search Terms report. Comma-separated bulk paste:
@@ -1413,7 +1546,7 @@ These are **two different fields** in Google Ads:
 
 **Our site behavior:** Forms show an inline success message on the **same URL** (no separate “thank you” page). Google’s own tip says: *“If there is no page after the quote request page, then use that.”*
 
-**For service campaigns (2–7):** Use the **service landing page** for both ad destination and “Add page” conversion URL. Example: Security ads → `https://mckeesecurity.ca/security` for both fields.
+**For service campaigns (2–8):** Use the **service landing page** for both ad destination and “Add page” conversion URL. Example: Security ads → `https://mckeesecurity.ca/security` for both fields.
 
 **For Brand only:** Ad → homepage · Conversion → `/contact-us`
 
@@ -1461,8 +1594,9 @@ Complete **before** scaling spend beyond ~$10/day total.
 
 ### Phase 1. Google Ads account
 
-- [x] Brand campaign **live** at $1.50/day
-- [ ] Add campaigns 2–7 using specs in this doc (one at a time as budget allows)
+- [x] Brand campaign **live** at $2.50/day
+- [x] Campaigns 2–7 **live** at $2.50/day each
+- [ ] Campaign 8 (Home Audio & Video) using specs in this doc
 - [ ] Search Network only; Display off (service campaigns)
 - [ ] Location targeting: presence in service area
 - [ ] Ad schedule: Mon–Fri 8 AM–4 PM
@@ -1493,7 +1627,8 @@ Can skip during campaign wizard; add within first week of running ads.
 
 ### Phase 4. Launch & optimize
 
-- [x] Launch all 7 campaigns (**~$12.16/day · ~$365/mo** total)
+- [x] Launch campaigns 1–7 at **$2.50/day** each
+- [ ] Launch Campaign 8 (Home Audio & Video) at **$2.50/day**
 - [ ] Wait 7 days before major structural changes (learning period)
 - [ ] Week 2: Search Terms report → add negatives
 - [ ] Week 3–4: Shift budget to campaigns with calls + form fills
@@ -1538,14 +1673,15 @@ Always send ads to the **most specific** relevant page, not the homepage (except
 | 2026-06-23 | First campaign in progress: conversion action **Customers request a quote** |
 | 2026-06-23 | Brand campaign conversion: **Customers request contact** → `/contact-us` (not quote; apply-now is careers only) |
 | 2026-06-23 | Promo tier: **Spend CA$600 get CA$600** (not CA$1,800 tier; spend threshold too high for budget/timeline) |
-| 2026-06-23 | Full Smart Campaign specs for campaigns 2–7: headlines, 60-char descriptions, conversions, keywords |
+| 2026-06-23 | Full Smart Campaign specs for campaigns 2–8: headlines, 60-char descriptions, conversions, keywords |
 | 2026-06-23 | Sitelink extensions: 6 core services (excludes Starlink Installation) |
 | 2026-06-23 | Conversion tracking live: Website lead form tag + Calls from ads; account-default goals |
 | 2026-06-23 | Bidding screen: focus **Conversions** (not Conversion value); new customers off |
-| 2026-06-23 | Search wizard Steps 3b–10 documented; AI Max off; per-campaign **Step 10 blurbs** in Campaign specs (2–7) in wizard order |
+| 2026-06-23 | Search wizard Steps 3b–10 documented; AI Max off; per-campaign **Step 10 blurbs** in Campaign specs (2–8) in wizard order |
 | 2026-06-23 | Step 10 blurbs revised: positive framing only, no guard or “we do not” disclaimers in paste copy |
-| 2026-06-23 | RSA structure: **15 headlines** + **4 descriptions** per campaign (Search 2–7 and Brand reference) |
+| 2026-06-23 | RSA structure: **15 headlines** + **4 descriptions** per campaign (Search 2–8 and Brand reference) |
 | 2026-06-23 | All 7 campaigns live at ~$12.16/day (~$365/mo) |
+| 2026-06-23 | Unified all campaigns to **$2.50/day**; added **Campaign 8: Home Audio & Video** (Search) |
 
 ---
 
