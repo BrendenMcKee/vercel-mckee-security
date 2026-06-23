@@ -1,22 +1,23 @@
-import Script from "next/script";
 import { GOOGLE_ADS_ID } from "@/lib/google-ads";
 
-/** Load in head before hydration — matches Google tag install instructions. */
+/** Plain script tags in head — matches Google's install snippet exactly. */
 export function GoogleAdsTag() {
   return (
     <>
-      <Script
+      <script
+        async
         src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
-        strategy="beforeInteractive"
       />
-      <Script id="google-ads-gtag-init" strategy="beforeInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GOOGLE_ADS_ID}');
-        `}
-      </Script>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GOOGLE_ADS_ID}');
+          `,
+        }}
+      />
     </>
   );
 }
