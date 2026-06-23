@@ -14,9 +14,6 @@ import { cn } from "@/lib/utils";
 
 type Filter = GalleryCategoryId | "all";
 
-/** Mobile header height — keep in sync with sticky top offset below */
-const MOBILE_HEADER_OFFSET = "100px";
-
 /** Scroll so the hero sits just behind the header and filters + first row are in view */
 function scrollToGalleryFilters() {
   const header = document.querySelector("header");
@@ -63,24 +60,38 @@ export function GalleryGrid() {
     const sentinel = stickySentinelRef.current;
     if (!sentinel) return;
 
-    const headerOffset = (() => {
-      const raw = getComputedStyle(document.documentElement)
-        .getPropertyValue("--site-header-height")
-        .trim();
-      const parsed = parseFloat(raw);
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : 100;
-    })();
+    let observer: IntersectionObserver | undefined;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsCompact(!entry.isIntersecting),
-      {
-        threshold: 0,
-        rootMargin: `-${headerOffset}px 0px 0px 0px`,
-      },
-    );
+    const readHeaderOffset = () => {
+      if (window.matchMedia("(min-width: 1024px)").matches) {
+        const raw = getComputedStyle(document.documentElement)
+          .getPropertyValue("--site-header-height")
+          .trim();
+        const parsed = parseFloat(raw);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 140;
+      }
+      return 100;
+    };
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    const attach = () => {
+      observer?.disconnect();
+      const headerOffset = readHeaderOffset();
+      observer = new IntersectionObserver(
+        ([entry]) => setIsCompact(!entry.isIntersecting),
+        {
+          threshold: 0,
+          rootMargin: `-${headerOffset}px 0px 0px 0px`,
+        },
+      );
+      observer.observe(sentinel);
+    };
+
+    attach();
+    window.addEventListener("resize", attach, { passive: true });
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", attach);
+    };
   }, []);
 
   return (
@@ -88,15 +99,22 @@ export function GalleryGrid() {
       {/* Sentinel sits just above the bar; when it leaves the sticky zone, filters compact */}
       <div
         ref={stickySentinelRef}
-        className="pointer-events-none h-px w-full lg:hidden"
+        className="pointer-events-none h-px w-full"
         aria-hidden="true"
       />
 
-      <div className="sticky top-[var(--site-header-height,100px)] z-40 mb-6 pt-6">
+      <div
+        className={cn(
+          "sticky z-40 mb-6 top-25 lg:top-[var(--site-header-height,100px)]",
+          isCompact && "lg:-mx-6 lg:bg-background",
+        )}
+      >
         <div
           className={cn(
-            "border-x border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-md transition-[padding] duration-300 ease-out rounded-t-none rounded-b-xl sm:px-3 sm:py-3 lg:rounded-b-2xl",
-            isCompact ? "px-2 py-2" : "px-2.5 py-2.5",
+            "border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-md transition-[border-radius,padding,border-color] duration-300 ease-out sm:px-3 sm:py-3",
+            isCompact
+              ? "rounded-b-xl rounded-t-none px-2 py-2 lg:rounded-none lg:rounded-b-2xl lg:border-x-0 lg:border-b lg:border-t-0 lg:bg-[#0a0a0a]/95 lg:px-6 lg:py-3"
+              : "rounded-xl px-2.5 py-2.5 sm:rounded-2xl lg:rounded-2xl lg:border lg:bg-[#0a0a0a]/95 lg:px-6 lg:py-3",
           )}
         >
           <div

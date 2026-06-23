@@ -21,13 +21,12 @@ export default function GalleryPage() {
         objectPosition="50% 42%"
         imageScale={1.05}
         compact
-        tightFooter
         overlay="dark"
       />
 
       <section
         id="gallery-content"
-        className="bg-background -mt-10 pb-16 sm:-mt-12 lg:-mt-14 lg:pb-20"
+        className="bg-background pt-6 pb-16 lg:pt-8 lg:pb-20"
       >
         <div className="mx-auto max-w-375 px-4 sm:px-6">
           <GalleryGrid />
