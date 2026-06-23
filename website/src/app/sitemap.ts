@@ -12,6 +12,7 @@ const routes = [
   "/networking-cellular-expansion",
   "/audio-video",
   "/starlink",
+  "/starlink-rental",
   "/apply-now",
   "/our-courses",
   "/courses/mckee-security-technician",

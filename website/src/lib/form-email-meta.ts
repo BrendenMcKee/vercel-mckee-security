@@ -8,6 +8,7 @@ export type ServiceInquirySlug =
   | "networking-cellular-expansion"
   | "audio-video"
   | "starlink"
+  | "starlink-rental"
   | "services-hub"
   | "general";
 
@@ -61,8 +62,13 @@ const serviceInquiryMeta: Record<ServiceInquirySlug, FormMeta> = {
   },
   starlink: {
     emoji: "🛰️",
-    title: "Starlink Inquiry",
-    inboxLabel: "Starlink quote request",
+    title: "Starlink Installation Inquiry",
+    inboxLabel: "Starlink installation quote request",
+  },
+  "starlink-rental": {
+    emoji: "🛰️",
+    title: "Starlink Rental Inquiry",
+    inboxLabel: "Starlink rental availability request",
   },
   "services-hub": {
     emoji: "🏠",

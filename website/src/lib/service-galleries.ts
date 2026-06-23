@@ -16,6 +16,7 @@ export type ServiceGalleryContent = {
 };
 
 const WORK = "/images/services/work";
+const GAL = "/images/gallery";
 
 export const serviceGalleries: Record<string, ServiceGalleryContent> = {
   security: {
@@ -410,6 +411,56 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         height: 850,
         alt: "Starlink dish on a pole mount standing above deep snow against a blue winter sky",
         caption: "Pole-mounted and clear through winter",
+      },
+    ],
+  },
+  "starlink-rental": {
+    eyebrow: "Portable Connectivity",
+    title: "Starlink Rental Kits in Action",
+    intro:
+      "Take high-speed satellite internet with you across cottage country and beyond with a rental kit configured and supported by our local team.",
+    photos: [
+      {
+        src: `${WORK}/starlink-dock.jpg`,
+        width: 900,
+        height: 1522,
+        alt: "Starlink dish mounted on a dock post overlooking the lake",
+        caption: "Connectivity right down to the dock",
+      },
+      {
+        src: `${GAL}/starlink-dock-red-chairs.jpg`,
+        width: 1600,
+        height: 901,
+        alt: "Starlink dish set up for portable use at a waterfront property",
+        caption: "Portable setups for seasonal and travel use",
+      },
+      {
+        src: `${GAL}/starlink-lake-panorama.jpg`,
+        width: 1600,
+        height: 901,
+        alt: "Starlink dish overlooking a lake panorama",
+        caption: "Broadband where traditional service cannot reach",
+      },
+      {
+        src: `${WORK}/starlink-dish-closeup.jpg`,
+        width: 901,
+        height: 1600,
+        alt: "Close-up of a mounted Starlink dish on a low-profile bracket",
+        caption: "Gen2 hardware maintained by our technicians",
+      },
+      {
+        src: `${WORK}/starlink-snow-pole.jpg`,
+        width: 1280,
+        height: 850,
+        alt: "Starlink dish on a pole mount standing above deep snow",
+        caption: "Reliable service through changing seasons",
+      },
+      {
+        src: `${GAL}/starlink-ladder-dish-house.jpg`,
+        width: 1600,
+        height: 901,
+        alt: "Starlink dish deployed at a residential property",
+        caption: "Ready for pickup, setup, and return",
       },
     ],
   },

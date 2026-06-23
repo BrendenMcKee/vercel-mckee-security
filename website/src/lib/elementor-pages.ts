@@ -3,6 +3,7 @@ import camera from "@/content/elementor/camera-surveillance.json";
 import networking from "@/content/elementor/networking-cellular-expansion.json";
 import audioVideo from "@/content/elementor/audio-video.json";
 import starlink from "@/content/elementor/starlink.json";
+import starlinkRental from "@/content/elementor/starlink-rental.json";
 
 export type ElementorPageData = {
   wrapperId: string;
@@ -23,6 +24,7 @@ export const elementorPages: Record<string, ElementorPageData> = {
   "networking-cellular-expansion": networking as ElementorPageData,
   "audio-video": audioVideo as ElementorPageData,
   starlink: starlink as ElementorPageData,
+  "starlink-rental": starlinkRental as ElementorPageData,
 };
 
 export function getElementorPage(slug: string) {

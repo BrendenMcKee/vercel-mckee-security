@@ -281,7 +281,7 @@ export const servicePages: Record<string, ServicePageContent> = {
     slug: "starlink",
     href: "/starlink",
     title: "Starlink Installation",
-    shortTitle: "Starlink",
+    shortTitle: "Starlink Installation",
     eyebrow: "Professional Starlink Installation",
     headline: "High-Speed Satellite Internet",
     description: "",
@@ -331,6 +331,63 @@ export const servicePages: Record<string, ServicePageContent> = {
       {
         title: "Complete Service",
         description: "From site survey to final configuration, we handle everything.",
+      },
+    ],
+  },
+  "starlink-rental": {
+    slug: "starlink-rental",
+    href: "/starlink-rental",
+    title: "Starlink Rental",
+    shortTitle: "Starlink Rental",
+    eyebrow: "Portable Starlink Rental",
+    headline: "Starlink When You Need It",
+    description: "",
+    icon: {} as Service["icon"],
+    features: [],
+    heroSubtitle:
+      "Rent a fully configured Starlink Gen2 kit with Roam Max service. Pick up at our Haliburton office, take it anywhere, and return when you are done.",
+    intro:
+      "Our rental kits use Gen2 dishes with actuated auto-pointing motors, arrive pre-configured on the highest Roam plan, and are maintained by the same team that installs permanent Starlink systems across the Haliburton region.",
+    featureIcons: [
+      { label: "Gen2 Auto-Pointing" },
+      { label: "Roam Max Plan" },
+      { label: "Flexible Duration" },
+      { label: "Pickup & Return" },
+      { label: "Availability Based" },
+      { label: "Local Support" },
+    ],
+    blocks: [
+      {
+        title: "Roam Max Service Included",
+        description:
+          "Every rental runs Starlink's highest mobile tier so you get the fastest speeds and priority access wherever coverage allows.",
+        bullets: ["Roam Max plan", "Use anywhere", "Fastest speeds"],
+      },
+      {
+        title: "Gen2 Kits, Ready to Go",
+        description:
+          "Starlink Gen2 hardware with an actuated motor automatically aligns to the constellation. No manual pointing required.",
+        bullets: ["Auto-pointing dish", "Pre-configured", "Fast setup"],
+      },
+      {
+        title: "Simple Pickup & Return",
+        description:
+          "Collect and return your kit at 4702 Haliburton County Rd 21. We confirm availability and pricing before reserving a unit.",
+        bullets: ["Haliburton pickup", "Flexible rental length", "Inquire for pricing"],
+      },
+    ],
+    valueProps: [
+      {
+        title: "Professionally Maintained",
+        description: "Each rental unit is checked and configured by our in-house Starlink technicians.",
+      },
+      {
+        title: "Built for Mobility",
+        description: "Take high-speed internet to the cottage, campsite, job site, or road trip.",
+      },
+      {
+        title: "Easy to Inquire",
+        description: "Contact us for availability and pricing based on your dates and rental length.",
       },
     ],
   },

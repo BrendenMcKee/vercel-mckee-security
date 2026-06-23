@@ -13,6 +13,7 @@ const SLUG_TO_CATEGORY: Record<string, GalleryCategoryId> = {
   "networking-cellular-expansion": "networking",
   "audio-video": "audio-video",
   starlink: "starlink",
+  "starlink-rental": "starlink",
 };
 
 export function ServiceGallery({ slug }: { slug: string }) {

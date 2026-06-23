@@ -68,6 +68,17 @@ const services: ServiceCard[] = [
     fullWidth: true,
     features: ["Gen 3 Compatible", "No Roof Penetration", "All Equipment Provided", "UniFi Integration"],
   },
+  {
+    id: "ci-starlink-rental",
+    href: "/starlink-rental",
+    icon: "fa-satellite",
+    title: "Starlink Rental",
+    text: "Rent a fully configured Starlink Gen2 kit with Roam Max service included. Our dishes auto-point themselves, arrive ready to connect, and can go anywhere coverage allows. Pick up and return at our Haliburton office for as little or as long as you need. Contact us for availability and pricing.",
+    image: "/images/gallery/starlink-dock-red-chairs.jpg",
+    imagePosition: "center 40%",
+    fullWidth: true,
+    features: ["Gen2 Auto-Pointing", "Roam Max Included", "Flexible Terms", "Pickup in Haliburton"],
+  },
 ];
 
 const whyCards = [
@@ -179,7 +190,10 @@ export function ServicesHubContent() {
                 <i className="fas fa-tv" aria-hidden="true" /> Audio / Video
               </a>
               <a href="#ci-starlink" className="mks2025-ci-hero-badge">
-                <i className="fas fa-satellite" aria-hidden="true" /> Starlink
+                <i className="fas fa-satellite" aria-hidden="true" /> Starlink Installation
+              </a>
+              <a href="#ci-starlink-rental" className="mks2025-ci-hero-badge">
+                <i className="fas fa-satellite" aria-hidden="true" /> Starlink Rental
               </a>
             </div>
           </div>

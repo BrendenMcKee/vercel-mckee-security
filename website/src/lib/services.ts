@@ -98,7 +98,7 @@ export const services: Service[] = [
     slug: "starlink",
     href: "/starlink",
     title: "Starlink Installation",
-    shortTitle: "Starlink",
+    shortTitle: "Starlink Installation",
     eyebrow: "Professional Starlink Installation",
     headline: "High-Speed Satellite Internet",
     description:
@@ -111,6 +111,24 @@ export const services: Service[] = [
       "UniFi Integration",
     ],
     image: images.services.starlink,
+  },
+  {
+    slug: "starlink-rental",
+    href: "/starlink-rental",
+    title: "Starlink Rental",
+    shortTitle: "Starlink Rental",
+    eyebrow: "Portable Starlink Rental",
+    headline: "Starlink When You Need It",
+    description:
+      "Rent a fully configured Starlink Gen2 kit with Roam Max service. Pick up at our Haliburton office, take it anywhere, and return when you are done.",
+    icon: Radio,
+    features: [
+      "Gen2 Auto-Pointing Dish",
+      "Roam Max Plan Included",
+      "Flexible Rental Terms",
+      "Pickup & Return in Haliburton",
+    ],
+    image: "/images/gallery/starlink-dock-red-chairs.jpg",
   },
 ];
 

@@ -36,7 +36,8 @@ export const mainNav: NavItem[] = [
         icon: "network",
       },
       { label: "Audio / Video", href: "/audio-video", icon: "tv" },
-      { label: "Starlink", href: "/starlink", icon: "satellite" },
+      { label: "Starlink Installation", href: "/starlink", icon: "satellite" },
+      { label: "Starlink Rental", href: "/starlink-rental", icon: "satellite" },
     ],
   },
 ];
