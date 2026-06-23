@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   MapPin,
   Phone,
@@ -12,6 +15,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { footerNav, siteConfig } from "@/lib/site-config";
+import { isNavItemActive } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 
 const socialLinks = [
   { label: "Instagram", href: siteConfig.social.instagram },
@@ -28,6 +33,8 @@ const quickLinkIcons: Record<string, LucideIcon> = {
 };
 
 export function Footer() {
+  const pathname = usePathname();
+
   return (
     <footer className="border-t border-white/10 bg-surface">
       <div className="mx-auto max-w-[1400px] px-6 py-10">
@@ -47,11 +54,15 @@ export function Footer() {
             <ul className="space-y-2.5">
               {footerNav.map((item) => {
                 const Icon = quickLinkIcons[item.href] ?? ExternalLink;
+                const active = isNavItemActive(pathname, item.href);
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-primary"
+                      className={cn(
+                        "inline-flex items-center gap-2 text-sm transition",
+                        active ? "text-primary" : "text-white/60 hover:text-primary",
+                      )}
                     >
                       <Icon className="h-4 w-4 shrink-0 text-primary" />
                       {item.label}
@@ -69,7 +80,9 @@ export function Footer() {
             <ul className="space-y-2.5 text-sm text-white/60">
               <li className="flex items-start gap-2">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                {siteConfig.address.full}
+                <span className="text-xs leading-snug sm:text-sm">
+                  {siteConfig.address.full}
+                </span>
               </li>
               <li>
                 <a

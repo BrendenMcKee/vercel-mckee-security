@@ -18,7 +18,7 @@ function ReadMoreLink({ href }: { href: string }) {
   return (
     <Link
       href={href}
-      className="mt-6 inline-block border-b-2 border-secondary pb-0.5 text-sm font-bold uppercase tracking-[0.15em] text-secondary transition hover:border-white hover:text-white"
+      className="mt-6 inline-block border-b-2 border-primary pb-0.5 text-sm font-bold uppercase tracking-[0.15em] text-primary transition hover:border-white hover:text-white"
     >
       read more
     </Link>
