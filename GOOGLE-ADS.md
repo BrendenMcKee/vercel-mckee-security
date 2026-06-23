@@ -2,7 +2,7 @@
 
 > **Domain:** [mckeesecurity.ca](https://mckeesecurity.ca)  
 > **Last updated:** 2026-06-23  
-> **Status:** Brand campaign live · Search Console linked · Conversion tracking live (Website lead form + Calls from ads)
+> **Status:** All 7 campaigns live · Search Console linked · Conversion tracking live (Website lead form + Calls from ads)
 
 This document captures budget plans, campaign structure, setup decisions, and integration steps for Google Ads and related SEO work after the WordPress → Vercel migration. Update this file as campaigns launch and performance data comes in.
 
@@ -43,17 +43,16 @@ Google’s **lowest daily budget per active campaign is $1.50/day** (~**$45/mont
 
 | Campaign | Daily | Monthly | Status / notes |
 |----------|-------|---------|----------------|
-| **Brand** | **$1.50** | **$45** | **Live (Campaign 1)**; was $30 @ $1/day |
-| Security & Monitoring | $2.50 | $75 | Launch after Brand is stable |
-| Camera Surveillance | $1.83 | $55 | |
-| Starlink Installation | $1.83 | $55 | |
-| Networking | $1.50 | $45 | Week 3–4 |
-| VoIP Phone Service | $1.50 | $45 | Week 4 (split from old combined campaign) |
-| Starlink Rental | $1.50 | $45 | **Pause Nov–Apr**; min $1.50/day when active |
-| **Total (Brand + Security + Starlink + Cameras + Networking, Rental paused)** | **~$10.66** | **~$320** | Over $300; pause one campaign or accept briefly during promo sprint |
-| **Total (5 core, no VoIP/Rental)** | **~$9.16** | **~$275** | Fits $300 plan with buffer |
+| **Brand** | **$1.50** | **$45** | **Live** |
+| Security & Monitoring | $2.50 | $75 | **Live** |
+| Camera Surveillance | $1.83 | $55 | **Live** |
+| Starlink Installation | $1.83 | $55 | **Live** |
+| Networking | $1.50 | $45 | **Live** |
+| VoIP Phone Service | $1.50 | $45 | **Live** |
+| Starlink Rental | $1.50 | $45 | **Live** (pause Nov–Apr) |
+| **Total (all 7 live)** | **~$12.16** | **~$365** | Over $300 plan; acceptable during promo sprint to hit CA$600 spend |
 
-**Campaign 1 only (current):** Brand at **$1.50/day = ~$45/month**. That leaves ~$255/month of headroom in the $300 plan for additional campaigns as you add them.
+**Current:** All 7 campaigns running at **~$12.16/day (~$365/mo)**. Slightly over the $300 target; fine short term while chasing the CA$600 promo tier.
 
 **Deferred for now:** Home Audio / Video (Sonos). Lower urgency vs security, Starlink, cameras.
 
@@ -490,12 +489,12 @@ Each campaign below includes **full setup** (objective, type, bidding, goals, ne
 | Order | Campaign | Daily | When |
 |-------|----------|-------|------|
 | 1 | Brand | $1.50 | **Live** |
-| 2 | Security & Monitoring | $2.50 | Week 2 |
-| 3 | Starlink Installation | $1.83 | Week 2–3 (cottage season priority) |
-| 4 | Camera Surveillance | $1.83 | Week 3 |
-| 5 | Networking | $1.50 | Week 3–4 |
-| 6 | VoIP Phone Service | $1.50 | Week 4 |
-| 7 | Starlink Rental | $1.50 | May–Sept only |
+| 2 | Security & Monitoring | $2.50 | **Live** |
+| 3 | Starlink Installation | $1.83 | **Live** |
+| 4 | Camera Surveillance | $1.83 | **Live** |
+| 5 | Networking | $1.50 | **Live** |
+| 6 | VoIP Phone Service | $1.50 | **Live** |
+| 7 | Starlink Rental | $1.50 | **Live** (pause Nov–Apr) |
 
 ---
 
@@ -643,7 +642,7 @@ mckee security, mckee security haliburton, mckee security and audio, mckeesecuri
 
 ### Campaign 2: Security & Monitoring
 
-**Status:** In progress (Search wizard)
+**Status:** Live
 
 #### Admin panel wizard (Steps 1–5)
 
@@ -775,7 +774,7 @@ Do not add a sitelink to `/security` (same as this campaign’s landing page). D
 
 ### Campaign 3: Camera Surveillance
 
-**Status:** Not started
+**Status:** Live
 
 #### Admin panel wizard (Steps 1–5)
 
@@ -898,7 +897,7 @@ Do not add a sitelink to `/camera-surveillance` (same as this campaign’s landi
 
 ### Campaign 4: Starlink Installation
 
-**Status:** Not started
+**Status:** Live
 
 #### Admin panel wizard (Steps 1–5)
 
@@ -1021,7 +1020,7 @@ Do not add a sitelink to `/starlink` (same as this campaign’s landing page). D
 
 ### Campaign 5: Starlink Rental
 
-**Status:** Not started · **Seasonal: run May–September only; pause Nov–Apr**
+**Status:** Live · **Seasonal: pause Nov–Apr**
 
 #### Admin panel wizard (Steps 1–5)
 
@@ -1138,7 +1137,7 @@ Do not add a sitelink to `/starlink-rental` (same as this campaign’s landing p
 
 ### Campaign 6: Networking / Cellular Expansion
 
-**Status:** Not started
+**Status:** Live
 
 #### Admin panel wizard (Steps 1–5)
 
@@ -1255,7 +1254,7 @@ Do not add a sitelink to `/networking-cellular-expansion` (same as this campaign
 
 ### Campaign 7: VoIP Phone Service
 
-**Status:** Not started
+**Status:** Live
 
 #### Admin panel wizard (Steps 1–5)
 
@@ -1494,8 +1493,8 @@ Can skip during campaign wizard; add within first week of running ads.
 
 ### Phase 4. Launch & optimize
 
-- [ ] Launch Brand at **$1.50/day** (~$45/mo); add campaigns only as budget allows (min **$1.50/day each**)
-- [ ] Wait 7 days before major structural changes
+- [x] Launch all 7 campaigns (**~$12.16/day · ~$365/mo** total)
+- [ ] Wait 7 days before major structural changes (learning period)
 - [ ] Week 2: Search Terms report → add negatives
 - [ ] Week 3–4: Shift budget to campaigns with calls + form fills
 - [ ] Pause underperforming ad groups; do not raise budget until conversions are tracked
@@ -1546,6 +1545,7 @@ Always send ads to the **most specific** relevant page, not the homepage (except
 | 2026-06-23 | Search wizard Steps 3b–10 documented; AI Max off; per-campaign **Step 10 blurbs** in Campaign specs (2–7) in wizard order |
 | 2026-06-23 | Step 10 blurbs revised: positive framing only, no guard or “we do not” disclaimers in paste copy |
 | 2026-06-23 | RSA structure: **15 headlines** + **4 descriptions** per campaign (Search 2–7 and Brand reference) |
+| 2026-06-23 | All 7 campaigns live at ~$12.16/day (~$365/mo) |
 
 ---
 
