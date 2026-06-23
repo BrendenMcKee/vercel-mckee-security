@@ -419,20 +419,20 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
     eyebrow: "Portable Connectivity",
     title: "Starlink Rental in Real-World Use",
     intro:
-      "Portable Gen2 kits on kickstands for campsites, cottages, trailers, and temporary stays. Every rental includes a 150-foot Gen2 cable for flexible dish placement.",
+      "Portable Gen2 kits on included ground stands for campsites, cottages, trailers, and temporary stays. Every rental includes a 150-foot Gen2 cable for flexible dish placement.",
     photos: [
       {
         src: `${RENT}/starlink-rental-hero-campsite.jpg`,
         width: 1536,
         height: 1024,
-        alt: "Starlink Gen2 dish on kickstand at a campsite on green grass",
+        alt: "Starlink Gen2 dish on included ground stand at a campsite on green grass",
         caption: "Set up on the lawn in minutes",
       },
       {
         src: `${RENT}/starlink-rental-kit-cable-closeup.jpg`,
         width: 1536,
         height: 1024,
-        alt: "Close-up of Starlink Gen2 dish on stand with gray cable on grass",
+        alt: "Starlink Gen2 dish on X-base stand with cable exiting the mast base on grass",
         caption: "Gen2 dish with 150-foot cable included",
       },
       {
@@ -446,21 +446,21 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
         src: `${RENT}/starlink-rental-cottage-lawn.jpg`,
         width: 1536,
         height: 1024,
-        alt: "Starlink Gen2 dish on kickstand on a cottage lawn",
+        alt: "Starlink Gen2 dish on included ground stand on a cottage lawn",
         caption: "Cottage, Airbnb, and seasonal stays",
       },
       {
         src: `${RENT}/starlink-rental-phone-campsite.jpg`,
         width: 1536,
         height: 1024,
-        alt: "Person using a phone near a portable Starlink Gen2 dish",
+        alt: "Person using a phone near a Starlink Gen2 dish on an included ground stand",
         caption: "Fast Roam Max speeds on the go",
       },
       {
         src: `${RENT}/starlink-rental-laptop-campsite.jpg`,
         width: 1536,
         height: 1024,
-        alt: "Campers using laptops with Starlink Gen2 on the ground nearby",
+        alt: "Campers using laptops with Starlink Gen2 on an included stand nearby",
         caption: "Work or stream from anywhere",
       },
     ],
