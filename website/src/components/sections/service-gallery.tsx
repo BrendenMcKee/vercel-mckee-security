@@ -66,7 +66,7 @@ export function ServiceGallery({ slug }: { slug: string }) {
                   fill
                   loading="lazy"
                   style={{ objectPosition: photo.objectPosition }}
-                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
+                  className="object-cover transition-transform duration-500 ease-out md:group-hover:scale-[1.06]"
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/10 to-transparent" />
@@ -76,7 +76,7 @@ export function ServiceGallery({ slug }: { slug: string }) {
                   </span>
                 </span>
                 <span
-                  className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/0 transition group-hover:ring-secondary/60"
+                  className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/0 transition md:group-hover:ring-secondary/60"
                   aria-hidden="true"
                 />
                 {i === 0 && (
