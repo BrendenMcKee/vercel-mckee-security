@@ -58,6 +58,16 @@ const services: ServiceCard[] = [
     features: ["Certified Sonos Dealer", "TV Mounting", "Whole-Home Audio", "Home Theater"],
   },
   {
+    id: "ci-voip",
+    href: "/voip-phone-service",
+    icon: "fa-phone",
+    title: "VoIP Phone Service",
+    text: "Fully hosted VoIP phone service with Yealink hardware for homes and businesses. We handle setup, provisioning, number porting, and E911 registration — with local support from our Haliburton team, not a distant call centre.",
+    image: "/images/services/voip/voip-hero.jpg",
+    imagePosition: "center 40%",
+    features: ["Yealink Hardware", "Managed Number Porting", "Residential & Commercial", "Local McKee Support"],
+  },
+  {
     id: "ci-starlink",
     href: "/starlink",
     icon: "fa-satellite",

@@ -2,6 +2,7 @@ import {
   Camera,
   Lock,
   Network,
+  Phone,
   Radio,
   Speaker,
   type LucideIcon,
@@ -93,6 +94,24 @@ export const services: Service[] = [
       "Home Theater",
     ],
     image: "/images/services/work/av-outdoor-tv-lakeside.jpg",
+  },
+  {
+    slug: "voip-phone-service",
+    href: "/voip-phone-service",
+    title: "VoIP Phone Service",
+    shortTitle: "VoIP Phones",
+    eyebrow: "Professional Hosted VoIP Phone Service",
+    headline: "Hosted VoIP Phone Service",
+    description:
+      "Fully hosted VoIP phone service with Yealink hardware, managed number porting, and local support from our Haliburton team — for homes and businesses across cottage country.",
+    icon: Phone,
+    features: [
+      "Yealink Hardware",
+      "Managed Number Porting",
+      "Residential & Commercial",
+      "Local McKee Support",
+    ],
+    image: "/images/services/voip/voip-hero.jpg",
   },
   {
     slug: "starlink",

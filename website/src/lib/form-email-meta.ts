@@ -7,6 +7,7 @@ export type ServiceInquirySlug =
   | "camera-surveillance"
   | "networking-cellular-expansion"
   | "audio-video"
+  | "voip-phone-service"
   | "starlink"
   | "starlink-rental"
   | "services-hub"
@@ -59,6 +60,11 @@ const serviceInquiryMeta: Record<ServiceInquirySlug, FormMeta> = {
     emoji: "🎬",
     title: "Audio / Video Inquiry",
     inboxLabel: "A/V quote request",
+  },
+  "voip-phone-service": {
+    emoji: "📞",
+    title: "VoIP Phone Service Inquiry",
+    inboxLabel: "VoIP phone service quote request",
   },
   starlink: {
     emoji: "🛰️",

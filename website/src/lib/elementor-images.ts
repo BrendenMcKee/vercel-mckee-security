@@ -18,6 +18,7 @@ const slugPreloadImages: Record<string, string[]> = {
   ],
   starlink: ["/images/services/work/starlink-mounting.jpg"],
   "starlink-rental": ["/images/services/starlink-rental/starlink-rental-hero-campsite.jpg"],
+  "voip-phone-service": ["/images/services/voip/voip-hero.jpg"],
 };
 
 export function getElementorPreloadImages(slug: string) {

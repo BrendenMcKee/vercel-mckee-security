@@ -1,7 +1,7 @@
 export type NavChild = {
   label: string;
   href: string;
-  icon?: "home" | "lock" | "camera" | "network" | "tv" | "satellite";
+  icon?: "home" | "lock" | "camera" | "network" | "tv" | "phone" | "satellite";
 };
 
 export type NavItem = {
@@ -36,6 +36,7 @@ export const mainNav: NavItem[] = [
         icon: "network",
       },
       { label: "Audio / Video", href: "/audio-video", icon: "tv" },
+      { label: "VoIP Phone Service", href: "/voip-phone-service", icon: "phone" },
       { label: "Starlink Installation", href: "/starlink", icon: "satellite" },
       { label: "Starlink Rental", href: "/starlink-rental", icon: "satellite" },
     ],
@@ -53,7 +54,7 @@ export const siteConfig = {
   name: "McKee Security & Audio Systems",
   tagline: "A viable technology solution",
   description:
-    "Custom security, camera surveillance, networking, audio and video, and Starlink installation for homes and businesses in Haliburton, Ontario.",
+    "Custom security, camera surveillance, networking, audio and video, VoIP phone service, and Starlink installation for homes and businesses in Haliburton, Ontario.",
   url: "https://mckeesecurity.ca",
   foundedYear: 1994,
   yearsInBusiness: 30,

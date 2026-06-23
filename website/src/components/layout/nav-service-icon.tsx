@@ -4,6 +4,7 @@ import {
   Camera,
   Network,
   Tv,
+  Phone,
   Satellite,
   type LucideIcon,
 } from "lucide-react";
@@ -15,6 +16,7 @@ const icons: Record<NonNullable<NavChild["icon"]>, LucideIcon> = {
   camera: Camera,
   network: Network,
   tv: Tv,
+  phone: Phone,
   satellite: Satellite,
 };
 

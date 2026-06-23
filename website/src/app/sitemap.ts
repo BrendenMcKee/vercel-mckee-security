@@ -11,6 +11,7 @@ const routes = [
   "/camera-surveillance",
   "/networking-cellular-expansion",
   "/audio-video",
+  "/voip-phone-service",
   "/starlink",
   "/starlink-rental",
   "/apply-now",
