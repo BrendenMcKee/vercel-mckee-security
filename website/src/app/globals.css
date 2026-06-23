@@ -9,6 +9,7 @@
   --surface: #262626;
   --surface-elevated: #424242;
   --muted: rgba(255, 255, 255, 0.65);
+  --site-header-height: 100px;
 }
 
 @theme inline {
@@ -28,6 +29,10 @@ html {
 
 /* Collapse the red top bar instantly on refresh when scroll is restored mid-page */
 @media (min-width: 1024px) {
+  :root {
+    --site-header-height: 140px;
+  }
+
   html.header-scrolled [data-site-top-bar] {
     height: 0 !important;
     opacity: 0 !important;

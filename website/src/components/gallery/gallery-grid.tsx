@@ -67,7 +67,7 @@ export function GalleryGrid() {
       ([entry]) => setIsCompact(!entry.isIntersecting),
       {
         threshold: 0,
-        rootMargin: `-${MOBILE_HEADER_OFFSET} 0px 0px 0px`,
+        rootMargin: `calc(-1 * var(--site-header-height, 100px)) 0px 0px 0px`,
       },
     );
 
@@ -84,13 +84,11 @@ export function GalleryGrid() {
         aria-hidden="true"
       />
 
-      <div className="sticky top-25 z-40 mb-6 lg:top-36 lg:mb-10">
+      <div className="sticky top-[var(--site-header-height,100px)] z-40 mb-6 lg:mb-10">
         <div
           className={cn(
-            "border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-md transition-[border-radius,padding] duration-300 ease-out sm:rounded-2xl sm:px-3 sm:py-3",
-            isCompact
-              ? "rounded-b-xl rounded-t-none px-2 py-2"
-              : "rounded-xl px-2.5 py-2.5",
+            "border-x border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-md transition-[padding] duration-300 ease-out rounded-t-none rounded-b-xl sm:px-3 sm:py-3 lg:rounded-b-2xl",
+            isCompact ? "px-2 py-2" : "px-2.5 py-2.5",
           )}
         >
           <div

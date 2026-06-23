@@ -17,7 +17,12 @@ import { images, mainNav, siteConfig, type NavChild } from "@/lib/site-config";
 import { NavServiceIcon } from "@/components/layout/nav-service-icon";
 import { SocialIconButtons } from "@/components/ui/social-icons";
 import { cn } from "@/lib/utils";
-import { pathsMatch, scrollPageToTop } from "@/lib/navigation";
+import {
+  isNavItemActive,
+  pathsMatch,
+  scrollPageToTop,
+  syncSiteHeaderHeight,
+} from "@/lib/navigation";
 
 const TOP_BAR_HEIGHT = 36;
 const SCROLL_COLLAPSE = 56;
@@ -32,29 +37,37 @@ function syncHeaderScrolledClass(scrolled: boolean) {
 
 function ServiceDropdown({
   items,
+  pathname,
   onNavigate,
   onSamePageNav,
 }: {
   items: NavChild[];
+  pathname: string;
   onNavigate?: () => void;
   onSamePageNav: (event: React.MouseEvent<HTMLAnchorElement>, href: string) => void;
 }) {
   return (
     <div className="min-w-[360px] rounded-lg border border-white/10 bg-[#1a1a1a] py-2 shadow-2xl">
-      {items.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          onClick={(event) => {
-            onSamePageNav(event, item.href);
-            onNavigate?.();
-          }}
-          className="flex items-center gap-3 whitespace-nowrap px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white/85 transition hover:bg-white/5 hover:text-primary"
-        >
-          <NavServiceIcon icon={item.icon} />
-          <span>{item.label}</span>
-        </Link>
-      ))}
+      {items.map((item) => {
+        const active = isNavItemActive(pathname, item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={(event) => {
+              onSamePageNav(event, item.href);
+              onNavigate?.();
+            }}
+            className={cn(
+              "flex items-center gap-3 whitespace-nowrap px-4 py-2.5 text-sm font-bold uppercase tracking-wide transition hover:bg-white/5",
+              active ? "text-primary" : "text-white/85 hover:text-primary",
+            )}
+          >
+            <NavServiceIcon icon={item.icon} />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -77,7 +90,9 @@ export function Header() {
       setScrolled(next);
       syncHeaderScrolledClass(next);
       if (headerRef.current) {
-        setSpacerHeight(headerRef.current.getBoundingClientRect().height);
+        const height = headerRef.current.getBoundingClientRect().height;
+        setSpacerHeight(height);
+        syncSiteHeaderHeight(height);
       }
     };
 
@@ -112,7 +127,9 @@ export function Header() {
     syncHeaderScrolledClass(false);
     requestAnimationFrame(() => {
       if (headerRef.current) {
-        setSpacerHeight(headerRef.current.getBoundingClientRect().height);
+        const height = headerRef.current.getBoundingClientRect().height;
+        setSpacerHeight(height);
+        syncSiteHeaderHeight(height);
       }
     });
   }, [pathname]);
@@ -123,7 +140,9 @@ export function Header() {
       syncHeaderScrolledClass(false);
       requestAnimationFrame(() => {
         if (headerRef.current) {
-          setSpacerHeight(headerRef.current.getBoundingClientRect().height);
+          const height = headerRef.current.getBoundingClientRect().height;
+          setSpacerHeight(height);
+          syncSiteHeaderHeight(height);
         }
       });
     };
@@ -136,7 +155,9 @@ export function Header() {
     if (!header) return;
 
     const syncSpacer = () => {
-      setSpacerHeight(header.getBoundingClientRect().height);
+      const height = header.getBoundingClientRect().height;
+      setSpacerHeight(height);
+      syncSiteHeaderHeight(height);
     };
 
     syncSpacer();
@@ -269,8 +290,11 @@ export function Header() {
 
             <nav className="hidden min-w-0 flex-1 items-center lg:flex">
               <ul className="flex items-center gap-0">
-                {mainNav.map((item) =>
-                  item.children ? (
+                {mainNav.map((item) => {
+                  const childHrefs = item.children?.map((child) => child.href) ?? [];
+                  const active = isNavItemActive(pathname, item.href, childHrefs);
+
+                  return item.children ? (
                     <li
                       key={item.href}
                       ref={dropdownRef}
@@ -281,7 +305,10 @@ export function Header() {
                       <button
                         type="button"
                         onClick={() => setServicesOpen((v) => !v)}
-                        className="flex items-center gap-1 whitespace-nowrap px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-white transition hover:text-primary"
+                        className={cn(
+                          "flex items-center gap-1 whitespace-nowrap px-4 py-2 text-[13px] font-bold uppercase tracking-wide transition",
+                          active ? "text-primary" : "text-white hover:text-primary",
+                        )}
                       >
                         {item.label}
                         <ChevronDown
@@ -302,6 +329,7 @@ export function Header() {
                           >
                             <ServiceDropdown
                               items={item.children}
+                              pathname={pathname}
                               onSamePageNav={handleSamePageNav}
                             />
                           </motion.div>
@@ -313,13 +341,16 @@ export function Header() {
                       <Link
                         href={item.href}
                         onClick={(event) => handleSamePageNav(event, item.href)}
-                        className="block whitespace-nowrap px-4 py-2 text-[13px] font-bold uppercase tracking-wide text-white transition hover:text-primary"
+                        className={cn(
+                          "block whitespace-nowrap px-4 py-2 text-[13px] font-bold uppercase tracking-wide transition",
+                          active ? "text-primary" : "text-white hover:text-primary",
+                        )}
                       >
                         {item.label}
                       </Link>
                     </li>
-                  ),
-                )}
+                  );
+                })}
               </ul>
             </nav>
 
@@ -383,13 +414,19 @@ export function Header() {
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2">
-                  {mainNav.map((item) =>
-                    item.children ? (
+                  {mainNav.map((item) => {
+                    const childHrefs = item.children?.map((child) => child.href) ?? [];
+                    const active = isNavItemActive(pathname, item.href, childHrefs);
+
+                    return item.children ? (
                       <div key={item.href}>
                         <button
                           type="button"
                           onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
-                          className="flex w-full items-center justify-between px-4 py-3 text-sm font-bold uppercase text-white"
+                          className={cn(
+                            "flex w-full items-center justify-between px-4 py-3 text-sm font-bold uppercase",
+                            active ? "text-primary" : "text-white",
+                          )}
                         >
                           {item.label}
                           <ChevronDown
@@ -401,20 +438,26 @@ export function Header() {
                         </button>
                         {mobileServicesOpen && (
                           <div className="border-l-2 border-primary/40 pl-2">
-                            {item.children.map((child) => (
-                              <Link
-                                key={child.href}
-                                href={child.href}
-                                onClick={(event) => {
-                                  handleSamePageNav(event, child.href);
-                                  closeMobile();
-                                }}
-                                className="flex items-center gap-3 px-4 py-2.5 text-xs font-bold uppercase text-white/75 hover:text-primary"
-                              >
-                                <NavServiceIcon icon={child.icon} className="h-3.5 w-3.5 shrink-0 text-primary" />
-                                <span>{child.label}</span>
-                              </Link>
-                            ))}
+                            {item.children.map((child) => {
+                              const childActive = isNavItemActive(pathname, child.href);
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  onClick={(event) => {
+                                    handleSamePageNav(event, child.href);
+                                    closeMobile();
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-3 px-4 py-2.5 text-xs font-bold uppercase hover:text-primary",
+                                    childActive ? "text-primary" : "text-white/75",
+                                  )}
+                                >
+                                  <NavServiceIcon icon={child.icon} className="h-3.5 w-3.5 shrink-0 text-primary" />
+                                  <span>{child.label}</span>
+                                </Link>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -426,12 +469,15 @@ export function Header() {
                           handleSamePageNav(event, item.href);
                           closeMobile();
                         }}
-                        className="block px-4 py-3 text-sm font-bold uppercase text-white hover:text-primary"
+                        className={cn(
+                          "block px-4 py-3 text-sm font-bold uppercase hover:text-primary",
+                          active ? "text-primary" : "text-white",
+                        )}
                       >
                         {item.label}
                       </Link>
-                    ),
-                  )}
+                    );
+                  })}
                 </div>
                 <div className="space-y-2 border-t border-white/10 p-4">
                   <a

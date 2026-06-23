@@ -3,6 +3,24 @@ export function pathsMatch(pathname: string, href: string) {
   return pathname === target;
 }
 
+/** True when the current route matches a top-level nav item (and its dropdown routes). */
+export function isNavItemActive(
+  pathname: string,
+  href: string,
+  childHrefs: string[] = [],
+) {
+  const targets = [href, ...childHrefs];
+  return targets.some((target) => {
+    const base = target.split("#")[0].split("?")[0] || "/";
+    if (base === "/") return pathname === "/";
+    return pathname === base || pathname.startsWith(`${base}/`);
+  });
+}
+
+export function syncSiteHeaderHeight(height: number) {
+  document.documentElement.style.setProperty("--site-header-height", `${height}px`);
+}
+
 export function scrollPageToTop() {
   const root = document.documentElement;
   const previousBehavior = root.style.scrollBehavior;
