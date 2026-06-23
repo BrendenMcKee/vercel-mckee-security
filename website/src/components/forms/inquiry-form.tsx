@@ -9,7 +9,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { getFormEmailMeta, getServiceDisplayName } from "@/lib/form-email-meta";
 import { siteConfig } from "@/lib/site-config";
-import { trackGoogleAdsConversion } from "@/lib/google-ads";
+import { trackWebsiteLeadForm } from "@/lib/google-ads";
 import { cn } from "@/lib/utils";
 
 const schema = z.object({
@@ -73,7 +73,7 @@ export function InquiryForm({
         body: JSON.stringify({ ...data, serviceLabel, serviceSlug }),
       });
       if (!res.ok) throw new Error("Submission failed");
-      trackGoogleAdsConversion("quote");
+      trackWebsiteLeadForm();
       setDone(true);
     } catch {
       setError("Something went wrong. Please call us directly.");

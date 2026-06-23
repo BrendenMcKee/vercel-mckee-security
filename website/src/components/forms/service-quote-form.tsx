@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getFormEmailMeta, getServiceDisplayName } from "@/lib/form-email-meta";
-import { trackGoogleAdsConversion } from "@/lib/google-ads";
+import { trackWebsiteLeadForm } from "@/lib/google-ads";
 import { cn } from "@/lib/utils";
 
 const schema = z.object({
@@ -56,7 +56,7 @@ export function ServiceQuoteForm({
         body: JSON.stringify({ ...data, serviceLabel, serviceSlug }),
       });
       if (!res.ok) throw new Error("failed");
-      trackGoogleAdsConversion("quote");
+      trackWebsiteLeadForm();
       setStatus("success");
       reset();
     } catch {
