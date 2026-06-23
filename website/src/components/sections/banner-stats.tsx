@@ -10,7 +10,7 @@ const stats: Stat[] = [
   { label: "Years of Dependability", value: 31, suffix: "+" },
   { label: "Founded", value: siteConfig.foundedYear },
   { label: "Generations", value: 3 },
-  { label: "Core Services", value: 5 },
+  { label: "Core Services", value: 6 },
 ];
 
 function AnimatedNumber({ value, suffix = "" }: { value: number; suffix?: string }) {
