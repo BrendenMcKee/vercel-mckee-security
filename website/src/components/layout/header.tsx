@@ -40,14 +40,22 @@ function ServiceDropdown({
   pathname,
   onNavigate,
   onSamePageNav,
+  compact = false,
 }: {
   items: NavChild[];
   pathname: string;
   onNavigate?: () => void;
   onSamePageNav: (event: React.MouseEvent<HTMLAnchorElement>, href: string) => void;
+  /** Tighter panel when the header is scrolled and sticky */
+  compact?: boolean;
 }) {
   return (
-    <div className="min-w-[360px] rounded-lg border border-white/10 bg-[#1a1a1a] py-2 shadow-2xl">
+    <div
+      className={cn(
+        "min-w-[360px] overflow-hidden border border-white/10 bg-[#1a1a1a] shadow-2xl transition-[border-radius,padding] duration-300",
+        compact ? "rounded-lg py-2" : "rounded-2xl py-2.5",
+      )}
+    >
       {items.map((item) => {
         const active = isNavItemActive(pathname, item.href);
         return (
@@ -325,12 +333,16 @@ export function Header() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 8 }}
                             transition={{ duration: 0.15 }}
-                            className="absolute left-0 top-full z-50 pt-1"
+                            className={cn(
+                              "absolute left-0 top-full z-50 transition-[padding] duration-300",
+                              scrolled ? "pt-1" : "pt-4",
+                            )}
                           >
                             <ServiceDropdown
                               items={item.children}
                               pathname={pathname}
                               onSamePageNav={handleSamePageNav}
+                              compact={scrolled}
                             />
                           </motion.div>
                         )}
