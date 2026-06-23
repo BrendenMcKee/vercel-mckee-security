@@ -120,15 +120,15 @@ export const services: Service[] = [
     eyebrow: "Portable Starlink Rental",
     headline: "Starlink When You Need It",
     description:
-      "Rent a fully configured Starlink Gen2 kit with Roam Max service. Pick up at our Haliburton office, take it anywhere, and return when you are done.",
+      "Rent a fully configured Starlink Gen2 kit with Roam Max service, kickstand, and a 150-foot Gen2 cable. Pick up at our Haliburton office and set the dish on open ground anywhere coverage allows.",
     icon: Radio,
     features: [
       "Gen2 Auto-Pointing Dish",
+      "150ft Gen2 Cable Included",
       "Roam Max Plan Included",
-      "Flexible Rental Terms",
-      "Pickup & Return in Haliburton",
+      "Kickstand for Ground Setup",
     ],
-    image: "/images/gallery/starlink-dock-red-chairs.jpg",
+    image: "/images/services/starlink-rental/starlink-rental-hero-campsite.jpg",
   },
 ];
 

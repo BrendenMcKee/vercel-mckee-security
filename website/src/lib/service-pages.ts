@@ -345,15 +345,15 @@ export const servicePages: Record<string, ServicePageContent> = {
     icon: {} as Service["icon"],
     features: [],
     heroSubtitle:
-      "Rent a fully configured Starlink Gen2 kit with Roam Max service. Pick up at our Haliburton office, take it anywhere, and return when you are done.",
+      "Rent a fully configured Starlink Gen2 kit with Roam Max service, kickstand, and a 150-foot Gen2 cable. Pick up at our Haliburton office and set the dish on open ground anywhere coverage allows.",
     intro:
-      "Our rental kits use Gen2 dishes with actuated auto-pointing motors, arrive pre-configured on the highest Roam plan, and are maintained by the same team that installs permanent Starlink systems across the Haliburton region.",
+      "Our rental kits use Gen2 rectangular dishes on kickstands with actuated auto-pointing motors, a 150-foot Gen2 cable for flexible placement, and the highest Roam plan pre-configured before pickup.",
     featureIcons: [
       { label: "Gen2 Auto-Pointing" },
+      { label: "150ft Gen2 Cable" },
       { label: "Roam Max Plan" },
-      { label: "Flexible Duration" },
+      { label: "Included Kickstand" },
       { label: "Pickup & Return" },
-      { label: "Availability Based" },
       { label: "Local Support" },
     ],
     blocks: [
@@ -366,8 +366,8 @@ export const servicePages: Record<string, ServicePageContent> = {
       {
         title: "Gen2 Kits, Ready to Go",
         description:
-          "Starlink Gen2 hardware with an actuated motor automatically aligns to the constellation. No manual pointing required.",
-        bullets: ["Auto-pointing dish", "Pre-configured", "Fast setup"],
+          "Starlink Gen2 hardware on a kickstand with an actuated motor automatically aligns to the constellation. Every rental includes a 150-foot Gen2 cable for flexible dish placement.",
+        bullets: ["Auto-pointing dish", "150ft Gen2 cable", "Ground setup"],
       },
       {
         title: "Simple Pickup & Return",

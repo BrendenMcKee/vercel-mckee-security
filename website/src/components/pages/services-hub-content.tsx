@@ -73,11 +73,11 @@ const services: ServiceCard[] = [
     href: "/starlink-rental",
     icon: "fa-satellite",
     title: "Starlink Rental",
-    text: "Rent a fully configured Starlink Gen2 kit with Roam Max service included. Our dishes auto-point themselves, arrive ready to connect, and can go anywhere coverage allows. Pick up and return at our Haliburton office for as little or as long as you need. Contact us for availability and pricing.",
-    image: "/images/gallery/starlink-dock-red-chairs.jpg",
+    text: "Rent a fully configured Starlink Gen2 kit with Roam Max service, kickstand, and a 150-foot Gen2 cable included. Set the dish on grass, gravel, or campsite ground outside a cottage, trailer, or Airbnb. Pick up and return at our Haliburton office for as little or as long as you need. Contact us for availability and pricing.",
+    image: "/images/services/starlink-rental/starlink-rental-trailer-campsite.jpg",
     imagePosition: "center 40%",
     fullWidth: true,
-    features: ["Gen2 Auto-Pointing", "Roam Max Included", "Flexible Terms", "Pickup in Haliburton"],
+    features: ["Gen2 Auto-Pointing", "150ft Gen2 Cable", "Roam Max Included", "Pickup in Haliburton"],
   },
 ];
 

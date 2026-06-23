@@ -17,6 +17,7 @@ export type ServiceGalleryContent = {
 
 const WORK = "/images/services/work";
 const GAL = "/images/gallery";
+const RENT = "/images/services/starlink-rental";
 
 export const serviceGalleries: Record<string, ServiceGalleryContent> = {
   security: {
@@ -416,51 +417,51 @@ export const serviceGalleries: Record<string, ServiceGalleryContent> = {
   },
   "starlink-rental": {
     eyebrow: "Portable Connectivity",
-    title: "Starlink Rental Kits in Action",
+    title: "Starlink Rental in Real-World Use",
     intro:
-      "Take high-speed satellite internet with you across cottage country and beyond with a rental kit configured and supported by our local team.",
+      "Portable Gen2 kits on kickstands for campsites, cottages, trailers, and temporary stays. Every rental includes a 150-foot Gen2 cable for flexible dish placement.",
     photos: [
       {
-        src: `${WORK}/starlink-dock.jpg`,
-        width: 900,
-        height: 1522,
-        alt: "Starlink dish mounted on a dock post overlooking the lake",
-        caption: "Connectivity right down to the dock",
+        src: `${RENT}/starlink-rental-hero-campsite.jpg`,
+        width: 1536,
+        height: 1024,
+        alt: "Starlink Gen2 dish on kickstand at a campsite on green grass",
+        caption: "Set up on the lawn in minutes",
       },
       {
-        src: `${GAL}/starlink-dock-red-chairs.jpg`,
-        width: 1600,
-        height: 901,
-        alt: "Starlink dish set up for portable use at a waterfront property",
-        caption: "Portable setups for seasonal and travel use",
+        src: `${RENT}/starlink-rental-kit-cable-closeup.jpg`,
+        width: 1536,
+        height: 1024,
+        alt: "Close-up of Starlink Gen2 dish on stand with gray cable on grass",
+        caption: "Gen2 dish with 150-foot cable included",
       },
       {
-        src: `${GAL}/starlink-lake-panorama.jpg`,
-        width: 1600,
-        height: 901,
-        alt: "Starlink dish overlooking a lake panorama",
-        caption: "Broadband where traditional service cannot reach",
+        src: `${RENT}/starlink-rental-trailer-campsite.jpg`,
+        width: 1536,
+        height: 1024,
+        alt: "Starlink Gen2 dish beside a camping trailer at a lakeside site",
+        caption: "Perfect beside your trailer or RV",
       },
       {
-        src: `${WORK}/starlink-dish-closeup.jpg`,
-        width: 901,
-        height: 1600,
-        alt: "Close-up of a mounted Starlink dish on a low-profile bracket",
-        caption: "Gen2 hardware maintained by our technicians",
+        src: `${RENT}/starlink-rental-cottage-lawn.jpg`,
+        width: 1536,
+        height: 1024,
+        alt: "Starlink Gen2 dish on kickstand on a cottage lawn",
+        caption: "Cottage, Airbnb, and seasonal stays",
       },
       {
-        src: `${WORK}/starlink-snow-pole.jpg`,
-        width: 1280,
-        height: 850,
-        alt: "Starlink dish on a pole mount standing above deep snow",
-        caption: "Reliable service through changing seasons",
+        src: `${RENT}/starlink-rental-phone-campsite.jpg`,
+        width: 1536,
+        height: 1024,
+        alt: "Person using a phone near a portable Starlink Gen2 dish",
+        caption: "Fast Roam Max speeds on the go",
       },
       {
-        src: `${GAL}/starlink-ladder-dish-house.jpg`,
-        width: 1600,
-        height: 901,
-        alt: "Starlink dish deployed at a residential property",
-        caption: "Ready for pickup, setup, and return",
+        src: `${RENT}/starlink-rental-laptop-campsite.jpg`,
+        width: 1536,
+        height: 1024,
+        alt: "Campers using laptops with Starlink Gen2 on the ground nearby",
+        caption: "Work or stream from anywhere",
       },
     ],
   },
