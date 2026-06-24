@@ -397,7 +397,16 @@
 .rental-time-note {
   margin: 0;
   font-size: 0.75rem;
+  line-height: 1.45;
   color: rgba(255, 255, 255, 0.48);
+}
+
+.rental-time-note--return {
+  padding: 0.75rem 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, 0.14);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 @media (min-width: 640px) {

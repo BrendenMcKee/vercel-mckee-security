@@ -3,33 +3,46 @@
 import { CalendarDays, Clock3 } from "lucide-react";
 import {
   formatRentalDateLong,
-  RENTAL_TIME_SLOTS,
+  isWeekdayIso,
+  RENTAL_PICKUP_TIME_SLOTS,
   type RentalTimeSlot,
 } from "@/lib/inquiry-dates";
 import { cn } from "@/lib/utils";
 
 type RentalSchedulePickerProps = {
-  title: string;
+  variant: "pickup" | "return";
   dateValue: string;
-  timeValue: string;
+  timeValue?: string;
   minDate: string;
   onDateChange: (isoDate: string) => void;
-  onTimeChange: (time: RentalTimeSlot) => void;
+  onTimeChange?: (time: RentalTimeSlot) => void;
+  onWeekdayRejected?: () => void;
   dateError?: string;
   timeError?: string;
 };
 
 export function RentalSchedulePicker({
-  title,
+  variant,
   dateValue,
-  timeValue,
+  timeValue = "",
   minDate,
   onDateChange,
   onTimeChange,
+  onWeekdayRejected,
   dateError,
   timeError,
 }: RentalSchedulePickerProps) {
+  const isPickup = variant === "pickup";
   const longDate = formatRentalDateLong(dateValue);
+  const title = isPickup ? "Pickup" : "Return";
+
+  const handleDateChange = (isoDate: string) => {
+    if (isPickup && isoDate && !isWeekdayIso(isoDate)) {
+      onWeekdayRejected?.();
+      return;
+    }
+    onDateChange(isoDate);
+  };
 
   return (
     <div className="rental-schedule-block">
@@ -41,7 +54,7 @@ export function RentalSchedulePicker({
           className="rental-date-picker__input"
           min={minDate}
           value={dateValue}
-          onChange={(event) => onDateChange(event.target.value)}
+          onChange={(event) => handleDateChange(event.target.value)}
           aria-label={`${title} date`}
         />
         <span className="rental-date-picker__icon" aria-hidden="true">
@@ -65,29 +78,36 @@ export function RentalSchedulePicker({
       </label>
       {dateError && <p className="mckee-form-error">{dateError}</p>}
 
-      <div className="rental-time-section">
-        <p className="rental-time-heading">
-          <Clock3 size={16} strokeWidth={1.75} aria-hidden="true" />
-          Approximate time
-        </p>
-        <div className="rental-time-slots" role="group" aria-label={`${title} time`}>
-          {RENTAL_TIME_SLOTS.map((slot) => {
-            const selected = timeValue === slot;
-            return (
-              <button
-                key={slot}
-                type="button"
-                className={cn("rental-time-slot", selected && "is-selected")}
-                aria-pressed={selected}
-                onClick={() => onTimeChange(slot)}
-              >
-                {slot}
-              </button>
-            );
-          })}
+      {isPickup ? (
+        <div className="rental-time-section">
+          <p className="rental-time-heading">
+            <Clock3 size={16} strokeWidth={1.75} aria-hidden="true" />
+            Approximate pickup time
+          </p>
+          <div className="rental-time-slots" role="group" aria-label="Pickup time">
+            {RENTAL_PICKUP_TIME_SLOTS.map((slot) => {
+              const selected = timeValue === slot;
+              return (
+                <button
+                  key={slot}
+                  type="button"
+                  className={cn("rental-time-slot", selected && "is-selected")}
+                  aria-pressed={selected}
+                  onClick={() => onTimeChange?.(slot)}
+                >
+                  {slot}
+                </button>
+              );
+            })}
+          </div>
+          <p className="rental-time-note">Monday to Friday · Haliburton office hours</p>
         </div>
-        <p className="rental-time-note">Mon to Fri · Haliburton office hours</p>
-      </div>
+      ) : (
+        <p className="rental-time-note rental-time-note--return">
+          Drop off anytime, including weekends. Leave the kit in the garage or on the
+          front porch if no one is home.
+        </p>
+      )}
       {timeError && <p className="mckee-form-error">{timeError}</p>}
     </div>
   );

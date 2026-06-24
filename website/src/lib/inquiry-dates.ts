@@ -1,5 +1,5 @@
-/** Office pickup/return hours (Mon–Fri). */
-export const RENTAL_TIME_SLOTS = [
+/** Office pickup hours (Mon–Fri, 8 AM to 4 PM). */
+export const RENTAL_PICKUP_TIME_SLOTS = [
   "8:00 AM",
   "9:00 AM",
   "10:00 AM",
@@ -11,7 +11,10 @@ export const RENTAL_TIME_SLOTS = [
   "4:00 PM",
 ] as const;
 
-export type RentalTimeSlot = (typeof RENTAL_TIME_SLOTS)[number];
+/** @deprecated Use RENTAL_PICKUP_TIME_SLOTS */
+export const RENTAL_TIME_SLOTS = RENTAL_PICKUP_TIME_SLOTS;
+
+export type RentalTimeSlot = (typeof RENTAL_PICKUP_TIME_SLOTS)[number];
 
 export function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -37,4 +40,18 @@ export function formatRentalSchedule(isoDate: string, time?: string): string {
     return `${dateLabel} · around ${time.trim()}`;
   }
   return dateLabel;
+}
+
+/** Return drop-off: any day, any time (porch/garage). */
+export function formatRentalReturnDate(isoDate: string): string {
+  const dateLabel = formatRentalDateLong(isoDate) ?? isoDate;
+  return `${dateLabel} · drop off anytime`;
+}
+
+export function isWeekdayIso(isoDate: string): boolean {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return false;
+
+  const dayOfWeek = new Date(year, month - 1, day).getDay();
+  return dayOfWeek >= 1 && dayOfWeek <= 5;
 }

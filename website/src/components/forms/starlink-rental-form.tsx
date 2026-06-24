@@ -7,14 +7,15 @@ import { z } from "zod";
 import { RentalSchedulePicker } from "@/components/forms/rental-schedule-picker";
 import { getFormEmailMeta } from "@/lib/form-email-meta";
 import {
-  RENTAL_TIME_SLOTS,
+  isWeekdayIso,
+  RENTAL_PICKUP_TIME_SLOTS,
   todayIso,
   type RentalTimeSlot,
 } from "@/lib/inquiry-dates";
 import { trackWebsiteLeadForm } from "@/lib/google-ads";
 import { cn } from "@/lib/utils";
 
-const timeSlotSchema = z.enum(RENTAL_TIME_SLOTS);
+const pickupTimeSchema = z.enum(RENTAL_PICKUP_TIME_SLOTS);
 
 const schema = z
   .object({
@@ -23,13 +24,16 @@ const schema = z
     phone: z.string().min(7, "Please enter your phone number"),
     address: z.string().min(5, "Please enter your address"),
     pickupDate: z.string().min(1, "Please choose a pickup date"),
-    pickupTime: timeSlotSchema,
+    pickupTime: pickupTimeSchema,
     returnDate: z.string().min(1, "Please choose a return date"),
-    returnTime: timeSlotSchema,
     usageLocation: z
       .string()
       .min(3, "Tell us where you plan to use the kit (cottage, campsite, etc.)"),
     comments: z.string().optional(),
+  })
+  .refine((data) => isWeekdayIso(data.pickupDate), {
+    message: "Pickup must be a weekday (Monday to Friday)",
+    path: ["pickupDate"],
   })
   .refine((data) => data.returnDate >= data.pickupDate, {
     message: "Return date must be on or after pickup date",
@@ -56,6 +60,7 @@ export function StarlinkRentalForm({
     control,
     handleSubmit,
     reset,
+    setError,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -64,7 +69,6 @@ export function StarlinkRentalForm({
       pickupDate: "",
       pickupTime: undefined,
       returnDate: "",
-      returnTime: undefined,
     },
   });
 
@@ -161,12 +165,17 @@ export function StarlinkRentalForm({
                 control={control}
                 render={({ field: timeField }) => (
                   <RentalSchedulePicker
-                    title="Pickup"
+                    variant="pickup"
                     dateValue={dateField.value ?? ""}
                     timeValue={timeField.value ?? ""}
                     minDate={todayIso()}
                     onDateChange={dateField.onChange}
                     onTimeChange={(time: RentalTimeSlot) => timeField.onChange(time)}
+                    onWeekdayRejected={() =>
+                      setError("pickupDate", {
+                        message: "Pickup must be a weekday (Monday to Friday)",
+                      })
+                    }
                     dateError={errors.pickupDate?.message}
                     timeError={errors.pickupTime?.message}
                   />
@@ -179,29 +188,20 @@ export function StarlinkRentalForm({
             name="returnDate"
             control={control}
             render={({ field: dateField }) => (
-              <Controller
-                name="returnTime"
-                control={control}
-                render={({ field: timeField }) => (
-                  <RentalSchedulePicker
-                    title="Return"
-                    dateValue={dateField.value ?? ""}
-                    timeValue={timeField.value ?? ""}
-                    minDate={returnMin}
-                    onDateChange={dateField.onChange}
-                    onTimeChange={(time: RentalTimeSlot) => timeField.onChange(time)}
-                    dateError={errors.returnDate?.message}
-                    timeError={errors.returnTime?.message}
-                  />
-                )}
+              <RentalSchedulePicker
+                variant="return"
+                dateValue={dateField.value ?? ""}
+                minDate={returnMin}
+                onDateChange={dateField.onChange}
+                dateError={errors.returnDate?.message}
               />
             )}
           />
         </div>
 
         <p className="mckee-form-note">
-          Dates and times are a request only. We will confirm kit availability before
-          anything is booked. Pickup and return are at our Haliburton office.
+          Dates are a request only. We will confirm availability before anything is
+          booked. Pickup is Mon to Fri at our Haliburton office. Return can be anytime.
         </p>
 
         <div className="mckee-form-field">

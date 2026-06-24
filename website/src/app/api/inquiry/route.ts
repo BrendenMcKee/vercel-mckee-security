@@ -6,10 +6,15 @@ import {
   buildFormEmailText,
 } from "@/lib/email-templates";
 import { getServiceDisplayName } from "@/lib/form-email-meta";
-import { formatRentalSchedule, RENTAL_TIME_SLOTS } from "@/lib/inquiry-dates";
+import {
+  formatRentalReturnDate,
+  formatRentalSchedule,
+  isWeekdayIso,
+  RENTAL_PICKUP_TIME_SLOTS,
+} from "@/lib/inquiry-dates";
 import { sendEmail } from "@/lib/email";
 
-const rentalTimeSchema = z.enum(RENTAL_TIME_SLOTS);
+const rentalTimeSchema = z.enum(RENTAL_PICKUP_TIME_SLOTS);
 
 const inquirySchema = z
   .object({
@@ -24,7 +29,6 @@ const inquirySchema = z
     pickupDate: z.string().optional(),
     pickupTime: rentalTimeSchema.optional(),
     returnDate: z.string().optional(),
-    returnTime: rentalTimeSchema.optional(),
     usageLocation: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -52,11 +56,11 @@ const inquirySchema = z
           message: "Pickup time is required",
         });
       }
-      if (!data.returnTime) {
+      if (data.pickupDate && !isWeekdayIso(data.pickupDate)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["returnTime"],
-          message: "Return time is required",
+          path: ["pickupDate"],
+          message: "Pickup must be a weekday (Monday to Friday)",
         });
       }
       if (!data.usageLocation || data.usageLocation.trim().length < 3) {
@@ -128,7 +132,7 @@ export async function POST(request: Request) {
         ? [
             {
               label: "Preferred Return",
-              value: formatRentalSchedule(data.returnDate, data.returnTime),
+              value: formatRentalReturnDate(data.returnDate),
               highlight: true,
             },
           ]
