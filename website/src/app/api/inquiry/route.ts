@@ -49,13 +49,6 @@ const inquirySchema = z
           message: "Return date is required",
         });
       }
-      if (!data.pickupTime) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["pickupTime"],
-          message: "Pickup time is required",
-        });
-      }
       if (data.pickupDate && !isWeekdayIso(data.pickupDate)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -133,6 +126,16 @@ export async function POST(request: Request) {
             {
               label: "Preferred Return",
               value: formatRentalReturnDate(data.returnDate),
+              highlight: true,
+            },
+          ]
+        : []),
+      ...(isStarlinkRental && data.pickupDate && !data.pickupTime
+        ? [
+            {
+              label: "Schedule Note",
+              value:
+                "Approximate pickup time was not selected. Confirm pickup time with the customer before booking.",
               highlight: true,
             },
           ]

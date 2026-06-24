@@ -24,7 +24,7 @@ const schema = z
     phone: z.string().min(7, "Please enter your phone number"),
     address: z.string().min(5, "Please enter your address"),
     pickupDate: z.string().min(1, "Please choose a pickup date"),
-    pickupTime: pickupTimeSchema,
+    pickupTime: pickupTimeSchema.optional(),
     returnDate: z.string().min(1, "Please choose a return date"),
     usageLocation: z
       .string()
@@ -170,14 +170,15 @@ export function StarlinkRentalForm({
                     timeValue={timeField.value ?? ""}
                     minDate={todayIso()}
                     onDateChange={dateField.onChange}
-                    onTimeChange={(time: RentalTimeSlot) => timeField.onChange(time)}
+                    onTimeChange={(time) =>
+                      timeField.onChange(time === "" ? undefined : time)
+                    }
                     onWeekdayRejected={() =>
                       setError("pickupDate", {
                         message: "Pickup must be a weekday (Monday to Friday)",
                       })
                     }
                     dateError={errors.pickupDate?.message}
-                    timeError={errors.pickupTime?.message}
                   />
                 )}
               />

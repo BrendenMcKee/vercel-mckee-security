@@ -39,7 +39,7 @@ export function formatRentalSchedule(isoDate: string, time?: string): string {
   if (time?.trim()) {
     return `${dateLabel} · around ${time.trim()}`;
   }
-  return dateLabel;
+  return `${dateLabel} · pickup time not selected yet`;
 }
 
 /** Return drop-off: any day, any time (porch/garage). */

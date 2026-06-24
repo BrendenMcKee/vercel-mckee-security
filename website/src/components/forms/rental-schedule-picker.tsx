@@ -15,7 +15,7 @@ type RentalSchedulePickerProps = {
   timeValue?: string;
   minDate: string;
   onDateChange: (isoDate: string) => void;
-  onTimeChange?: (time: RentalTimeSlot) => void;
+  onTimeChange?: (time: RentalTimeSlot | "") => void;
   onWeekdayRejected?: () => void;
   dateError?: string;
   timeError?: string;
@@ -84,7 +84,7 @@ export function RentalSchedulePicker({
         <div className="rental-time-section">
           <p className="rental-time-heading">
             <Clock3 size={16} strokeWidth={1.75} aria-hidden="true" />
-            Approximate pickup time
+            Approximate pickup time <span className="rental-time-optional">(optional)</span>
           </p>
           <div className="rental-time-slots" role="group" aria-label="Pickup time">
             {RENTAL_PICKUP_TIME_SLOTS.map((slot) => {
@@ -95,14 +95,18 @@ export function RentalSchedulePicker({
                   type="button"
                   className={cn("rental-time-slot", selected && "is-selected")}
                   aria-pressed={selected}
-                  onClick={() => onTimeChange?.(slot)}
+                  onClick={() =>
+                    onTimeChange?.(selected ? "" : slot)
+                  }
                 >
                   {slot}
                 </button>
               );
             })}
           </div>
-          <p className="rental-time-note">Monday to Friday · Haliburton office hours</p>
+          <p className="rental-time-note">
+            Monday to Friday · Haliburton office hours · tap again to clear
+          </p>
         </div>
       ) : (
         <p className="rental-time-note rental-time-note--return">

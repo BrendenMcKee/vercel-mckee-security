@@ -335,8 +335,8 @@
   position: relative;
   z-index: 1;
   display: flex;
-  align-items: center;
-  gap: 0.875rem;
+  align-items: flex-start;
+  gap: 1.125rem;
   min-height: 4.75rem;
   padding: 0.875rem 1rem;
   pointer-events: none;
@@ -347,8 +347,9 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-top: 0.125rem;
   border-radius: 0.75rem;
   background: rgba(201, 24, 24, 0.14);
   color: #ff8a8a;
@@ -357,8 +358,9 @@
 .rental-date-picker__text {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.35rem;
   min-width: 0;
+  flex: 1;
   pointer-events: none;
 }
 
@@ -398,6 +400,11 @@
   color: rgba(255, 255, 255, 0.78);
 }
 
+.rental-time-optional {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.42);
+}
+
 .rental-time-slots {
   display: flex;
   flex-wrap: wrap;
@@ -406,6 +413,7 @@
 
 .rental-time-slot {
   min-width: 4.75rem;
+  min-height: 2.75rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.18);
@@ -444,11 +452,12 @@
   color: rgba(255, 255, 255, 0.62);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 960px) {
   .rental-schedule-stack {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
+    align-items: start;
   }
 
   .rental-time-slots {
