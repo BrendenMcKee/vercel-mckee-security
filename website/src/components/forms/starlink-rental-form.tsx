@@ -200,7 +200,7 @@ export function StarlinkRentalForm({
           />
         </div>
 
-        <p className="mckee-form-note">
+        <p className="mckee-form-note text-center">
           Dates are a request only. We will confirm availability before anything is
           booked. Pickup is Mon to Fri at our Haliburton office. Return can be anytime.
         </p>
