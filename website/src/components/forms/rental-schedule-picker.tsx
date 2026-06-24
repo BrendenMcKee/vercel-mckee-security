@@ -57,23 +57,25 @@ export function RentalSchedulePicker({
           onChange={(event) => handleDateChange(event.target.value)}
           aria-label={`${title} date`}
         />
-        <span className="rental-date-picker__icon" aria-hidden="true">
-          <CalendarDays size={22} strokeWidth={1.75} />
-        </span>
-        <span className="rental-date-picker__text">
-          {longDate ? (
-            <>
-              <span className="rental-date-picker__label">Selected date</span>
-              <span className="rental-date-picker__value">{longDate}</span>
-            </>
-          ) : (
-            <>
-              <span className="rental-date-picker__label">Choose a date</span>
-              <span className="rental-date-picker__value rental-date-picker__value--placeholder">
-                Tap to open calendar
-              </span>
-            </>
-          )}
+        <span className="rental-date-picker__face">
+          <span className="rental-date-picker__icon" aria-hidden="true">
+            <CalendarDays size={22} strokeWidth={1.75} />
+          </span>
+          <span className="rental-date-picker__text">
+            {longDate ? (
+              <>
+                <span className="rental-date-picker__label">Selected date</span>
+                <span className="rental-date-picker__value">{longDate}</span>
+              </>
+            ) : (
+              <>
+                <span className="rental-date-picker__label">Choose a date</span>
+                <span className="rental-date-picker__value rental-date-picker__value--placeholder">
+                  Tap to open calendar
+                </span>
+              </>
+            )}
+          </span>
         </span>
       </label>
       {dateError && <p className="mckee-form-error">{dateError}</p>}

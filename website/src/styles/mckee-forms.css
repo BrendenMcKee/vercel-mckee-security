@@ -275,20 +275,22 @@
 
 .rental-date-picker {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
+  display: block;
   min-height: 4.75rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0.875rem;
   background: rgba(0, 0, 0, 0.22);
-  padding: 0.875rem 1rem;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  user-select: none;
 }
 
-.rental-date-picker:hover,
 .rental-date-picker:focus-within {
+  border-color: rgba(201, 24, 24, 0.45);
+  box-shadow: 0 0 0 3px rgba(201, 24, 24, 0.12);
+}
+
+.rental-date-picker:hover {
   border-color: rgba(201, 24, 24, 0.45);
   box-shadow: 0 0 0 3px rgba(201, 24, 24, 0.12);
 }
@@ -301,10 +303,43 @@
 .rental-date-picker__input {
   position: absolute;
   inset: 0;
+  z-index: 2;
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   opacity: 0;
   cursor: pointer;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.mckee-elementor-form--compact .rental-date-picker__input,
+.mckee-form-fields .rental-date-picker__input {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 4.75rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.rental-date-picker__face {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 4.75rem;
+  padding: 0.875rem 1rem;
+  pointer-events: none;
 }
 
 .rental-date-picker__icon {
