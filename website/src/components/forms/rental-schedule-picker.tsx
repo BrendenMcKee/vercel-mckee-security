@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { CalendarDays, Clock3 } from "lucide-react";
 import {
   formatRentalDateLong,
@@ -35,6 +36,25 @@ export function RentalSchedulePicker({
   const isPickup = variant === "pickup";
   const longDate = formatRentalDateLong(dateValue);
   const title = isPickup ? "Pickup" : "Return";
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const openDatePicker = () => {
+    const input = dateInputRef.current;
+    if (!input) return;
+
+    input.focus({ preventScroll: true });
+
+    if (typeof input.showPicker === "function") {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // Some browsers throw if not triggered from a direct user gesture.
+      }
+    }
+
+    input.click();
+  };
 
   const handleDateChange = (isoDate: string) => {
     if (isPickup && isoDate && !isWeekdayIso(isoDate)) {
@@ -48,16 +68,25 @@ export function RentalSchedulePicker({
     <div className="rental-schedule-block">
       <p className="rental-schedule-title">{title}</p>
 
-      <label className={cn("rental-date-picker", dateValue && "has-value")}>
+      <div className={cn("rental-date-picker", dateValue && "has-value")}>
         <input
+          ref={dateInputRef}
           type="date"
           className="rental-date-picker__input"
           min={minDate}
           value={dateValue}
           onChange={(event) => handleDateChange(event.target.value)}
           aria-label={`${title} date`}
+          tabIndex={-1}
         />
-        <span className="rental-date-picker__face">
+        <button
+          type="button"
+          className="rental-date-picker__face"
+          onClick={openDatePicker}
+          aria-label={
+            longDate ? `${title} date: ${longDate}. Tap to change.` : `${title} date. Tap to open calendar.`
+          }
+        >
           <span className="rental-date-picker__icon" aria-hidden="true">
             <CalendarDays size={22} strokeWidth={1.75} />
           </span>
@@ -76,8 +105,8 @@ export function RentalSchedulePicker({
               </>
             )}
           </span>
-        </span>
-      </label>
+        </button>
+      </div>
       {dateError && <p className="mckee-form-error">{dateError}</p>}
 
       {isPickup ? (

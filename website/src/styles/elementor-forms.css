@@ -95,7 +95,7 @@
   gap: 0.875rem;
 }
 
-.mckee-elementor-form--compact label {
+.mckee-elementor-form--compact label:not(.rental-date-picker) {
   display: block;
   margin-bottom: 0.35rem;
   font-size: 0.8125rem;
@@ -108,7 +108,7 @@
   font-weight: 400;
 }
 
-.mckee-elementor-form--compact input,
+.mckee-elementor-form--compact input:not(.rental-date-picker__input),
 .mckee-elementor-form--compact textarea {
   width: 100%;
   border-radius: 0.75rem;
@@ -120,12 +120,12 @@
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
-.mckee-elementor-form--compact input::placeholder,
+.mckee-elementor-form--compact input:not(.rental-date-picker__input)::placeholder,
 .mckee-elementor-form--compact textarea::placeholder {
   color: rgba(255, 255, 255, 0.32);
 }
 
-.mckee-elementor-form--compact input:focus,
+.mckee-elementor-form--compact input:not(.rental-date-picker__input):focus,
 .mckee-elementor-form--compact textarea:focus {
   outline: none;
   border-color: #c91818;
