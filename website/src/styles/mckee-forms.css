@@ -82,6 +82,24 @@
   gap: 1rem;
 }
 
+.mckee-form-field-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .mckee-form-field-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.mckee-form-note {
+  margin: -0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .mckee-form-field label,
 .mckee-form-label {
   display: block;

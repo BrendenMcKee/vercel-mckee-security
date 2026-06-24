@@ -1,4 +1,5 @@
 import { ServiceQuoteForm } from "@/components/forms/service-quote-form";
+import { StarlinkRentalForm } from "@/components/forms/starlink-rental-form";
 import { cn } from "@/lib/utils";
 
 type ServiceQuoteSectionProps = {
@@ -27,12 +28,16 @@ export function ServiceQuoteSection({
             <p>{description}</p>
           </header>
           <div className="mckee-service-quote-form-box">
-            <ServiceQuoteForm
-              compact
-              serviceLabel={serviceLabel}
-              serviceSlug={serviceSlug}
-              showHeader={false}
-            />
+            {serviceSlug === "starlink-rental" ? (
+              <StarlinkRentalForm compact showHeader={false} />
+            ) : (
+              <ServiceQuoteForm
+                compact
+                serviceLabel={serviceLabel}
+                serviceSlug={serviceSlug}
+                showHeader={false}
+              />
+            )}
           </div>
         </div>
       </div>
