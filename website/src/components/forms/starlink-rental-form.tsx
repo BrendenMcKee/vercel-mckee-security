@@ -1,12 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { RentalSchedulePicker } from "@/components/forms/rental-schedule-picker";
 import { getFormEmailMeta } from "@/lib/form-email-meta";
+import {
+  RENTAL_TIME_SLOTS,
+  todayIso,
+  type RentalTimeSlot,
+} from "@/lib/inquiry-dates";
 import { trackWebsiteLeadForm } from "@/lib/google-ads";
 import { cn } from "@/lib/utils";
+
+const timeSlotSchema = z.enum(RENTAL_TIME_SLOTS);
 
 const schema = z
   .object({
@@ -15,19 +23,18 @@ const schema = z
     phone: z.string().min(7, "Please enter your phone number"),
     address: z.string().min(5, "Please enter your address"),
     pickupDate: z.string().min(1, "Please choose a pickup date"),
+    pickupTime: timeSlotSchema,
     returnDate: z.string().min(1, "Please choose a return date"),
+    returnTime: timeSlotSchema,
     usageLocation: z
       .string()
       .min(3, "Tell us where you plan to use the kit (cottage, campsite, etc.)"),
     comments: z.string().optional(),
   })
-  .refine(
-    (data) => data.returnDate >= data.pickupDate,
-    {
-      message: "Return date must be on or after pickup date",
-      path: ["returnDate"],
-    },
-  );
+  .refine((data) => data.returnDate >= data.pickupDate, {
+    message: "Return date must be on or after pickup date",
+    path: ["returnDate"],
+  });
 
 type FormData = z.infer<typeof schema>;
 
@@ -36,8 +43,6 @@ type StarlinkRentalFormProps = {
   compact?: boolean;
   showHeader?: boolean;
 };
-
-const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export function StarlinkRentalForm({
   className,
@@ -48,17 +53,24 @@ export function StarlinkRentalForm({
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const {
     register,
+    control,
     handleSubmit,
     reset,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { pickupDate: "", returnDate: "" },
+    defaultValues: {
+      pickupDate: "",
+      pickupTime: undefined,
+      returnDate: "",
+      returnTime: undefined,
+    },
   });
 
   const pickupDate = watch("pickupDate");
-  const returnMin = pickupDate && pickupDate >= todayIso() ? pickupDate : todayIso();
+  const returnMin =
+    pickupDate && pickupDate >= todayIso() ? pickupDate : todayIso();
 
   const onSubmit = async (data: FormData) => {
     setStatus("idle");
@@ -139,43 +151,57 @@ export function StarlinkRentalForm({
           {errors.address && <p className="mckee-form-error">{errors.address.message}</p>}
         </div>
 
-        <div className="mckee-form-field-grid">
-          <div className="mckee-form-field">
-            <label className="mckee-form-label">
-              Preferred pickup date{" "}
-              <span className="mckee-form-required">(required)</span>
-            </label>
-            <input
-              type="date"
-              min={todayIso()}
-              {...register("pickupDate")}
-              className="mckee-form-input"
-            />
-            {errors.pickupDate && (
-              <p className="mckee-form-error">{errors.pickupDate.message}</p>
+        <div className="rental-schedule-stack">
+          <Controller
+            name="pickupDate"
+            control={control}
+            render={({ field: dateField }) => (
+              <Controller
+                name="pickupTime"
+                control={control}
+                render={({ field: timeField }) => (
+                  <RentalSchedulePicker
+                    title="Pickup"
+                    dateValue={dateField.value ?? ""}
+                    timeValue={timeField.value ?? ""}
+                    minDate={todayIso()}
+                    onDateChange={dateField.onChange}
+                    onTimeChange={(time: RentalTimeSlot) => timeField.onChange(time)}
+                    dateError={errors.pickupDate?.message}
+                    timeError={errors.pickupTime?.message}
+                  />
+                )}
+              />
             )}
-          </div>
+          />
 
-          <div className="mckee-form-field">
-            <label className="mckee-form-label">
-              Preferred return date{" "}
-              <span className="mckee-form-required">(required)</span>
-            </label>
-            <input
-              type="date"
-              min={returnMin}
-              {...register("returnDate")}
-              className="mckee-form-input"
-            />
-            {errors.returnDate && (
-              <p className="mckee-form-error">{errors.returnDate.message}</p>
+          <Controller
+            name="returnDate"
+            control={control}
+            render={({ field: dateField }) => (
+              <Controller
+                name="returnTime"
+                control={control}
+                render={({ field: timeField }) => (
+                  <RentalSchedulePicker
+                    title="Return"
+                    dateValue={dateField.value ?? ""}
+                    timeValue={timeField.value ?? ""}
+                    minDate={returnMin}
+                    onDateChange={dateField.onChange}
+                    onTimeChange={(time: RentalTimeSlot) => timeField.onChange(time)}
+                    dateError={errors.returnDate?.message}
+                    timeError={errors.returnTime?.message}
+                  />
+                )}
+              />
             )}
-          </div>
+          />
         </div>
 
         <p className="mckee-form-note">
-          Dates are a request only. We will confirm kit availability before anything is
-          booked. Pickup and return are at our Haliburton office.
+          Dates and times are a request only. We will confirm kit availability before
+          anything is booked. Pickup and return are at our Haliburton office.
         </p>
 
         <div className="mckee-form-field">

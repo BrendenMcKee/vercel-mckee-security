@@ -6,18 +6,10 @@ import {
   buildFormEmailText,
 } from "@/lib/email-templates";
 import { getServiceDisplayName } from "@/lib/form-email-meta";
+import { formatRentalSchedule, RENTAL_TIME_SLOTS } from "@/lib/inquiry-dates";
 import { sendEmail } from "@/lib/email";
 
-function formatInquiryDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  if (!year || !month || !day) return isoDate;
-
-  return new Date(year, month - 1, day).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
+const rentalTimeSchema = z.enum(RENTAL_TIME_SLOTS);
 
 const inquirySchema = z
   .object({
@@ -30,7 +22,9 @@ const inquirySchema = z
     serviceLabel: z.string().optional(),
     serviceSlug: z.string().optional(),
     pickupDate: z.string().optional(),
+    pickupTime: rentalTimeSchema.optional(),
     returnDate: z.string().optional(),
+    returnTime: rentalTimeSchema.optional(),
     usageLocation: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -49,6 +43,20 @@ const inquirySchema = z
           code: z.ZodIssueCode.custom,
           path: ["returnDate"],
           message: "Return date is required",
+        });
+      }
+      if (!data.pickupTime) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pickupTime"],
+          message: "Pickup time is required",
+        });
+      }
+      if (!data.returnTime) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["returnTime"],
+          message: "Return time is required",
         });
       }
       if (!data.usageLocation || data.usageLocation.trim().length < 3) {
@@ -110,8 +118,8 @@ export async function POST(request: Request) {
       ...(data.pickupDate
         ? [
             {
-              label: "Preferred Pickup Date",
-              value: formatInquiryDate(data.pickupDate),
+              label: "Preferred Pickup",
+              value: formatRentalSchedule(data.pickupDate, data.pickupTime),
               highlight: true,
             },
           ]
@@ -119,8 +127,8 @@ export async function POST(request: Request) {
       ...(data.returnDate
         ? [
             {
-              label: "Preferred Return Date",
-              value: formatInquiryDate(data.returnDate),
+              label: "Preferred Return",
+              value: formatRentalSchedule(data.returnDate, data.returnTime),
               highlight: true,
             },
           ]
