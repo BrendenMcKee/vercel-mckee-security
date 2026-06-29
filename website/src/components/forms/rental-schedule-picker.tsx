@@ -160,10 +160,18 @@ export function RentalSchedulePicker({
               modifiersClassNames={{ booked: "rdp-booked" }}
               showOutsideDays
             />
-            <p className="rental-date-picker__legend">
-              {isPickup ? "Pickup is Mon to Fri. " : ""}
-              Crossed-out dates are unavailable.
-            </p>
+            <div className="rental-date-picker__legend">
+              <span className="rental-date-picker__legend-item">
+                <span
+                  className="rental-date-picker__legend-dot rental-date-picker__legend-dot--booked"
+                  aria-hidden="true"
+                />
+                Booked &mdash; no kits available
+              </span>
+              {isPickup ? (
+                <span className="rental-date-picker__legend-item">Pickup is Mon to Fri</span>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>

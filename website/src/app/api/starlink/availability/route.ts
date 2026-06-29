@@ -7,7 +7,7 @@ import { daysBetweenInclusive } from "@/lib/starlink/dates";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_RANGE_DAYS = 180;
+const MAX_RANGE_DAYS = 400;
 
 export async function GET(request: Request) {
   // Never break the public form: if the backend is not wired up yet, report

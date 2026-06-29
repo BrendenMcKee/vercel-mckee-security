@@ -503,10 +503,44 @@
 }
 
 .rental-date-picker__legend {
-  margin: 0.4rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+  margin: 0.55rem 0 0;
   font-size: 0.7rem;
   line-height: 1.4;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.rental-date-picker__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rental-date-picker__legend-dot {
+  position: relative;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 9999px;
+  flex: none;
+}
+
+.rental-date-picker__legend-dot--booked {
+  background: rgba(201, 24, 24, 0.28);
+  border: 1px solid rgba(248, 113, 113, 0.75);
+}
+
+.rental-date-picker__legend-dot--booked::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  height: 1.5px;
+  background: rgba(248, 113, 113, 0.95);
+  transform: translateY(-50%) rotate(-14deg);
 }
 
 .rental-daypicker.rdp-root {
@@ -554,10 +588,19 @@
 }
 
 .rental-daypicker .rdp-disabled .rdp-day_button {
-  color: rgba(255, 255, 255, 0.32);
+  color: rgba(255, 255, 255, 0.3);
 }
 
+/* Booked days: a clearly different, red struck-through pill (not just greyed). */
 .rental-daypicker .rdp-booked .rdp-day_button {
+  background: rgba(201, 24, 24, 0.28);
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  border-radius: 9999px;
+  color: #fecaca;
+  font-weight: 600;
   text-decoration: line-through;
-  color: rgba(248, 113, 113, 0.65);
+  text-decoration-color: rgba(248, 113, 113, 0.95);
+  text-decoration-thickness: 2px;
+  opacity: 1;
+  cursor: not-allowed;
 }

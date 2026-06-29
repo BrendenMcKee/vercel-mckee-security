@@ -61,7 +61,7 @@ export function StarlinkRentalForm({
   useEffect(() => {
     const controller = new AbortController();
     const start = todayIso();
-    const end = addDaysIso(start, 180);
+    const end = addDaysIso(start, 365);
     fetch(`/api/starlink/availability?start=${start}&end=${end}`, {
       signal: controller.signal,
     })
