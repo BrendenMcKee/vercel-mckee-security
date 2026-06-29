@@ -26,15 +26,15 @@ export function ServiceFormScrollButton({
         className,
       )}
       onClick={() => scrollToServiceQuote()}
-      aria-label="Fill out the inquiry form"
+      aria-label="Scroll to inquiry form"
     >
       {isFloating ? (
         <>
           <ClipboardPenLine size={18} strokeWidth={2} aria-hidden="true" />
-          <span>Fill out the form</span>
+          <span className="mckee-service-form-scroll-btn__label">Inquire now</span>
         </>
       ) : (
-        "Fill out the form now"
+        <span className="mckee-service-form-scroll-btn__label">Inquire Now</span>
       )}
     </button>
   );
