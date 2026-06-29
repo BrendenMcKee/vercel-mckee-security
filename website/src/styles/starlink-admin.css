@@ -28,3 +28,23 @@
 .sl-admin select option {
   color: #111;
 }
+
+/* Checkboxes are always clickable — show the pointer on desktop. */
+.sl-admin input[type="checkbox"]:not(:disabled) {
+  cursor: pointer;
+}
+
+/*
+ * Custom dropdown chevron so it sits with comfortable right padding instead of
+ * touching the right edge (mirrors the spacing of the native date-picker icon).
+ */
+.sl-admin select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem 1rem;
+}

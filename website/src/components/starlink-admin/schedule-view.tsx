@@ -6,6 +6,7 @@ import type { RentalWithUnit, Unit } from "@/lib/starlink/types";
 import { formatDateMedium } from "@/lib/starlink/format";
 import { CalendarMonth } from "./calendar-month";
 import { StatusBadge } from "./status-badge";
+import { RentalIndicatorLegend, RentalIndicators } from "./rental-indicators";
 import { cn } from "@/lib/utils";
 
 const MONTH_LABEL = new Intl.DateTimeFormat("en-CA", {
@@ -102,6 +103,8 @@ export function ScheduleView({
         </div>
       ) : null}
 
+      <RentalIndicatorLegend className="rounded-lg border border-white/10 bg-surface/30 px-3 py-2" />
+
       {/* Calendar grid on tablet and up */}
       <div className="hidden sm:block">
         <CalendarMonth
@@ -149,8 +152,11 @@ export function ScheduleView({
                   <span className="mt-0.5 block truncate text-xs text-white/55">
                     {formatDateMedium(r.pickup_date)} → {formatDateMedium(r.return_date)}
                   </span>
-                  <span className="mt-0.5 block truncate text-xs text-white/40">
-                    {r.unit?.name ?? "Unassigned"}
+                  <span className="mt-1 flex items-center justify-between gap-2">
+                    <span className="truncate text-xs text-white/40">
+                      {r.unit?.name ?? "Unassigned"}
+                    </span>
+                    <RentalIndicators rental={r} size={14} className="shrink-0" />
                   </span>
                 </span>
               </button>

@@ -28,6 +28,14 @@ export type StatusTone =
   | "slate"
   | "red";
 
+export const STATUS_TONE_HEX: Record<StatusTone, string> = {
+  amber: "#f59e0b",
+  blue: "#3b82f6",
+  green: "#22c55e",
+  slate: "#64748b",
+  red: "#ef4444",
+};
+
 export const STATUS_META: Record<
   RentalStatus,
   { label: string; tone: StatusTone; description: string }

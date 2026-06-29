@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Trash2, X } from "lucide-react";
 import {
   RENTAL_STATUSES,
+  STATUS_META,
+  STATUS_TONE_HEX,
+  type RentalStatus,
   type RentalWithUnit,
   type Unit,
 } from "@/lib/starlink/types";
@@ -13,7 +16,8 @@ import {
   updateRental,
 } from "@/lib/starlink/client-api";
 import { daysBetweenInclusive } from "@/lib/starlink/dates";
-import { formatCurrency } from "@/lib/starlink/format";
+import { formatCurrency, hexToRgba } from "@/lib/starlink/format";
+import { StatusBadge } from "./status-badge";
 import { cn } from "@/lib/utils";
 
 type FormState = {
@@ -85,7 +89,7 @@ function Field({
   children,
   className,
 }: {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -149,6 +153,16 @@ export function RentalModal({
     if (quoted === null) return null;
     return quoted - paid;
   }, [form.quoted_price, form.amount_received]);
+
+  const statusKey: RentalStatus = RENTAL_STATUSES.includes(
+    form.status as RentalStatus,
+  )
+    ? (form.status as RentalStatus)
+    : "requested";
+  const statusMeta = STATUS_META[statusKey];
+  const statusHex = STATUS_TONE_HEX[statusMeta.tone];
+  const selectedUnit = units.find((u) => u.id === form.unit_id) ?? null;
+  const unitColor = selectedUnit?.color ?? null;
 
   async function handleSave() {
     setError("");
@@ -224,15 +238,51 @@ export function RentalModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="my-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-surface shadow-2xl shadow-black/50">
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 rounded-t-2xl border-b border-white/10 bg-surface px-5 py-4">
-          <h2 className="text-base font-bold text-white">
-            {isEdit ? "Rental details" : "New rental"}
-          </h2>
+      <div
+        className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border bg-surface shadow-2xl shadow-black/50 transition-colors"
+        style={{
+          borderColor: hexToRgba(statusHex, 0.55),
+          boxShadow: `0 0 0 1px ${hexToRgba(statusHex, 0.18)}, 0 25px 50px -12px rgba(0,0,0,0.6)`,
+        }}
+      >
+        <div
+          className="h-1.5 w-full"
+          style={{
+            background: `linear-gradient(90deg, ${statusHex}, ${unitColor ?? statusHex})`,
+          }}
+          aria-hidden="true"
+        />
+        <div
+          className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-surface px-5 py-4"
+          style={{ borderBottomColor: hexToRgba(statusHex, 0.3) }}
+        >
+          <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+            <h2 className="text-base font-bold text-white">
+              {isEdit ? "Rental details" : "New rental"}
+            </h2>
+            <StatusBadge status={statusKey} />
+            {selectedUnit ? (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold"
+                style={{
+                  borderColor: hexToRgba(selectedUnit.color, 0.5),
+                  backgroundColor: hexToRgba(selectedUnit.color, 0.15),
+                  color: "#fff",
+                }}
+              >
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: selectedUnit.color }}
+                  aria-hidden="true"
+                />
+                {selectedUnit.name}
+              </span>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/5 hover:text-white"
+            className="shrink-0 rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/5 hover:text-white"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -293,9 +343,30 @@ export function RentalModal({
               Booking
             </h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Unit">
+              <Field
+                label={
+                  <span className="flex items-center gap-1.5">
+                    Unit
+                    {unitColor ? (
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: unitColor }}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </span>
+                }
+              >
                 <select
                   className={inputClass}
+                  style={
+                    unitColor
+                      ? {
+                          borderLeft: `4px solid ${unitColor}`,
+                          backgroundColor: hexToRgba(unitColor, 0.12),
+                        }
+                      : undefined
+                  }
                   value={form.unit_id}
                   onChange={(e) => set("unit_id", e.target.value)}
                 >
@@ -310,13 +381,18 @@ export function RentalModal({
               </Field>
               <Field label="Status">
                 <select
-                  className={inputClass}
+                  className={cn(inputClass, "font-semibold")}
+                  style={{
+                    borderLeft: `4px solid ${statusHex}`,
+                    backgroundColor: hexToRgba(statusHex, 0.12),
+                    color: statusHex,
+                  }}
                   value={form.status}
                   onChange={(e) => set("status", e.target.value)}
                 >
                   {RENTAL_STATUSES.map((st) => (
                     <option key={st} value={st}>
-                      {st}
+                      {STATUS_META[st].label}
                     </option>
                   ))}
                 </select>
@@ -354,10 +430,17 @@ export function RentalModal({
                   : ""}
               </p>
             ) : null}
-            {form.status === "confirmed" || form.status === "active" ? (
-              <p className="rounded-lg border border-blue-500/25 bg-blue-500/10 px-3 py-2 text-xs text-blue-200">
-                Confirmed and active rentals reserve the unit. Overlapping dates on the
-                same unit will be rejected.
+            {statusKey === "confirmed" || statusKey === "active" ? (
+              <p
+                className="rounded-lg border px-3 py-2 text-xs"
+                style={{
+                  borderColor: hexToRgba(statusHex, 0.3),
+                  backgroundColor: hexToRgba(statusHex, 0.1),
+                  color: statusHex,
+                }}
+              >
+                {statusKey === "active" ? "Active" : "Confirmed"} rentals reserve the
+                unit. Overlapping dates on the same unit will be rejected.
               </p>
             ) : null}
           </section>
@@ -433,20 +516,34 @@ export function RentalModal({
                 />
               </Field>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm text-white/80">
+            <div className="flex flex-wrap gap-3">
+              <label
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
+                  form.deposit_received
+                    ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
+                    : "border-white/15 bg-black/20 text-white/70 hover:bg-white/5",
+                )}
+              >
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-[var(--primary)]"
+                  className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
                   checked={form.deposit_received}
                   onChange={(e) => set("deposit_received", e.target.checked)}
                 />
                 Deposit received
               </label>
-              <label className="flex items-center gap-2 text-sm text-white/80">
+              <label
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
+                  form.deposit_returned
+                    ? "border-slate-300/40 bg-slate-300/10 text-slate-200"
+                    : "border-white/15 bg-black/20 text-white/70 hover:bg-white/5",
+                )}
+              >
                 <input
                   type="checkbox"
-                  className="h-4 w-4 accent-[var(--primary)]"
+                  className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
                   checked={form.deposit_returned}
                   onChange={(e) => set("deposit_returned", e.target.checked)}
                 />
@@ -458,8 +555,8 @@ export function RentalModal({
           {/* Comments */}
           <Field label="Internal comments">
             <textarea
-              className={inputClass}
-              rows={3}
+              className={cn(inputClass, "min-h-[8.5rem] resize-y leading-relaxed")}
+              rows={6}
               value={form.comments}
               onChange={(e) => set("comments", e.target.value)}
               placeholder="Notes for the team..."

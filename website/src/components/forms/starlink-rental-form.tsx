@@ -224,8 +224,9 @@ export function StarlinkRentalForm({
         </div>
 
         <p className="mckee-form-note text-center">
-          Dates are a request only. We will confirm availability before anything is
-          booked. Pickup is Mon to Fri at our Haliburton office. Return can be anytime.
+          Fully-booked dates are greyed out on the calendars above. Your dates are a
+          request only &mdash; we&rsquo;ll reply with pricing and confirm before anything
+          is booked. Pickup is Mon to Fri at our Haliburton office; return can be anytime.
         </p>
 
         <div className="mckee-form-field">
@@ -292,7 +293,7 @@ export function StarlinkRentalForm({
               : "mckee-form-submit min-w-[220px]"
           }
         >
-          {isSubmitting ? "Sending..." : "Check Availability"}
+          {isSubmitting ? "Sending..." : "Send Inquiry"}
         </button>
       </div>
     </form>

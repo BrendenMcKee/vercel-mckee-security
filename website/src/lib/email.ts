@@ -11,36 +11,46 @@ type EmailPayload = {
   attachments?: EmailAttachment[];
 };
 
-export async function sendEmail(payload: EmailPayload) {
+/**
+ * Sends an email via Resend. Returns `true` only when a message was actually
+ * dispatched. When `RESEND_API_KEY` is missing it logs and returns `false` so
+ * callers can decide how to handle an undelivered notification (rather than
+ * silently treating a no-op as success).
+ */
+export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const to = process.env.CONTACT_EMAIL ?? "info@mckeesecurity.ca";
   const apiKey = process.env.RESEND_API_KEY;
 
-  if (apiKey) {
-    const body: Record<string, unknown> = {
-      from: process.env.EMAIL_FROM ?? "McKee Security <onboarding@resend.dev>",
-      to: [to],
-      subject: payload.subject,
-      text: payload.text,
-    };
-
-    if (payload.html) body.html = payload.html;
-    if (payload.replyTo) body.reply_to = payload.replyTo;
-    if (payload.attachments?.length) body.attachments = payload.attachments;
-
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Email failed: ${err}`);
-    }
-    return;
+  if (!apiKey) {
+    console.warn(
+      "[email] RESEND_API_KEY is not set; email NOT sent:",
+      payload.subject,
+    );
+    return false;
   }
 
-  console.info("[email]", payload.subject, payload.text.slice(0, 200));
+  const body: Record<string, unknown> = {
+    from: process.env.EMAIL_FROM ?? "McKee Security <onboarding@resend.dev>",
+    to: [to],
+    subject: payload.subject,
+    text: payload.text,
+  };
+
+  if (payload.html) body.html = payload.html;
+  if (payload.replyTo) body.reply_to = payload.replyTo;
+  if (payload.attachments?.length) body.attachments = payload.attachments;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Email failed: ${err}`);
+  }
+  return true;
 }

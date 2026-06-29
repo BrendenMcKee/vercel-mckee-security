@@ -1,8 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import type { RentalWithUnit } from "@/lib/starlink/types";
+import {
+  STATUS_META,
+  type RentalStatus,
+  type RentalWithUnit,
+} from "@/lib/starlink/types";
+import { hexToRgba } from "@/lib/starlink/format";
 import { cn } from "@/lib/utils";
+import { isPaidInFull, RentalIndicators } from "./rental-indicators";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -13,14 +19,16 @@ function toIso(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export function hexToRgba(hex: string, alpha: number): string {
-  const match = /^#?([0-9a-fA-F]{6})$/.exec(hex);
-  if (!match) return `rgba(148,163,184,${alpha})`;
-  const int = parseInt(match[1], 16);
-  const r = (int >> 16) & 255;
-  const g = (int >> 8) & 255;
-  const b = int & 255;
-  return `rgba(${r},${g},${b},${alpha})`;
+function chipTitle(r: RentalWithUnit): string {
+  const parts = [
+    r.customer_name,
+    r.unit?.name ?? "Unassigned",
+    STATUS_META[r.status as RentalStatus]?.label ?? r.status,
+  ];
+  if (r.deposit_returned) parts.push("Deposit returned");
+  else if (r.deposit_received) parts.push("Deposit held");
+  if (isPaidInFull(r)) parts.push("Paid in full");
+  return parts.join(" · ");
 }
 
 type DayCell = {
@@ -111,9 +119,9 @@ export function CalendarMonth({
                     key={r.id}
                     type="button"
                     onClick={() => onSelectRental(r)}
-                    title={`${r.customer_name} · ${r.unit?.name ?? "Unassigned"}`}
+                    title={chipTitle(r)}
                     className={cn(
-                      "flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[0.7rem] font-medium transition-opacity hover:opacity-80",
+                      "flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-left text-[0.7rem] font-medium transition-opacity hover:opacity-80",
                       !color &&
                         "border border-dashed border-amber-400/50 bg-amber-400/10 text-amber-200",
                       r.status === "requested" && "opacity-80",
@@ -128,9 +136,10 @@ export function CalendarMonth({
                         : undefined
                     }
                   >
-                    <span className="truncate">
+                    <span className="min-w-0 flex-1 truncate">
                       {isStart ? firstName : `· ${firstName}`}
                     </span>
+                    <RentalIndicators rental={r} size={11} className="shrink-0" />
                   </button>
                 );
               })}

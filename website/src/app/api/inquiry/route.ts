@@ -254,16 +254,16 @@ export async function POST(request: Request) {
     serviceSlug: data.serviceSlug,
   };
 
-  // Email is best-effort. For Starlink rentals the DB row is the source of truth.
+  // Email and the durable DB write are independent capture channels. The request
+  // only succeeds if the lead landed somewhere we'll actually see it.
   let emailSent = false;
   try {
-    await sendEmail({
+    emailSent = await sendEmail({
       subject: buildFormEmailSubject("inquiry", data.name, data.serviceSlug),
       text: buildFormEmailText(payload),
       html: buildFormEmailHtml(payload),
       replyTo: data.email,
     });
-    emailSent = true;
   } catch (err) {
     console.error("[inquiry] email failed", err);
   }
