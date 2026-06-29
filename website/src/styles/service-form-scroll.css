@@ -1,0 +1,164 @@
+.mckee-service-quote-header {
+  scroll-margin-top: calc(var(--site-header-height, 88px) + 1rem);
+}
+
+.mckee-service-form-hero-cta {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.mckee-service-form-scroll-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.mckee-service-form-scroll-btn--hero {
+  min-height: 3rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c91818 0%, #a81414 100%);
+  color: #fff;
+  font-size: clamp(0.9375rem, 2.4vw, 1rem);
+  letter-spacing: 0.01em;
+  box-shadow: 0 10px 28px rgba(201, 24, 24, 0.35);
+}
+
+.mckee-service-form-scroll-btn--hero:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow: 0 14px 32px rgba(201, 24, 24, 0.42);
+}
+
+.mckee-service-form-scroll-btn--hero:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(201, 24, 24, 0.35),
+    0 10px 28px rgba(201, 24, 24, 0.35);
+}
+
+.mckee-service-form-floating-cta {
+  position: fixed;
+  left: max(1rem, env(safe-area-inset-left, 0px));
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    visibility 0.25s ease;
+}
+
+.mckee-service-form-floating-cta--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(0.75rem);
+}
+
+.mckee-service-form-scroll-btn--floating {
+  min-height: 3rem;
+  padding: 0.75rem 1.1rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c91818 0%, #a81414 100%);
+  color: #fff;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.45),
+    0 8px 22px rgba(201, 24, 24, 0.32);
+  animation: mckee-service-form-float-wiggle 5s ease-in-out infinite;
+}
+
+.mckee-service-form-scroll-btn--floating:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  animation: none;
+}
+
+.mckee-service-form-scroll-btn--floating:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(201, 24, 24, 0.35),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+  animation: none;
+}
+
+@keyframes mckee-service-form-float-wiggle {
+  0%,
+  90%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  92% {
+    transform: translateY(-2px) rotate(-2deg);
+  }
+
+  96% {
+    transform: translateY(-2px) rotate(2deg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .mckee-service-form-floating-cta {
+    left: max(1.5rem, env(safe-area-inset-left, 0px));
+    bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .mckee-service-form-scroll-btn--floating {
+    min-height: 3.25rem;
+    padding: 0.85rem 1.25rem;
+    font-size: 0.9375rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .mckee-service-form-hero-cta {
+    margin-top: 1rem;
+  }
+
+  .mckee-service-form-scroll-btn--hero {
+    width: min(100%, 20rem);
+  }
+
+  .mckee-service-form-scroll-btn--floating span {
+    display: none;
+  }
+
+  .mckee-service-form-scroll-btn--floating {
+    width: 3.25rem;
+    height: 3.25rem;
+    min-height: 3.25rem;
+    padding: 0;
+    border-radius: 999px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mckee-service-form-scroll-btn--floating {
+    animation: none;
+  }
+
+  .mckee-service-form-floating-cta,
+  .mckee-service-form-floating-cta--hidden,
+  .mckee-service-form-scroll-btn {
+    transition: none;
+  }
+}

@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { ServiceQuoteSection } from "@/components/sections/service-quote-section";
 import { MonitoringTiers } from "@/components/sections/monitoring-tiers";
 import { ServiceGallery } from "@/components/sections/service-gallery";
+import { ServiceFormFloatingCta } from "@/components/service-form-scroll/service-form-floating-cta";
+import { ServiceFormHeroCta } from "@/components/service-form-scroll/service-form-hero-cta";
 import { getElementorPage } from "@/lib/elementor-pages";
 import {
   enhanceElementorImages,
@@ -64,11 +66,15 @@ export function ElementorServicePage({ slug }: { slug: string }) {
       <ServiceGallery slug={slug} />
       {data.includeMonitoring && <MonitoringTiers />}
       {data.ctaTitle && data.ctaText && (
-        <ServiceQuoteSection
-          title={data.ctaTitle}
-          description={data.ctaText}
-          serviceSlug={slug}
-        />
+        <>
+          <ServiceFormHeroCta containerRef={containerRef} slug={slug} />
+          <ServiceFormFloatingCta />
+          <ServiceQuoteSection
+            title={data.ctaTitle}
+            description={data.ctaText}
+            serviceSlug={slug}
+          />
+        </>
       )}
     </>
   );
