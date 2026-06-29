@@ -13,6 +13,7 @@ import {
   RENTAL_PICKUP_TIME_SLOTS,
 } from "@/lib/inquiry-dates";
 import { sendEmail } from "@/lib/email";
+import { siteConfig } from "@/lib/site-config";
 import {
   getSupabaseAdmin,
   isSupabaseConfigured,
@@ -98,12 +99,14 @@ const inquirySchema = z
 type InquiryData = z.infer<typeof inquirySchema>;
 
 /**
- * Best-effort durable capture of a website rental request. Returns true when a
- * row exists (either newly inserted or an identical recent one already on file).
+ * Best-effort durable capture of a website rental request. Returns the rental id
+ * when a row exists (either newly inserted or an identical recent one already on
+ * file), or null on failure. The new row is always `requested`, which is visible
+ * in the admin portal but never blocks availability until an admin confirms it.
  * Never throws: the inquiry email is the fallback path.
  */
-async function tryWriteRequestedRental(data: InquiryData): Promise<boolean> {
-  if (!data.pickupDate || !data.returnDate) return false;
+async function tryWriteRequestedRental(data: InquiryData): Promise<string | null> {
+  if (!data.pickupDate || !data.returnDate) return null;
   try {
     const supabase = getSupabaseAdmin();
 
@@ -118,30 +121,34 @@ async function tryWriteRequestedRental(data: InquiryData): Promise<boolean> {
       .gte("created_at", tenMinutesAgo)
       .limit(1);
 
-    if (existing && existing.length > 0) return true;
+    if (existing && existing.length > 0) return existing[0].id;
 
-    const { error } = await supabase.from("rentals").insert({
-      status: "requested",
-      source: "website",
-      customer_name: data.name,
-      customer_email: data.email,
-      customer_phone: data.phone ?? null,
-      customer_address: data.address ?? null,
-      usage_location: data.usageLocation ?? null,
-      pickup_date: data.pickupDate,
-      pickup_time: data.pickupTime ?? null,
-      return_date: data.returnDate,
-      comments: data.comments ?? null,
-    });
+    const { data: inserted, error } = await supabase
+      .from("rentals")
+      .insert({
+        status: "requested",
+        source: "website",
+        customer_name: data.name,
+        customer_email: data.email,
+        customer_phone: data.phone ?? null,
+        customer_address: data.address ?? null,
+        usage_location: data.usageLocation ?? null,
+        pickup_date: data.pickupDate,
+        pickup_time: data.pickupTime ?? null,
+        return_date: data.returnDate,
+        comments: data.comments ?? null,
+      })
+      .select("id")
+      .single();
 
     if (error) {
       console.error("[inquiry] rental write failed", error.message);
-      return false;
+      return null;
     }
-    return true;
+    return inserted.id;
   } catch (err) {
     console.error("[inquiry] rental write threw", err);
-    return false;
+    return null;
   }
 }
 
@@ -162,16 +169,32 @@ export async function POST(request: Request) {
   const isStarlinkRental = data.serviceSlug === "starlink-rental";
 
   // For Starlink rentals, durably capture the lead first (primary path).
-  let rentalWritten = false;
+  let rentalId: string | null = null;
   if (isStarlinkRental && isSupabaseConfigured()) {
-    rentalWritten = await tryWriteRequestedRental(data);
+    rentalId = await tryWriteRequestedRental(data);
   }
+  const rentalWritten = Boolean(rentalId);
+
+  const baseUrl = siteConfig.url.replace(/\/$/, "");
+  const adminUrl = rentalId
+    ? `${baseUrl}/starlink-admin?rental=${rentalId}`
+    : `${baseUrl}/starlink-admin`;
 
   const servicesRequested =
     data.services?.trim() ||
     (isStarlinkRental ? "Starlink Gen2 Rental (Roam Max included)" : "");
 
   const fields = [
+      ...(isStarlinkRental
+        ? [
+            {
+              label: "Review & confirm (admin portal)",
+              value: adminUrl,
+              href: adminUrl,
+              highlight: true,
+            },
+          ]
+        : []),
       { label: "Name", value: data.name },
       {
         label: "Email",

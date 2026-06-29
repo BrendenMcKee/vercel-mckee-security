@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
@@ -43,6 +43,7 @@ export function StarlinkAdminApp() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalRental, setModalRental] = useState<RentalWithUnit | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const deepLinkHandled = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -60,6 +61,22 @@ export function StarlinkAdminApp() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Deep link from the inquiry email: /starlink-admin?rental=<id> opens that
+  // request straight away once data has loaded.
+  useEffect(() => {
+    if (loading || deepLinkHandled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("rental");
+    if (id) {
+      const match = rentals.find((r) => r.id === id);
+      if (match) {
+        setModalRental(match);
+        setModalOpen(true);
+      }
+    }
+    deepLinkHandled.current = true;
+  }, [loading, rentals]);
 
   const openNew = () => {
     setModalRental(null);
