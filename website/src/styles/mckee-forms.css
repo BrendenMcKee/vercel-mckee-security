@@ -709,10 +709,14 @@
   align-self: flex-start;
 }
 
-.rental-daypicker--inline {
+/* Doubled class keeps specificity equal to `.rental-daypicker.rdp-root` so these
+   green overrides actually win (otherwise the red accent bleeds into the range
+   start/end gradients). */
+.rental-daypicker.rental-daypicker--inline {
   /* Green = the customer's own selection; red stays reserved for booked days. */
   --rdp-accent-color: #16a34a;
   --rdp-accent-background-color: rgba(22, 163, 74, 0.18);
+  --rdp-range_middle-background-color: rgba(22, 163, 74, 0.14);
   --rdp-today-color: #16a34a;
   --rdp-day-height: 2.6rem;
   --rdp-day-width: 2.6rem;
@@ -721,7 +725,7 @@
 }
 
 @media (min-width: 768px) {
-  .rental-daypicker--inline {
+  .rental-daypicker.rental-daypicker--inline {
     --rdp-day-height: 2.85rem;
     --rdp-day-width: 2.85rem;
     --rdp-day_button-height: 2.55rem;
@@ -729,7 +733,7 @@
     font-size: 0.95rem;
   }
 
-  .rental-daypicker--inline .rdp-months {
+  .rental-daypicker.rental-daypicker--inline .rdp-months {
     gap: 1.25rem;
   }
 }
