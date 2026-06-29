@@ -13,6 +13,7 @@ import {
 } from "@/lib/inquiry-dates";
 import { addDaysIso } from "@/lib/starlink/dates";
 import { trackWebsiteLeadForm } from "@/lib/google-ads";
+import { useAutofillSync } from "@/lib/use-autofill-sync";
 import { cn } from "@/lib/utils";
 
 const pickupTimeSchema = z.enum(RENTAL_PICKUP_TIME_SLOTS);
@@ -98,6 +99,8 @@ export function StarlinkRentalForm({
     },
   });
 
+  const { formRef, onAnimationStart } = useAutofillSync<FormData>(setValue);
+
   const pickupDate = watch("pickupDate");
   const returnDate = watch("returnDate");
   const pickupTime = watch("pickupTime");
@@ -125,7 +128,9 @@ export function StarlinkRentalForm({
 
   return (
     <form
+      ref={formRef}
       onSubmit={handleSubmit(onSubmit)}
+      onAnimationStart={onAnimationStart}
       className={cn(
         "mckee-elementor-form",
         compact && "mckee-elementor-form--compact",
@@ -153,7 +158,12 @@ export function StarlinkRentalForm({
           <label className="mckee-form-label">
             Name <span className="mckee-form-required">(required)</span>
           </label>
-          <input type="text" {...register("name")} className="mckee-form-input" />
+          <input
+            type="text"
+            autoComplete="name"
+            {...register("name")}
+            className="mckee-form-input"
+          />
           {errors.name && <p className="mckee-form-error">{errors.name.message}</p>}
         </div>
 
@@ -161,7 +171,12 @@ export function StarlinkRentalForm({
           <label className="mckee-form-label">
             Email <span className="mckee-form-required">(required)</span>
           </label>
-          <input type="email" {...register("email")} className="mckee-form-input" />
+          <input
+            type="email"
+            autoComplete="email"
+            {...register("email")}
+            className="mckee-form-input"
+          />
           {errors.email && <p className="mckee-form-error">{errors.email.message}</p>}
         </div>
 
@@ -169,7 +184,12 @@ export function StarlinkRentalForm({
           <label className="mckee-form-label">
             Phone <span className="mckee-form-required">(required)</span>
           </label>
-          <input type="tel" {...register("phone")} className="mckee-form-input" />
+          <input
+            type="tel"
+            autoComplete="tel"
+            {...register("phone")}
+            className="mckee-form-input"
+          />
           {errors.phone && <p className="mckee-form-error">{errors.phone.message}</p>}
         </div>
 
@@ -177,7 +197,12 @@ export function StarlinkRentalForm({
           <label className="mckee-form-label">
             Your address <span className="mckee-form-required">(required)</span>
           </label>
-          <input type="text" {...register("address")} className="mckee-form-input" />
+          <input
+            type="text"
+            autoComplete="street-address"
+            {...register("address")}
+            className="mckee-form-input"
+          />
           {errors.address && <p className="mckee-form-error">{errors.address.message}</p>}
         </div>
 

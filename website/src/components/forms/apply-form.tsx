@@ -8,6 +8,7 @@ import { ChevronDown } from "lucide-react";
 import { getFormEmailMeta } from "@/lib/form-email-meta";
 import { FormIcon } from "@/components/forms/form-icon";
 import { siteConfig } from "@/lib/site-config";
+import { useAutofillSync } from "@/lib/use-autofill-sync";
 import { cn } from "@/lib/utils";
 
 const schema = z.object({
@@ -44,8 +45,10 @@ export function ApplyForm() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const { formRef, onAnimationStart } = useAutofillSync<FormData>(setValue);
 
   const sourceValue = watch("source");
 
@@ -81,34 +84,73 @@ export function ApplyForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mckee-form-body">
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit(onSubmit)}
+        onAnimationStart={onAnimationStart}
+        className="mckee-form-body"
+      >
         <div className="mckee-form-fields">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="First Name" error={errors.firstName?.message}>
-              <input {...register("firstName")} className="mckee-form-input" />
+              <input
+                autoComplete="given-name"
+                {...register("firstName")}
+                className="mckee-form-input"
+              />
             </Field>
             <Field label="Last Name" error={errors.lastName?.message}>
-              <input {...register("lastName")} className="mckee-form-input" />
+              <input
+                autoComplete="family-name"
+                {...register("lastName")}
+                className="mckee-form-input"
+              />
             </Field>
           </div>
           <Field label="Email" error={errors.email?.message}>
-            <input type="email" {...register("email")} className="mckee-form-input" />
+            <input
+              type="email"
+              autoComplete="email"
+              {...register("email")}
+              className="mckee-form-input"
+            />
           </Field>
           <Field label="Phone" error={errors.phone?.message}>
-            <input type="tel" {...register("phone")} className="mckee-form-input" />
+            <input
+              type="tel"
+              autoComplete="tel"
+              {...register("phone")}
+              className="mckee-form-input"
+            />
           </Field>
           <Field label="Address Line 1" error={errors.address?.message}>
-            <input {...register("address")} className="mckee-form-input" />
+            <input
+              autoComplete="address-line1"
+              {...register("address")}
+              className="mckee-form-input"
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="City" error={errors.city?.message}>
-              <input {...register("city")} className="mckee-form-input" />
+              <input
+                autoComplete="address-level2"
+                {...register("city")}
+                className="mckee-form-input"
+              />
             </Field>
             <Field label="Province" error={errors.province?.message}>
-              <input {...register("province")} className="mckee-form-input" />
+              <input
+                autoComplete="address-level1"
+                {...register("province")}
+                className="mckee-form-input"
+              />
             </Field>
             <Field label="Postal Code" error={errors.postalCode?.message}>
-              <input {...register("postalCode")} className="mckee-form-input" />
+              <input
+                autoComplete="postal-code"
+                {...register("postalCode")}
+                className="mckee-form-input"
+              />
             </Field>
           </div>
           <Field

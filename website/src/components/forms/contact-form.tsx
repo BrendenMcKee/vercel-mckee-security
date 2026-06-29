@@ -7,6 +7,7 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import { getFormEmailMeta } from "@/lib/form-email-meta";
 import { trackWebsiteLeadForm } from "@/lib/google-ads";
+import { useAutofillSync } from "@/lib/use-autofill-sync";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -25,8 +26,10 @@ export function ContactForm() {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const { formRef, onAnimationStart } = useAutofillSync<FormData>(setValue);
 
   const onSubmit = async (data: FormData) => {
     setStatus("idle");
@@ -64,17 +67,38 @@ export function ContactForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mckee-form-body">
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit(onSubmit)}
+        onAnimationStart={onAnimationStart}
+        className="mckee-form-body"
+      >
         <div className="mckee-form-fields">
           {[
-            { name: "name" as const, label: "Your Name", type: "text" },
-            { name: "email" as const, label: "Your Email", type: "email" },
-            { name: "subject" as const, label: "Subject", type: "text" },
+            {
+              name: "name" as const,
+              label: "Your Name",
+              type: "text",
+              autoComplete: "name",
+            },
+            {
+              name: "email" as const,
+              label: "Your Email",
+              type: "email",
+              autoComplete: "email",
+            },
+            {
+              name: "subject" as const,
+              label: "Subject",
+              type: "text",
+              autoComplete: "off",
+            },
           ].map((field) => (
             <div key={field.name} className="mckee-form-field">
               <label className="mckee-form-label">{field.label}</label>
               <input
                 type={field.type}
+                autoComplete={field.autoComplete}
                 {...register(field.name)}
                 className="mckee-form-input"
               />

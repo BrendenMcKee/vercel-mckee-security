@@ -149,6 +149,27 @@
   min-height: 6rem;
 }
 
+/* Autofill detection: browsers apply :-webkit-autofill without firing the
+   input/change events react-hook-form needs. This fires an animationstart event
+   that useAutofillSync listens for to copy the value into the form state. The
+   custom-property keyframe keeps the rule from being stripped by minifiers. */
+@keyframes mckee-autofill-start {
+  from {
+    --mckee-autofill: 0;
+  }
+  to {
+    --mckee-autofill: 1;
+  }
+}
+
+.mckee-form-input:-webkit-autofill,
+.mckee-form-panel input:-webkit-autofill,
+.mckee-form-panel textarea:-webkit-autofill,
+.mckee-form-panel select:-webkit-autofill {
+  animation-name: mckee-autofill-start;
+  animation-duration: 0.001s;
+}
+
 .mckee-form-error {
   margin-top: 0.35rem;
   font-size: 0.75rem;

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getFormEmailMeta, getServiceDisplayName } from "@/lib/form-email-meta";
 import { trackWebsiteLeadForm } from "@/lib/google-ads";
+import { useAutofillSync } from "@/lib/use-autofill-sync";
 import { cn } from "@/lib/utils";
 
 const schema = z.object({
@@ -44,8 +45,10 @@ export function ServiceQuoteForm({
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const { formRef, onAnimationStart } = useAutofillSync<FormData>(setValue);
 
   const onSubmit = async (data: FormData) => {
     setStatus("idle");
@@ -71,14 +74,24 @@ export function ServiceQuoteForm({
           Enter your first &amp; last name{" "}
           <span className="mckee-form-required">(required)</span>
         </label>
-        <input type="text" {...register("name")} className="mckee-form-input" />
+        <input
+          type="text"
+          autoComplete="name"
+          {...register("name")}
+          className="mckee-form-input"
+        />
         {errors.name && <p className="mckee-form-error">{errors.name.message}</p>}
       </div>
       <div className="mckee-form-field">
         <label className="mckee-form-label">
           Enter your email <span className="mckee-form-required">(required)</span>
         </label>
-        <input type="email" {...register("email")} className="mckee-form-input" />
+        <input
+          type="email"
+          autoComplete="email"
+          {...register("email")}
+          className="mckee-form-input"
+        />
         {errors.email && <p className="mckee-form-error">{errors.email.message}</p>}
       </div>
       <div className="mckee-form-field">
@@ -86,7 +99,12 @@ export function ServiceQuoteForm({
           Enter your phone or cell number{" "}
           <span className="mckee-form-required">(required)</span>
         </label>
-        <input type="text" {...register("phone")} className="mckee-form-input" />
+        <input
+          type="tel"
+          autoComplete="tel"
+          {...register("phone")}
+          className="mckee-form-input"
+        />
         {errors.phone && <p className="mckee-form-error">{errors.phone.message}</p>}
       </div>
       <div className="mckee-form-field">
@@ -94,7 +112,12 @@ export function ServiceQuoteForm({
           Enter your full address{" "}
           <span className="mckee-form-required">(required)</span>
         </label>
-        <input type="text" {...register("address")} className="mckee-form-input" />
+        <input
+          type="text"
+          autoComplete="street-address"
+          {...register("address")}
+          className="mckee-form-input"
+        />
         {errors.address && <p className="mckee-form-error">{errors.address.message}</p>}
       </div>
       <div className="mckee-form-field">
@@ -116,7 +139,9 @@ export function ServiceQuoteForm({
 
   return (
     <form
+      ref={formRef}
       onSubmit={handleSubmit(onSubmit)}
+      onAnimationStart={onAnimationStart}
       className={cn("mckee-elementor-form", compact && "mckee-elementor-form--compact", className)}
     >
       {showHeader && (
