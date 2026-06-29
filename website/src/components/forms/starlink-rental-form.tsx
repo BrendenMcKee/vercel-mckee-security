@@ -39,6 +39,10 @@ const schema = z
   .refine((data) => data.returnDate >= data.pickupDate, {
     message: "Return date must be on or after pickup date",
     path: ["returnDate"],
+  })
+  .refine((data) => Boolean(data.pickupTime), {
+    message: "Please select an approximate pickup time",
+    path: ["pickupTime"],
   });
 
 type FormData = z.infer<typeof schema>;
@@ -185,8 +189,8 @@ export function StarlinkRentalForm({
           unavailableDates={unavailableDates}
           onChange={(pickup, ret) => {
             clearErrors(["pickupDate", "returnDate"]);
-            setValue("pickupDate", pickup, { shouldValidate: true });
-            setValue("returnDate", ret, { shouldValidate: true });
+            setValue("pickupDate", pickup, { shouldValidate: pickup !== "" });
+            setValue("returnDate", ret, { shouldValidate: ret !== "" });
           }}
           onTimeChange={(time) =>
             setValue("pickupTime", time === "" ? undefined : time, {
@@ -200,12 +204,14 @@ export function StarlinkRentalForm({
           }
           pickupError={errors.pickupDate?.message}
           returnError={errors.returnDate?.message}
+          timeError={errors.pickupTime?.message}
         />
 
         <p className="mckee-form-note text-center">
-          Fully-booked dates are greyed out on the calendars above. Your dates are a
-          request only &mdash; we&rsquo;ll reply with pricing and confirm before anything
-          is booked. Pickup is Mon to Fri at our Haliburton office; return can be anytime.
+          Fully booked dates are greyed out on the calendar above. Your dates are a
+          request only. We will reply with pricing and confirm before anything is
+          booked. Pickup is Monday to Friday at our Haliburton office. Return can be
+          any day.
         </p>
 
         <div className="mckee-form-field">

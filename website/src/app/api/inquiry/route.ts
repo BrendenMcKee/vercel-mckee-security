@@ -66,6 +66,13 @@ const inquirySchema = z
           message: "Pickup must be a weekday (Monday to Friday)",
         });
       }
+      if (!data.pickupTime) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pickupTime"],
+          message: "Approximate pickup time is required",
+        });
+      }
       if (!data.usageLocation || data.usageLocation.trim().length < 3) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

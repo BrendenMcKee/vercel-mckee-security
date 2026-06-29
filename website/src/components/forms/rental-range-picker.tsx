@@ -24,6 +24,7 @@ type RentalRangePickerProps = {
   onWeekdayRejected?: () => void;
   pickupError?: string;
   returnError?: string;
+  timeError?: string;
 };
 
 function isoToDate(iso: string): Date | undefined {
@@ -50,6 +51,7 @@ export function RentalRangePicker({
   onWeekdayRejected,
   pickupError,
   returnError,
+  timeError,
 }: RentalRangePickerProps) {
   const minDateObj = isoToDate(minDate);
   const pickupObj = pickupDate ? isoToDate(pickupDate) : undefined;
@@ -74,12 +76,18 @@ export function RentalRangePicker({
     [unavailableDates],
   );
 
+  // The next tap is a return date only when a pickup is set but no return yet.
+  // Returns may fall on weekends; the pickup itself must be a weekday, so we
+  // grey out weekends whenever the next tap will choose (or restart) a pickup.
+  const choosingReturn = Boolean(pickupDate) && !returnDate;
+
   const disabled = useMemo<Matcher[]>(() => {
     const matchers: Matcher[] = [];
     if (minDateObj) matchers.push({ before: minDateObj });
+    if (!choosingReturn) matchers.push({ dayOfWeek: [0, 6] });
     if (bookedDates.length) matchers.push(...bookedDates);
     return matchers;
-  }, [minDateObj, bookedDates]);
+  }, [minDateObj, bookedDates, choosingReturn]);
 
   const selected: DateRange | undefined = pickupObj
     ? { from: pickupObj, to: returnObj }
@@ -97,9 +105,9 @@ export function RentalRangePicker({
     }
     const fromIso = dateToIso(next.from);
     // Pickup must be a weekday; returns and mid-range days can be any day.
+    // Keep any existing selection rather than wiping it on an invalid tap.
     if (!isWeekdayIso(fromIso)) {
       onWeekdayRejected?.();
-      onChange("", "");
       return;
     }
     const toIso = next.to ? dateToIso(next.to) : "";
@@ -110,14 +118,13 @@ export function RentalRangePicker({
   if (!pickupDate) {
     guidance = (
       <>
-        Tap your <strong>pickup date</strong> to begin{" "}
-        <span className="rental-range__guidance-soft">(Mon&ndash;Fri)</span>.
+        Tap your <strong>pickup date</strong> to begin. Pickup is Monday to Friday.
       </>
     );
   } else if (!returnDate) {
     guidance = (
       <>
-        Nice &mdash; now tap your <strong>return date</strong>.
+        Pickup selected. Now tap your <strong>return date</strong>.
       </>
     );
   } else {
@@ -187,7 +194,7 @@ export function RentalRangePicker({
               className="rental-date-picker__legend-dot rental-date-picker__legend-dot--booked"
               aria-hidden="true"
             />
-            Booked &mdash; no kits available
+            Booked: no kits available
           </span>
         </div>
       </div>
@@ -200,7 +207,7 @@ export function RentalRangePicker({
         <p className="rental-time-heading">
           <Clock3 size={16} strokeWidth={1.75} aria-hidden="true" />
           Approximate pickup time{" "}
-          <span className="rental-time-optional">(optional)</span>
+          <span className="mckee-form-required">(required)</span>
         </p>
         <div className="rental-time-slots" role="group" aria-label="Pickup time">
           {RENTAL_PICKUP_TIME_SLOTS.map((slot) => {
@@ -211,16 +218,17 @@ export function RentalRangePicker({
                 type="button"
                 className={cn("rental-time-slot", isSelected && "is-selected")}
                 aria-pressed={isSelected}
-                onClick={() => onTimeChange(isSelected ? "" : slot)}
+                onClick={() => onTimeChange(slot)}
               >
                 {slot}
               </button>
             );
           })}
         </div>
-        <p className="rental-time-note">
+        {timeError ? <p className="mckee-form-error">{timeError}</p> : null}
+        <p className="rental-time-note rental-time-note--center">
           Pickup is Monday to Friday at our Haliburton office. Return any day,
-          including weekends. Tap a time again to clear it.
+          including weekends.
         </p>
       </div>
     </div>
