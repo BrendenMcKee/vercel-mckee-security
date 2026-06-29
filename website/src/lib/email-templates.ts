@@ -13,11 +13,22 @@ const TEXT = "#f5f5f5";
 const MUTED = "rgba(255, 255, 255, 0.55)";
 const BORDER = "rgba(255, 255, 255, 0.1)";
 
+// Green action accent: deliberately different from the red brand/customer-info
+// styling so the admin call-to-action is unmistakable.
+const ACTION_GREEN = "#16a34a";
+const ACTION_GREEN_DARK = "#15803d";
+const ACTION_SOFT = "rgba(22, 163, 74, 0.12)";
+const ACTION_BORDER = "rgba(22, 163, 74, 0.34)";
+
 export type EmailField = {
   label: string;
   value: string;
   href?: string;
   highlight?: boolean;
+  /** Render as a prominent action button instead of a standard field row. */
+  cta?: boolean;
+  /** Text shown inside the CTA button (defaults to "Open admin portal"). */
+  buttonLabel?: string;
 };
 
 export type FormEmailOptions = {
@@ -62,13 +73,46 @@ function renderFieldRow(field: EmailField): string {
     </tr>`;
 }
 
+// Bulletproof, table-based action button in a green-tinted panel so it stands
+// out from the red customer-info rows. The td bgcolor is the Outlook fallback;
+// the gradient/border-radius enhance clients that support them.
+function renderCtaRow(field: EmailField): string {
+  const href = escapeHtml(field.href ?? "#");
+  const buttonLabel = escapeHtml(field.buttonLabel ?? "Open admin portal");
+
+  return `
+    <tr>
+      <td style="padding:0 0 18px;">
+        <div style="background:${ACTION_SOFT};border:1px solid ${ACTION_BORDER};border-radius:14px;padding:18px 18px 20px;">
+          <p style="margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${ACTION_GREEN};">
+            ${escapeHtml(field.label)}
+          </p>
+          <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:${TEXT};">
+            ${escapeHtml(field.value).replace(/\n/g, "<br />")}
+          </p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;">
+            <tr>
+              <td align="center" bgcolor="${ACTION_GREEN}" style="border-radius:10px;background-image:linear-gradient(135deg, ${ACTION_GREEN} 0%, ${ACTION_GREEN_DARK} 100%);">
+                <a href="${href}" target="_blank" rel="noopener" style="display:inline-block;padding:14px 30px;font-size:15px;font-weight:700;line-height:1;color:#ffffff;text-decoration:none;border-radius:10px;">
+                  ${buttonLabel} &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </td>
+    </tr>`;
+}
+
 export function buildFormEmailHtml({
   kind,
   fields,
   serviceSlug,
 }: FormEmailOptions): string {
   const meta = getFormEmailMeta(kind, serviceSlug);
-  const rows = fields.map(renderFieldRow).join("");
+  const rows = fields
+    .map((field) => (field.cta ? renderCtaRow(field) : renderFieldRow(field)))
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -147,7 +191,12 @@ export function buildFormEmailText({
     meta.inboxLabel,
     "-".repeat(36),
     "",
-    ...fields.flatMap((field) => [field.label, field.value, ""]),
+    ...fields.flatMap((field) => {
+      const block = [field.label, field.value];
+      // Keep the actual link in plaintext for CTA buttons whose value is copy.
+      if (field.cta && field.href) block.push(field.href);
+      return [...block, ""];
+    }),
     `Submitted via ${siteConfig.url}`,
   ];
 

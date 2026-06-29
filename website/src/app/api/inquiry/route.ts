@@ -195,10 +195,12 @@ export async function POST(request: Request) {
       ...(isStarlinkRental
         ? [
             {
-              label: "Review & confirm (admin portal)",
-              value: adminUrl,
+              label: "Admin action",
+              value:
+                "Open this request in the admin portal to set pricing, confirm, and lock in the dates. Nothing is reserved until you confirm.",
               href: adminUrl,
-              highlight: true,
+              buttonLabel: "Review & confirm rental",
+              cta: true,
             },
           ]
         : []),
