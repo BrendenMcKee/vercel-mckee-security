@@ -604,3 +604,151 @@
   opacity: 1;
   cursor: not-allowed;
 }
+
+/* ============================================================
+   Inline range calendar (single calendar, pickup -> return)
+   ============================================================ */
+.rental-range {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rental-range__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.rental-range__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.rental-range__chips {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rental-range__chip {
+  flex: 1 1 0;
+  min-width: 8.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, 0.18);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.rental-range__chip.is-set {
+  border-color: rgba(201, 24, 24, 0.6);
+  background: rgba(201, 24, 24, 0.12);
+}
+
+.rental-range__chip-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.rental-range__chip-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.rental-range__chip-arrow {
+  align-self: center;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.rental-range__guidance {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.rental-range__guidance strong {
+  color: #fff;
+}
+
+.rental-range__guidance-soft {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.rental-range__calendar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.rental-range__calendar .rental-date-picker__legend {
+  align-self: flex-start;
+}
+
+.rental-daypicker--inline {
+  --rdp-day-height: 2.6rem;
+  --rdp-day-width: 2.6rem;
+  --rdp-day_button-height: 2.35rem;
+  --rdp-day_button-width: 2.35rem;
+}
+
+@media (min-width: 768px) {
+  .rental-daypicker--inline {
+    --rdp-day-height: 2.85rem;
+    --rdp-day-width: 2.85rem;
+    --rdp-day_button-height: 2.55rem;
+    --rdp-day_button-width: 2.55rem;
+    font-size: 0.95rem;
+  }
+
+  .rental-daypicker--inline .rdp-months {
+    gap: 1.25rem;
+  }
+}
+
+/* Selected range: solid pickup/return pills with a translucent band between. */
+.rental-daypicker .rdp-range_start .rdp-day_button,
+.rental-daypicker .rdp-range_end .rdp-day_button {
+  background: var(--primary);
+  border-color: var(--primary);
+  border-radius: 9999px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.rental-daypicker .rdp-range_middle {
+  background: rgba(201, 24, 24, 0.12);
+}
+
+.rental-daypicker .rdp-range_middle .rdp-day_button {
+  background: rgba(201, 24, 24, 0.22);
+  border-color: transparent;
+  border-radius: 0;
+  color: #fff;
+  text-decoration: none;
+}
+
+.rental-date-picker__legend-dot--range {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+}

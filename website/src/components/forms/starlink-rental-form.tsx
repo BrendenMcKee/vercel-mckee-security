@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { RentalSchedulePicker } from "@/components/forms/rental-schedule-picker";
+import { RentalRangePicker } from "@/components/forms/rental-range-picker";
 import { getFormEmailMeta } from "@/lib/form-email-meta";
 import {
   isWeekdayIso,
@@ -78,10 +78,11 @@ export function StarlinkRentalForm({
   }, []);
   const {
     register,
-    control,
     handleSubmit,
     reset,
     setError,
+    clearErrors,
+    setValue,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -94,8 +95,8 @@ export function StarlinkRentalForm({
   });
 
   const pickupDate = watch("pickupDate");
-  const returnMin =
-    pickupDate && pickupDate >= todayIso() ? pickupDate : todayIso();
+  const returnDate = watch("returnDate");
+  const pickupTime = watch("pickupTime");
 
   const onSubmit = async (data: FormData) => {
     setStatus("idle");
@@ -176,52 +177,30 @@ export function StarlinkRentalForm({
           {errors.address && <p className="mckee-form-error">{errors.address.message}</p>}
         </div>
 
-        <div className="rental-schedule-stack">
-          <Controller
-            name="pickupDate"
-            control={control}
-            render={({ field: dateField }) => (
-              <Controller
-                name="pickupTime"
-                control={control}
-                render={({ field: timeField }) => (
-                  <RentalSchedulePicker
-                    variant="pickup"
-                    dateValue={dateField.value ?? ""}
-                    timeValue={timeField.value ?? ""}
-                    minDate={todayIso()}
-                    unavailableDates={unavailableDates}
-                    onDateChange={dateField.onChange}
-                    onTimeChange={(time) =>
-                      timeField.onChange(time === "" ? undefined : time)
-                    }
-                    onWeekdayRejected={() =>
-                      setError("pickupDate", {
-                        message: "Pickup must be a weekday (Monday to Friday)",
-                      })
-                    }
-                    dateError={errors.pickupDate?.message}
-                  />
-                )}
-              />
-            )}
-          />
-
-          <Controller
-            name="returnDate"
-            control={control}
-            render={({ field: dateField }) => (
-              <RentalSchedulePicker
-                variant="return"
-                dateValue={dateField.value ?? ""}
-                minDate={returnMin}
-                unavailableDates={unavailableDates}
-                onDateChange={dateField.onChange}
-                dateError={errors.returnDate?.message}
-              />
-            )}
-          />
-        </div>
+        <RentalRangePicker
+          pickupDate={pickupDate ?? ""}
+          returnDate={returnDate ?? ""}
+          pickupTime={pickupTime ?? ""}
+          minDate={todayIso()}
+          unavailableDates={unavailableDates}
+          onChange={(pickup, ret) => {
+            clearErrors(["pickupDate", "returnDate"]);
+            setValue("pickupDate", pickup, { shouldValidate: true });
+            setValue("returnDate", ret, { shouldValidate: true });
+          }}
+          onTimeChange={(time) =>
+            setValue("pickupTime", time === "" ? undefined : time, {
+              shouldValidate: true,
+            })
+          }
+          onWeekdayRejected={() =>
+            setError("pickupDate", {
+              message: "Pickup must be a weekday (Monday to Friday)",
+            })
+          }
+          pickupError={errors.pickupDate?.message}
+          returnError={errors.returnDate?.message}
+        />
 
         <p className="mckee-form-note text-center">
           Fully-booked dates are greyed out on the calendars above. Your dates are a
