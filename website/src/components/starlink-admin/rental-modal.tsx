@@ -327,8 +327,9 @@ export function RentalModal({
                 />
               </Field>
               <Field label="Where the kit will be used" className="sm:col-span-2">
-                <input
-                  className={inputClass}
+                <textarea
+                  className={cn(inputClass, "min-h-19 resize-y leading-relaxed")}
+                  rows={3}
                   value={form.usage_location}
                   onChange={(e) => set("usage_location", e.target.value)}
                   placeholder="Cottage, campsite, job site..."
@@ -555,8 +556,8 @@ export function RentalModal({
           {/* Comments */}
           <Field label="Internal comments">
             <textarea
-              className={cn(inputClass, "min-h-[8.5rem] resize-y leading-relaxed")}
-              rows={6}
+              className={cn(inputClass, "min-h-68 resize-y leading-relaxed")}
+              rows={12}
               value={form.comments}
               onChange={(e) => set("comments", e.target.value)}
               placeholder="Notes for the team..."
