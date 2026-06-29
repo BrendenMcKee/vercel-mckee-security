@@ -476,3 +476,88 @@
     gap: 0.45rem;
   }
 }
+
+/* Honeypot: visually hidden, off-screen, not announced to AT. */
+.mckee-form-honeypot {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Availability calendar popover */
+.rental-date-picker__pop {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 2rem));
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--surface);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+}
+
+.rental-date-picker__legend {
+  margin: 0.4rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.rental-daypicker.rdp-root {
+  --rdp-accent-color: var(--primary);
+  --rdp-accent-background-color: rgba(201, 24, 24, 0.22);
+  --rdp-day-height: 2.4rem;
+  --rdp-day-width: 2.4rem;
+  --rdp-day_button-height: 2.15rem;
+  --rdp-day_button-width: 2.15rem;
+  --rdp-today-color: var(--primary);
+  margin: 0;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.rental-daypicker .rdp-month_caption,
+.rental-daypicker .rdp-caption_label {
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.rental-daypicker .rdp-weekday {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.rental-daypicker .rdp-chevron {
+  fill: #fff;
+}
+
+.rental-daypicker .rdp-day_button {
+  color: #fff;
+}
+
+.rental-daypicker .rdp-day_button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+}
+
+.rental-daypicker .rdp-selected .rdp-day_button {
+  background: var(--primary);
+  border-color: var(--primary);
+  border-radius: 9999px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.rental-daypicker .rdp-disabled .rdp-day_button {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.rental-daypicker .rdp-booked .rdp-day_button {
+  text-decoration: line-through;
+  color: rgba(248, 113, 113, 0.65);
+}

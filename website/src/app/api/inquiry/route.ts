@@ -13,6 +13,13 @@ import {
   RENTAL_PICKUP_TIME_SLOTS,
 } from "@/lib/inquiry-dates";
 import { sendEmail } from "@/lib/email";
+import {
+  getSupabaseAdmin,
+  isSupabaseConfigured,
+} from "@/lib/starlink/supabase-admin";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const rentalTimeSchema = z.enum(RENTAL_PICKUP_TIME_SLOTS);
 
@@ -30,6 +37,8 @@ const inquirySchema = z
     pickupTime: rentalTimeSchema.optional(),
     returnDate: z.string().optional(),
     usageLocation: z.string().optional(),
+    // Honeypot: real users never fill this. Bots often do.
+    company: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     const isStarlinkRental = data.serviceSlug === "starlink-rental";
@@ -86,16 +95,83 @@ const inquirySchema = z
     }
   });
 
+type InquiryData = z.infer<typeof inquirySchema>;
+
+/**
+ * Best-effort durable capture of a website rental request. Returns true when a
+ * row exists (either newly inserted or an identical recent one already on file).
+ * Never throws: the inquiry email is the fallback path.
+ */
+async function tryWriteRequestedRental(data: InquiryData): Promise<boolean> {
+  if (!data.pickupDate || !data.returnDate) return false;
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: existing } = await supabase
+      .from("rentals")
+      .select("id")
+      .eq("customer_email", data.email)
+      .eq("pickup_date", data.pickupDate)
+      .eq("return_date", data.returnDate)
+      .eq("status", "requested")
+      .gte("created_at", tenMinutesAgo)
+      .limit(1);
+
+    if (existing && existing.length > 0) return true;
+
+    const { error } = await supabase.from("rentals").insert({
+      status: "requested",
+      source: "website",
+      customer_name: data.name,
+      customer_email: data.email,
+      customer_phone: data.phone ?? null,
+      customer_address: data.address ?? null,
+      usage_location: data.usageLocation ?? null,
+      pickup_date: data.pickupDate,
+      pickup_time: data.pickupTime ?? null,
+      return_date: data.returnDate,
+      comments: data.comments ?? null,
+    });
+
+    if (error) {
+      console.error("[inquiry] rental write failed", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[inquiry] rental write threw", err);
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
+  let data: InquiryData;
   try {
     const body = await request.json();
-    const data = inquirySchema.parse(body);
-    const isStarlinkRental = data.serviceSlug === "starlink-rental";
-    const servicesRequested =
-      data.services?.trim() ||
-      (isStarlinkRental ? "Starlink Gen2 Rental (Roam Max included)" : "");
+    data = inquirySchema.parse(body);
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
 
-    const fields = [
+  // Honeypot: bots fill this hidden field. Silently accept and drop.
+  if (data.company && data.company.trim().length > 0) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const isStarlinkRental = data.serviceSlug === "starlink-rental";
+
+  // For Starlink rentals, durably capture the lead first (primary path).
+  let rentalWritten = false;
+  if (isStarlinkRental && isSupabaseConfigured()) {
+    rentalWritten = await tryWriteRequestedRental(data);
+  }
+
+  const servicesRequested =
+    data.services?.trim() ||
+    (isStarlinkRental ? "Starlink Gen2 Rental (Roam Max included)" : "");
+
+  const fields = [
       { label: "Name", value: data.name },
       {
         label: "Email",
@@ -149,21 +225,32 @@ export async function POST(request: Request) {
         : []),
     ];
 
-    const payload = {
-      kind: "inquiry" as const,
-      fields,
-      serviceSlug: data.serviceSlug,
-    };
+  const payload = {
+    kind: "inquiry" as const,
+    fields,
+    serviceSlug: data.serviceSlug,
+  };
 
+  // Email is best-effort. For Starlink rentals the DB row is the source of truth.
+  let emailSent = false;
+  try {
     await sendEmail({
       subject: buildFormEmailSubject("inquiry", data.name, data.serviceSlug),
       text: buildFormEmailText(payload),
       html: buildFormEmailHtml(payload),
       replyTo: data.email,
     });
-
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    emailSent = true;
+  } catch (err) {
+    console.error("[inquiry] email failed", err);
   }
+
+  if (!emailSent && !rentalWritten) {
+    return NextResponse.json(
+      { error: "Could not submit your request. Please call (705) 457-2156." },
+      { status: 502 },
+    );
+  }
+
+  return NextResponse.json({ ok: true });
 }

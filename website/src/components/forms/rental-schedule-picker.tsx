@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { DayPicker, type Matcher } from "react-day-picker";
+import "react-day-picker/style.css";
 import { CalendarDays, Clock3 } from "lucide-react";
 import {
   formatRentalDateLong,
@@ -15,76 +17,113 @@ type RentalSchedulePickerProps = {
   dateValue: string;
   timeValue?: string;
   minDate: string;
+  unavailableDates?: string[];
   onDateChange: (isoDate: string) => void;
   onTimeChange?: (time: RentalTimeSlot | "") => void;
   onWeekdayRejected?: () => void;
   dateError?: string;
-  timeError?: string;
 };
+
+function isoToDate(iso: string): Date | undefined {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d);
+}
+
+function dateToIso(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export function RentalSchedulePicker({
   variant,
   dateValue,
   timeValue = "",
   minDate,
+  unavailableDates = [],
   onDateChange,
   onTimeChange,
   onWeekdayRejected,
   dateError,
-  timeError,
 }: RentalSchedulePickerProps) {
   const isPickup = variant === "pickup";
   const longDate = formatRentalDateLong(dateValue);
   const title = isPickup ? "Pickup" : "Return";
-  const dateInputRef = useRef<HTMLInputElement>(null);
 
-  const openDatePicker = () => {
-    const input = dateInputRef.current;
-    if (!input) return;
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    input.focus({ preventScroll: true });
-
-    if (typeof input.showPicker === "function") {
-      try {
-        input.showPicker();
-        return;
-      } catch {
-        // Some browsers throw if not triggered from a direct user gesture.
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
       }
     }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
-    input.click();
-  };
+  const selected = dateValue ? isoToDate(dateValue) : undefined;
+  const minDateObj = isoToDate(minDate);
 
-  const handleDateChange = (isoDate: string) => {
-    if (isPickup && isoDate && !isWeekdayIso(isoDate)) {
+  const bookedDates = useMemo(
+    () =>
+      unavailableDates
+        .map(isoToDate)
+        .filter((d): d is Date => Boolean(d)),
+    [unavailableDates],
+  );
+
+  const disabledMatchers = useMemo<Matcher[]>(() => {
+    const matchers: Matcher[] = [];
+    if (minDateObj) matchers.push({ before: minDateObj });
+    if (isPickup) matchers.push({ dayOfWeek: [0, 6] });
+    if (bookedDates.length) matchers.push(...bookedDates);
+    return matchers;
+  }, [minDateObj, isPickup, bookedDates]);
+
+  const handleSelect = (date: Date | undefined) => {
+    if (!date) return;
+    const iso = dateToIso(date);
+    if (isPickup && !isWeekdayIso(iso)) {
       onWeekdayRejected?.();
       return;
     }
-    onDateChange(isoDate);
+    onDateChange(iso);
+    setOpen(false);
   };
 
   return (
     <div className="rental-schedule-block">
       <p className="rental-schedule-title">{title}</p>
 
-      <div className={cn("rental-date-picker", dateValue && "has-value")}>
-        <input
-          ref={dateInputRef}
-          type="date"
-          className="rental-date-picker__input"
-          min={minDate}
-          value={dateValue}
-          onChange={(event) => handleDateChange(event.target.value)}
-          aria-label={`${title} date`}
-          tabIndex={-1}
-        />
+      <div
+        ref={containerRef}
+        className={cn("rental-date-picker", dateValue && "has-value")}
+      >
         <button
           type="button"
           className="rental-date-picker__face"
-          onClick={openDatePicker}
+          onClick={() => setOpen((v) => !v)}
+          aria-haspopup="dialog"
+          aria-expanded={open}
           aria-label={
-            longDate ? `${title} date: ${longDate}. Tap to change.` : `${title} date. Tap to open calendar.`
+            longDate
+              ? `${title} date: ${longDate}. Tap to change.`
+              : `${title} date. Tap to open calendar.`
           }
         >
           <span className="rental-date-picker__icon" aria-hidden="true">
@@ -106,6 +145,27 @@ export function RentalSchedulePicker({
             )}
           </span>
         </button>
+
+        {open ? (
+          <div className="rental-date-picker__pop" role="dialog" aria-label={`${title} date calendar`}>
+            <DayPicker
+              className="rental-daypicker"
+              mode="single"
+              selected={selected}
+              onSelect={handleSelect}
+              defaultMonth={selected ?? minDateObj}
+              startMonth={minDateObj}
+              disabled={disabledMatchers}
+              modifiers={{ booked: bookedDates }}
+              modifiersClassNames={{ booked: "rdp-booked" }}
+              showOutsideDays
+            />
+            <p className="rental-date-picker__legend">
+              {isPickup ? "Pickup is Mon to Fri. " : ""}
+              Crossed-out dates are unavailable.
+            </p>
+          </div>
+        ) : null}
       </div>
       {dateError && <p className="mckee-form-error">{dateError}</p>}
 
@@ -117,16 +177,14 @@ export function RentalSchedulePicker({
           </p>
           <div className="rental-time-slots" role="group" aria-label="Pickup time">
             {RENTAL_PICKUP_TIME_SLOTS.map((slot) => {
-              const selected = timeValue === slot;
+              const isSelected = timeValue === slot;
               return (
                 <button
                   key={slot}
                   type="button"
-                  className={cn("rental-time-slot", selected && "is-selected")}
-                  aria-pressed={selected}
-                  onClick={() =>
-                    onTimeChange?.(selected ? "" : slot)
-                  }
+                  className={cn("rental-time-slot", isSelected && "is-selected")}
+                  aria-pressed={isSelected}
+                  onClick={() => onTimeChange?.(isSelected ? "" : slot)}
                 >
                   {slot}
                 </button>
@@ -143,7 +201,6 @@ export function RentalSchedulePicker({
           front porch if no one is home.
         </p>
       )}
-      {timeError && <p className="mckee-form-error">{timeError}</p>}
     </div>
   );
 }

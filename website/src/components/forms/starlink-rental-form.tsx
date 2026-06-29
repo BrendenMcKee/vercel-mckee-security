@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,8 +10,8 @@ import {
   isWeekdayIso,
   RENTAL_PICKUP_TIME_SLOTS,
   todayIso,
-  type RentalTimeSlot,
 } from "@/lib/inquiry-dates";
+import { addDaysIso } from "@/lib/starlink/dates";
 import { trackWebsiteLeadForm } from "@/lib/google-ads";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,7 @@ const schema = z
       .string()
       .min(3, "Tell us where you plan to use the kit (cottage, campsite, etc.)"),
     comments: z.string().optional(),
+    company: z.string().optional(),
   })
   .refine((data) => isWeekdayIso(data.pickupDate), {
     message: "Pickup must be a weekday (Monday to Friday)",
@@ -55,6 +56,26 @@ export function StarlinkRentalForm({
 }: StarlinkRentalFormProps) {
   const inquiryMeta = getFormEmailMeta("inquiry", "starlink-rental");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const start = todayIso();
+    const end = addDaysIso(start, 180);
+    fetch(`/api/starlink/availability?start=${start}&end=${end}`, {
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.fullyBookedDates)) {
+          setUnavailableDates(data.fullyBookedDates);
+        }
+      })
+      .catch(() => {
+        // Availability is advisory; ignore failures.
+      });
+    return () => controller.abort();
+  }, []);
   const {
     register,
     control,
@@ -169,6 +190,7 @@ export function StarlinkRentalForm({
                     dateValue={dateField.value ?? ""}
                     timeValue={timeField.value ?? ""}
                     minDate={todayIso()}
+                    unavailableDates={unavailableDates}
                     onDateChange={dateField.onChange}
                     onTimeChange={(time) =>
                       timeField.onChange(time === "" ? undefined : time)
@@ -193,6 +215,7 @@ export function StarlinkRentalForm({
                 variant="return"
                 dateValue={dateField.value ?? ""}
                 minDate={returnMin}
+                unavailableDates={unavailableDates}
                 onDateChange={dateField.onChange}
                 dateError={errors.returnDate?.message}
               />
@@ -227,6 +250,17 @@ export function StarlinkRentalForm({
             {...register("comments")}
             rows={compact ? 2 : 3}
             className="mckee-form-input"
+          />
+        </div>
+
+        <div className="mckee-form-honeypot" aria-hidden="true">
+          <label htmlFor="rental-company">Company</label>
+          <input
+            id="rental-company"
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
+            {...register("company")}
           />
         </div>
       </div>

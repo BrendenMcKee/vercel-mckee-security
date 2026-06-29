@@ -1,0 +1,30 @@
+/*
+ * Starlink rental admin portal.
+ * Scoped to the .sl-admin wrapper so it never affects the marketing site.
+ */
+.sl-admin {
+  min-height: 72vh;
+}
+
+/* Desktop pointer affordances for interactive controls. */
+@media (hover: hover) and (pointer: fine) {
+  .sl-admin a[href],
+  .sl-admin button:not(:disabled),
+  .sl-admin [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  .sl-admin button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+/* Keep native date/select controls legible on the dark theme. */
+.sl-admin input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+}
+
+.sl-admin select option {
+  color: #111;
+}
