@@ -718,24 +718,14 @@
   --rdp-accent-background-color: rgba(22, 163, 74, 0.18);
   --rdp-range_middle-background-color: rgba(22, 163, 74, 0.14);
   --rdp-today-color: #16a34a;
-  --rdp-day-height: 2.6rem;
-  --rdp-day-width: 2.6rem;
-  --rdp-day_button-height: 2.35rem;
-  --rdp-day_button-width: 2.35rem;
 }
 
-@media (min-width: 768px) {
-  .rental-daypicker.rental-daypicker--inline {
-    --rdp-day-height: 2.85rem;
-    --rdp-day-width: 2.85rem;
-    --rdp-day_button-height: 2.55rem;
-    --rdp-day_button-width: 2.55rem;
-    font-size: 0.95rem;
-  }
-
-  .rental-daypicker.rental-daypicker--inline .rdp-months {
-    gap: 1.25rem;
-  }
+/* Two months must fit side by side inside the ~42rem form column on desktop, so
+   keep the default day-cell size and use a tight gap. A larger cell size makes
+   the second month wrap below the first. */
+.rental-daypicker.rental-daypicker--inline .rdp-months {
+  gap: 1rem;
+  justify-content: center;
 }
 
 /* Selected range: green pickup/return pills with a translucent green band. */
