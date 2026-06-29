@@ -167,6 +167,7 @@
   border: 1px solid rgba(74, 222, 128, 0.22);
   background: rgba(74, 222, 128, 0.08);
   color: #86efac;
+  text-align: center;
 }
 
 .mckee-form-status--error {
