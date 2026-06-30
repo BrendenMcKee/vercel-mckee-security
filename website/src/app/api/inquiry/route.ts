@@ -117,29 +117,18 @@ function fullName(data: InquiryData): string {
 }
 
 /**
- * Best-effort durable capture of a website rental request. Returns the rental id
- * when a row exists (either newly inserted or an identical recent one already on
- * file), or null on failure. The new row is always `requested`, which is visible
- * in the admin portal but never blocks availability until an admin confirms it.
- * Never throws: the inquiry email is the fallback path.
+ * Best-effort durable capture of a website rental request. Returns the newly
+ * inserted rental id, or null on failure. The new row is always `requested`,
+ * which is visible in the admin portal but never blocks availability until an
+ * admin confirms it. Every submission is recorded as its own request; accidental
+ * double-submits are already prevented client-side (the submit button disables
+ * while sending and the form resets on success). Never throws: the inquiry email
+ * is the fallback path.
  */
 async function tryWriteRequestedRental(data: InquiryData): Promise<string | null> {
   if (!data.pickupDate || !data.returnDate) return null;
   try {
     const supabase = getSupabaseAdmin();
-
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data: existing } = await supabase
-      .from("rentals")
-      .select("id")
-      .eq("customer_email", data.email)
-      .eq("pickup_date", data.pickupDate)
-      .eq("return_date", data.returnDate)
-      .eq("status", "requested")
-      .gte("created_at", tenMinutesAgo)
-      .limit(1);
-
-    if (existing && existing.length > 0) return existing[0].id;
 
     const { data: inserted, error } = await supabase
       .from("rentals")
