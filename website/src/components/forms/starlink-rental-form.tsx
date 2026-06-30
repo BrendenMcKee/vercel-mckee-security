@@ -291,6 +291,7 @@ export function StarlinkRentalForm({
             type="text"
             tabIndex={-1}
             autoComplete="off"
+            data-honeypot="true"
             {...register("company")}
           />
         </div>

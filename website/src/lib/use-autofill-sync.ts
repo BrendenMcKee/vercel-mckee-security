@@ -40,6 +40,10 @@ export function useAutofillSync<T extends FieldValues>(
   const sync = useCallback(
     (el: EventTarget | Element | null) => {
       if (!isFillable(el)) return;
+      // Never sync honeypot/anti-spam fields. Chrome ignores autocomplete="off"
+      // and will autofill a hidden "Company" trap; copying that value into the
+      // form makes a real submission look like a bot and get silently dropped.
+      if (el.dataset.honeypot === "true") return;
       const name = el.name;
       if (!name || el.value === "") return;
       setValue(name as Path<T>, el.value as PathValue<T, Path<T>>, {
