@@ -111,6 +111,20 @@ export function getFormEmailMeta(
   return formKindMeta[kind];
 }
 
+function subjectTimestamp(): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Toronto",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toUTCString();
+  }
+}
+
 export function buildFormEmailSubject(
   kind: FormEmailKind,
   detail?: string,
@@ -118,12 +132,15 @@ export function buildFormEmailSubject(
 ): string {
   const meta = getFormEmailMeta(kind, serviceSlug);
   const clean = detail?.replace(/\s+/g, " ").trim();
+  // The trailing timestamp keeps every notification's subject distinct so Gmail
+  // never threads or defers same-name submissions.
+  const stamp = subjectTimestamp();
 
   if (clean) {
-    return `${meta.emoji} ${meta.title} | ${clean}`;
+    return `${meta.emoji} ${meta.title} | ${clean} | ${stamp}`;
   }
 
-  return `${meta.emoji} ${meta.title}`;
+  return `${meta.emoji} ${meta.title} | ${stamp}`;
 }
 
 export function getServiceDisplayName(serviceSlug?: string | null): string {

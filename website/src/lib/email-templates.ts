@@ -37,6 +37,39 @@ export type FormEmailOptions = {
   serviceSlug?: string | null;
 };
 
+const TIMEZONE = "America/Toronto";
+
+function torontoStamp(opts: Intl.DateTimeFormatOptions): string {
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZone: TIMEZONE, ...opts }).format(
+      new Date(),
+    );
+  } catch {
+    return new Date().toUTCString();
+  }
+}
+
+/** Compact stamp for subject lines, e.g. "Jun 29, 7:57 PM". */
+function subjectStamp(): string {
+  return torontoStamp({
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Fuller stamp for the email body, e.g. "Jun 29, 2026, 7:57 PM ET". */
+function receivedStamp(): string {
+  return `${torontoStamp({
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })} ET`;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -168,6 +201,7 @@ export function buildFormEmailHtml({
                   <a href="${siteConfig.url}" style="color:${BRAND_RED};text-decoration:none;font-weight:600;">
                     ${siteConfig.url.replace("https://", "")}
                   </a>
+                  &nbsp;&bull;&nbsp; Received ${escapeHtml(receivedStamp())}
                 </p>
               </td>
             </tr>
@@ -198,6 +232,7 @@ export function buildFormEmailText({
       return [...block, ""];
     }),
     `Submitted via ${siteConfig.url}`,
+    `Received ${receivedStamp()}`,
   ];
 
   return lines.join("\n").trim();

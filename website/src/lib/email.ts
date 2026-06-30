@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 type EmailAttachment = {
   filename: string;
   content: string;
@@ -9,6 +11,7 @@ type EmailPayload = {
   html?: string;
   replyTo?: string;
   attachments?: EmailAttachment[];
+  headers?: Record<string, string>;
 };
 
 /**
@@ -34,6 +37,13 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
     to: [to],
     subject: payload.subject,
     text: payload.text,
+    // A unique reference id stops Gmail from collapsing same-subject notifications
+    // into one thread (and deferring the apparent duplicate), so every submission
+    // lands as its own message that arrives promptly.
+    headers: {
+      "X-Entity-Ref-ID": randomUUID(),
+      ...payload.headers,
+    },
   };
 
   if (payload.html) body.html = payload.html;
