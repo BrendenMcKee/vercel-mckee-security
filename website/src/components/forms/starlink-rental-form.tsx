@@ -20,7 +20,8 @@ const pickupTimeSchema = z.enum(RENTAL_PICKUP_TIME_SLOTS);
 
 const schema = z
   .object({
-    name: z.string().min(2, "Please enter your name"),
+    firstName: z.string().min(1, "Please enter your first name"),
+    lastName: z.string().min(1, "Please enter your last name"),
     email: z.string().email("Please enter a valid email"),
     phone: z.string().min(7, "Please enter your phone number"),
     address: z.string().min(5, "Please enter your address"),
@@ -154,17 +155,36 @@ export function StarlinkRentalForm({
           compact ? "mckee-elementor-form-fields mckee-form-fields" : "mckee-form-fields"
         }
       >
-        <div className="mckee-form-field">
-          <label className="mckee-form-label">
-            Name <span className="mckee-form-required">(required)</span>
-          </label>
-          <input
-            type="text"
-            autoComplete="name"
-            {...register("name")}
-            className="mckee-form-input"
-          />
-          {errors.name && <p className="mckee-form-error">{errors.name.message}</p>}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="mckee-form-field">
+            <label className="mckee-form-label">
+              First name <span className="mckee-form-required">(required)</span>
+            </label>
+            <input
+              type="text"
+              autoComplete="given-name"
+              {...register("firstName")}
+              className="mckee-form-input"
+            />
+            {errors.firstName && (
+              <p className="mckee-form-error">{errors.firstName.message}</p>
+            )}
+          </div>
+
+          <div className="mckee-form-field">
+            <label className="mckee-form-label">
+              Last name <span className="mckee-form-required">(required)</span>
+            </label>
+            <input
+              type="text"
+              autoComplete="family-name"
+              {...register("lastName")}
+              className="mckee-form-input"
+            />
+            {errors.lastName && (
+              <p className="mckee-form-error">{errors.lastName.message}</p>
+            )}
+          </div>
         </div>
 
         <div className="mckee-form-field">

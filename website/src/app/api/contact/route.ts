@@ -8,7 +8,8 @@ import {
 import { sendEmail } from "@/lib/email";
 
 const schema = z.object({
-  name: z.string().min(2),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
   email: z.string().email(),
   subject: z.string().min(2),
   message: z.string().min(10),
@@ -19,8 +20,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = schema.parse(body);
 
+    const name = `${data.firstName} ${data.lastName}`.replace(/\s+/g, " ").trim();
+
     const fields = [
-      { label: "Name", value: data.name },
+      { label: "Name", value: name },
       {
         label: "Email",
         value: data.email,

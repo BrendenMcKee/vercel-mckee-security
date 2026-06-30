@@ -10,7 +10,8 @@ import { trackWebsiteLeadForm } from "@/lib/google-ads";
 import { useAutofillSync } from "@/lib/use-autofill-sync";
 
 const schema = z.object({
-  name: z.string().min(2, "Name is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Valid email required"),
   subject: z.string().min(2, "Subject is required"),
   message: z.string().min(10, "Please include a message"),
@@ -74,13 +75,33 @@ export function ContactForm() {
         className="mckee-form-body"
       >
         <div className="mckee-form-fields">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="mckee-form-field">
+              <label className="mckee-form-label">First Name</label>
+              <input
+                type="text"
+                autoComplete="given-name"
+                {...register("firstName")}
+                className="mckee-form-input"
+              />
+              {errors.firstName && (
+                <p className="mckee-form-error">{errors.firstName.message}</p>
+              )}
+            </div>
+            <div className="mckee-form-field">
+              <label className="mckee-form-label">Last Name</label>
+              <input
+                type="text"
+                autoComplete="family-name"
+                {...register("lastName")}
+                className="mckee-form-input"
+              />
+              {errors.lastName && (
+                <p className="mckee-form-error">{errors.lastName.message}</p>
+              )}
+            </div>
+          </div>
           {[
-            {
-              name: "name" as const,
-              label: "Your Name",
-              type: "text",
-              autoComplete: "name",
-            },
             {
               name: "email" as const,
               label: "Your Email",

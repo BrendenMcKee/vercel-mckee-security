@@ -13,7 +13,8 @@ import { trackWebsiteLeadForm } from "@/lib/google-ads";
 import { cn } from "@/lib/utils";
 
 const schema = z.object({
-  name: z.string().min(2, "Please enter your name"),
+  firstName: z.string().min(1, "Please enter your first name"),
+  lastName: z.string().min(1, "Please enter your last name"),
   email: z.string().email("Please enter a valid email"),
   phone: z.string().min(7, "Please enter your phone number"),
   address: z.string().min(5, "Please enter your address"),
@@ -59,7 +60,7 @@ export function InquiryForm({
 
   const nextStep = async () => {
     if (step === 0) {
-      const valid = await trigger(["name", "email", "phone"]);
+      const valid = await trigger(["firstName", "lastName", "email", "phone"]);
       if (valid) setStep(1);
     }
   };
@@ -153,9 +154,22 @@ export function InquiryForm({
                       animate={{ opacity: 1, x: 0 }}
                       className="mckee-form-fields"
                     >
-                      <Field label="First and last name" error={errors.name?.message}>
-                        <input {...register("name")} className="mckee-form-input" />
-                      </Field>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label="First name" error={errors.firstName?.message}>
+                          <input
+                            autoComplete="given-name"
+                            {...register("firstName")}
+                            className="mckee-form-input"
+                          />
+                        </Field>
+                        <Field label="Last name" error={errors.lastName?.message}>
+                          <input
+                            autoComplete="family-name"
+                            {...register("lastName")}
+                            className="mckee-form-input"
+                          />
+                        </Field>
+                      </div>
                       <Field label="Email" error={errors.email?.message}>
                         <input type="email" {...register("email")} className="mckee-form-input" />
                       </Field>

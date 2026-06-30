@@ -26,7 +26,8 @@ const rentalTimeSchema = z.enum(RENTAL_PICKUP_TIME_SLOTS);
 
 const inquirySchema = z
   .object({
-    name: z.string().min(2),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
     email: z.string().email(),
     phone: z.string().min(7),
     address: z.string().min(5),
@@ -105,6 +106,11 @@ const inquirySchema = z
 
 type InquiryData = z.infer<typeof inquirySchema>;
 
+/** Combine the split name fields into a single display name. */
+function fullName(data: InquiryData): string {
+  return `${data.firstName} ${data.lastName}`.replace(/\s+/g, " ").trim();
+}
+
 /**
  * Best-effort durable capture of a website rental request. Returns the rental id
  * when a row exists (either newly inserted or an identical recent one already on
@@ -135,7 +141,7 @@ async function tryWriteRequestedRental(data: InquiryData): Promise<string | null
       .insert({
         status: "requested",
         source: "website",
-        customer_name: data.name,
+        customer_name: fullName(data),
         customer_email: data.email,
         customer_phone: data.phone ?? null,
         customer_address: data.address ?? null,
@@ -174,6 +180,7 @@ export async function POST(request: Request) {
   }
 
   const isStarlinkRental = data.serviceSlug === "starlink-rental";
+  const customerName = fullName(data);
 
   // For Starlink rentals, durably capture the lead first (primary path).
   let rentalId: string | null = null;
@@ -204,7 +211,7 @@ export async function POST(request: Request) {
             },
           ]
         : []),
-      { label: "Name", value: data.name },
+      { label: "Name", value: customerName },
       {
         label: "Email",
         value: data.email,
@@ -268,7 +275,7 @@ export async function POST(request: Request) {
   let emailSent = false;
   try {
     emailSent = await sendEmail({
-      subject: buildFormEmailSubject("inquiry", data.name, data.serviceSlug),
+      subject: buildFormEmailSubject("inquiry", customerName, data.serviceSlug),
       text: buildFormEmailText(payload),
       html: buildFormEmailHtml(payload),
       replyTo: data.email,
