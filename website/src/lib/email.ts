@@ -60,14 +60,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   });
   if (!res.ok) {
     const err = await res.text();
-    console.error(
-      `[email] Resend rejected request (HTTP ${res.status}) for "${payload.subject}": ${err}`,
-    );
     throw new Error(`Email failed: ${err}`);
   }
-  const result = (await res.json().catch(() => null)) as { id?: string } | null;
-  console.log(
-    `[email] sent "${payload.subject}" to ${to} (Resend id: ${result?.id ?? "unknown"})`,
-  );
   return true;
 }

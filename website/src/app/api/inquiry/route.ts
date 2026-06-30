@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -172,31 +171,11 @@ async function tryWriteRequestedRental(data: InquiryData): Promise<string | null
 }
 
 export async function POST(request: Request) {
-  const reqId = randomUUID().slice(0, 8);
   let data: InquiryData;
   try {
     const body = await request.json();
-    // Log the raw shape (not full values) so we can see what the browser sent.
-    console.log(`[inquiry ${reqId}] received`, {
-      serviceSlug: body?.serviceSlug,
-      hasFirstName: Boolean(body?.firstName),
-      hasLastName: Boolean(body?.lastName),
-      hasEmail: Boolean(body?.email),
-      hasPhone: Boolean(body?.phone),
-      hasAddress: Boolean(body?.address),
-      pickupDate: body?.pickupDate ?? null,
-      returnDate: body?.returnDate ?? null,
-      pickupTime: body?.pickupTime ?? null,
-      hasUsageLocation: Boolean(body?.usageLocation),
-      honeypotFilled: Boolean(body?.hp_field && String(body.hp_field).trim()),
-      honeypotValue: body?.hp_field ?? null,
-      legacyCompanyValue: body?.company ?? null,
-    });
     data = inquirySchema.parse(body);
-  } catch (err) {
-    const issues =
-      err instanceof z.ZodError ? err.flatten().fieldErrors : String(err);
-    console.warn(`[inquiry ${reqId}] validation failed`, issues);
+  } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
@@ -204,9 +183,6 @@ export async function POST(request: Request) {
   // neutrally-named field counts; the legacy "company" key is intentionally not
   // a spam signal because browser autofill used to populate it.
   if (data.hp_field && data.hp_field.trim().length > 0) {
-    console.warn(
-      `[inquiry ${reqId}] honeypot triggered (hp_field="${data.hp_field}") — dropping as spam`,
-    );
     return NextResponse.json({ ok: true });
   }
 
@@ -217,17 +193,8 @@ export async function POST(request: Request) {
   let rentalId: string | null = null;
   if (isStarlinkRental && isSupabaseConfigured()) {
     rentalId = await tryWriteRequestedRental(data);
-  } else if (isStarlinkRental) {
-    console.warn(
-      `[inquiry ${reqId}] Supabase not configured; skipping rental write`,
-    );
   }
   const rentalWritten = Boolean(rentalId);
-  if (isStarlinkRental) {
-    console.log(
-      `[inquiry ${reqId}] rental write ${rentalWritten ? `ok (id ${rentalId})` : "FAILED"}`,
-    );
-  }
 
   const baseUrl = siteConfig.url.replace(/\/$/, "");
   const adminUrl = rentalId
@@ -321,17 +288,10 @@ export async function POST(request: Request) {
       replyTo: data.email,
     });
   } catch (err) {
-    console.error(`[inquiry ${reqId}] email failed`, err);
+    console.error("[inquiry] email failed", err);
   }
 
-  console.log(
-    `[inquiry ${reqId}] outcome: emailSent=${emailSent} rentalWritten=${rentalWritten}`,
-  );
-
   if (!emailSent && !rentalWritten) {
-    console.error(
-      `[inquiry ${reqId}] BOTH channels failed — returning 502 to client`,
-    );
     return NextResponse.json(
       { error: "Could not submit your request. Please call (705) 457-2156." },
       { status: 502 },
