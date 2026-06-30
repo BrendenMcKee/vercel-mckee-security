@@ -32,7 +32,7 @@ const schema = z
       .string()
       .min(3, "Tell us where you plan to use the kit (cottage, campsite, etc.)"),
     comments: z.string().optional(),
-    company: z.string().optional(),
+    hp_field: z.string().optional(),
   })
   .refine((data) => isWeekdayIso(data.pickupDate), {
     message: "Pickup must be a weekday (Monday to Friday)",
@@ -285,14 +285,15 @@ export function StarlinkRentalForm({
         </div>
 
         <div className="mckee-form-honeypot" aria-hidden="true">
-          <label htmlFor="rental-company">Company</label>
+          <label htmlFor="rental-hp-field">Leave this field blank</label>
           <input
-            id="rental-company"
+            id="rental-hp-field"
             type="text"
             tabIndex={-1}
             autoComplete="off"
+            aria-hidden="true"
             data-honeypot="true"
-            {...register("company")}
+            {...register("hp_field")}
           />
         </div>
       </div>
