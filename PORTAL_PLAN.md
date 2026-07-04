@@ -50,24 +50,36 @@ No em dashes anywhere in this project. Use periods, commas, or colons. Complete 
 - **Never use `user_metadata` for authorization** (user-editable). Roles live in `profiles.role`, checked in RLS via a `security definer` function kept in an unexposed schema.
 - Postgres RLS gotcha: **UPDATE requires a SELECT policy** on the same rows, or updates silently affect 0 rows.
 
-### 1.4 AWS account audit (verified via CLI, 2026-07-04)
+### 1.4 AWS account state (audited and cleaned up, 2026-07-04)
 
-| Fact | Implication |
-|------|-------------|
-| EB application `nvr-backup` (ca-central-1) is running a t3.micro but has **zero application versions deployed**: it serves the stock EB Node.js sample app. Only config: `EMAIL_USER=mckee.cloud.storage@gmail.com` + `EMAIL_PASSWORD` (plaintext app password in EB env) | There is **no recoverable legacy NVR-backup code**. The camera cloud backup system is fully greenfield. The environment should be decommissioned (D10) and the Gmail app password rotated |
-| `nvr-backup-app` (us-east-2) exists with no environments and no versions; `user-dashboard-cloud-storage` (ca-central-1) has no versions | Same conclusion: nothing to port |
-| **No Glacier vaults and no footage S3 buckets exist** in ca-central-1 or us-east-2. Only EB deployment buckets exist | The handover's "AWS Arctic archive storage" is aspirational, not current. The storage layer (bucket, lifecycle, IAM) must be created in Phase 6A |
-| `main-user-management` (t3.micro, Node 22, the legacy Cognito portal backend) and `user-management` (grey health, Node 20) are still running | Legacy prototype infrastructure the handover says not to extend. Candidates for decommission after portal launch (D10). Roughly $30/month currently spent across the three idle/legacy t3.micros |
-| `nvr-backup` security group allows inbound 80/22 only; no FTP/RTSP ports were ever opened | Confirms no ingest pipeline was ever operational |
-| Working CLI access: profile `eb-cli`, account 490004615514 | Sufficient for EB/S3/EC2 auditing today. Footage bucket + scoped IAM will need broader admin action (D5) |
+The account (490004615514, profile `eb-cli`) was fully audited and then cleaned per stakeholder approval. Findings first, current state second.
+
+**Audit findings that shaped the plan:**
+
+- The legacy `nvr-backup` EB environment had **zero application versions deployed** (stock EB sample app, inbound 80/22 only, no FTP/RTSP ever opened). There was no recoverable ingest code anywhere (also checked `nvr-backup-app` in us-east-2 and `user-dashboard-cloud-storage`: both empty). The camera cloud backup system is fully greenfield.
+- **No Glacier vaults and no footage S3 buckets existed.** The handover's "AWS Arctic archive storage" was aspirational; Phase 6A creates the storage layer.
+- The legacy Cognito-era portal backend (`main-user-management`) and its predecessors were still running, costing roughly $45+/month across two idle t3.micros, an idle application load balancer, and associated addresses.
+
+**Cleanup executed 2026-07-04 (all approved):** deleted six EB applications + environments: `nvr-backup`, `main-user-management`, `user-management`, `mckee-security`, `user-dashboard-cloud-storage` (ca-central-1) and `nvr-backup-app` (us-east-2); their instances, load balancer, and Elastic IPs released; 71 orphaned deployment objects removed from the EB S3 bucket. Two stale legacy security groups were detached from `mckeesecurity-rds` (they blocked stack deletion; Data Drops connects through the `default` group). Data Drops verified healthy (HTTP 200 against the live API) after each step.
+
+**Current AWS footprint (everything that now exists):**
+
+| Resource | Purpose | Keep |
+|----------|---------|------|
+| EB app + env `data-drops-app` (t3.micro, Node 22, ALB with 3 EIPs behind `app-mckeesecurity.ca`) | Data Drops Express API (active internal tool; the site proxies to it via `/api/dd/*`) | Yes |
+| RDS `mckeesecurity-rds` (MySQL, db.t4g.micro) | Data Drops database. Also still holds the legacy portal's `McKeeSecurityRDS` database (data preserved; the legacy app that used it is gone) | Yes |
+| EB S3 buckets (ca-central-1, us-east-2) | Deployment bundles for `data-drops-app` only | Yes |
+| Supabase (not AWS) + Vercel | Everything else in this plan | Yes |
+
+**Follow-ups:** rotate the `mckee.cloud.storage@gmail.com` app password that sat in plaintext EB config (cannot be done via CLI); remove any DNS record still pointing at the deleted `main-user-management` load balancer; Cognito user pool from the legacy prototype can be deleted whenever convenient (no cost while idle). Phase 6A adds: footage bucket, per-site IAM, SSM hybrid activations.
 
 ### 1.5 Camera fleet and connectivity constraints (research verified, 2026-07)
 
 | Fact | Implication |
 |------|-------------|
 | UNV/Uniview NVRs support FTP upload of **snapshots only** (D1-resolution stills, scheduled or event-triggered). No native continuous video push to FTP/cloud. EZCloud is P2P viewing, not backup | The NVR alone cannot deliver the cloud backup product. An **on-site gateway** must capture and upload video (Section 9.2) |
-| Many client sites are on **Starlink with CGNAT (double NAT)**: no public IP, no port forwarding, inbound connections impossible | Every site component must be **outbound-initiated**: HTTPS uploads to S3 and an outbound mesh VPN (Tailscale/WireGuard) for remote management both work through CGNAT |
-| Starlink residential uplink is typically 5 to 20 Mbps and variable | Continuous main-stream upload (4 to 8 Mbps per camera) is infeasible for multi-camera sites. Upload sub-streams (1 to 2 Mbps) and/or event-triggered clips, with local store-and-forward buffering for outages (Section 9.2.4) |
+| UNV cameras: Ultra265/H.265 with U-code smart codec, dual/triple streams, RTSP mainstream at `/media/video1`, up to 32 concurrent stream users, ONVIF Profile S/T | The gateway pulls **mainstream RTSP directly from each camera** in parallel with the NVR (32-user headroom makes one extra consumer safe). H.265 4MP mainstream runs 2 to 4 Mbps real-world with U-code |
+| Starlink 2026 (Gen 4 dishes, Standard/Standard 4x): Residential fixed plans officially spec **15 to 35 Mbps upload**, ~22 Mbps median, improving year over year. Residential still uses **CGNAT** (public IP only on Priority plans) with a **1,200 concurrent session limit**; Starlink explicitly warns VPNs burn sessions | Mainstream upload is now feasible for typical sites (4 cameras x ~3 Mbps = 12 Mbps, inside the envelope, capped by the uploader). All connections must be outbound-initiated. **Avoid always-on VPNs**: they add cost, burn CGNAT sessions, and are unnecessary (R17) |
 
 ---
 
@@ -93,7 +105,10 @@ No em dashes anywhere in this project. Use periods, commas, or colons. Complete 
 | R13 | Data access in admin features | Admin UI reads/writes through the **user-context client** (RLS admin policies), not the service role. Service role is reserved for: `auth.admin` operations, webhook/cron contexts, and invitation validation before a session exists |
 | R14 | Device expiry alerts | `expiry_alerted_at` timestamp on `devices`, cleared when the install date changes, so the nightly cron emails once per expiry event instead of every night |
 | R15 | Dev environment | Supabase org is on a **paid plan** (confirmed 2026-07-04): use a **Supabase development branch** of the platform project for schema iteration, promote to production via reviewed migrations. Local stack remains available for offline work |
-| R16 | Camera ingestion platform | **No Elastic Beanstalk and no 24/7 ingest server.** On-site gateway devices upload directly to S3 over HTTPS (outbound-only, CGNAT-safe); Supabase holds sites/cameras/gateway metadata; Vercel API routes are the control plane (heartbeats, provisioning). Full rationale and rejected alternatives in Section 9.2.6 |
+| R16 | Camera ingestion platform | **No Elastic Beanstalk and no 24/7 ingest server.** On-site gateway devices upload directly to S3 over HTTPS (outbound-only, CGNAT-safe); Supabase holds sites/cameras/gateway metadata; Vercel API routes are the control plane (heartbeats, config, provisioning). Full rationale and rejected alternatives in Section 9.2.6 |
+| R17 | Gateway remote management | **No VPN services or tunnel subscriptions.** Gateways register as free AWS SSM hybrid nodes (outbound HTTPS agent, works through CGNAT): remote shell and run-command are pay-per-use ($0.05/session, $0.002/command, zero standing cost). Day-to-day config changes ride the gateway's own config-poll channel, so SSM is for break-glass support only |
+| R18 | Capture quality | **Mainstream (full resolution H.265) capture is the default**, so retrieved footage is evidence-grade. Continuous recording by default; motion-gated upload available per camera as a cost lever (D9). The NVR remains the on-site system of record |
+| R19 | Retention tiers map to S3 storage classes | 7-day tier = S3 Standard, 30-day = Standard-IA, 90-day = **Glacier Instant Retrieval** ("Arctic"). Each tier's retention window equals its class minimum-duration billing floor, so zero early-delete penalties, and every class serves instant GETs: **no restore jobs anywhere in the product** (9.2.5) |
 
 ### Open (stakeholder or phase-gated)
 
@@ -105,9 +120,9 @@ No em dashes anywhere in this project. Use periods, commas, or colons. Complete 
 | D5 | AWS footage storage provisioning | Phase 6A | **Audit finding: no bucket, vault, or IAM exists yet; all greenfield.** Human approves: footage bucket creation (ca-central-1), lifecycle rules per tier (9.2.5), an admin-capable IAM path for the agent or console work, per-site upload credentials model (9.2.3). "Arctic" is implemented as S3 storage classes chosen per retention tier, not a separate product |
 | D6 | Handover Section 18 business answers | Rolling | Blocking map: Q1/Q3 (tier features, monitoring paid in portal?) by Phase 3; Q7 (admin alert inbox) by Phase 2; Q16/Q9 (caller ID min/max, history in UI?) by Phase 4; Q2 (cloud tier pricing) by Phase 5; Q4/Q6 (retention on cancel, link expiry) by Phase 6. Q8 (camera list source) is resolved structurally: cameras are registered rows in the `cameras` table, populated at gateway provisioning (9.2.3) |
 | D7 | Vercel plan cron limits | Phase 6/7 | If on Hobby (daily-only crons), nightly expiry works but the footage poller needs pg_cron or S3 event notifications. Verify plan at Phase 6B kickoff |
-| D8 | Gateway site kit | Phase 6A | Hardware per site (recommendation: fanless mini PC or Raspberry Pi 5 with SSD buffer, wired to the camera VLAN), procurement, and install SOP for technicians. Pilot site selection (recommendation: one McKee-controlled site first, ideally behind Starlink to prove CGNAT behavior) |
-| D9 | Per-site capture strategy | Phase 6A | Default recommendation: continuous **sub-stream** RTSP capture per camera (1 to 2 Mbps) + retain NVR local recording as the full-quality source. Alternatives per site: event-clip-only upload (motion windows) for very constrained links, or main-stream for small sites with good uplink. Confirm per-tier expectations with McKee ops |
-| D10 | Legacy AWS decommission | Post-launch (flag now) | Terminate `nvr-backup` EB env (runs only the sample app), delete empty `nvr-backup-app` (us-east-2) and `user-dashboard-cloud-storage` apps, retire `main-user-management` + `user-management` once the portal replaces the legacy prototype. **Rotate the Gmail app password currently sitting in EB env config.** Human approval required; nothing is torn down during portal development |
+| D8 | Gateway site kit | Phase 6A | Recommendation: fanless x86 mini PC (Intel N100 class, 8GB RAM, 500GB to 1TB NVMe, ~$200 to $280 one-time per site) over Raspberry Pi: native NVMe, better ffmpeg headroom, industrial options exist. Human approves hardware SKU + pilot site (recommendation: one McKee-controlled Starlink site first to prove CGNAT behavior end to end) |
+| D9 | Per-site capture tuning | Phase 6A | Default is continuous mainstream H.265 (R18). Per-camera knobs: bitrate cap pushed to the camera (U-code, target 2 to 3 Mbps for 4MP), motion-gated upload for constrained links or budget-sensitive clients. Confirm defaults against pilot bandwidth data |
+| D10 | Legacy AWS decommission | **Done 2026-07-04** | Executed with stakeholder approval: all six legacy EB applications deleted across both regions, orphaned S3 objects removed, stale security groups detached from RDS, Data Drops + RDS untouched and verified healthy (1.4). Remaining human items: rotate the exposed Gmail app password; remove stale DNS records for the deleted load balancer |
 
 ---
 
@@ -177,16 +192,17 @@ supabase/
 └── migrations/                                 # committed migration files (workflow in 4.4)
 
 camera-gateway/                                 # NEW top-level app (Phase 6A), runs on site devices
-├── README.md                                   # technician provisioning SOP
-├── agent/                                      # Node/TypeScript uploader service
-│   ├── capture.ts                              # ffmpeg RTSP -> segmented mp4, per camera
-│   ├── uploader.ts                             # store-and-forward queue -> S3 multipart upload
-│   ├── heartbeat.ts                            # POST /api/gateway/heartbeat (status, disk, upload lag)
-│   └── config.ts                               # per-site config: cameras, streams, bitrate caps
-└── provision/                                  # bootstrap scripts: Tailscale, systemd units, IAM creds
+├── README.md                                   # technician install SOP (plug-in-and-verify, 9.2.3)
+├── agent/                                      # Node/TypeScript service (systemd-supervised)
+│   ├── capture.ts                              # ffmpeg mainstream RTSP -> segmented mp4, per camera
+│   ├── uploader.ts                             # store-and-forward queue -> S3 multipart upload, bandwidth-capped
+│   ├── heartbeat.ts                            # POST /api/gateway/heartbeat (status, disk, queue, bytes)
+│   ├── config-sync.ts                          # GET /api/gateway/config on version bump (cameras, creds, caps)
+│   └── discovery.ts                            # ONVIF/RTSP camera discovery assist for installs
+└── provision/                                  # office imaging: base OS, agent, SSM hybrid registration
 ```
 
-Portal API addition for the gateway control plane (Phase 6A): `src/app/api/gateway/heartbeat/route.ts` (per-site secret auth, updates `gateways.last_seen_at` + metrics).
+Portal API additions for the gateway control plane (Phase 6A): `src/app/api/gateway/heartbeat/route.ts` and `src/app/api/gateway/config/route.ts` (per-gateway secret auth; heartbeat updates `gateways.last_seen_at` + metrics, config serves the site's camera and capture configuration).
 
 Modified files: `src/lib/email.ts` (add `to`/`cc` override), `next.config.ts` (remove 5 legacy redirects), `src/app/sitemap.ts` (exclude portal routes if pattern requires), `package.json` (`@supabase/ssr`, `stripe`, `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` in Phase 6B).
 
@@ -319,7 +335,7 @@ Expiry is computed, not stored: battery `installed_on + interval '5 years'`, smo
 | `site_id` | uuid | FK sites, not null |
 | `name` | text | not null (client-facing label, e.g. "Driveway") |
 | `rtsp_path` | text | not null (gateway-side stream config; never shown to client) |
-| `capture_mode` | text | `'substream'` / `'mainstream'` / `'events_only'` (D9), default `'substream'` |
+| `capture_mode` | text | `'mainstream'` / `'events_only'` / `'substream'` (D9, R18), default `'mainstream'` |
 | `active` | boolean | not null default true |
 
 **`gateways`** (Phase 6A; one row per site device)
@@ -328,10 +344,21 @@ Expiry is computed, not stored: battery `installed_on + interval '5 years'`, smo
 |--------|------|-------------|
 | `id` | uuid | PK |
 | `site_id` | uuid | FK sites, not null, unique |
-| `secret_hash` | text | not null (SHA-256 of per-gateway heartbeat secret) |
-| `tailscale_name` | text | nullable (management address) |
+| `secret_hash` | text | not null (SHA-256 of per-gateway API secret) |
+| `hardware_serial` | text | nullable, unique (claim/imaging identity) |
+| `ssm_node_id` | text | nullable (`mi-...` hybrid node id for break-glass access, R17) |
+| `config_version` | integer | not null default 0 (bumped on config change; gateway polls and applies) |
 | `last_seen_at` | timestamptz | nullable (heartbeat) |
-| `metrics` | jsonb | nullable (disk free, upload lag, camera states from last heartbeat) |
+| `metrics` | jsonb | nullable (disk free, queue depth, per-camera capture state, bytes uploaded) |
+
+**`site_usage`** (Phase 6A; nightly rollup for margin visibility, 9.2.7)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `site_id` | uuid | FK sites, not null |
+| `day` | date | not null |
+| `bytes_uploaded` | bigint | not null default 0 |
+| `unique (site_id, day)` | | |
 
 **`footage_requests`** (Phase 6B)
 
@@ -527,97 +554,124 @@ Caller ID diff email: added contacts styled green, removed styled red (handover 
 
 ### 9.2 Camera cloud backup ingestion (Phase 6A)
 
-The audit (1.4, 1.5) established three hard constraints: nothing exists in AWS yet, UNV NVRs cannot push continuous video natively, and Starlink CGNAT blocks all inbound connections. The design below satisfies all three.
+The audit (1.4, 1.5) established the constraints: the storage layer is greenfield, UNV NVRs cannot push continuous video natively, Starlink Residential remains CGNAT (outbound-only), and 2026 Starlink uplink (15 to 35 Mbps) makes **mainstream-quality upload feasible**. The product goal: evidence-grade footage in the cloud, minimum recurring cost per site, and a plug-in-and-verify install for technicians.
 
 #### 9.2.1 Architecture
 
 ```
-Client site (possibly Starlink double NAT: outbound-only)
+Client site (Starlink Gen 4 or any ISP: outbound-only assumed)
 │
-├── UNV cameras + NVR             # NVR keeps full-quality local recording (unchanged)
-│         │ RTSP over camera VLAN (local, no internet needed)
+├── UNV cameras + NVR             # NVR keeps its local recording exactly as today (unchanged)
+│         │ mainstream RTSP (H.265/U-code) pulled per camera over the local network
 │         v
-├── McKee gateway device          # fanless mini PC / Pi 5 + SSD (D8)
-│   ├── ffmpeg per camera         # sub-stream RTSP -> N-minute mp4 segments (D9)
-│   ├── store-and-forward queue   # SSD buffer survives Starlink outages
-│   ├── uploader                  # S3 multipart PUT over HTTPS (outbound 443 only)
-│   ├── heartbeat                 # HTTPS POST to portal API every few minutes
-│   └── Tailscale                 # outbound mesh VPN for remote management (CGNAT-safe)
+├── McKee gateway device          # fanless mini PC + NVMe buffer (D8), one per site
+│   ├── ffmpeg per camera         # mainstream RTSP -> 5-min mp4 segments, stream copy (no re-encode)
+│   ├── store-and-forward queue   # NVMe buffer rides out Starlink outages (days of backlog)
+│   ├── uploader                  # S3 multipart PUT, outbound 443 only, bandwidth-capped
+│   ├── heartbeat + config-sync   # HTTPS to portal API: status up, config down
+│   └── amazon-ssm-agent          # free hybrid node registration; break-glass remote access (R17)
 │
-└── (no inbound ports, no port forwarding, no public IP required)
+└── (no inbound ports, no port forwarding, no public IP, no VPN)
 
 AWS (ca-central-1)
 ├── S3 footage bucket             # sites/<site_id>/<camera_id>/<yyyy>/<mm>/<dd>/<hhmmss>.mp4
-│   ├── lifecycle rules per tier  # 9.2.5
+│   ├── objects PUT directly into the tier's storage class (9.2.5)
+│   ├── lifecycle: expiration-only rules per tier prefix (9.2.5)
 │   └── SSE-S3 encryption, versioning off, public access blocked
 └── Per-site IAM credentials      # PutObject scoped to that site's prefix only (9.2.3)
 
 Portal / cloud
-├── Supabase: sites, cameras, gateways (schema 4.2)
-├── /api/gateway/heartbeat        # gateway status -> admin visibility + offline alerting
-└── Phase 6B retrieval reads the same bucket
+├── Supabase: sites, cameras, gateways (+ daily usage rollup) (schema 4.2)
+├── /api/gateway/heartbeat        # fleet health -> admin dashboard + offline alerting
+├── /api/gateway/config           # versioned per-site config the gateway polls
+└── Phase 6B retrieval reads the same bucket with a read-only credential
 ```
 
-Design rule: the **NVR remains the full-quality system of record on site**; the cloud copy is the backup/retention product (sub-stream by default), which is what the 7/30/90-day tiers actually sell. The gateway initiates every connection, so double NAT, CGNAT, and dynamic IPs are irrelevant.
+Design rules: the NVR stays the on-site system of record; the cloud copy is the sellable retention product, captured at **mainstream quality (R18)** so a retrieved clip is usable as evidence. The gateway initiates every connection, so CGNAT, double NAT, and dynamic IPs are irrelevant. Total recurring per-site infrastructure cost is S3 storage plus fractions of a cent of API calls: there is no server, no VPN subscription, and no per-camera license (9.2.6).
 
 #### 9.2.2 Gateway software (`camera-gateway/`)
 
-- Node/TypeScript agent supervised by systemd; ffmpeg spawned per active camera (`rtsp_transport tcp`, `-c copy` remux to mp4 segments, default 5 minutes, no re-encode so CPU stays trivial).
-- Store-and-forward: segments land on the SSD queue first; the uploader drains oldest-first with retry/backoff and a configurable bandwidth cap (protects the Starlink uplink). Disk watermark: oldest segments dropped if the buffer exceeds its cap during a long outage, with drops reported via heartbeat.
-- Heartbeat every 5 minutes to `/api/gateway/heartbeat` (auth: per-gateway secret, hash in `gateways.secret_hash`): camera capture states, queue depth, disk free, last successful upload. Missing heartbeats > 30 minutes surface in the admin dashboard (email alerting joins Phase 7).
-- Management: Tailscale (outbound WireGuard mesh) gives SSH access to gateways behind CGNAT; no client router changes ever required.
+- Node/TypeScript agent supervised by systemd; ffmpeg spawned per active camera: `rtsp_transport tcp`, mainstream URL (`/media/video1` on UNV), `-c copy` remux into 5-minute fragmented mp4 segments. Stream copy means no transcoding, so even an N100 handles 8+ cameras with trivial CPU.
+- Bitrate is controlled **at the camera** (UNV: H.265 + U-code, target 2 to 3 Mbps for 4MP mainstream), set during install. The gateway does not re-encode; it ships what the camera produces.
+- Store-and-forward: segments land on the NVMe queue first; the uploader drains oldest-first with retry/backoff and a per-site bandwidth cap (default: 60% of measured uplink, configurable). A 500GB buffer holds roughly 3.5 days of 4-camera backlog at 3 Mbps; 1TB roughly 7 days. If the buffer high-watermark is hit during an extended outage, oldest segments are dropped and the drop window is reported via heartbeat (the NVR still has that footage locally).
+- Heartbeat every 5 minutes to `/api/gateway/heartbeat` (per-gateway secret, hash in `gateways.secret_hash`): per-camera capture state, queue depth, disk free, cumulative bytes uploaded, agent version. Config changes flow the other way: heartbeat response carries the current `config_version`; on mismatch the agent GETs `/api/gateway/config` and applies (add/remove cameras, caps, capture mode) with no site visit.
 - Clock discipline: NTP required (segment timestamps drive retrieval matching).
+- Watchdog: systemd restarts on crash; the agent restarts individual ffmpeg processes on stall (no-data timeout) and reports flaps in the heartbeat.
 
-#### 9.2.3 Provisioning and credentials (per site)
+#### 9.2.3 Provisioning and the technician experience
 
-1. Admin registers site + cameras in the admin dashboard (writes `sites`, `cameras`, `gateways`, generates the gateway secret).
-2. Technician images the gateway with `camera-gateway/provision/`, drops in the site config (site id, camera RTSP paths, secret, IAM credentials), connects it to the camera VLAN.
-3. IAM: one credential per site allowing `s3:PutObject` (+ multipart helpers) **only under `sites/<site_id>/*`**. No read, no delete, no other prefixes: a stolen gateway cannot read any footage or touch other sites. Start with per-site IAM users; move to short-lived STS via a Vercel token-vending route if fleet size warrants (future hardening item).
-4. Camera rows drive both gateway capture config and the client-facing footage request form (Q8 resolved).
+The install must be plug-in-and-verify: no laptop at the site, no router changes, no networking knowledge beyond plugging in two cables.
 
-#### 9.2.4 Bandwidth and cost model (defaults, tune at D9)
+**Office (once per gateway, before the truck rolls):**
+1. Flash the standard gateway image (`camera-gateway/provision/`): OS, agent, amazon-ssm-agent with a hybrid activation, and the gateway's identity file (gateway id + API secret). Record `hardware_serial` in the admin dashboard; the device row now exists and shows "awaiting first contact".
+2. Admin creates the site in the admin portal, assigns the gateway to it, and enters the cloud tier. The per-site IAM credential is provisioned (script in `provision/`) and baked into the identity file.
 
-| Item | Working number |
-|------|----------------|
-| Sub-stream bitrate | 1 to 2 Mbps per camera (10.8 to 21.6 GB/day per camera) |
-| 4-camera site uplink need | 4 to 8 Mbps sustained: below typical Starlink uplink, and capped by the uploader |
-| S3 Standard storage | ~$0.025/GB-month (ca-central-1). Example: 4 cameras, 30-day tier, 1.5 Mbps is roughly 1.9 TB, ~$49/month raw storage |
-| Cost levers | Lower sub-stream bitrate, `events_only` capture mode, Standard-IA for the 90-day tier tail |
+**On site (technician, target under 15 minutes):**
+1. Plug the gateway into the camera network (NVR switch or PoE switch port) and power.
+2. The gateway boots, reaches the internet outbound, heartbeats in, and pulls its config. The admin dashboard (on the technician's phone) flips the gateway to green.
+3. Camera discovery: the agent scans for UNV cameras (ONVIF probe), reports candidates in the heartbeat, and the technician confirms/names them in the admin portal (labels like "Driveway"). Camera credentials are the standard McKee install credentials entered once per site in the portal, delivered to the gateway via config-sync, never stored in the portal in plaintext (encrypted column or Vault).
+4. The dashboard shows a per-camera live checklist: RTSP connected, first segment written, first segment uploaded. All green = done; the SOP in `camera-gateway/README.md` is one page.
 
-These numbers feed tier pricing (D6/Q2) and must be validated in the pilot.
+**Credentials (least privilege):** one IAM credential per site allowing `s3:PutObject` + multipart helpers **only under `sites/<site_id>/*`**. No read, no list, no delete, no other prefixes: a stolen gateway cannot read any footage, not even its own site's. Start with per-site IAM users; move to short-lived STS via a token-vending route if the fleet grows (recorded hardening item). Camera rows drive both gateway capture config and the client-facing footage request form (Q8 resolved).
 
-#### 9.2.5 Retention = S3 lifecycle rules (supersedes the handover's "Arctic" assumption)
+#### 9.2.4 Bandwidth and cost model (mainstream capture, validate in pilot)
 
-The 7/30/90-day tiers are **rolling retention windows**, so objects are short-lived. Glacier-class storage carries minimum-duration charges (Instant Retrieval 90 days, Flexible 90, Deep Archive 180) that make it wrong for most of this data. Implementation:
+Working numbers at 3 Mbps per camera (4MP H.265/U-code mainstream, 24/7 continuous):
 
-| Tier | Lifecycle on `sites/<site_id>/` |
-|------|--------------------------------|
-| 7-day | expire objects after 7 days (S3 Standard throughout) |
-| 30-day | expire after 30 days (Standard throughout) |
-| 90-day | transition to Standard-IA at day 30 (30-day IA minimum fits), expire at day 90 |
+| Item | Number |
+|------|--------|
+| Per camera per day | 32.4 GB captured and uploaded |
+| 4-camera site uplink | 12 Mbps sustained: inside Starlink Residential's 15 to 35 Mbps envelope, capped by the uploader |
+| Steady-state storage per camera | 7-day tier: ~227 GB. 30-day: ~972 GB. 90-day: ~2.92 TB |
+| Monthly storage cost per camera (ca-central-1 approx) | 7-day on Standard (~$0.025/GB): **~$5.70**. 30-day on Standard-IA (~$0.0138/GB): **~$13.40**. 90-day on Glacier Instant Retrieval (~$0.005/GB): **~$14.60** |
+| PUT requests (288 segments/day/camera) | $0.05 to $0.19 per camera per month depending on class: noise |
+| Upload data transfer into S3 | Free |
+| Retrieval incident (1 hour of footage ~1.35 GB) | Class retrieval fee ($0.01 to $0.03/GB) + $0.09/GB egress: **~$0.16 per incident**: noise |
 
-Lifecycle configuration is updated when the admin assigns or changes a site's cloud tier. Consequence for Phase 6B: most retrievals are **instant** (presigned URLs, no restore wait). The Glacier restore path is kept in the design only for a possible future long-archive product. Same business outcome as the handover's "Arctic" language with correct storage economics; flag to stakeholder at D5.
+Cost levers, in order of impact: camera bitrate (2 Mbps cuts every storage number by a third), **motion-gated upload** (`events_only` capture mode typically cuts 70 to 95% at rural sites while the NVR still holds the continuous record), and per-camera pricing so heavy sites pay for what they use. Starlink Residential data is unlimited standard data, so the upload volume itself costs the client nothing. These cost-basis numbers feed tier pricing (D6/Q2): they are the wholesale cost under any retail price McKee sets per camera per tier.
+
+#### 9.2.5 Retention tiers map directly to S3 storage classes (this is "Arctic")
+
+Each tier's retention window equals a storage class minimum-duration billing floor, so there are no early-delete penalties and no lifecycle transition costs: the gateway PUTs each object **directly into the tier's class** via the `x-amz-storage-class` header, and an expiration-only lifecycle rule deletes at end of window.
+
+| Tier | Storage class at PUT | Class minimum duration | Lifecycle rule | Retrieval behavior |
+|------|---------------------|------------------------|----------------|--------------------|
+| 7-day | S3 Standard | none | expire day 7 | instant GET, no fee |
+| 30-day | S3 Standard-IA | 30 days (exact fit) | expire day 30 | instant GET, $0.01/GB |
+| 90-day | S3 Glacier Instant Retrieval | 90 days (exact fit) | expire day 90 | **instant GET**, $0.03/GB |
+
+Glacier Instant Retrieval is genuinely Glacier-class economics (83% cheaper than Standard) with millisecond GETs, so the "Arctic" brand promise holds while **no restore jobs exist anywhere in the product**. Deep Archive (180-day minimum) only enters if a future 6-month/1-year archive tier is sold; the restore-job flow in 9.3 step 4 is reserved for that. A tier change updates the gateway's PUT class via config-sync and the site's expiration rule; existing objects keep their class and age out under the old window (acceptable, documented behavior).
 
 #### 9.2.6 Platform decision record (R16)
 
 | Option | Verdict | Why |
 |--------|---------|-----|
-| Gateway -> direct S3, Supabase metadata, Vercel control plane | **Chosen** | No 24/7 server, no inbound ports, cheapest (S3 plus pennies of API), per-site scaling, CGNAT-native |
-| Rebuild on Elastic Beanstalk (legacy direction) | Rejected | Audit showed nothing was ever built there; a 24/7 ingest VM adds cost and a single point of failure with no benefit over direct-to-S3 |
+| Gateway -> direct S3, Supabase metadata, Vercel control plane | **Chosen** | No 24/7 server, no inbound ports, near-zero fixed cost (S3 plus pennies of API), per-site scaling, CGNAT-native |
+| Rebuild on Elastic Beanstalk (legacy direction) | Rejected | Audit showed nothing was ever built there; a 24/7 ingest VM adds ~$30+/month fixed cost and a single point of failure with no benefit over direct-to-S3. The legacy EB apps were deleted in the 2026-07-04 cleanup (1.4) |
+| Always-on VPN/tunnel (Tailscale, WireGuard mesh) | Rejected | Recurring per-device subscription or self-hosted coordinator to babysit; burns Starlink's 1,200-session CGNAT budget; unnecessary because SSM covers break-glass access (R17) |
 | AWS Transfer Family (managed FTP/SFTP) | Rejected | ~$216/month idle endpoint; FTP only receives NVR snapshots anyway (1.5) |
 | Kinesis Video Streams | Rejected for v1 | Per-GB ingest pricing, per-stream management, SDK complexity; overkill for segment backup |
 | Third-party cloud adapter (e.g. Videoloft) | Rejected | Per-camera licensing, no ownership; conflicts with building McKee's own product |
 | NVR-native upload only | Rejected | Snapshots only (1.5); cannot deliver the video backup product |
 
+Remote management stack (R17): amazon-ssm-agent registers each gateway as a free AWS hybrid node over outbound HTTPS. Fleet-wide day-to-day changes ride the config-sync channel (free). Break-glass shell access is SSM Session Manager at $0.05/session, run-command at $0.002/invocation: a support incident costs cents, and a healthy fleet costs zero.
+
+#### 9.2.7 Business operations integration
+
+- **Client experience:** the cloud backup card shows per-camera protection status ("Driveway: backed up 3 minutes ago" from heartbeat data), the tier and its retention window, and the footage request form (camera + date/time range). Requests return working links typically within a minute (9.3). No client ever interacts with AWS concepts.
+- **Admin experience:** a fleet board in the admin dashboard: every site, gateway health (last heartbeat, queue depth, disk, per-camera state), storage consumption, and open footage requests. Offline gateways surface red within 30 minutes and email the admin (9.4).
+- **Accounting:** heartbeats carry cumulative uploaded bytes; a nightly rollup writes per-site daily usage (`site_usage` table: `site_id`, `day`, `bytes_uploaded`, unique on both). The admin fleet board shows per-site GB stored and estimated wholesale cost next to the subscription price, so margin per client is visible at a glance. Recommendation for D6/Q2: price cloud backup **per camera per tier** (Stripe subscription quantity = active camera count), since 9.2.4 shows cost scales linearly with cameras; flat per-site pricing hides margin risk on large sites. `billing_events` capture keeps this QB Scope B ready.
+- **Support runbook (in `camera-gateway/README.md`):** offline gateway -> check site power/internet, then SSM session; camera down -> config-sync re-push, then discovery re-run; buffer filling -> confirm uplink, lower cap or bitrate. Every action is remote; a truck roll is the last resort.
+
 ### 9.3 Footage retrieval (Phase 6B)
 
 1. Client submits camera (a `cameras` row) + time range; `footage_requests` insert (`pending`); rate-limited.
 2. Server lists matching segments under `sites/<site_id>/<camera_id>/` for the range (`ListObjectsV2`, timestamp-keyed names), stores keys in `s3_keys`, status -> `processing`.
-3. Standard/IA objects (the normal case per 9.2.5): presign immediately. Single segment = one presigned GET; multi-segment = per-segment presigned links listed on the dashboard (server-side zip bundling is a later nicety). Status -> `ready`, email sent, typically within a minute.
-4. Glacier-class objects (only if a future archive tier exists): `RestoreObject`, then completion per D7: (a) cron poller (`HeadObject` `x-amz-restore`), (b) S3 Event Notifications -> webhook route, or (c) lazy dashboard check + daily sweep.
+3. All three product tiers serve **instant GETs** (9.2.5): presign immediately. Single segment = one presigned GET; multi-segment = per-segment presigned links listed on the dashboard (server-side zip bundling is a later nicety). Status -> `ready`, email sent, typically within a minute of the request.
+4. Restore-job path (dormant until a Deep Archive tier is ever sold): `RestoreObject`, then completion per D7: (a) cron poller (`HeadObject` `x-amz-restore`), (b) S3 Event Notifications -> webhook route, or (c) lazy dashboard check + daily sweep.
 5. Presigned TTL per D6/Q6 (default 72h; 7-day max with IAM user credentials). Cleanup cron marks `ready` past TTL as `expired`. Failures -> `failed` + reason + client and admin emails.
 
-Vercel-side IAM (separate from gateway credentials): list + read + restore on the footage bucket, no write, no delete. Credentials only in Vercel env.
+Vercel-side IAM (separate from gateway credentials): list + read (+ restore for the dormant path) on the footage bucket, no write, no delete. Credentials only in Vercel env.
 
 ### 9.4 Scheduled jobs (Phase 7)
 
@@ -627,9 +681,10 @@ Vercel-side IAM (separate from gateway credentials): list + read + restore on th
 |-------|----------|------|
 | `/api/cron/device-expiry` | daily 06:00 UTC | expired devices where `expiry_alerted_at is null` -> email admin + client, stamp `expiry_alerted_at` (R14) |
 | `/api/cron/cleanup` | daily | orphan auth users >7d, invitations expired >90d, footage links past TTL |
-| `/api/cron/footage-poller` | hourly (if option (a) chosen and plan allows) | poll `processing` restores |
+| `/api/cron/gateway-health` | every 30 min (plan permitting, else hourly + dashboard-first) | gateways with `last_seen_at` older than 30 min and not already alerted -> email admin; also writes the nightly `site_usage` rollup on its midnight run |
+| `/api/cron/footage-poller` | dormant | only if a Deep Archive tier is ever sold (9.3 step 4) |
 
-Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for the poller (R4).
+Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-daily jobs (R4).
 
 ---
 
@@ -704,25 +759,26 @@ Each phase ends with a test gate; do not start the next phase with a failing gat
 
 ### Phase 6A: Camera Cloud Backup Ingestion
 
-- [ ] **[HUMAN]** D5: approve footage bucket creation + lifecycle rules (9.2.5) + IAM model (9.2.3); provide admin-capable AWS access for setup. D8: gateway hardware chosen and pilot site selected. D9: capture strategy defaults confirmed
-- [ ] Create S3 bucket (ca-central-1): public access blocked, SSE-S3, lifecycle rules per tier
-- [ ] Migration 5: `sites`, `cameras`, `gateways` (+ RLS incl. `rtsp_path` exclusion for clients)
-- [ ] Admin dashboard: site + camera registration, gateway secret generation, gateway health view (last heartbeat, queue depth)
-- [ ] `/api/gateway/heartbeat` route (per-gateway secret auth)
-- [ ] Build `camera-gateway/` agent: capture (ffmpeg segmenting), store-and-forward uploader with bandwidth cap, heartbeat, provisioning scripts (Tailscale, systemd)
-- [ ] Bench test: gateway + one UNV camera on the shop network uploading to S3
-- [ ] **[HUMAN]** Pilot install at the selected site (ideally Starlink) by technician per `camera-gateway/README.md`
+- [ ] **[HUMAN]** D5: approve footage bucket creation + tier storage-class mapping (9.2.5) + IAM model (9.2.3); provide admin-capable AWS access for setup. D8: gateway hardware SKU purchased and pilot site selected. D9: capture defaults confirmed (mainstream bitrate target)
+- [ ] Create S3 bucket (ca-central-1): public access blocked, SSE-S3, expiration-only lifecycle rules per tier
+- [ ] Migration 5: `sites`, `cameras`, `gateways`, `site_usage` (+ RLS incl. `rtsp_path` exclusion for clients)
+- [ ] Admin dashboard: site + camera registration, gateway assignment and secret generation, fleet board (9.2.7: health, storage, margin view)
+- [ ] `/api/gateway/heartbeat` + `/api/gateway/config` routes (per-gateway secret auth, config versioning)
+- [ ] Build `camera-gateway/` agent: mainstream capture (ffmpeg stream-copy segmenting), store-and-forward uploader with bandwidth cap and direct-to-class PUT, heartbeat, config-sync, ONVIF discovery assist
+- [ ] Provisioning image: OS + agent + amazon-ssm-agent hybrid registration + identity file; one-page technician SOP in `camera-gateway/README.md`
+- [ ] Bench test: gateway + one UNV camera on the shop network, mainstream H.265, uploading to S3 with per-camera checklist green in the admin dashboard
+- [ ] **[HUMAN]** Pilot install at the selected Starlink site by a technician following only the SOP (agent developer hands-off: this validates the install experience, not just the software)
 
-**Gate:** pilot site uploads continuously for 7 days through Starlink CGNAT with zero inbound ports; a forced 2-hour internet outage results in buffered segments uploading afterward with no gap; heartbeat outage alert appears in admin dashboard; per-site IAM credential verifiably cannot read or write outside its prefix; lifecycle rule observed expiring old objects (short-window test rule).
+**Gate:** pilot uploads mainstream continuously for 7 days through Starlink CGNAT with zero inbound ports and no VPN; a forced 2-hour internet outage backfills from the buffer with no gap; a config change (camera rename + bitrate cap) applies remotely via config-sync without a site visit; SSM break-glass session works; heartbeat outage alert reaches the admin; per-site IAM credential verifiably cannot read or list anything; expiration rule observed deleting aged objects (short-window test rule); technician completed the install in under 15 minutes from the SOP alone.
 
 ### Phase 6B: Footage Requests & Retrieval
 
-- [ ] **[HUMAN]** D6/Q4+Q6 (retention on cancel, link TTL). D7: Vercel plan check (affects poller option only)
+- [ ] **[HUMAN]** D6/Q4+Q6 (retention on cancel, link TTL). D7: Vercel plan check (affects gateway-health cron cadence)
 - [ ] Migration 6: `footage_requests` (+ RLS with camera-ownership check)
-- [ ] `footage-retrieval.ts` (list, presign, restore path); request form in cloud backup card (cameras from DB); requests list with statuses; admin view of all requests
+- [ ] `footage-retrieval.ts` (list, presign; dormant restore path); request form in cloud backup card (cameras from DB); per-camera protection status on the client card (9.2.7); requests list with statuses; admin view of all requests
 - [ ] Ready/failed emails; rate limiting on request creation
 
-**Gate:** end-to-end on the pilot site: client requests a range -> presigned link email arrives -> footage plays -> link expires at TTL; request against a camera the client does not own is impossible (RLS + action check); forced failure notifies client + admin and marks `failed`.
+**Gate:** end-to-end on the pilot site: client requests a range -> presigned link email arrives typically within a minute -> mainstream footage plays -> link expires at TTL; a 90-day-tier (Glacier Instant Retrieval) object serves instantly with no restore job; request against a camera the client does not own is impossible (RLS + action check); forced failure notifies client + admin and marks `failed`.
 
 ### Phase 7: Automation, Hardening, Launch
 
@@ -748,8 +804,8 @@ Each phase ends with a test gate; do not start the next phase with a failing gat
 | Cloud backup self-service: change, cancel, footage (6.3, 9.2) | Phase 5 plan flows + Phase 6B requests (9.3) |
 | Caller ID changes alert admin with green/red diff (6.4, 12) | Save action diff + email (Section 8); history table |
 | Device expiry 5yr battery / 10yr smoke, alerts to both parties (6.5, 11.9) | Computed expiry (4.2); nightly cron + `expiry_alerted_at` (9.4, R14) |
-| Cloud retention tiers 7/30/90-day actually enforced (9.2 handover) | S3 lifecycle rules per site prefix (9.2.5) |
-| Footage stored durably off-site and retrievable (6.3, 13) | Gateway ingestion pipeline (9.2), outbound-only through CGNAT (1.5); retrieval via presigned links (9.3) |
+| Cloud retention tiers 7/30/90-day actually enforced (9.2 handover) | Direct-to-class PUT + expiration-only lifecycle per site prefix (9.2.5, R19) |
+| Footage stored durably off-site at evidence quality and retrievable (6.3, 13) | Mainstream gateway ingestion (9.2, R18), outbound-only through CGNAT with no VPN (1.5, R17); instant presigned retrieval on all tiers (9.3) |
 | Cameras listed per client in footage form (18/Q8) | `cameras` table registered at provisioning (4.2, 9.2.3) |
 | Activation token: single-use, expiring, cryptographically random (22.1) | 32-byte random, SHA-256 stored, `used_at`, partial unique index (4.2, R8) |
 | Google linking requires valid token, no hijacking (22.1) | Activation cookie flow + target-email match invariant (6.4) |
@@ -793,6 +849,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-04 | Supabase project renamed to "McKee Security Platform" (Management API, verified via MCP). Auth config audited: site_url still localhost, Google disabled, publishable key available. Advisors: INFO-only (units/rentals no policies, intentional) |
 | 2026-07-04 | Plan hardened to v2: verified Next 16 proxy/cookies facts from bundled docs, adopted `getClaims()` + publishable key + required `proxy.ts` per current Supabase SSR guidance, full schema + RLS matrix + flow specs + traceability added. `npm install` run in `website/` (node_modules present). Phase 0 remaining items ready to start |
 | 2026-07-04 | Plan v3: camera cloud backup added end to end. AWS audit via CLI found the legacy `nvr-backup` EB env has **no deployed code** (stock sample app) and no Glacier vaults or footage buckets exist: ingestion is greenfield. Research confirmed UNV NVRs push snapshots only and Starlink CGNAT blocks inbound. Designed gateway-to-S3 ingestion (9.2), lifecycle-based retention (9.2.5), instant presigned retrieval (9.3), new `sites`/`cameras`/`gateways` schema, Phase 6 split into 6A/6B. Legacy EB decommission + Gmail credential rotation flagged (D10) |
+| 2026-07-04 | Plan v4 + AWS cleanup executed. Ingest redesigned around 2026 realities: mainstream H.265 capture (R18, Starlink Gen 4 uplink 15 to 35 Mbps makes it feasible), no VPN anywhere (R17, SSM hybrid nodes now free to register), retention tiers PUT directly into matching storage classes with instant GETs on all tiers (R19: Standard / Standard-IA / Glacier Instant Retrieval = "Arctic"). Zero-touch technician provisioning (9.2.3), full cost model (9.2.4), business ops integration incl. per-site margin visibility (9.2.7). AWS cleaned: six legacy EB apps deleted, only Data Drops (EB + RDS) remains (1.4, D10) |
 
 ## 14. Decision Log
 
@@ -805,4 +862,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-04 | D1 resolved: single platform Supabase project (renamed in place); `units`/`rentals` untouched, no policies added |
 | 2026-07-04 | R15: Supabase paid plan confirmed; dev via Supabase development branch, promote via migrations |
 | 2026-07-04 | R16: camera ingestion = on-site gateway direct to S3 (no Elastic Beanstalk, no 24/7 ingest server); alternatives recorded in 9.2.6 |
-| 2026-07-04 | Retention tiers implemented as S3 lifecycle rules, not Glacier archive (minimum-duration economics, 9.2.5); Glacier restore path reserved for a future long-archive product |
+| 2026-07-04 | R17: no VPN services or devices; SSM hybrid nodes (free registration, pay-per-use break-glass) + config-poll channel for management |
+| 2026-07-04 | R18: mainstream (full resolution) capture is the default so retrieved footage is evidence-grade; camera-side H.265/U-code keeps it to 2 to 3 Mbps |
+| 2026-07-04 | R19: tiers map to storage classes with matching minimum durations (Standard / Standard-IA / Glacier Instant Retrieval); direct-to-class PUT, expiration-only lifecycle, instant retrieval on every product tier (9.2.5). Restore-job path dormant unless a Deep Archive tier is sold |
+| 2026-07-04 | D10 executed: legacy AWS decommissioned (six EB apps deleted, both regions); Data Drops EB + RDS are the only remaining AWS workloads (1.4) |
