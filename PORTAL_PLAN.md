@@ -616,19 +616,20 @@ The install must be plug-in-and-verify: no laptop at the site, no router changes
 
 #### 9.2.4 Bandwidth and cost model (mainstream capture, validate in pilot)
 
-Working numbers at 3 Mbps per camera (4MP H.265/U-code mainstream, 24/7 continuous):
+The current fleet is mostly **8MP (4K) ColorHunter/LightHunter cameras**, so 8MP mainstream is the primary sizing case; 4MP numbers are kept as the budget/capped profile. H.265 + U-code working bitrates: 8MP ~5 Mbps (4 to 6 real-world), 4MP ~3 Mbps.
 
-| Item | Number |
-|------|--------|
-| Per camera per day | 32.4 GB captured and uploaded |
-| 4-camera site uplink | 12 Mbps sustained: inside Starlink Residential's 15 to 35 Mbps envelope, capped by the uploader |
-| Steady-state storage per camera | 7-day tier: ~227 GB. 30-day: ~972 GB. 90-day: ~2.92 TB |
-| Monthly storage cost per camera (ca-central-1 approx) | 7-day on Standard (~$0.025/GB): **~$5.70**. 30-day on Standard-IA (~$0.0138/GB): **~$13.40**. 90-day on Glacier Instant Retrieval (~$0.005/GB): **~$14.60** |
-| PUT requests (288 segments/day/camera) | $0.05 to $0.19 per camera per month depending on class: noise |
-| Upload data transfer into S3 | Free |
-| Retrieval incident (1 hour of footage ~1.35 GB) | Class retrieval fee ($0.01 to $0.03/GB) + $0.09/GB egress: **~$0.16 per incident**: noise |
+| Item | 8MP @ 5 Mbps (primary) | 4MP @ 3 Mbps (capped profile) |
+|------|------------------------|-------------------------------|
+| Per camera per day | 54 GB | 32.4 GB |
+| 4-camera site uplink | 20 Mbps sustained: at Starlink Residential's ~22 Mbps median, workable but tight (see note) | 12 Mbps: comfortable |
+| Steady-state storage per camera | 7-day: ~378 GB. 30-day: ~1.62 TB. 90-day: ~4.86 TB | 7-day: ~227 GB. 30-day: ~972 GB. 90-day: ~2.92 TB |
+| Monthly wholesale per camera (ca-central-1 approx: Standard ~$0.025, IA ~$0.0138, GIR ~$0.005/GB) | 7-day: **~$9.45**. 30-day: **~$22.40**. 90-day: **~$24.30** | 7-day: **~$5.70**. 30-day: **~$13.40**. 90-day: **~$14.60** |
+| PUT requests, upload transfer | Noise ($0.05 to $0.35/camera/month); transfer into S3 free | Same |
+| Retrieval incident (1 hour of footage) | ~2.25 GB: retrieval fee + $0.09/GB egress = **~$0.27**: noise | ~$0.16 |
 
-Cost levers, in order of impact: camera bitrate (2 Mbps cuts every storage number by a third), **motion-gated upload** (`events_only` capture mode typically cuts 70 to 95% at rural sites while the NVR still holds the continuous record), and per-camera pricing so heavy sites pay for what they use. Starlink Residential data is unlimited standard data, so the upload volume itself costs the client nothing. These cost-basis numbers feed tier pricing (D6/Q2): they are the wholesale cost under any retail price McKee sets per camera per tier.
+Note the 90-day quirk: Glacier Instant Retrieval is so cheap that 90-day wholesale is barely above 30-day, which makes the 90-day tier the natural high-margin flagship. Starlink capacity note: beyond 4 to 5 cameras at full 8MP continuous, cap bitrate toward 4 Mbps, use motion-gated upload, or put the site on Starlink Priority (40+ Mbps up, public IP); the uploader's bandwidth cap plus buffer absorbs peak-hour dips either way.
+
+Cost levers, in order of impact: **motion-gated upload** (`events_only` typically cuts 70 to 95% at rural sites while the NVR keeps the continuous record), camera bitrate (8MP at 4 Mbps drops every number 20%), and per-camera pricing so heavy sites pay for what they use. Starlink Residential data is unlimited standard data, so upload volume costs the client nothing. Gateway hardware is ~$250 one-time per site: ~$7/month amortized over 3 years, under $2/camera/month on a 4-camera site. These wholesale numbers feed tier pricing (D6/Q2).
 
 #### 9.2.5 Retention tiers map directly to S3 storage classes (this is "Arctic")
 
