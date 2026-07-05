@@ -122,7 +122,7 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | D3 | Admin staff sign-in method | Phase 1 | Recommended: same Google + email/password as clients, role decides access |
 | D4 | Stripe account, products/prices, webhook endpoint | Phase 5 | Agent supplies product/price definitions and required webhook events |
 | D5 | AWS footage storage provisioning | Phase 6A | **Audit finding: no bucket, vault, or IAM exists yet; all greenfield.** Human approves: footage bucket creation (ca-central-1), lifecycle rules per tier (9.2.5), an admin-capable IAM path for the agent or console work, per-site upload credentials model (9.2.3). "Arctic" is implemented as S3 storage classes chosen per retention tier, not a separate product |
-| D6 | Handover Section 18 business answers | Rolling | Blocking map: Q1/Q3 (tier features, monitoring paid in portal?) by Phase 3; Q7 (admin alert inbox) by Phase 2; Q16/Q9 (caller ID min/max, history in UI?) by Phase 4; Q2 (cloud tier pricing) by Phase 6A (Track 2; retail matrix recommendation ready in 9.2.7); Q4/Q6 (retention on cancel, link expiry) by Phase 6B. Q8 (camera list source) is resolved structurally: cameras are registered rows in the `cameras` table, populated at gateway provisioning (9.2.3) |
+| D6 | Handover Section 18 business answers | Rolling | Blocking map: Q1/Q3 (tier features, monitoring paid in portal?) by Phase 3; Q7 (admin alert inbox) by Phase 2; Q16/Q9 (caller ID min/max, history in UI?) by Phase 4; Q2 (cloud tier pricing) by Phase 6A (Track 2; retail matrix recommendation ready in 9.2.7); Q4/Q6 (retention on cancel, link expiry) by Phase 6B. Q8 (camera list source) is resolved structurally: cameras are registered rows in the `cameras` table, populated at gateway provisioning (9.2.3); Q11 (privacy/compliance expectations for stored addresses and caller ID data, PIPEDA-conscious) by the Phase 7 launch review; paused-vs-cancelled operational semantics (handover 9.1) by Phase 3. Already resolved: Q5 (R8: 7-day invite expiry, configurable), Q10 (technician role reserved in the enum, deferred), Q12 (email-only notifications in v1; in-portal notifications remain a listed future enhancement), Q13 (target-email match enforced, 6.4), Q14/Q15 (R3/R16: Vercel-only, no EB, no Cloud Run needed) |
 | D7 | Vercel plan cron limits | Phase 7, re-check at 6A | If on Hobby (daily-only crons), nightly expiry and cleanup work; sub-daily gateway-health needs pg_cron fallback (R4). Verify plan when writing `vercel.json` and again at Track 2 kickoff |
 | D8 | Gateway site kit | Phase 6A | Recommendation: fanless x86 mini PC (Intel N100 class, 8GB RAM, 500GB to 1TB NVMe, ~$200 to $280 one-time per site): native NVMe, headroom, and Quick Sync as free contingency (not required since all tiers are stream copy, R20). Human approves hardware SKU + pilot site (recommendation: one McKee-controlled Starlink site first to prove CGNAT behavior end to end) |
 | D9 | Per-site capture tuning | Phase 6A | Default is continuous mainstream H.265 (R18). Per-camera knobs: bitrate cap pushed to the camera (U-code, target 2 to 3 Mbps for 4MP), motion-gated upload for constrained links or budget-sensitive clients. Confirm defaults against pilot bandwidth data |
@@ -493,7 +493,7 @@ Email/password settings: keep `mailer_autoconfirm=false`; activation-created use
 
 Server action `createClient` (requireAdmin):
 
-1. Validate input (Zod): first/last name required; email optional but validated; monitoring tier and/or cloud tier optional.
+1. Validate input (Zod): first/last name required; email optional but validated; address optional (handover 7.2); monitoring tier and/or cloud tier optional.
 2. Insert `profiles` (`status='pending'`, `user_id=null`), insert `services` rows (`status='unpaid'` for monitoring per Q3 default, `'active'` if admin marks manually-billed) in one transaction.
 3. Generate raw token (`crypto.randomBytes(32)` base64url), insert `invitations` with `token_hash=sha256(raw)`, `target_email` if provided.
 4. If email provided: send invite email (Section 8) with `https://mckeesecurity.ca/account/activate?token=<raw>`. If not provided: surface the link in the admin UI for manual delivery.
@@ -558,7 +558,7 @@ Layout pattern: follow `starlink-admin` component density. The admin dashboard i
 | Fleet | gateway health, per-site storage and margin (9.2.7) | 6A (Track 2) |
 | Alerts | recent device expiry alerts, failed email sends, payment follow-ups | 7 |
 
-All writes are server actions with `requireAdmin()`. Tier changes reflect immediately on the client dashboard (no caching of dashboard data: portal pages are dynamic). Analytics are plain SQL aggregates over the portal tables computed at request time; at McKee's scale this needs no analytics infrastructure, and if a query ever slows down the fix is a materialized view, not a new system.
+All writes are server actions with `requireAdmin()`. Destructive admin actions (cancel service, disable client) use explicit confirm dialogs (handover 14.2). Tier changes reflect immediately on the client dashboard (no caching of dashboard data: portal pages are dynamic). Analytics are plain SQL aggregates over the portal tables computed at request time; at McKee's scale this needs no analytics infrastructure, and if a query ever slows down the fix is a materialized view, not a new system.
 
 ### 7.3 Payments oversight: autopay and manual billing (R22)
 
@@ -868,7 +868,8 @@ Track 1 scope: build the complete billing rails on **both methods** (R22): Strip
 - [ ] `vercel.json` crons + `CRON_SECRET`; device-expiry job (R14 semantics); cleanup job (6.6); payment-due job (R22: client reminders + admin collections digest, 7.3). Gateway-health cron joins in Track 2 (9.4)
 - [ ] Rate limiting on activation endpoints (6.6); footage endpoints get the same treatment in Track 2
 - [ ] RLS penetration script: for every portal table x {anon, client A, client B, admin}, assert the 4.3 matrix; run against production before launch
-- [ ] Security sweep: webhook signature tests, `get_advisors` clean, no service-role usage outside `admin.ts`/webhook/cron, secrets audit
+- [ ] Security sweep: webhook signature tests, `get_advisors` clean, no service-role usage outside `admin.ts`/webhook/cron, secrets audit, origin posture on sensitive route handlers (server actions carry Next.js built-in origin checks; webhook/cron/gateway routes are token- or signature-authenticated) per handover 22.2
+- [ ] Observability (handover 22.3): failed login/activation attempts logged without credentials, email send failures surfaced in the Alerts tab, optional error tracking service (Sentry or similar, stakeholder choice)
 - [ ] Full mobile UX pass; accessibility spot check (focus rings, labels, keyboard nav)
 - [ ] Cross-browser smoke (Chrome, Firefox, Safari, iOS Safari, Android Chrome) per handover 22.4
 - [ ] **[HUMAN]** stakeholder walkthrough (mobile + desktop) and production sign-off
@@ -940,6 +941,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | R20 simplified per ops input: the camera sub-stream resolution is fully configurable via the NVR, so 1080p and 1440p are sub-stream copies set to the purchased resolution at install. **No transcoding anywhere**; Quick Sync demoted from D8 requirement to contingency. Bench test now verifies per-model sub-stream resolution options |
 | 2026-07-05 | Final pre-build audit passed. Build order locked: Track 1 = core portal (Phases 0-5, 7), Track 2 = camera cloud backup (6A/6B) after launch. Cloud backup client purchase flows deferred to Track 2; Q2 pricing moved to the 6A gate. Plan v4.2, ready for Phase 0 |
 | 2026-07-05 | Plan v4.3 per stakeholder: cloud backup plan management locked to admin (R21, supersedes handover 6.3 self-service). Admin console fully specified: Overview analytics, searchable Clients tab, Billing collections console (7.2/7.3). Dual billing rails added (R22): `billing_method` on services, append-only `manual_payments` ledger, payment-due reminder cron with admin collections digest, new emails, D11 opened. Schema, RLS, Stripe, phases, traceability all updated |
+| 2026-07-05 | Line-by-line cross-audit of this plan against all 23 sections + appendices of `PRODUCT_HANDOVER.md`. Five small gaps found and closed: address field on the create-client action (7.2), Q11 privacy review + paused-vs-cancelled semantics tracked in D6, Q5/Q10/Q12/Q13/Q14/Q15 recorded as resolved in D6, admin confirm dialogs for destructive actions (14.2), observability + origin-posture items added to Phase 7 (22.2/22.3). Verdict: full coverage, ready for Phase 0 |
 
 ## 14. Decision Log
 
