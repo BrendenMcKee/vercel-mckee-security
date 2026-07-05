@@ -137,15 +137,32 @@ function renderCtaRow(field: EmailField): string {
     </tr>`;
 }
 
-export function buildFormEmailHtml({
-  kind,
-  fields,
-  serviceSlug,
-}: FormEmailOptions): string {
-  const meta = getFormEmailMeta(kind, serviceSlug);
+export type BrandedEmailMeta = {
+  emoji: string;
+  title: string;
+  inboxLabel: string;
+};
+
+/**
+ * Generic branded shell shared by admin form notifications and portal emails
+ * (PORTAL_PLAN.md Section 8). `footerHtml` defaults to the form-submission
+ * footer; portal emails pass their own.
+ */
+export function buildBrandedEmailHtml(
+  meta: BrandedEmailMeta,
+  fields: EmailField[],
+  footerHtml?: string,
+): string {
   const rows = fields
     .map((field) => (field.cta ? renderCtaRow(field) : renderFieldRow(field)))
     .join("");
+  const footer =
+    footerHtml ??
+    `Submitted via
+                  <a href="${siteConfig.url}" style="color:${BRAND_RED};text-decoration:none;font-weight:600;">
+                    ${siteConfig.url.replace("https://", "")}
+                  </a>
+                  &nbsp;&bull;&nbsp; Received ${escapeHtml(receivedStamp())}`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -197,11 +214,7 @@ export function buildFormEmailHtml({
             <tr>
               <td style="padding:8px 24px 22px;border-top:1px solid ${BORDER};">
                 <p style="margin:0;font-size:12px;line-height:1.6;color:${MUTED};">
-                  Submitted via
-                  <a href="${siteConfig.url}" style="color:${BRAND_RED};text-decoration:none;font-weight:600;">
-                    ${siteConfig.url.replace("https://", "")}
-                  </a>
-                  &nbsp;&bull;&nbsp; Received ${escapeHtml(receivedStamp())}
+                  ${footer}
                 </p>
               </td>
             </tr>
@@ -213,12 +226,11 @@ export function buildFormEmailHtml({
 </html>`;
 }
 
-export function buildFormEmailText({
-  kind,
-  fields,
-  serviceSlug,
-}: FormEmailOptions): string {
-  const meta = getFormEmailMeta(kind, serviceSlug);
+export function buildBrandedEmailText(
+  meta: BrandedEmailMeta,
+  fields: EmailField[],
+  footerLines?: string[],
+): string {
   const lines = [
     `${meta.emoji} ${siteConfig.name}`,
     meta.title,
@@ -231,11 +243,26 @@ export function buildFormEmailText({
       if (field.cta && field.href) block.push(field.href);
       return [...block, ""];
     }),
-    `Submitted via ${siteConfig.url}`,
-    `Received ${receivedStamp()}`,
+    ...(footerLines ?? [`Submitted via ${siteConfig.url}`, `Received ${receivedStamp()}`]),
   ];
 
   return lines.join("\n").trim();
+}
+
+export function buildFormEmailHtml({
+  kind,
+  fields,
+  serviceSlug,
+}: FormEmailOptions): string {
+  return buildBrandedEmailHtml(getFormEmailMeta(kind, serviceSlug), fields);
+}
+
+export function buildFormEmailText({
+  kind,
+  fields,
+  serviceSlug,
+}: FormEmailOptions): string {
+  return buildBrandedEmailText(getFormEmailMeta(kind, serviceSlug), fields);
 }
 
 export const applySourceLabels: Record<string, string> = {

@@ -1,6 +1,3 @@
-// Generated via Supabase MCP generate_typescript_types (production schema).
-// Regenerate after every applied migration (PORTAL_PLAN.md 4.4).
-
 export type Json =
   | string
   | number
@@ -17,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      invitations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          profile_id: string
+          target_email: string | null
+          token_hash: string
+          updated_at: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          profile_id: string
+          target_email?: string | null
+          token_hash: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          profile_id?: string
+          target_email?: string | null
+          token_hash?: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -148,6 +189,59 @@ export type Database = {
           },
         ]
       }
+      services: {
+        Row: {
+          billing_method: Database["public"]["Enums"]["billing_method"]
+          created_at: string
+          due_alerted_at: string | null
+          id: string
+          monthly_amount_cents: number | null
+          next_due_on: string | null
+          profile_id: string
+          service_type: Database["public"]["Enums"]["service_type"]
+          status: Database["public"]["Enums"]["service_status"]
+          stripe_subscription_id: string | null
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          billing_method?: Database["public"]["Enums"]["billing_method"]
+          created_at?: string
+          due_alerted_at?: string | null
+          id?: string
+          monthly_amount_cents?: number | null
+          next_due_on?: string | null
+          profile_id: string
+          service_type: Database["public"]["Enums"]["service_type"]
+          status?: Database["public"]["Enums"]["service_status"]
+          stripe_subscription_id?: string | null
+          tier: string
+          updated_at?: string
+        }
+        Update: {
+          billing_method?: Database["public"]["Enums"]["billing_method"]
+          created_at?: string
+          due_alerted_at?: string | null
+          id?: string
+          monthly_amount_cents?: number | null
+          next_due_on?: string | null
+          profile_id?: string
+          service_type?: Database["public"]["Enums"]["service_type"]
+          status?: Database["public"]["Enums"]["service_status"]
+          stripe_subscription_id?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           active: boolean
@@ -180,7 +274,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_create_client: {
+        Args: {
+          p_address: string
+          p_cloud_tier: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_monitoring_tier: string
+          p_target_email: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       billing_method: "stripe" | "manual"

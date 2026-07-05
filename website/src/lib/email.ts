@@ -12,6 +12,9 @@ type EmailPayload = {
   replyTo?: string;
   attachments?: EmailAttachment[];
   headers?: Record<string, string>;
+  /** Recipient override (portal emails). Defaults to CONTACT_EMAIL: existing site forms are unaffected. */
+  to?: string | string[];
+  cc?: string | string[];
 };
 
 /**
@@ -21,7 +24,7 @@ type EmailPayload = {
  * silently treating a no-op as success).
  */
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
-  const to = process.env.CONTACT_EMAIL ?? "info@mckeesecurity.ca";
+  const to = payload.to ?? process.env.CONTACT_EMAIL ?? "info@mckeesecurity.ca";
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
@@ -34,7 +37,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
   const body: Record<string, unknown> = {
     from: process.env.EMAIL_FROM ?? "McKee Security <onboarding@resend.dev>",
-    to: [to],
+    to: Array.isArray(to) ? to : [to],
     subject: payload.subject,
     text: payload.text,
     // A unique reference id stops Gmail from collapsing same-subject notifications
@@ -48,6 +51,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
   if (payload.html) body.html = payload.html;
   if (payload.replyTo) body.reply_to = payload.replyTo;
+  if (payload.cc) body.cc = Array.isArray(payload.cc) ? payload.cc : [payload.cc];
   if (payload.attachments?.length) body.attachments = payload.attachments;
 
   const res = await fetch("https://api.resend.com/emails", {
