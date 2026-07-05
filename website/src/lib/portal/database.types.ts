@@ -14,6 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing_events: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          profile_id: string | null
+          service_id: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          payload: Json
+          profile_id?: string | null
+          service_id?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          profile_id?: string | null
+          service_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_events_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caller_id_changes: {
+        Row: {
+          added: Json
+          authorized_via: string | null
+          change_reason: string | null
+          changed_by: string
+          changed_by_email: string | null
+          changed_via: string
+          client_notified_at: string | null
+          created_at: string
+          id: string
+          profile_id: string
+          removed: Json
+        }
+        Insert: {
+          added?: Json
+          authorized_via?: string | null
+          change_reason?: string | null
+          changed_by: string
+          changed_by_email?: string | null
+          changed_via: string
+          client_notified_at?: string | null
+          created_at?: string
+          id?: string
+          profile_id: string
+          removed?: Json
+        }
+        Update: {
+          added?: Json
+          authorized_via?: string | null
+          change_reason?: string | null
+          changed_by?: string
+          changed_by_email?: string | null
+          changed_via?: string
+          client_notified_at?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string
+          removed?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caller_id_changes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caller_id_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          phone: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          phone: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          phone?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caller_id_contacts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devices: {
+        Row: {
+          created_at: string
+          device_type: Database["public"]["Enums"]["device_type"]
+          expiry_alerted_at: string | null
+          id: string
+          installed_on: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_type: Database["public"]["Enums"]["device_type"]
+          expiry_alerted_at?: string | null
+          id?: string
+          installed_on: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_type?: Database["public"]["Enums"]["device_type"]
+          expiry_alerted_at?: string | null
+          id?: string
+          installed_on?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           created_at: string
@@ -54,6 +216,60 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manual_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          note: string | null
+          paid_on: string
+          profile_id: string
+          recorded_by: string | null
+          recorded_by_email: string | null
+          service_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          method: Database["public"]["Enums"]["payment_method"]
+          note?: string | null
+          paid_on?: string
+          profile_id: string
+          recorded_by?: string | null
+          recorded_by_email?: string | null
+          service_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          note?: string | null
+          paid_on?: string
+          profile_id?: string
+          recorded_by?: string | null
+          recorded_by_email?: string | null
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_payments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manual_payments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -289,6 +505,17 @@ export type Database = {
           p_token_hash: string
         }
         Returns: string
+      }
+      save_caller_id_list: {
+        Args: {
+          p_authorized_via?: string
+          p_change_reason?: string
+          p_changed_by_email: string
+          p_changed_via: string
+          p_contacts: Json
+          p_profile_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {

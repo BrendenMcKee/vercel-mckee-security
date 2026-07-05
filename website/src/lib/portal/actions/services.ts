@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { SERVICE_TIERS } from "@/lib/portal/service-labels";
+import { getStripeClient, isStripeConfigured, priceIdFor } from "@/lib/portal/stripe";
 
 export type ServiceActionResult = { ok: true } | { ok: false; error: string };
 
@@ -72,13 +73,38 @@ export async function updateServiceTierAction(input: {
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, service_type")
+    .select("id, service_type, stripe_subscription_id")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
 
   if (!SERVICE_TIERS[service.service_type].includes(tier)) {
     return { ok: false, error: "That tier does not exist for this service." };
+  }
+
+  // Phase 5 (9.1): a plan change on an autopay service swaps the Stripe
+  // subscription price too, so the next invoice bills the new tier.
+  if (service.stripe_subscription_id) {
+    if (!isStripeConfigured()) {
+      return { ok: false, error: "This service has a Stripe subscription but Stripe is not configured on the server." };
+    }
+    const priceId = priceIdFor(service.service_type, tier);
+    if (!priceId) {
+      return { ok: false, error: "No Stripe price is configured for that tier yet. Add the price ID env var first." };
+    }
+    try {
+      const stripe = getStripeClient();
+      const subscription = await stripe.subscriptions.retrieve(service.stripe_subscription_id);
+      const itemId = subscription.items.data[0]?.id;
+      if (!itemId) return { ok: false, error: "The Stripe subscription has no billable item. Fix it in Stripe first." };
+      await stripe.subscriptions.update(service.stripe_subscription_id, {
+        items: [{ id: itemId, price: priceId }],
+        proration_behavior: "none",
+      });
+    } catch (error) {
+      console.error("[portal] Stripe tier swap failed:", error);
+      return { ok: false, error: "Stripe rejected the plan change; the tier was not modified. Check the Stripe dashboard." };
+    }
   }
 
   const { error } = await supabase.from("services").update({ tier }).eq("id", serviceId);
@@ -97,8 +123,10 @@ const statusChangeSchema = z.object({
 });
 
 /**
- * Cancel / restart / pause (R21). Phase 5 layers Stripe semantics on top
- * (cancel_at_period_end etc.); until then status is a direct operational flag.
+ * Cancel / restart / pause (R21). For autopay services the Stripe
+ * subscription is kept in sync (9.1): cancel sets cancel_at_period_end, pause
+ * voids collection, reactivate clears both. The webhook confirms the final
+ * state when Stripe processes it.
  */
 export async function updateServiceStatusAction(input: {
   serviceId: string;
@@ -111,6 +139,37 @@ export async function updateServiceStatusAction(input: {
   const { serviceId, status } = parsed.data;
 
   const supabase = await createPortalServerClient();
+  const { data: service } = await supabase
+    .from("services")
+    .select("id, stripe_subscription_id")
+    .eq("id", serviceId)
+    .maybeSingle();
+  if (!service) return { ok: false, error: "Service not found." };
+
+  if (service.stripe_subscription_id && status !== "unpaid") {
+    if (!isStripeConfigured()) {
+      return { ok: false, error: "This service has a Stripe subscription but Stripe is not configured on the server." };
+    }
+    try {
+      const stripe = getStripeClient();
+      if (status === "cancelled") {
+        await stripe.subscriptions.update(service.stripe_subscription_id, { cancel_at_period_end: true });
+      } else if (status === "paused") {
+        await stripe.subscriptions.update(service.stripe_subscription_id, {
+          pause_collection: { behavior: "void" },
+        });
+      } else {
+        await stripe.subscriptions.update(service.stripe_subscription_id, {
+          cancel_at_period_end: false,
+          pause_collection: "",
+        });
+      }
+    } catch (error) {
+      console.error("[portal] Stripe status sync failed:", error);
+      return { ok: false, error: "Stripe rejected the change; the service was not modified. Check the Stripe dashboard." };
+    }
+  }
+
   const { data: updated, error } = await supabase
     .from("services")
     .update({ status })

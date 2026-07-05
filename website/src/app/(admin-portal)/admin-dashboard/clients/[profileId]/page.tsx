@@ -14,11 +14,12 @@ export const metadata: Metadata = {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Phase 3 client detail (PORTAL_PLAN.md 7.2): one page per client with
- * profile editing, service management (R21: all plan changes live here, on
- * the admin side only), and invitation state. Caller IDs and devices join in
- * Phase 4; payment history in Phase 5. Reads run on the user-context client
- * so admin RLS authorizes them (R13); the layout gate 404s non-admins.
+ * Client detail (PORTAL_PLAN.md 7.2): one page per client with profile
+ * editing, service management (R21: all plan changes live here, on the admin
+ * side only), invitation state, caller ID list + audit history (Phase 4,
+ * R23/R24), device maintenance dates, and billing (Phase 5: rails, record
+ * payment, ledger). Reads run on the user-context client so admin RLS
+ * authorizes them (R13); the layout gate 404s non-admins.
  */
 export default async function AdminClientDetailPage({
   params,
@@ -50,6 +51,38 @@ export default async function AdminClientDetailPage({
   }
   if (!client) notFound();
 
+  const [contactsResult, changesResult, devicesResult, paymentsResult] = await Promise.all([
+    supabase
+      .from("caller_id_contacts")
+      .select("phone, label")
+      .eq("profile_id", profileId)
+      .order("created_at"),
+    supabase
+      .from("caller_id_changes")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("devices")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("device_type"),
+    supabase
+      .from("manual_payments")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("paid_on", { ascending: false })
+      .limit(24),
+  ]);
+
+  const subError =
+    contactsResult.error ?? changesResult.error ?? devicesResult.error ?? paymentsResult.error;
+  if (subError) {
+    console.error("[portal] Admin client detail sub-queries failed:", subError);
+    throw new Error("Client detail failed to load.");
+  }
+
   return (
     <section className="mx-auto w-full max-w-5xl px-4 py-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -68,7 +101,13 @@ export default async function AdminClientDetailPage({
       </div>
 
       <div className="mt-10">
-        <AdminClientDetail client={client} />
+        <AdminClientDetail
+          client={client}
+          callerIdContacts={contactsResult.data ?? []}
+          callerIdChanges={changesResult.data ?? []}
+          devices={devicesResult.data ?? []}
+          manualPayments={paymentsResult.data ?? []}
+        />
       </div>
     </section>
   );

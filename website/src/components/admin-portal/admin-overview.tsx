@@ -20,34 +20,41 @@ function KpiCard({ label, value, sub }: { label: string; value: number | string;
 }
 
 /**
- * Phase 3 Overview skeleton (PORTAL_PLAN.md 7.2): plain aggregates over the
- * portal tables computed at request time, no analytics infrastructure.
- * Billing KPIs (revenue split, overdue, failed payments) join in Phase 5.
- * Reads run on the user-context client under admin RLS (R13).
+ * Overview (PORTAL_PLAN.md 7.2): plain aggregates over the portal tables
+ * computed at request time, no analytics infrastructure. Phase 5 added the
+ * billing row: booked monthly revenue split by rail, overdue manual
+ * collections, and failed card payments (30 days). Reads run on the
+ * user-context client under admin RLS (R13).
  */
 export async function AdminOverview() {
   const supabase = await createPortalServerClient();
 
-  const [profilesRes, servicesRes, activationsRes] = await Promise.all([
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const [profilesRes, servicesRes, activationsRes, failedRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, first_name, last_name, status, created_at")
       .eq("role", "client"),
     supabase
       .from("services")
-      .select("id, profile_id, service_type, tier, status, created_at"),
+      .select("id, profile_id, service_type, tier, status, created_at, billing_method, monthly_amount_cents, next_due_on"),
     supabase
       .from("invitations")
       .select("profile_id, used_at")
       .not("used_at", "is", null)
       .order("used_at", { ascending: false })
       .limit(15),
+    supabase
+      .from("billing_events")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "invoice.payment_failed")
+      .gte("created_at", thirtyDaysAgo),
   ]);
 
-  if (profilesRes.error || servicesRes.error || activationsRes.error) {
+  if (profilesRes.error || servicesRes.error || activationsRes.error || failedRes.error) {
     console.error(
       "[portal] Overview queries failed:",
-      profilesRes.error ?? servicesRes.error ?? activationsRes.error,
+      profilesRes.error ?? servicesRes.error ?? activationsRes.error ?? failedRes.error,
     );
     throw new Error("Overview failed to load.");
   }
@@ -60,6 +67,22 @@ export async function AdminOverview() {
   const pendingActivations = profiles.filter((p) => p.status === "pending").length;
   const disabledClients = profiles.filter((p) => p.status === "disabled").length;
   const unpaidServices = services.filter((s) => s.status === "unpaid").length;
+
+  // Billing KPIs (Phase 5). Booked revenue = monthly amounts on non-cancelled
+  // services, split by rail.
+  const billable = services.filter((s) => s.status !== "cancelled");
+  const autopayCents = billable
+    .filter((s) => s.billing_method === "stripe")
+    .reduce((sum, s) => sum + (s.monthly_amount_cents ?? 0), 0);
+  const manualCents = billable
+    .filter((s) => s.billing_method === "manual")
+    .reduce((sum, s) => sum + (s.monthly_amount_cents ?? 0), 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const overdueManual = billable.filter(
+    (s) => s.billing_method === "manual" && s.next_due_on && s.next_due_on < today,
+  ).length;
+  const failedPayments30d = failedRes.count ?? 0;
+  const dollars = (cents: number) => `$${(cents / 100).toFixed(0)}`;
 
   const tierCounts = new Map<string, number>();
   for (const s of services) {
@@ -97,10 +120,33 @@ export async function AdminOverview() {
         <KpiCard label="Disabled accounts" value={disabledClients} />
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label="Booked monthly revenue"
+          value={dollars(autopayCents + manualCents)}
+          sub="Non-cancelled services with an amount set"
+        />
+        <KpiCard
+          label="Autopay vs manual"
+          value={`${dollars(autopayCents)} / ${dollars(manualCents)}`}
+          sub="Card on file vs legacy collection"
+        />
+        <KpiCard
+          label="Overdue manual payments"
+          value={overdueManual}
+          sub="Collect these — see the Billing tab"
+        />
+        <KpiCard
+          label="Failed card payments"
+          value={failedPayments30d}
+          sub="Last 30 days, via Stripe webhook"
+        />
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-surface p-6">
           <h2 className="text-lg font-bold text-white">Services by tier</h2>
-          <p className="mt-1 text-xs text-white/40">Cancelled services excluded. Revenue KPIs arrive with billing (Phase 5).</p>
+          <p className="mt-1 text-xs text-white/40">Cancelled services excluded.</p>
           <div className="mt-4 space-y-5">
             {(Object.keys(SERVICE_TIERS) as ServiceType[]).map((type) => (
               <div key={type}>

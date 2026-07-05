@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
+import { AdminBilling } from "@/components/admin-portal/admin-billing";
 import { AdminClientsPanel } from "@/components/admin-portal/admin-clients-panel";
 import { AdminOverview } from "@/components/admin-portal/admin-overview";
 import { SignOutButton } from "@/components/portal/sign-out-button";
@@ -13,15 +14,17 @@ export const metadata: Metadata = {
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "clients", label: "Clients" },
+  { id: "billing", label: "Billing" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 /**
- * Phase 3: tabbed operating console (PORTAL_PLAN.md 7.2). Overview (KPIs +
- * activity feed) and Clients (search, filters, create, row click to detail).
- * Billing, Fleet, and Alerts tabs join in Phases 5/6A/7. Reads run on the
- * user-context client: admin RLS policies authorize them (R13).
+ * Tabbed operating console (PORTAL_PLAN.md 7.2). Overview (KPIs + activity
+ * feed), Clients (search, filters, create, row click to detail), and Billing
+ * (autopay + manual collection boards, Phase 5). Fleet and Alerts tabs join
+ * in Phases 6A/7. Reads run on the user-context client: admin RLS policies
+ * authorize them (R13).
  */
 export default async function AdminDashboardPage({
   searchParams,
@@ -29,7 +32,7 @@ export default async function AdminDashboardPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const activeTab: TabId = tab === "clients" ? "clients" : "overview";
+  const activeTab: TabId = tab === "clients" ? "clients" : tab === "billing" ? "billing" : "overview";
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-12">
@@ -63,7 +66,13 @@ export default async function AdminDashboardPage({
       </nav>
 
       <div className="mt-8">
-        {activeTab === "overview" ? <AdminOverview /> : <ClientsTab />}
+        {activeTab === "overview" ? (
+          <AdminOverview />
+        ) : activeTab === "billing" ? (
+          <AdminBilling />
+        ) : (
+          <ClientsTab />
+        )}
       </div>
     </section>
   );

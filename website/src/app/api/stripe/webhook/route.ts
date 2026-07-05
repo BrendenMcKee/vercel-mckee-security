@@ -1,0 +1,204 @@
+import { NextResponse } from "next/server";
+import type Stripe from "stripe";
+import { getStripeClient, isStripeConfigured, tierForPriceId } from "@/lib/portal/stripe";
+import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
+import { sendCardPaymentFailedAlert, sendPaymentSuccessEmail } from "@/lib/portal/emails";
+
+/**
+ * Stripe webhook (PORTAL_PLAN.md 9.1). Signature-verified with the raw body;
+ * every event is recorded in billing_events FIRST (PK = Stripe event id), so
+ * replays are ON CONFLICT no-ops and the Billing tab has a full audit feed.
+ * All writes use the service role: this route has no user session.
+ */
+export async function POST(request: Request) {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret || !isStripeConfigured()) {
+    return NextResponse.json({ error: "Stripe webhook is not configured" }, { status: 503 });
+  }
+
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
+  try {
+    const rawBody = await request.text();
+    event = await getStripeClient().webhooks.constructEventAsync(rawBody, signature, secret);
+  } catch (error) {
+    console.warn("[portal] Stripe webhook signature verification failed:", error);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  const admin = getPortalAdminClient();
+
+  const { serviceId, profileId } = extractIds(event);
+  const { error: insertError, data: inserted } = await admin
+    .from("billing_events")
+    .upsert(
+      {
+        id: event.id,
+        type: event.type,
+        service_id: serviceId,
+        profile_id: profileId,
+        payload: JSON.parse(JSON.stringify(event.data.object)),
+      },
+      { onConflict: "id", ignoreDuplicates: true },
+    )
+    .select("id");
+
+  if (insertError) {
+    console.error("[portal] billing_events insert failed:", insertError);
+    // Let Stripe retry; nothing was processed.
+    return NextResponse.json({ error: "Event store failed" }, { status: 500 });
+  }
+  if (!inserted || inserted.length === 0) {
+    // Duplicate delivery already handled.
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed":
+        await handleCheckoutCompleted(event.data.object);
+        break;
+      case "customer.subscription.updated":
+        await handleSubscriptionUpdated(event.data.object);
+        break;
+      case "customer.subscription.deleted":
+        await handleSubscriptionDeleted(event.data.object);
+        break;
+      case "invoice.payment_failed":
+        await handlePaymentFailed(event.data.object);
+        break;
+      default:
+        break;
+    }
+  } catch (error) {
+    console.error(`[portal] Stripe webhook handler failed for ${event.type}:`, error);
+    return NextResponse.json({ error: "Handler failed" }, { status: 500 });
+  }
+
+  return NextResponse.json({ received: true });
+}
+
+function extractIds(event: Stripe.Event): { serviceId: string | null; profileId: string | null } {
+  const object = event.data.object as { metadata?: Record<string, string> | null };
+  const metadata = object.metadata ?? {};
+  return {
+    serviceId: metadata.service_id ?? null,
+    profileId: metadata.profile_id ?? null,
+  };
+}
+
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const serviceId = session.metadata?.service_id;
+  const profileId = session.metadata?.profile_id;
+  if (!serviceId) {
+    console.warn("[portal] checkout.session.completed without service_id metadata:", session.id);
+    return;
+  }
+
+  const admin = getPortalAdminClient();
+  const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+
+  const { error } = await admin
+    .from("services")
+    .update({
+      status: "active",
+      billing_method: "stripe",
+      stripe_subscription_id: subscriptionId ?? null,
+      next_due_on: null,
+      due_alerted_at: null,
+    })
+    .eq("id", serviceId);
+  if (error) throw error;
+
+  if (profileId) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("first_name, email")
+      .eq("id", profileId)
+      .maybeSingle();
+    const { data: service } = await admin
+      .from("services")
+      .select("service_type, tier")
+      .eq("id", serviceId)
+      .maybeSingle();
+    if (profile?.email && service) {
+      await sendPaymentSuccessEmail({
+        to: profile.email,
+        firstName: profile.first_name,
+        serviceType: service.service_type,
+        tier: service.tier,
+      });
+    }
+  }
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const admin = getPortalAdminClient();
+
+  const { data: service } = await admin
+    .from("services")
+    .select("id, status, tier, service_type")
+    .eq("stripe_subscription_id", subscription.id)
+    .maybeSingle();
+  if (!service) return;
+
+  const updates: { status?: "active" | "unpaid" | "cancelled"; tier?: string } = {};
+
+  // Status sync: Stripe is the source of truth for autopay services.
+  if (subscription.status === "active" && service.status !== "active") {
+    updates.status = "active";
+  } else if ((subscription.status === "past_due" || subscription.status === "unpaid") && service.status === "active") {
+    updates.status = "unpaid";
+  } else if (subscription.status === "canceled" && service.status !== "cancelled") {
+    updates.status = "cancelled";
+  }
+
+  // Tier sync when the plan was changed in Stripe (admin plan changes flow
+  // through here too, keeping the DB consistent no matter where the change
+  // originated).
+  const priceId = subscription.items.data[0]?.price?.id;
+  if (priceId) {
+    const mapped = tierForPriceId(priceId);
+    if (mapped && mapped.serviceType === service.service_type && mapped.tier !== service.tier) {
+      updates.tier = mapped.tier;
+    }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    const { error } = await admin.from("services").update(updates).eq("id", service.id);
+    if (error) throw error;
+  }
+}
+
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const admin = getPortalAdminClient();
+  const { error } = await admin
+    .from("services")
+    .update({ status: "cancelled", stripe_subscription_id: null })
+    .eq("stripe_subscription_id", subscription.id);
+  if (error) throw error;
+}
+
+async function handlePaymentFailed(invoice: Stripe.Invoice) {
+  const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+  if (!customerId) return;
+
+  const admin = getPortalAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id, first_name, last_name, email")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  await sendCardPaymentFailedAlert({
+    clientName: profile ? `${profile.first_name} ${profile.last_name}` : `Stripe customer ${customerId}`,
+    clientEmail: profile?.email ?? null,
+    serviceType: null,
+    amountCents: invoice.amount_due ?? null,
+    profileId: profile?.id ?? null,
+  });
+}

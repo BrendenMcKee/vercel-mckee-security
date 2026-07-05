@@ -20,7 +20,23 @@ import {
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
+import { setDeviceInstallDate } from "@/lib/portal/actions/caller-id";
+import { recordManualPayment, updateServiceBilling } from "@/lib/portal/actions/payments";
+import { formatPhone } from "@/lib/portal/phone";
+import {
+  PAYMENT_METHOD_LABELS,
+  formatCents,
+  type PaymentMethod,
+} from "@/lib/portal/billing";
+import {
+  DEVICE_LABELS,
+  DEVICE_LIFETIME_YEARS,
+  deviceExpiryDate,
+  isDeviceExpired,
+  type DeviceType,
+} from "@/lib/portal/devices";
 import { adminInputClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
+import { CallerIdEditor, type CallerIdContact } from "@/components/portal/caller-id-editor";
 
 type InvitationSummary = Pick<
   Tables<"invitations">,
@@ -518,11 +534,493 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
   );
 }
 
-export function AdminClientDetail({ client }: { client: AdminClientDetailRow }) {
+// ---------------------------------------------------------------------------
+// Phase 5: billing card. Per-service rails (R22), record-payment flow, and
+// the append-only manual payment ledger.
+// ---------------------------------------------------------------------------
+
+function BillingServiceRow({ service }: { service: Tables<"services"> }) {
+  const [notice, setNotice] = useState<Notice>(null);
+  const [pending, startTransition] = useTransition();
+  const [method, setMethod] = useState<"stripe" | "manual">(service.billing_method);
+  const [amount, setAmount] = useState(
+    service.monthly_amount_cents != null ? (service.monthly_amount_cents / 100).toFixed(2) : "",
+  );
+  const [dueOn, setDueOn] = useState(service.next_due_on ?? "");
+
+  const [payAmount, setPayAmount] = useState(
+    service.monthly_amount_cents != null ? (service.monthly_amount_cents / 100).toFixed(2) : "",
+  );
+  const [payMethod, setPayMethod] = useState<PaymentMethod>("etransfer");
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [payNote, setPayNote] = useState("");
+
+  function saveBilling() {
+    setNotice(null);
+    const cents = amount.trim() ? Math.round(Number.parseFloat(amount) * 100) : null;
+    if (amount.trim() && (!Number.isFinite(cents) || cents! <= 0)) {
+      setNotice({ kind: "error", text: "Enter a valid monthly amount." });
+      return;
+    }
+    startTransition(async () => {
+      const result = await updateServiceBilling({
+        serviceId: service.id,
+        billingMethod: method,
+        monthlyAmountCents: cents,
+        nextDueOn: dueOn,
+      });
+      setNotice(
+        result.ok
+          ? { kind: "ok", text: "Billing settings saved." }
+          : { kind: "error", text: result.error },
+      );
+    });
+  }
+
+  function recordPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNotice(null);
+    const cents = Math.round(Number.parseFloat(payAmount) * 100);
+    if (!Number.isFinite(cents) || cents <= 0) {
+      setNotice({ kind: "error", text: "Enter the amount that was received." });
+      return;
+    }
+    startTransition(async () => {
+      const result = await recordManualPayment({
+        serviceId: service.id,
+        amountCents: cents,
+        method: payMethod,
+        paidOn: payDate,
+        note: payNote.trim() || undefined,
+      });
+      if (!result.ok) {
+        setNotice({ kind: "error", text: result.error });
+        return;
+      }
+      setPayNote("");
+      setNotice({
+        kind: "ok",
+        text: `Payment recorded.${result.nextDueOn ? ` Next due ${result.nextDueOn}.` : ""}${
+          result.emailSent === false ? " Confirmation email failed to send." : result.emailSent ? " Client emailed a confirmation." : ""
+        }`,
+      });
+    });
+  }
+
+  return (
+    <div className="space-y-4 rounded-xl border border-white/10 bg-background p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="font-bold text-white">{SERVICE_TYPE_LABELS[service.service_type]}</span>
+          <ServiceStatusBadge status={service.status} />
+        </div>
+        <span className="text-xs uppercase tracking-widest text-white/40">
+          {service.billing_method === "stripe"
+            ? service.stripe_subscription_id
+              ? "Autopay (card on file)"
+              : "Autopay (awaiting first payment)"
+            : "Manual billing"}
+        </span>
+      </div>
+
+      <NoticeBanner notice={notice} />
+
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          Billing rail
+          <select
+            value={method}
+            onChange={(e) => setMethod(e.target.value as "stripe" | "manual")}
+            className={`${adminInputClass} cursor-pointer`}
+          >
+            <option value="manual">Manual (e-Transfer / cheque / cash)</option>
+            <option value="stripe">Stripe autopay (card)</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          Monthly amount ($)
+          <input
+            inputMode="decimal"
+            placeholder="45.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className={adminInputClass}
+          />
+        </label>
+        {method === "manual" && (
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Next due
+            <input
+              type="date"
+              value={dueOn}
+              onChange={(e) => setDueOn(e.target.value)}
+              className={adminInputClass}
+            />
+          </label>
+        )}
+        <button type="button" disabled={pending} onClick={saveBilling} className={buttonSecondary}>
+          {pending ? "Saving..." : "Save Billing"}
+        </button>
+      </div>
+
+      {service.billing_method === "manual" && (
+        <form
+          onSubmit={recordPayment}
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-emerald-500/25 bg-emerald-500/5 p-4"
+        >
+          <p className="w-full text-xs font-bold uppercase tracking-widest text-emerald-300">
+            Record a received payment
+          </p>
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Amount ($)
+            <input
+              inputMode="decimal"
+              required
+              value={payAmount}
+              onChange={(e) => setPayAmount(e.target.value)}
+              className={adminInputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Method
+            <select
+              value={payMethod}
+              onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
+              className={`${adminInputClass} cursor-pointer`}
+            >
+              {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Received on
+            <input
+              type="date"
+              required
+              value={payDate}
+              onChange={(e) => setPayDate(e.target.value)}
+              className={adminInputClass}
+            />
+          </label>
+          <label className="flex min-w-[12rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
+            Note
+            <input
+              placeholder="e.g. e-Transfer ref 12345"
+              maxLength={300}
+              value={payNote}
+              onChange={(e) => setPayNote(e.target.value)}
+              className={adminInputClass}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={pending}
+            className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+          >
+            {pending ? "Recording..." : "Record Payment"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function BillingCard({
+  client,
+  manualPayments,
+}: {
+  client: AdminClientDetailRow;
+  manualPayments: Tables<"manual_payments">[];
+}) {
+  const serviceLabel = (serviceId: string) => {
+    const service = client.services.find((s) => s.id === serviceId);
+    return service ? SERVICE_TYPE_LABELS[service.service_type] : "Removed service";
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-surface p-6">
+      <h2 className="text-lg font-bold text-white">Billing</h2>
+      <p className="mt-1 text-xs text-white/40">
+        Two rails (R22): Stripe autopay renews itself; manual clients get
+        reminders and payments are recorded here. The ledger is append-only —
+        fix mistakes with a correcting entry, never by editing history.
+      </p>
+
+      <div className="mt-4 space-y-4">
+        {client.services.length === 0 && (
+          <p className="rounded-xl border border-white/10 bg-background p-4 text-sm text-white/40">
+            Assign a service first, then configure its billing.
+          </p>
+        )}
+        {client.services.map((service) => (
+          <BillingServiceRow key={service.id} service={service} />
+        ))}
+
+        {manualPayments.length > 0 && (
+          <div className="rounded-xl border border-white/10 bg-background p-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-white/40">
+              Payment history
+            </p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {manualPayments.map((payment) => (
+                <li key={payment.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                  <span className="text-white/80">
+                    <span className="font-bold text-white">{formatCents(payment.amount_cents)}</span>
+                    {" "}&middot; {PAYMENT_METHOD_LABELS[payment.method]} &middot; {serviceLabel(payment.service_id)}
+                    {payment.note && <span className="text-white/40"> &mdash; {payment.note}</span>}
+                  </span>
+                  <span className="text-xs text-white/40">
+                    {payment.paid_on}
+                    {payment.recorded_by_email && ` · by ${payment.recorded_by_email}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: caller ID card (R23 admin-assisted changes with R24 audit trail)
+// and the immutable change history.
+// ---------------------------------------------------------------------------
+
+const AUTHORIZED_VIA_LABELS: Record<string, string> = {
+  client_email: "client email",
+  client_verbal: "verbal request",
+  client_in_person: "in person",
+  mckee_initiated: "McKee-initiated",
+};
+
+type DiffEntry = { phone: string; label: string };
+
+function HistoryDiffList({ entries, kind }: { entries: DiffEntry[]; kind: "added" | "removed" }) {
+  if (entries.length === 0) return null;
+  const color = kind === "added" ? "text-emerald-300" : "text-red-300";
+  const sign = kind === "added" ? "+" : "−";
+  return (
+    <>
+      {entries.map((entry) => (
+        <p key={`${kind}-${entry.phone}-${entry.label}`} className={`text-sm ${color}`}>
+          {sign} {formatPhone(entry.phone)} <span className="text-white/50">({entry.label})</span>
+        </p>
+      ))}
+    </>
+  );
+}
+
+function CallerIdCard({
+  client,
+  contacts,
+  changes,
+}: {
+  client: AdminClientDetailRow;
+  contacts: CallerIdContact[];
+  changes: Tables<"caller_id_changes">[];
+}) {
+  const [showHistory, setShowHistory] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-surface p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-white">Caller ID List</h2>
+        <button type="button" onClick={() => setShowHistory((v) => !v)} className={buttonSecondary}>
+          {showHistory ? "Hide History" : `History (${changes.length})`}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-white/40">
+        Changes here are made on the client&apos;s behalf (R23): authorization
+        method and reason are mandatory, the audit trail is permanent, and the
+        client is emailed the exact diff (R24).
+      </p>
+
+      <div className="mt-5">
+        <CallerIdEditor
+          key={contacts.map((c) => `${c.phone}|${c.label}`).join(",")}
+          variant="admin"
+          profileId={client.id}
+          initialContacts={contacts}
+        />
+      </div>
+
+      {showHistory && (
+        <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-white/40">
+            Change history (append-only)
+          </p>
+          {changes.length === 0 && (
+            <p className="text-sm text-white/40">No changes recorded yet.</p>
+          )}
+          {changes.map((change) => {
+            const added = (change.added ?? []) as DiffEntry[];
+            const removed = (change.removed ?? []) as DiffEntry[];
+            const isAdmin = change.changed_via === "admin_dashboard";
+            return (
+              <div key={change.id} className="rounded-xl border border-white/10 bg-background p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-sm font-bold text-white">
+                    {isAdmin ? "Admin change" : "Client change"}
+                    <span className="font-normal text-white/50">
+                      {" "}by {change.changed_by_email ?? "unknown"}
+                    </span>
+                  </p>
+                  <p className="text-xs text-white/40">
+                    {new Date(change.created_at).toLocaleString("en-CA")}
+                  </p>
+                </div>
+                <div className="mt-2 space-y-0.5">
+                  <HistoryDiffList entries={added} kind="added" />
+                  <HistoryDiffList entries={removed} kind="removed" />
+                </div>
+                {isAdmin && (
+                  <div className="mt-2 space-y-1 text-xs text-white/50">
+                    <p>
+                      Authorized via{" "}
+                      <span className="text-white/80">
+                        {AUTHORIZED_VIA_LABELS[change.authorized_via ?? ""] ?? change.authorized_via}
+                      </span>
+                      {" "}&middot; Reason: <span className="text-white/80">{change.change_reason}</span>
+                    </p>
+                    <p>
+                      {change.client_notified_at
+                        ? `Client notified ${new Date(change.client_notified_at).toLocaleString("en-CA")}`
+                        : "Client notification email NOT confirmed — follow up manually."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: devices card. Admin sets install dates; expiry is computed
+// (battery +5y, smoke +10y) and a date change re-arms the expiry alert (R14).
+// ---------------------------------------------------------------------------
+
+function DevicesCard({
+  client,
+  devices,
+}: {
+  client: AdminClientDetailRow;
+  devices: Tables<"devices">[];
+}) {
+  const [notice, setNotice] = useState<Notice>(null);
+  const [pending, startTransition] = useTransition();
+  const [dates, setDates] = useState<Record<DeviceType, string>>(() => ({
+    battery: devices.find((d) => d.device_type === "battery")?.installed_on ?? "",
+    smoke_detector: devices.find((d) => d.device_type === "smoke_detector")?.installed_on ?? "",
+  }));
+
+  function save(deviceType: DeviceType) {
+    const installedOn = dates[deviceType];
+    if (!installedOn) {
+      setNotice({ kind: "error", text: "Pick the install (or replacement) date first." });
+      return;
+    }
+    setNotice(null);
+    startTransition(async () => {
+      const result = await setDeviceInstallDate({ profileId: client.id, deviceType, installedOn });
+      setNotice(
+        result.ok
+          ? { kind: "ok", text: `${DEVICE_LABELS[deviceType]} date saved. Expiry alerts are re-armed.` }
+          : { kind: "error", text: result.error },
+      );
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-surface p-6">
+      <h2 className="text-lg font-bold text-white">Devices</h2>
+      <p className="mt-1 text-xs text-white/40">
+        Set the install/replacement date after each site visit. Batteries flag
+        at {DEVICE_LIFETIME_YEARS.battery} years, smoke detectors at{" "}
+        {DEVICE_LIFETIME_YEARS.smoke_detector} (handover 6.5); the weekly cron
+        emails the client and McKee when one expires.
+      </p>
+
+      <div className="mt-4 space-y-3">
+        <NoticeBanner notice={notice} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(Object.keys(DEVICE_LABELS) as DeviceType[]).map((deviceType) => {
+            const existing = devices.find((d) => d.device_type === deviceType);
+            const expired = existing ? isDeviceExpired(deviceType, existing.installed_on) : false;
+            return (
+              <div
+                key={deviceType}
+                className={`rounded-xl border p-4 ${
+                  expired ? "border-amber-500/40 bg-amber-500/10" : "border-white/10 bg-background"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-bold text-white">{DEVICE_LABELS[deviceType]}</p>
+                  {expired && (
+                    <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
+                      Replacement due
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-white/50">
+                  {existing
+                    ? `Installed ${existing.installed_on} · due ${deviceExpiryDate(deviceType, existing.installed_on).toLocaleDateString("en-CA", { year: "numeric", month: "short" })}`
+                    : "Not tracked yet."}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    value={dates[deviceType]}
+                    onChange={(e) => setDates((d) => ({ ...d, [deviceType]: e.target.value }))}
+                    className={adminInputClass}
+                    aria-label={`${DEVICE_LABELS[deviceType]} install date`}
+                  />
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => save(deviceType)}
+                    className={buttonSecondary}
+                  >
+                    {pending ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function AdminClientDetail({
+  client,
+  callerIdContacts,
+  callerIdChanges,
+  devices,
+  manualPayments,
+}: {
+  client: AdminClientDetailRow;
+  callerIdContacts: CallerIdContact[];
+  callerIdChanges: Tables<"caller_id_changes">[];
+  devices: Tables<"devices">[];
+  manualPayments: Tables<"manual_payments">[];
+}) {
   return (
     <div className="space-y-6">
       <ProfileCard client={client} />
       <ServicesCard client={client} />
+      <BillingCard client={client} manualPayments={manualPayments} />
+      <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
+      <DevicesCard client={client} devices={devices} />
       <InvitationCard client={client} />
       <DangerZone client={client} />
     </div>

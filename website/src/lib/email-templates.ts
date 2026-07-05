@@ -29,6 +29,12 @@ export type EmailField = {
   cta?: boolean;
   /** Text shown inside the CTA button (defaults to "Open admin portal"). */
   buttonLabel?: string;
+  /**
+   * Pre-rendered TRUSTED html for the value (e.g. the caller ID green/red
+   * diff). Bypasses escaping; the plaintext fallback still uses `value`.
+   * Never pass user input here without escaping it first.
+   */
+  htmlValue?: string;
 };
 
 export type FormEmailOptions = {
@@ -70,7 +76,7 @@ function receivedStamp(): string {
   })} ET`;
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -79,6 +85,7 @@ function escapeHtml(value: string): string {
 }
 
 function renderFieldValue(field: EmailField): string {
+  if (field.htmlValue) return field.htmlValue;
   const safe = escapeHtml(field.value).replace(/\n/g, "<br />");
   if (field.href) {
     return `<a href="${escapeHtml(field.href)}" style="color:${TEXT};text-decoration:underline;text-decoration-color:rgba(255,255,255,0.35);">${safe}</a>`;
