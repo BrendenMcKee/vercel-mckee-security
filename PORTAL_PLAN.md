@@ -113,7 +113,8 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | R20 | Storage resolution tiers | Clients choose stored resolution **per camera**: 1080p, 1440p, or 2160p (full 4K). Implementation is **pure stream copy at every tier, no transcoding**: 2160p pulls the 4K mainstream; 1080p/1440p pull the camera sub-stream, which is set to the purchased resolution on the NVR/camera at install (sub-stream resolution is fully configurable on the fleet, per ops). Lower future tiers (e.g. 720p) are just config plus a new price cell. The NVR records full 4K mainstream locally in every case. Pricing = retention x resolution matrix (9.2.4, 9.2.7) |
 | R21 | Cloud backup plan management is **admin-only** | Supersedes handover 6.3 self-service (stakeholder, 2026-07-05). Clients view backup status and request footage; **all plan assignment, tier/resolution changes, and cancellation are admin actions.** Rationale: the service runs on McKee-managed on-site hardware and NVR/sub-stream configuration (R20), so a plan change is an operational event (config-sync, possibly a camera reconfig), not a self-service toggle. The only client-initiated money action anywhere in the portal is Pay Now checkout for an admin-assigned tier |
 | R22 | Dual billing rails: autopay + manual | Every paid service is `billing_method = 'stripe'` (autopay via Checkout/webhooks) or `'manual'` (legacy e-transfer/cheque/cash). Manual services carry `monthly_amount_cents` + `next_due_on`; a daily cron reminds the client before due and when overdue (R14-style `due_alerted_at` guard, once per cycle) and sends the admin a collections digest so no legacy payment is missed. Payments are recorded in an append-only `manual_payments` ledger that advances `next_due_on`. The admin Billing tab (7.2/7.3) is the collections console; failed Stripe payments land on the same board |
-| R23 | Caller ID lists are editable by **both** client and admin | Amends handover 7.5 (admin was view-only; stakeholder, 2026-07-05). Clients self-manage their list from the dashboard; admins can edit any client's list from client detail (e.g. a change phoned in). **Both paths run the same save action**: transactional replace, diff compute, history row with `changed_by` attribution, and the green/red diff email to the admin inbox. The email fires on every change regardless of who made it, with a "changed by" line, so the Lanvac (monitoring station) update queue stays a single inbox and nothing is missed |
+| R23 | Caller ID lists are editable by **both** client and admin | Amends handover 7.5 (admin was view-only; stakeholder, 2026-07-05). Clients self-manage their list from the dashboard; admins can edit any client's list from client detail. **Both paths run the same save action**: transactional replace, diff compute, immutable history row, and the green/red diff email to the admin inbox. The email fires on every change regardless of who made it, with a "changed by" line, so the Lanvac (monitoring station) update queue stays a single inbox and nothing is missed |
+| R24 | Admin caller ID changes require recorded authorization + client notification | Caller ID lists drive emergency response, so an unauthorized or missed change is a security exposure. Reconciliation model (stakeholder, 2026-07-05): **(1)** a client-made change is self-authorizing (authenticated session = proof). **(2)** An admin-made change cannot be saved without an **authorization method** (`client_email` preferred and nudged by the UI, `client_verbal`, `client_in_person`, `mckee_initiated` for corrections) and a **required reason note** referencing the request (e.g. "Client emailed 2026-07-05 asking to remove former employee"). **(3)** The client is **always emailed** when an admin changes their list: exact diff, the recorded reason, and "if you did not request this, contact McKee immediately"; the send is stamped on the history row. **(4)** History is **append-only and immutable** (no UPDATE/DELETE policies), so the record of who/when/what/why/how can never be rewritten. Written (email) requests are the preferred evidence; verbal changes are allowed but explicitly flagged, and the client notification acts as the dispute backstop either way |
 
 ### Open (stakeholder or phase-gated)
 
@@ -311,16 +312,22 @@ Partial unique index: at most one unused invitation per profile (`unique (profil
 
 Contact cap (default 15, pending D6/Q16) enforced in the server action, not the schema.
 
-**`caller_id_changes`** (audit history, handover 6.4 recommended)
+**`caller_id_changes`** (immutable audit history; handover 6.4, hardened per R24)
 
-| Column | Type |
-|--------|------|
-| `id` | uuid PK |
-| `profile_id` | uuid FK |
-| `changed_by` | uuid FK auth.users |
-| `added` | jsonb (array of `{phone,label}`) |
-| `removed` | jsonb (array of `{phone,label}`) |
-| `created_at` | timestamptz |
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | uuid | PK |
+| `profile_id` | uuid | FK profiles, not null |
+| `changed_by` | uuid | FK auth.users, not null (the authenticated actor) |
+| `changed_via` | text | not null, CHECK in (`'client_dashboard'`, `'admin_dashboard'`) (where/how the change was made) |
+| `added` | jsonb | array of `{phone,label}` |
+| `removed` | jsonb | array of `{phone,label}` |
+| `authorized_via` | text | null for client changes; **required for admin changes**, CHECK in (`'client_email'`, `'client_verbal'`, `'client_in_person'`, `'mckee_initiated'`) |
+| `change_reason` | text | null for client changes; **required non-empty for admin changes** (references the client request, R24) |
+| `client_notified_at` | timestamptz | nullable; stamped when the client notification email sends (admin changes only) |
+| `created_at` | timestamptz | not null (when) |
+
+Integrity CHECK: `changed_via = 'client_dashboard' OR (authorized_via IS NOT NULL AND length(trim(change_reason)) > 0)`. The table is append-only: no UPDATE or DELETE policies for any role, so the audit trail cannot be rewritten. Together the row answers: who (`changed_by`), when (`created_at`), what (`added`/`removed`), where and how (`changed_via`), on whose authority (`authorized_via`), why (`change_reason`), and whether the client was told (`client_notified_at`).
 
 **`devices`**
 
@@ -442,7 +449,7 @@ grant execute on function private.is_admin() to authenticated;
 | `invitations` | none | none (validation happens server-side pre-session via service role) | SELECT/INSERT/UPDATE |
 | `services` | none | SELECT own via profile join | SELECT/INSERT/UPDATE all. Client tier/status changes happen only through server actions and webhooks (service role), never direct client writes |
 | `caller_id_contacts` | none | SELECT/INSERT/DELETE own (+ SELECT required for any UPDATE; list saves are delete+insert in a transaction) | SELECT/INSERT/DELETE all (R23: admin edits on behalf of clients; same save action) |
-| `caller_id_changes` | none | none (server action writes with user context INSERT-own policy) | SELECT all + INSERT (admin-context saves write their own history rows, `changed_by` = admin) |
+| `caller_id_changes` | none | none (server action writes with user context INSERT-own policy) | SELECT all + INSERT (admin-context saves write their own history rows, `changed_by` = admin). **No UPDATE/DELETE for any role: immutable audit trail (R24)** |
 | `devices` | none | SELECT own | SELECT/INSERT/UPDATE all |
 | `sites` | none | SELECT own (via profile join), minus ops columns if needed (view or column grants) | SELECT/INSERT/UPDATE all |
 | `cameras` | none | SELECT own active cameras (`id`, `name` only; `rtsp_path` excluded via a `security_invoker` view or column-level grants) | SELECT/INSERT/UPDATE all |
@@ -554,7 +561,7 @@ Layout pattern: follow `starlink-admin` component density. The admin dashboard i
 |-----|--------------|-------|
 | Overview | KPI cards + simple trends: active clients, pending activations, services by type and tier, revenue split autopay vs manual, unpaid services, overdue manual payers, failed card payments (last 30 days), recent activity feed (activations, tier changes, caller ID changes, payments recorded) | 3 skeleton, completed in 5 |
 | Clients | searchable table: instant text filter on name/email, filters for status, service type, tier, billing method, and overdue; sortable columns; pagination; create-client form; row click opens client detail | 2 basic table, 3 search + filters |
-| Client detail | one page per client: profile info, services (assign/modify tier, cancel/restart, set billing method, amount, next due), payment history (both rails), devices, caller IDs (view **and edit**, R23) + change history, invitation state + resend | 3 core, 4 caller ID editor, 5 billing fields |
+| Client detail | one page per client: profile info, services (assign/modify tier, cancel/restart, set billing method, amount, next due), payment history (both rails), devices, caller IDs (view **and edit**, R23; the editor requires an authorization method + reason note before save and shows the diff in the confirm dialog, R24) + change history, invitation state + resend | 3 core, 4 caller ID editor, 5 billing fields |
 | Billing | the collections console (7.3): autopay board (active subscriptions, failed payments needing follow-up) and manual board (upcoming dues, overdue highlighted amber/red, one-click record-payment) | 5 |
 | Fleet | gateway health, per-site storage and margin (9.2.7) | 6A (Track 2) |
 | Alerts | recent device expiry alerts, failed email sends, payment follow-ups | 7 |
@@ -582,6 +589,7 @@ Task 2.1 extends `src/lib/email.ts`: optional `to: string | string[]` and `cc` i
 |----------|---------|----|----|
 | Account invitation | admin creates client / resend | client | 2 |
 | Caller ID change alert | client **or admin** saves a list (R23); includes a "changed by" line | admin inbox (`PORTAL_ADMIN_ALERT_EMAIL`, fallback `CONTACT_EMAIL`) | 4 |
+| Caller ID changed by McKee | admin saves a client's list (R24) | client: exact diff + recorded reason + "if you did not request this, contact McKee immediately"; send stamped on the history row | 4 |
 | Device expiry alert | nightly cron detects newly expired | admin + client | 7 |
 | Footage ready | retrieval presigns links, request marked ready | client | 6B |
 | Footage failed | retrieval failure | client + admin | 6B |
@@ -821,12 +829,12 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 ### Phase 4: Caller ID & Devices
 
 - [ ] Migration 3: `caller_id_contacts`, `caller_id_changes`, `devices` (+ RLS)
-- [ ] `phone.ts` normalization; caller ID card with add/remove/save; save action: transactional replace, diff compute, history insert with `changed_by`, admin email (green/red diff + "changed by" line)
+- [ ] `phone.ts` normalization; caller ID card with add/remove/save; save action: transactional replace, diff compute, history insert with `changed_by`/`changed_via`, admin email (green/red diff + "changed by" line)
 - [ ] Devices card with expiry highlighting; admin device date editor (updates clear `expiry_alerted_at`)
-- [ ] Admin caller ID editor + history in client detail (R23: same save action in admin context, same email and validation rules)
+- [ ] Admin caller ID editor + history in client detail (R23/R24): same save action in admin context, same validation; save blocked until authorization method + reason note are provided; diff shown in the confirm dialog; client notification email sent and stamped on the history row
 - [ ] **[HUMAN]** D6/Q16+Q9 answered (cap, history in UI)
 
-**Gate:** saving a change (from the client dashboard and separately from the admin editor) emails admin with the exact correct diff and correct "changed by" attribution; duplicate phone rejected; invalid format rejected on both paths; history shows both actors; device installed 2018 renders expired with amber/error styling; admin date update clears the expired state.
+**Gate:** saving a change (from the client dashboard and separately from the admin editor) emails admin with the exact correct diff and correct "changed by" attribution; an admin save without an authorization method or reason note is rejected (action validation and DB CHECK both verified); an admin save emails the client the diff + reason and stamps `client_notified_at`; a direct UPDATE/DELETE attempt on `caller_id_changes` fails for every role; duplicate phone rejected; invalid format rejected on both paths; history shows both actors with full authorization metadata; device installed 2018 renders expired with amber/error styling; admin date update clears the expired state.
 
 ### Phase 5: Stripe & Billing
 
@@ -890,6 +898,7 @@ Track 1 scope: build the complete billing rails on **both methods** (R22): Strip
 | Legacy (non-card) payers are reminded, tracked, and collected (stakeholder 2026-07-05) | R22: `billing_method` + `manual_payments` ledger + payment-due cron + Billing tab (4.2, 7.3, 9.4) |
 | Admin can search, analyze, and manage the whole client base from one console (7, stakeholder 2026-07-05) | Tabbed admin dashboard: Overview KPIs, searchable Clients, Billing collections console (7.2/7.3) |
 | Caller ID changes alert admin with green/red diff (6.4, 12; 7.5 as amended by R23) | Single save action for client and admin edits: diff + email with attribution (Section 8); `caller_id_changes` history with `changed_by` |
+| Admin caller ID changes carry recorded authorization, reason, and client notification (stakeholder 2026-07-05, R24) | Required `authorized_via` + `change_reason` enforced by action validation and a DB CHECK; always-sent client notification stamped `client_notified_at`; append-only history (4.2, 4.3) |
 | Device expiry 5yr battery / 10yr smoke, alerts to both parties (6.5, 11.9) | Computed expiry (4.2); nightly cron + `expiry_alerted_at` (9.4, R14) |
 | Cloud retention tiers 7/30/90-day actually enforced (9.2 handover) | Direct-to-class PUT + expiration-only lifecycle per site prefix (9.2.5, R19) |
 | Footage stored durably off-site at evidence quality and retrievable (6.3, 13) | Mainstream gateway ingestion (9.2, R18), outbound-only through CGNAT with no VPN (1.5, R17); instant presigned retrieval on all tiers (9.3) |
@@ -944,6 +953,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | Plan v4.3 per stakeholder: cloud backup plan management locked to admin (R21, supersedes handover 6.3 self-service). Admin console fully specified: Overview analytics, searchable Clients tab, Billing collections console (7.2/7.3). Dual billing rails added (R22): `billing_method` on services, append-only `manual_payments` ledger, payment-due reminder cron with admin collections digest, new emails, D11 opened. Schema, RLS, Stripe, phases, traceability all updated |
 | 2026-07-05 | Line-by-line cross-audit of this plan against all 23 sections + appendices of `PRODUCT_HANDOVER.md`. Five small gaps found and closed: address field on the create-client action (7.2), Q11 privacy review + paused-vs-cancelled semantics tracked in D6, Q5/Q10/Q12/Q13/Q14/Q15 recorded as resolved in D6, admin confirm dialogs for destructive actions (14.2), observability + origin-posture items added to Phase 7 (22.2/22.3). Verdict: full coverage, ready for Phase 0 |
 | 2026-07-05 | R23 per stakeholder: caller ID lists editable by admin as well as client (amends handover 7.5 view-only). Same save action, validation, history (`changed_by`), and diff email on both paths; email documents itself as the Lanvac update trigger with a "changed by" line. RLS, admin client detail, Phase 4 tasks and gate updated |
+| 2026-07-05 | R24 per stakeholder: admin caller ID changes hardened for reconciliation. `caller_id_changes` extended (`changed_via`, `authorized_via`, required `change_reason`, `client_notified_at`) with a DB CHECK and append-only immutability; admin editor blocks save until authorization method + reason are entered; client always emailed the diff + reason with a dispute prompt. Phase 4 gate now tests the rejection, the notification, and the immutability |
 
 ## 14. Decision Log
 
@@ -965,3 +975,4 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | R21: cloud backup plan management is admin-only (stakeholder override of handover 6.3 self-service): the service runs on McKee-managed hardware, so plan changes are operational events. Clients keep footage requests and Pay Now only |
 | 2026-07-05 | R22: dual billing rails. `billing_method` per service (`stripe`/`manual`); manual payers get automated due reminders and an admin collections digest; payments recorded in append-only `manual_payments`. Admin Billing tab is the collections console |
 | 2026-07-05 | R23: caller ID lists editable by both client and admin (amends handover 7.5). One shared save action; every change emails the admin inbox with attribution because that email drives the Lanvac (monitoring station) update |
+| 2026-07-05 | R24: admin caller ID changes require a recorded authorization method (email preferred) plus a mandatory reason note, always notify the client with the diff and a dispute prompt, and live in an append-only history that answers who/when/what/why/how. Client-made changes are self-authorizing via the authenticated session |
