@@ -6,6 +6,7 @@
 
 **Product:** Client and admin portal built natively into the live `mckeesecurity.ca` Next.js site.
 **Scope:** Handover Sections 1 to 22 (core portal, Phases 0 to 7). QuickBooks plumbing (Scope B) and the accounting agent (Scope C) are deferred; the only obligation toward them is clean Stripe event and customer record-keeping (Section 8 of this plan).
+**Build order (decided 2026-07-05):** Track 1 is the core portal: Phases 0 to 5, then Phase 7 hardening and launch. Track 2 is the camera cloud backup service: Phases 6A/6B, started **after** the core portal is live. The camera design (Sections 9.2/9.3) is fully specified and stays in this plan, but nothing in Track 1 depends on it.
 
 ---
 
@@ -119,8 +120,8 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | D3 | Admin staff sign-in method | Phase 1 | Recommended: same Google + email/password as clients, role decides access |
 | D4 | Stripe account, products/prices, webhook endpoint | Phase 5 | Agent supplies product/price definitions and required webhook events |
 | D5 | AWS footage storage provisioning | Phase 6A | **Audit finding: no bucket, vault, or IAM exists yet; all greenfield.** Human approves: footage bucket creation (ca-central-1), lifecycle rules per tier (9.2.5), an admin-capable IAM path for the agent or console work, per-site upload credentials model (9.2.3). "Arctic" is implemented as S3 storage classes chosen per retention tier, not a separate product |
-| D6 | Handover Section 18 business answers | Rolling | Blocking map: Q1/Q3 (tier features, monitoring paid in portal?) by Phase 3; Q7 (admin alert inbox) by Phase 2; Q16/Q9 (caller ID min/max, history in UI?) by Phase 4; Q2 (cloud tier pricing) by Phase 5; Q4/Q6 (retention on cancel, link expiry) by Phase 6. Q8 (camera list source) is resolved structurally: cameras are registered rows in the `cameras` table, populated at gateway provisioning (9.2.3) |
-| D7 | Vercel plan cron limits | Phase 6/7 | If on Hobby (daily-only crons), nightly expiry works but the footage poller needs pg_cron or S3 event notifications. Verify plan at Phase 6B kickoff |
+| D6 | Handover Section 18 business answers | Rolling | Blocking map: Q1/Q3 (tier features, monitoring paid in portal?) by Phase 3; Q7 (admin alert inbox) by Phase 2; Q16/Q9 (caller ID min/max, history in UI?) by Phase 4; Q2 (cloud tier pricing) by Phase 6A (Track 2; retail matrix recommendation ready in 9.2.7); Q4/Q6 (retention on cancel, link expiry) by Phase 6B. Q8 (camera list source) is resolved structurally: cameras are registered rows in the `cameras` table, populated at gateway provisioning (9.2.3) |
+| D7 | Vercel plan cron limits | Phase 7, re-check at 6A | If on Hobby (daily-only crons), nightly expiry and cleanup work; sub-daily gateway-health needs pg_cron fallback (R4). Verify plan when writing `vercel.json` and again at Track 2 kickoff |
 | D8 | Gateway site kit | Phase 6A | Recommendation: fanless x86 mini PC (Intel N100 class, 8GB RAM, 500GB to 1TB NVMe, ~$200 to $280 one-time per site): native NVMe, headroom, and Quick Sync as free contingency (not required since all tiers are stream copy, R20). Human approves hardware SKU + pilot site (recommendation: one McKee-controlled Starlink site first to prove CGNAT behavior end to end) |
 | D9 | Per-site capture tuning | Phase 6A | Default is continuous mainstream H.265 (R18). Per-camera knobs: bitrate cap pushed to the camera (U-code, target 2 to 3 Mbps for 4MP), motion-gated upload for constrained links or budget-sensitive clients. Confirm defaults against pilot bandwidth data |
 | D10 | Legacy AWS decommission | **Done 2026-07-04** | Executed with stakeholder approval: all six legacy EB applications deleted across both regions, orphaned S3 objects removed, stale security groups detached from RDS, Data Drops + RDS untouched and verified healthy (1.4). Remaining human items: rotate the exposed Gmail app password; remove stale DNS records for the deleted load balancer |
@@ -151,7 +152,8 @@ website/
     │       └── cron/
     │           ├── device-expiry/route.ts      # Phase 7
     │           ├── cleanup/route.ts            # Phase 7: orphan auth users, expired invites, expired footage links
-    │           └── footage-poller/route.ts     # Phase 6B (if cron-based polling chosen)
+    │           ├── gateway-health/route.ts     # Track 2 (6A): offline alerting + site_usage rollup
+    │           └── footage-poller/route.ts     # dormant (only if a Deep Archive tier is ever sold, 9.3)
     ├── components/portal/
     │   ├── sign-in.tsx                         # Google button + email/password form
     │   ├── activate-account.tsx                # Google / set-password chooser
@@ -506,7 +508,7 @@ Global chrome: site `Header`/`Footer` stay (portal is native to the site); welco
 | Section | Content | Client actions | Rules enforced |
 |---------|---------|----------------|----------------|
 | Security Monitoring | tier + status badge | **none** (read-only; no controls rendered at all) | Handover 6.2: client never changes tier/status |
-| Cloud Backup | tier + status | Change Plan (Phase 5), Cancel Plan (Phase 5, confirm dialog), Request Footage (Phase 6B) | Handover 6.3 |
+| Cloud Backup | tier + status (display from Phase 3; card hidden if client has no cloud service) | Change Plan + Cancel Plan (rails built in Phase 5, surfaced to clients in Track 2), Request Footage (Phase 6B) | Handover 6.3 |
 | Caller ID | contact list (phone + label) | add, remove, save (single save action commits the batch) | Validation: NANP format, no duplicates, cap (D6). Save triggers admin diff email |
 | Device Maintenance | battery + smoke install dates, expiry state | none | Expired = amber/error highlight, not brand red (handover 14) |
 | Payment banner | shown when any service `status='unpaid'` | Pay Now -> Stripe Checkout (Phase 5) | Tier server-validated, success/cancel return states |
@@ -536,8 +538,8 @@ Task 2.1 extends `src/lib/email.ts`: optional `to: string | string[]` and `cc` i
 | Account invitation | admin creates client / resend | client | 2 |
 | Caller ID change alert | client saves list | admin inbox (`PORTAL_ADMIN_ALERT_EMAIL`, fallback `CONTACT_EMAIL`) | 4 |
 | Device expiry alert | nightly cron detects newly expired | admin + client | 7 |
-| Footage ready | poller marks ready | client | 6 |
-| Footage failed | retrieval failure | client + admin | 6 |
+| Footage ready | retrieval presigns links, request marked ready | client | 6B |
+| Footage failed | retrieval failure | client + admin | 6B |
 | Payment success | Stripe webhook (optional per handover 12) | client | 5 |
 
 Caller ID diff email: added contacts styled green, removed styled red (handover 6.4), plain-text fallback included. Email send failures are logged and surfaced in the admin alerts area (handover 22.3); a failed notification never rolls back the underlying save.
@@ -706,7 +708,7 @@ Vercel-side IAM (separate from gateway credentials): list + read (+ restore for 
 |-------|----------|------|
 | `/api/cron/device-expiry` | daily 06:00 UTC | expired devices where `expiry_alerted_at is null` -> email admin + client, stamp `expiry_alerted_at` (R14) |
 | `/api/cron/cleanup` | daily | orphan auth users >7d, invitations expired >90d, footage links past TTL |
-| `/api/cron/gateway-health` | every 30 min (plan permitting, else hourly + dashboard-first) | gateways with `last_seen_at` older than 30 min and not already alerted -> email admin; also writes the nightly `site_usage` rollup on its midnight run |
+| `/api/cron/gateway-health` | every 30 min (plan permitting, else hourly + dashboard-first). Added in Track 2 (6A) | gateways with `last_seen_at` older than 30 min and not already alerted -> email admin; also writes the nightly `site_usage` rollup on its midnight run |
 | `/api/cron/footage-poller` | dormant | only if a Deep Archive tier is ever sold (9.3 step 4) |
 
 Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-daily jobs (R4).
@@ -715,7 +717,7 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 
 ## 10. Phase Plan
 
-Each phase ends with a test gate; do not start the next phase with a failing gate. **[HUMAN]** marks stakeholder checkpoints (handover Section 21 model).
+**Execution order: 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 7 (core portal launch), then 6A -> 6B (camera cloud backup, Track 2, post-launch).** Phase numbers are kept stable because the rest of this document references them; 6A/6B simply run after 7. Each phase ends with a test gate; do not start the next phase with a failing gate. **[HUMAN]** marks stakeholder checkpoints (handover Section 21 model).
 
 ### Phase 0: Foundation
 
@@ -775,14 +777,16 @@ Each phase ends with a test gate; do not start the next phase with a failing gat
 
 ### Phase 5: Stripe & Billing
 
-- [ ] **[HUMAN]** D4: Stripe account; products/prices per 9.1; webhook endpoint registered; keys in Vercel. D6/Q2 pricing confirmed
+Track 1 scope: build the complete billing rails (checkout, webhook, banner, change/cancel plumbing) and put monitoring prices live if Q3 confirms in-portal monitoring payment. The cloud backup 9-cell matrix (9.2.7) is set up in test mode only and is **not exposed to clients until Track 2 ships** (selling cloud backup in-portal before ingestion exists would sell a service that cannot run). Admins can still record a cloud backup `services` row for any manually-arranged client (Phase 3 client detail), but the client-facing purchase and Change Plan paths for cloud backup stay hidden until Track 2.
+
+- [ ] **[HUMAN]** D4: Stripe account; products/prices per 9.1; webhook endpoint registered; keys in Vercel. D6/Q3 confirmed (monitoring paid in portal?); Q2 cloud pricing can wait for Track 2
 - [ ] Migration 4: `billing_events`; `profiles.stripe_customer_id`; `services.stripe_subscription_id`
 - [ ] `stripe.ts` (SDK + price map); checkout server action with DB-side tier validation; webhook route (9.1); payment banner; change/cancel plan flows; success/cancel UX
 - [ ] Payment success email (optional, per handover 12)
 
 **Gate (Stripe test mode):** full checkout activates the service via webhook (not redirect); webhook replay is a no-op; tampered tier/price attempts are impossible via API surface; cancel sets `cancel_at_period_end`; plan change swaps price with proration.
 
-### Phase 6A: Camera Cloud Backup Ingestion
+### Phase 6A: Camera Cloud Backup Ingestion (Track 2, starts after Phase 7 launch)
 
 - [ ] **[HUMAN]** D5: approve footage bucket creation + tier storage-class mapping (9.2.5) + IAM model (9.2.3); provide admin-capable AWS access for setup. D8: gateway hardware SKU purchased and pilot site selected. D9: capture defaults confirmed (mainstream bitrate target)
 - [ ] Create S3 bucket (ca-central-1): public access blocked, SSE-S3, expiration-only lifecycle rules per tier
@@ -796,7 +800,7 @@ Each phase ends with a test gate; do not start the next phase with a failing gat
 
 **Gate:** pilot uploads mainstream continuously for 7 days through Starlink CGNAT with zero inbound ports and no VPN; a forced 2-hour internet outage backfills from the buffer with no gap; a config change (camera rename + bitrate cap) applies remotely via config-sync without a site visit; SSM break-glass session works; heartbeat outage alert reaches the admin; per-site IAM credential verifiably cannot read or list anything; expiration rule observed deleting aged objects (short-window test rule); technician completed the install in under 15 minutes from the SOP alone.
 
-### Phase 6B: Footage Requests & Retrieval
+### Phase 6B: Footage Requests & Retrieval (Track 2)
 
 - [ ] **[HUMAN]** D6/Q4+Q6 (retention on cancel, link TTL). D7: Vercel plan check (affects gateway-health cron cadence)
 - [ ] Migration 6: `footage_requests` (+ RLS with camera-ownership check)
@@ -805,10 +809,10 @@ Each phase ends with a test gate; do not start the next phase with a failing gat
 
 **Gate:** end-to-end on the pilot site: client requests a range -> presigned link email arrives typically within a minute -> mainstream footage plays -> link expires at TTL; a 90-day-tier (Glacier Instant Retrieval) object serves instantly with no restore job; request against a camera the client does not own is impossible (RLS + action check); forced failure notifies client + admin and marks `failed`.
 
-### Phase 7: Automation, Hardening, Launch
+### Phase 7: Automation, Hardening, Launch (core portal goes live here)
 
-- [ ] `vercel.json` crons + `CRON_SECRET`; device-expiry job (R14 semantics); cleanup job (6.6)
-- [ ] Rate limiting on activation + footage endpoints (6.6)
+- [ ] `vercel.json` crons + `CRON_SECRET`; device-expiry job (R14 semantics); cleanup job (6.6). Gateway-health cron joins in Track 2 (9.4)
+- [ ] Rate limiting on activation endpoints (6.6); footage endpoints get the same treatment in Track 2
 - [ ] RLS penetration script: for every portal table x {anon, client A, client B, admin}, assert the 4.3 matrix; run against production before launch
 - [ ] Security sweep: webhook signature tests, `get_advisors` clean, no service-role usage outside `admin.ts`/webhook/cron, secrets audit
 - [ ] Full mobile UX pass; accessibility spot check (focus rings, labels, keyboard nav)
@@ -826,7 +830,7 @@ Each phase ends with a test gate; do not start the next phase with a failing gat
 | Admin-provisioned accounts, no open registration (4, 8) | No signup UI; activation requires valid token (6.3/6.4); orphan handling + cleanup (6.6); R9 |
 | Client never changes monitoring tier/status (6.2, 9.1) | No UI controls; no client RLS write on `services` (4.3); tier changes only via admin actions + webhooks |
 | Client pays only the admin-assigned tier (6.6, 9.3) | Checkout server action reads tier from DB; price map server-side only (9.1) |
-| Cloud backup self-service: change, cancel, footage (6.3, 9.2) | Phase 5 plan flows + Phase 6B requests (9.3) |
+| Cloud backup self-service: change, cancel, footage (6.3, 9.2) | Phase 5 billing rails + Phase 6B requests (9.3); client-facing cloud backup controls surface in Track 2 |
 | Caller ID changes alert admin with green/red diff (6.4, 12) | Save action diff + email (Section 8); history table |
 | Device expiry 5yr battery / 10yr smoke, alerts to both parties (6.5, 11.9) | Computed expiry (4.2); nightly cron + `expiry_alerted_at` (9.4, R14) |
 | Cloud retention tiers 7/30/90-day actually enforced (9.2 handover) | Direct-to-class PUT + expiration-only lifecycle per site prefix (9.2.5, R19) |
@@ -877,6 +881,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-04 | Plan v4 + AWS cleanup executed. Ingest redesigned around 2026 realities: mainstream H.265 capture (R18, Starlink Gen 4 uplink 15 to 35 Mbps makes it feasible), no VPN anywhere (R17, SSM hybrid nodes now free to register), retention tiers PUT directly into matching storage classes with instant GETs on all tiers (R19: Standard / Standard-IA / Glacier Instant Retrieval = "Arctic"). Zero-touch technician provisioning (9.2.3), full cost model (9.2.4), business ops integration incl. per-site margin visibility (9.2.7). AWS cleaned: six legacy EB apps deleted, only Data Drops (EB + RDS) remains (1.4, D10) |
 | 2026-07-05 | Resolution tiers added (R20): per-camera 1080p/1440p/2160p storage choice. Cost model rebuilt as a retention x resolution wholesale matrix (9.2.4) with a 9-cell retail recommendation at ~60% margin (9.2.7); Stripe model updated to per-camera prices per cell (9.1) |
 | 2026-07-05 | R20 simplified per ops input: the camera sub-stream resolution is fully configurable via the NVR, so 1080p and 1440p are sub-stream copies set to the purchased resolution at install. **No transcoding anywhere**; Quick Sync demoted from D8 requirement to contingency. Bench test now verifies per-model sub-stream resolution options |
+| 2026-07-05 | Final pre-build audit passed. Build order locked: Track 1 = core portal (Phases 0-5, 7), Track 2 = camera cloud backup (6A/6B) after launch. Cloud backup client purchase flows deferred to Track 2; Q2 pricing moved to the 6A gate. Plan v4.2, ready for Phase 0 |
 
 ## 14. Decision Log
 
@@ -894,3 +899,4 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-04 | R19: tiers map to storage classes with matching minimum durations (Standard / Standard-IA / Glacier Instant Retrieval); direct-to-class PUT, expiration-only lifecycle, instant retrieval on every product tier (9.2.5). Restore-job path dormant unless a Deep Archive tier is sold |
 | 2026-07-04 | D10 executed: legacy AWS decommissioned (six EB apps deleted, both regions); Data Drops EB + RDS are the only remaining AWS workloads (1.4) |
 | 2026-07-05 | R20: client-selectable storage resolution per camera (1080p/1440p/2160p); stream copy at every tier (sub-stream resolution set on the NVR to the purchased tier, per ops); billing per camera per (retention, resolution) cell |
+| 2026-07-05 | Two-track build order: core portal ships first (0-5, 7), camera cloud backup (6A/6B) starts after launch. Camera design stays fully specified in this plan; nothing in Track 1 depends on it |
