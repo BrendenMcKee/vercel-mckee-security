@@ -23,7 +23,7 @@ export default async function AdminPortalLayout({
   const { user, profile } = await getAuthContext();
 
   if (!user) {
-    return <SignIn next="/admin-dashboard" />;
+    return <SignIn next="/admin-dashboard" variant="admin" />;
   }
 
   if (!profile || profile.role !== "admin" || profile.status !== "active") {

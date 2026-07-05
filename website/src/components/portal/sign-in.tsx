@@ -4,6 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortalBrowserClient } from "@/lib/portal/supabase/client";
 
+const COPY = {
+  client: {
+    eyebrow: "McKee Security Client Portal",
+    heading: "Manage Account",
+    description: "Securely manage your account information, cloud backups, and more.",
+    footer: "invitation",
+  },
+  admin: {
+    eyebrow: "McKee Security Internal",
+    heading: "Admin Sign In",
+    description: "Sign in with your McKee Security staff account.",
+    footer: "staff",
+  },
+} as const;
+
 /**
  * Logged-out state for /user-dashboard and /admin-dashboard (PORTAL_PLAN.md
  * 6.1): prominent Google sign-in, secondary email/password form. Rendered in
@@ -12,7 +27,14 @@ import { createPortalBrowserClient } from "@/lib/portal/supabase/client";
  * `next` controls where the Google OAuth callback lands (email/password uses
  * router.refresh(), which re-renders the current route either way).
  */
-export function SignIn({ next = "/user-dashboard" }: { next?: string }) {
+export function SignIn({
+  next = "/user-dashboard",
+  variant = "client",
+}: {
+  next?: string;
+  variant?: keyof typeof COPY;
+}) {
+  const copy = COPY[variant];
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,13 +76,13 @@ export function SignIn({ next = "/user-dashboard" }: { next?: string }) {
   return (
     <section className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-4 py-20">
       <p className="text-sm font-bold uppercase tracking-widest text-primary">
-        McKee Security Client Portal
+        {copy.eyebrow}
       </p>
       <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-        Manage Account
+        {copy.heading}
       </h1>
       <p className="mt-4 max-w-sm text-center text-base leading-relaxed text-white/65">
-        Securely manage your account information, cloud backups, and more.
+        {copy.description}
       </p>
 
       <div className="mt-8 w-full rounded-2xl border border-white/10 bg-surface p-6">
@@ -125,14 +147,24 @@ export function SignIn({ next = "/user-dashboard" }: { next?: string }) {
         </form>
       </div>
 
-      <p className="mt-6 max-w-sm text-center text-sm text-white/50">
-        New to the portal? Access is by invitation. If you received an activation link
-        from McKee Security, use it to set up your account, or call{" "}
-        <a href="tel:+17054572156" className="font-bold text-white/80 hover:text-white">
-          (705) 457-2156
-        </a>
-        .
-      </p>
+      {copy.footer === "invitation" ? (
+        <p className="mt-6 max-w-sm text-center text-sm text-white/50">
+          New to the portal? Access is by invitation. If you received an activation link
+          from McKee Security, use it to set up your account, or call{" "}
+          <a href="tel:+17054572156" className="font-bold text-white/80 hover:text-white">
+            (705) 457-2156
+          </a>
+          .
+        </p>
+      ) : (
+        <p className="mt-6 max-w-sm text-center text-sm text-white/50">
+          McKee Security staff only. Looking for your client account? Sign in at{" "}
+          <a href="/user-dashboard" className="font-bold text-white/80 hover:text-white">
+            Manage Account
+          </a>
+          .
+        </p>
+      )}
     </section>
   );
 }
