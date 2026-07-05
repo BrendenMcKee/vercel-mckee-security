@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import type { Tables } from "@/lib/portal/database.types";
 import {
   createClientAction,
+  deleteClientAction,
   resendInviteAction,
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
@@ -79,6 +80,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string; link?: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -119,6 +121,26 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       } else {
         setNotice({ kind: "ok", text: "Client created and invitation email sent." });
       }
+    });
+  }
+
+  function remove(client: AdminClientRow) {
+    const name = `${client.first_name} ${client.last_name}`;
+    // Explicit confirm for destructive admin actions (handover 14.2).
+    const confirmed = window.confirm(
+      `Permanently delete ${name}?\n\nThis removes their sign-in, profile, services, and invitations everywhere. This cannot be undone.`,
+    );
+    if (!confirmed) return;
+    setNotice(null);
+    setDeletingId(client.id);
+    startTransition(async () => {
+      const result = await deleteClientAction(client.id);
+      setDeletingId(null);
+      if (!result.ok) {
+        setNotice({ kind: "error", text: result.error });
+        return;
+      }
+      setNotice({ kind: "ok", text: `${name} and all their data were deleted.` });
     });
   }
 
@@ -296,12 +318,15 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               <th className="px-4 py-3 font-bold">Status</th>
               <th className="px-4 py-3 font-bold">Services</th>
               <th className="px-4 py-3 font-bold">Invitation</th>
+              <th className="px-4 py-3 text-right font-bold">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-white/40">
+                <td colSpan={6} className="px-4 py-10 text-center text-white/40">
                   {clients.length === 0
                     ? "No clients yet. Create the first one with New Client."
                     : "No clients match your search."}
@@ -359,6 +384,16 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                         </button>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => remove(client)}
+                      className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
+                    >
+                      {deletingId === client.id ? "Deleting..." : "Delete"}
+                    </button>
                   </td>
                 </tr>
               );

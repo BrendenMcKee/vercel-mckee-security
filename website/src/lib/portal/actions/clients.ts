@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
+import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
 import { sendInvitationEmail } from "@/lib/portal/emails";
 import { siteConfig } from "@/lib/site-config";
@@ -176,4 +177,56 @@ export async function resendInviteAction(profileId: string): Promise<ResendInvit
 
   revalidatePath("/admin-dashboard");
   return { ok: true, activateUrl, emailSent, emailAttempted: Boolean(profile.email) };
+}
+
+export type DeleteClientResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Permanently deletes a client and every trace of them: auth user (sign-in),
+ * profile, and via cascade their services and invitations. Restricted to
+ * `role='client'` so an admin can never delete an admin account (or
+ * themselves) from this surface. Runs on the service role because it spans
+ * Supabase Auth + database; `requireAdmin()` is the authorization gate.
+ */
+export async function deleteClientAction(profileId: string): Promise<DeleteClientResult> {
+  await requireAdmin();
+
+  if (!z.uuid().safeParse(profileId).success) {
+    return { ok: false, error: "Invalid client." };
+  }
+
+  // Read through the user-context client (admin RLS) so a revoked admin
+  // cannot even resolve the target.
+  const supabase = await createPortalServerClient();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, role, user_id, first_name, last_name")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (!profile) return { ok: false, error: "Client not found." };
+  if (profile.role !== "client") {
+    return { ok: false, error: "Only client accounts can be deleted here." };
+  }
+
+  const admin = getPortalAdminClient();
+
+  if (profile.user_id) {
+    const { error: authError } = await admin.auth.admin.deleteUser(profile.user_id);
+    if (authError) {
+      console.error("[portal] deleteClient auth deletion failed:", authError);
+      return { ok: false, error: "Could not delete the client's sign-in. Nothing was removed; please try again." };
+    }
+  }
+
+  const { error: profileError } = await admin.from("profiles").delete().eq("id", profileId);
+  if (profileError) {
+    // Auth user is already gone; the remaining profile row is orphaned but
+    // harmless and this action can be retried from the table.
+    console.error("[portal] deleteClient profile deletion failed:", profileError);
+    return { ok: false, error: "Sign-in removed, but profile data deletion failed. Retry to finish." };
+  }
+
+  revalidatePath("/admin-dashboard");
+  return { ok: true };
 }

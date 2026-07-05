@@ -445,7 +445,7 @@ grant execute on function private.is_admin() to authenticated;
 
 | Table | anon | authenticated client | admin |
 |-------|------|----------------------|-------|
-| `profiles` | none | SELECT own (`user_id = auth.uid()`). No INSERT/UPDATE/DELETE (name/address changes go through admin) | SELECT/INSERT/UPDATE all via `private.is_admin()`. DELETE withheld (disable instead) |
+| `profiles` | none | SELECT own (`user_id = auth.uid()`). No INSERT/UPDATE/DELETE (name/address changes go through admin) | SELECT/INSERT/UPDATE all via `private.is_admin()`. No DELETE policy; deletion happens only through `deleteClientAction` (service role behind `requireAdmin()`, client-role targets only, confirm dialog) |
 | `invitations` | none | none (validation happens server-side pre-session via service role) | SELECT/INSERT/UPDATE |
 | `services` | none | SELECT own via profile join | SELECT/INSERT/UPDATE all. Client tier/status changes happen only through server actions and webhooks (service role), never direct client writes |
 | `caller_id_contacts` | none | SELECT/INSERT/DELETE own (+ SELECT required for any UPDATE; list saves are delete+insert in a transaction) | SELECT/INSERT/DELETE all (R23: admin edits on behalf of clients; same save action) |
@@ -837,6 +837,7 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 - [x] R25 forced password setup: Migration 3 (`password_set_at` + backfill from `auth.users.encrypted_password`), dashboard gate, `updatePassword` action, set-password screen with Google-linked success banner (6.4b). Activation suite extended to 23 checks
 - [x] Forgot password: `SignIn` forgot mode, `/account/reset-password` page with link-expired re-request state, callback failures land on the `next` path
 - [x] **[HUMAN]** Custom SMTP for auth emails: done 2026-07-05. Stakeholder placed `RESEND_API_KEY` in `website/.env.local` (git-ignored, verified); `configure-auth-smtp.ps1` applied `smtp.resend.com:465`, sender `McKee Security <info@mckeesecurity.ca>`, rate limit 30/hr, branded recovery/confirmation subjects. Test recovery email dispatched successfully to the stakeholder's admin account
+- [x] Delete client from the admin Clients table (stakeholder 2026-07-05, for test-account hygiene): `deleteClientAction` removes auth user + profile (cascade takes services/invitations) behind an explicit confirm dialog. Restricted to `role='client'`, so admin accounts can never be deleted from the UI; runs on the service role (spans Auth + DB) with `requireAdmin()` as the gate. Full client editing remains Phase 3 client detail
 
 ### Phase 3: Services Display & Management
 
@@ -1006,3 +1007,4 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | Q7 (D6): admin alert inbox = `info@mckeesecurity.ca`. Matches the `CONTACT_EMAIL` default, so `PORTAL_ADMIN_ALERT_EMAIL` stays unset and the code fallback applies |
 | 2026-07-05 | Invitation resend rotates the open invitation row in place (new hash + fresh expiry) rather than expiring and inserting: keeps the one-open-invite-per-profile unique index simple and guarantees the old link dies at the moment of resend |
 | 2026-07-05 | R25: every client must end up with a password, even after Google activation (stakeholder: dummy-proof against "I don't know my password"). Google-activated clients are forced through a set-password screen (with a clear "Google is linked" success indicator) before the dashboard opens; forgot-password flow added; auth emails move to Resend SMTP |
+| 2026-07-05 | Admin delete-client added ahead of the Phase 3 client detail (stakeholder: test-account hygiene). Deletes auth user + profile + cascaded services/invitations; client-role targets only; confirm dialog; service role behind `requireAdmin()`. Orphaned rows from dashboard-side auth deletions cleaned up and both admin accounts re-verified (brenden@mckeesecurity.ca re-seeded after its auth user was deleted in the dashboard; brenden255@gmail.com removed entirely per stakeholder) |
