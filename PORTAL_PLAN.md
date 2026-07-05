@@ -109,6 +109,7 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | R17 | Gateway remote management | **No VPN services or tunnel subscriptions.** Gateways register as free AWS SSM hybrid nodes (outbound HTTPS agent, works through CGNAT): remote shell and run-command are pay-per-use ($0.05/session, $0.002/command, zero standing cost). Day-to-day config changes ride the gateway's own config-poll channel, so SSM is for break-glass support only |
 | R18 | Capture quality | **Mainstream (full resolution H.265) capture is the default**, so retrieved footage is evidence-grade. Continuous recording by default; motion-gated upload available per camera as a cost lever (D9). The NVR remains the on-site system of record |
 | R19 | Retention tiers map to S3 storage classes | 7-day tier = S3 Standard, 30-day = Standard-IA, 90-day = **Glacier Instant Retrieval** ("Arctic"). Each tier's retention window equals its class minimum-duration billing floor, so zero early-delete penalties, and every class serves instant GETs: **no restore jobs anywhere in the product** (9.2.5) |
+| R20 | Storage resolution tiers | Clients choose stored resolution **per camera**: 1080p, 1440p, or 2160p (full 4K). Implementation always prefers native stream copy: 2160p = 4K mainstream, 1080p = camera sub-stream; 1440p = Intel Quick Sync hardware transcode on the gateway (no native UNV 1440p stream exists), budgeted per gateway (9.2.2). The NVR records full 4K mainstream locally in every case. Pricing = retention x resolution matrix (9.2.4, 9.2.7) |
 
 ### Open (stakeholder or phase-gated)
 
@@ -120,7 +121,7 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | D5 | AWS footage storage provisioning | Phase 6A | **Audit finding: no bucket, vault, or IAM exists yet; all greenfield.** Human approves: footage bucket creation (ca-central-1), lifecycle rules per tier (9.2.5), an admin-capable IAM path for the agent or console work, per-site upload credentials model (9.2.3). "Arctic" is implemented as S3 storage classes chosen per retention tier, not a separate product |
 | D6 | Handover Section 18 business answers | Rolling | Blocking map: Q1/Q3 (tier features, monitoring paid in portal?) by Phase 3; Q7 (admin alert inbox) by Phase 2; Q16/Q9 (caller ID min/max, history in UI?) by Phase 4; Q2 (cloud tier pricing) by Phase 5; Q4/Q6 (retention on cancel, link expiry) by Phase 6. Q8 (camera list source) is resolved structurally: cameras are registered rows in the `cameras` table, populated at gateway provisioning (9.2.3) |
 | D7 | Vercel plan cron limits | Phase 6/7 | If on Hobby (daily-only crons), nightly expiry works but the footage poller needs pg_cron or S3 event notifications. Verify plan at Phase 6B kickoff |
-| D8 | Gateway site kit | Phase 6A | Recommendation: fanless x86 mini PC (Intel N100 class, 8GB RAM, 500GB to 1TB NVMe, ~$200 to $280 one-time per site) over Raspberry Pi: native NVMe, better ffmpeg headroom, industrial options exist. Human approves hardware SKU + pilot site (recommendation: one McKee-controlled Starlink site first to prove CGNAT behavior end to end) |
+| D8 | Gateway site kit | Phase 6A | Recommendation: fanless x86 mini PC (Intel N100 class, 8GB RAM, 500GB to 1TB NVMe, ~$200 to $280 one-time per site). **Intel Quick Sync is now a hard requirement** (1440p tier transcode, R20), which rules out Raspberry Pi. Human approves hardware SKU + pilot site (recommendation: one McKee-controlled Starlink site first to prove CGNAT behavior end to end) |
 | D9 | Per-site capture tuning | Phase 6A | Default is continuous mainstream H.265 (R18). Per-camera knobs: bitrate cap pushed to the camera (U-code, target 2 to 3 Mbps for 4MP), motion-gated upload for constrained links or budget-sensitive clients. Confirm defaults against pilot bandwidth data |
 | D10 | Legacy AWS decommission | **Done 2026-07-04** | Executed with stakeholder approval: all six legacy EB applications deleted across both regions, orphaned S3 objects removed, stale security groups detached from RDS, Data Drops + RDS untouched and verified healthy (1.4). Remaining human items: rotate the exposed Gmail app password; remove stale DNS records for the deleted load balancer |
 
@@ -336,6 +337,7 @@ Expiry is computed, not stored: battery `installed_on + interval '5 years'`, smo
 | `name` | text | not null (client-facing label, e.g. "Driveway") |
 | `rtsp_path` | text | not null (gateway-side stream config; never shown to client) |
 | `capture_mode` | text | `'mainstream'` / `'events_only'` / `'substream'` (D9, R18), default `'mainstream'` |
+| `resolution` | text | `'2160p'` / `'1440p'` / `'1080p'` (R20), default `'2160p'`; drives stream selection/transcode and the billing matrix |
 | `active` | boolean | not null default true |
 
 **`gateways`** (Phase 6A; one row per site device)
@@ -546,7 +548,7 @@ Caller ID diff email: added contacts styled green, removed styled red (handover 
 
 ### 9.1 Stripe (Phase 5)
 
-- **Model:** one Stripe Product per service type, one recurring Price per tier (6 prices total; monitoring prices only if Q3 confirms in-portal monitoring payment). Price IDs live in a server-side map in `lib/portal/stripe.ts`, keyed by `(service_type, tier)`. Client code never sends price IDs.
+- **Model:** one Stripe Product per service type. Monitoring: one recurring Price per tier (3 prices, only if Q3 confirms in-portal monitoring payment). Cloud backup: one recurring **per-camera** Price per (retention tier, resolution) cell (9 prices, matrix in 9.2.7); the subscription carries an item per cell in use with quantity = camera count. Price IDs live in a server-side map in `lib/portal/stripe.ts`, keyed by `(service_type, tier, resolution)`. Client code never sends price IDs.
 - **Checkout:** server action verifies the caller owns the `services` row and reads the **admin-assigned tier from the database** (anti-spoofing, handover 9.3), creates a subscription-mode Checkout Session with `customer` (created/reused `stripe_customer_id`), `metadata: { profile_id, service_id, service_type, tier }`, success URL `/user-dashboard?payment=success`, cancel URL `/user-dashboard?payment=cancelled`.
 - **Change Plan (cloud backup):** active subscription exists = server-side `subscriptions.update` swapping the price (proration default), after an explicit confirm dialog. No subscription = new Checkout. **Cancel Plan:** `cancel_at_period_end` (data retention policy per D6/Q4).
 - **Webhook `/api/stripe/webhook`:** raw body via `await req.text()`, `stripe.webhooks.constructEvent` signature verification. Insert into `billing_events` first (PK conflict = already processed, return 200). Handle: `checkout.session.completed` (service -> `active`, store subscription id), `customer.subscription.updated` (tier/status sync), `customer.subscription.deleted` (-> `cancelled`), `invoice.payment_failed` (-> flag + optional admin email). All writes via service role.
@@ -591,8 +593,9 @@ Design rules: the NVR stays the on-site system of record; the cloud copy is the 
 
 #### 9.2.2 Gateway software (`camera-gateway/`)
 
-- Node/TypeScript agent supervised by systemd; ffmpeg spawned per active camera: `rtsp_transport tcp`, mainstream URL (`/media/video1` on UNV), `-c copy` remux into 5-minute fragmented mp4 segments. Stream copy means no transcoding, so even an N100 handles 8+ cameras with trivial CPU.
-- Bitrate is controlled **at the camera** (UNV: H.265 + U-code, target 2 to 3 Mbps for 4MP mainstream), set during install. The gateway does not re-encode; it ships what the camera produces.
+- Node/TypeScript agent supervised by systemd; ffmpeg spawned per active camera: `rtsp_transport tcp`, `-c copy` remux into 5-minute fragmented mp4 segments wherever stream copy is possible. Stream copy means no transcoding, so an N100 handles 8+ copy cameras with trivial CPU.
+- **Resolution tier handling (R20):** 2160p pulls the 4K mainstream (`/media/video1` on UNV), 1080p pulls the camera sub-stream (`/media/video2`, configured 1080p H.265): both are pure stream copies. 1440p has no native UNV stream, so the gateway transcodes mainstream down with Intel Quick Sync (`hevc_qsv`): hardware-accelerated, but budgeted at ~4 concurrent transcodes per N100 gateway, enforced by config validation and confirmed at the bench test. Native copy is always preferred when a camera's stream matches the purchased resolution.
+- Bitrate is controlled **at the camera** for copy paths (UNV: H.265 + U-code; targets: ~5 Mbps 4K mainstream, ~2 Mbps 1080p sub-stream) and at the encoder for the 1440p transcode (~3 Mbps). The NVR keeps recording the full 4K mainstream locally regardless of the purchased cloud resolution.
 - Store-and-forward: segments land on the NVMe queue first; the uploader drains oldest-first with retry/backoff and a per-site bandwidth cap (default: 60% of measured uplink, configurable). A 500GB buffer holds roughly 3.5 days of 4-camera backlog at 3 Mbps; 1TB roughly 7 days. If the buffer high-watermark is hit during an extended outage, oldest segments are dropped and the drop window is reported via heartbeat (the NVR still has that footage locally).
 - Heartbeat every 5 minutes to `/api/gateway/heartbeat` (per-gateway secret, hash in `gateways.secret_hash`): per-camera capture state, queue depth, disk free, cumulative bytes uploaded, agent version. Config changes flow the other way: heartbeat response carries the current `config_version`; on mismatch the agent GETs `/api/gateway/config` and applies (add/remove cameras, caps, capture mode) with no site visit.
 - Clock discipline: NTP required (segment timestamps drive retrieval matching).
@@ -614,22 +617,33 @@ The install must be plug-in-and-verify: no laptop at the site, no router changes
 
 **Credentials (least privilege):** one IAM credential per site allowing `s3:PutObject` + multipart helpers **only under `sites/<site_id>/*`**. No read, no list, no delete, no other prefixes: a stolen gateway cannot read any footage, not even its own site's. Start with per-site IAM users; move to short-lived STS via a token-vending route if the fleet grows (recorded hardening item). Camera rows drive both gateway capture config and the client-facing footage request form (Q8 resolved).
 
-#### 9.2.4 Bandwidth and cost model (mainstream capture, validate in pilot)
+#### 9.2.4 Bandwidth and cost model (retention x resolution matrix, validate in pilot)
 
-The current fleet is mostly **8MP (4K) ColorHunter/LightHunter cameras**, so 8MP mainstream is the primary sizing case; 4MP numbers are kept as the budget/capped profile. H.265 + U-code working bitrates: 8MP ~5 Mbps (4 to 6 real-world), 4MP ~3 Mbps.
+The fleet is mostly **8MP (4K) ColorHunter/LightHunter cameras**; clients choose the stored resolution per camera (R20). H.265 + U-code working bitrates and volumes:
 
-| Item | 8MP @ 5 Mbps (primary) | 4MP @ 3 Mbps (capped profile) |
-|------|------------------------|-------------------------------|
-| Per camera per day | 54 GB | 32.4 GB |
-| 4-camera site uplink | 20 Mbps sustained: at Starlink Residential's ~22 Mbps median, workable but tight (see note) | 12 Mbps: comfortable |
-| Steady-state storage per camera | 7-day: ~378 GB. 30-day: ~1.62 TB. 90-day: ~4.86 TB | 7-day: ~227 GB. 30-day: ~972 GB. 90-day: ~2.92 TB |
-| Monthly wholesale per camera (ca-central-1 approx: Standard ~$0.025, IA ~$0.0138, GIR ~$0.005/GB) | 7-day: **~$9.45**. 30-day: **~$22.40**. 90-day: **~$24.30** | 7-day: **~$5.70**. 30-day: **~$13.40**. 90-day: **~$14.60** |
-| PUT requests, upload transfer | Noise ($0.05 to $0.35/camera/month); transfer into S3 free | Same |
-| Retrieval incident (1 hour of footage) | ~2.25 GB: retrieval fee + $0.09/GB egress = **~$0.27**: noise | ~$0.16 |
+| Resolution | Bitrate | Per camera per day | Path |
+|------------|---------|--------------------|------|
+| 1080p | ~2 Mbps | 21.6 GB | camera sub-stream, copy |
+| 1440p | ~3 Mbps | 32.4 GB | Quick Sync transcode from mainstream |
+| 2160p (4K) | ~5 Mbps | 54 GB | 4K mainstream, copy |
 
-Note the 90-day quirk: Glacier Instant Retrieval is so cheap that 90-day wholesale is barely above 30-day, which makes the 90-day tier the natural high-margin flagship. Starlink capacity note: beyond 4 to 5 cameras at full 8MP continuous, cap bitrate toward 4 Mbps, use motion-gated upload, or put the site on Starlink Priority (40+ Mbps up, public IP); the uploader's bandwidth cap plus buffer absorbs peak-hour dips either way.
+**Monthly wholesale cost per camera** (ca-central-1 approx: Standard ~$0.025, Standard-IA ~$0.0138, Glacier Instant Retrieval ~$0.005 per GB):
 
-Cost levers, in order of impact: **motion-gated upload** (`events_only` typically cuts 70 to 95% at rural sites while the NVR keeps the continuous record), camera bitrate (8MP at 4 Mbps drops every number 20%), and per-camera pricing so heavy sites pay for what they use. Starlink Residential data is unlimited standard data, so upload volume costs the client nothing. Gateway hardware is ~$250 one-time per site: ~$7/month amortized over 3 years, under $2/camera/month on a 4-camera site. These wholesale numbers feed tier pricing (D6/Q2).
+| | 7-day | 30-day | 90-day |
+|-|-------|--------|--------|
+| 1080p | ~$3.80 | ~$8.95 | ~$9.70 |
+| 1440p | ~$5.70 | ~$13.40 | ~$14.60 |
+| 2160p | ~$9.45 | ~$22.40 | ~$24.30 |
+
+Everything else is noise: PUT requests $0.05 to $0.35/camera/month, upload into S3 free, a 1-hour retrieval ~$0.16 to $0.27 all-in. Gateway hardware is ~$250 one-time per site: under $2/camera/month on a 4-camera site amortized over 3 years.
+
+Notes that shape pricing and site design:
+
+- **The 90-day quirk:** Glacier Instant Retrieval is so cheap that 90-day wholesale is barely above 30-day at every resolution, making 90-day the natural high-margin flagship.
+- **Starlink uplink budget** (Residential median ~22 Mbps up): 4 cameras at 2160p = 20 Mbps, workable but tight; at 1440p = 12 Mbps comfortable; at 1080p = 8 Mbps trivial. Mixed-resolution sites usually land comfortably. Beyond 4 to 5 full-4K cameras: drop some to 1440p, use motion-gated upload, or move the site to Starlink Priority (40+ Mbps up). The uploader's bandwidth cap plus the NVMe buffer absorbs peak-hour dips either way.
+- **Cost levers, in order of impact:** motion-gated upload (`events_only` typically cuts 70 to 95% at rural sites while the NVR keeps the continuous record), the resolution tier itself (1080p costs 40% of 4K), and per-camera pricing so heavy sites pay for what they use. Starlink Residential data is unlimited standard data, so upload volume costs the client nothing.
+
+These wholesale numbers feed the retail matrix recommendation in 9.2.7 (final pricing is D6/Q2).
 
 #### 9.2.5 Retention tiers map directly to S3 storage classes (this is "Arctic")
 
@@ -661,7 +675,17 @@ Remote management stack (R17): amazon-ssm-agent registers each gateway as a free
 
 - **Client experience:** the cloud backup card shows per-camera protection status ("Driveway: backed up 3 minutes ago" from heartbeat data), the tier and its retention window, and the footage request form (camera + date/time range). Requests return working links typically within a minute (9.3). No client ever interacts with AWS concepts.
 - **Admin experience:** a fleet board in the admin dashboard: every site, gateway health (last heartbeat, queue depth, disk, per-camera state), storage consumption, and open footage requests. Offline gateways surface red within 30 minutes and email the admin (9.4).
-- **Accounting:** heartbeats carry cumulative uploaded bytes; a nightly rollup writes per-site daily usage (`site_usage` table: `site_id`, `day`, `bytes_uploaded`, unique on both). The admin fleet board shows per-site GB stored and estimated wholesale cost next to the subscription price, so margin per client is visible at a glance. Recommendation for D6/Q2: price cloud backup **per camera per tier** (Stripe subscription quantity = active camera count), since 9.2.4 shows cost scales linearly with cameras; flat per-site pricing hides margin risk on large sites. `billing_events` capture keeps this QB Scope B ready.
+- **Accounting:** heartbeats carry cumulative uploaded bytes; a nightly rollup writes per-site daily usage (`site_usage` table: `site_id`, `day`, `bytes_uploaded`, unique on both). The admin fleet board shows per-site GB stored and estimated wholesale cost next to the subscription price, so margin per client is visible at a glance. Pricing is **per camera per (retention, resolution) cell** (R20): one Stripe Price per cell (9 prices), the site's subscription carries one item per cell in use with quantity = camera count, and resolution changes ride the Change Plan flow (subscription item swap with proration + config-sync to the gateway). Flat per-site pricing is avoided because cost scales linearly with cameras. `billing_events` capture keeps this QB Scope B ready.
+
+Recommended retail matrix at ~60% gross margin, pending D6/Q2 sign-off (wholesale from 9.2.4 in parentheses):
+
+| Per camera per month | 7-day | 30-day | 90-day |
+|----------------------|-------|--------|--------|
+| 1080p | $9.99 (~$3.80) | $21.99 (~$8.95) | $27.99 (~$9.70) |
+| 1440p | $14.99 (~$5.70) | $32.99 (~$13.40) | $41.99 (~$14.60) |
+| 2160p | $24.99 (~$9.45) | $54.99 (~$22.40) | $69.99 (~$24.30) |
+
+Every cell sits between 59% and 66% gross margin, and the ladder reads cleanly to clients: resolution up = quality, retention up = protection.
 - **Support runbook (in `camera-gateway/README.md`):** offline gateway -> check site power/internet, then SSM session; camera down -> config-sync re-push, then discovery re-run; buffer filling -> confirm uplink, lower cap or bitrate. Every action is remote; a truck roll is the last resort.
 
 ### 9.3 Footage retrieval (Phase 6B)
@@ -765,9 +789,9 @@ Each phase ends with a test gate; do not start the next phase with a failing gat
 - [ ] Migration 5: `sites`, `cameras`, `gateways`, `site_usage` (+ RLS incl. `rtsp_path` exclusion for clients)
 - [ ] Admin dashboard: site + camera registration, gateway assignment and secret generation, fleet board (9.2.7: health, storage, margin view)
 - [ ] `/api/gateway/heartbeat` + `/api/gateway/config` routes (per-gateway secret auth, config versioning)
-- [ ] Build `camera-gateway/` agent: mainstream capture (ffmpeg stream-copy segmenting), store-and-forward uploader with bandwidth cap and direct-to-class PUT, heartbeat, config-sync, ONVIF discovery assist
+- [ ] Build `camera-gateway/` agent: capture per resolution tier (stream copy for 2160p/1080p, Quick Sync transcode for 1440p with per-gateway budget), store-and-forward uploader with bandwidth cap and direct-to-class PUT, heartbeat, config-sync, ONVIF discovery assist
 - [ ] Provisioning image: OS + agent + amazon-ssm-agent hybrid registration + identity file; one-page technician SOP in `camera-gateway/README.md`
-- [ ] Bench test: gateway + one UNV camera on the shop network, mainstream H.265, uploading to S3 with per-camera checklist green in the admin dashboard
+- [ ] Bench test: gateway + one 8MP UNV camera on the shop network, all three resolution tiers verified (4K copy, 1080p sub-stream copy, 1440p Quick Sync transcode with measured CPU/GPU load to validate the 4-transcode budget), uploads landing in the correct storage class, per-camera checklist green in the admin dashboard
 - [ ] **[HUMAN]** Pilot install at the selected Starlink site by a technician following only the SOP (agent developer hands-off: this validates the install experience, not just the software)
 
 **Gate:** pilot uploads mainstream continuously for 7 days through Starlink CGNAT with zero inbound ports and no VPN; a forced 2-hour internet outage backfills from the buffer with no gap; a config change (camera rename + bitrate cap) applies remotely via config-sync without a site visit; SSM break-glass session works; heartbeat outage alert reaches the admin; per-site IAM credential verifiably cannot read or list anything; expiration rule observed deleting aged objects (short-window test rule); technician completed the install in under 15 minutes from the SOP alone.
@@ -851,6 +875,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-04 | Plan hardened to v2: verified Next 16 proxy/cookies facts from bundled docs, adopted `getClaims()` + publishable key + required `proxy.ts` per current Supabase SSR guidance, full schema + RLS matrix + flow specs + traceability added. `npm install` run in `website/` (node_modules present). Phase 0 remaining items ready to start |
 | 2026-07-04 | Plan v3: camera cloud backup added end to end. AWS audit via CLI found the legacy `nvr-backup` EB env has **no deployed code** (stock sample app) and no Glacier vaults or footage buckets exist: ingestion is greenfield. Research confirmed UNV NVRs push snapshots only and Starlink CGNAT blocks inbound. Designed gateway-to-S3 ingestion (9.2), lifecycle-based retention (9.2.5), instant presigned retrieval (9.3), new `sites`/`cameras`/`gateways` schema, Phase 6 split into 6A/6B. Legacy EB decommission + Gmail credential rotation flagged (D10) |
 | 2026-07-04 | Plan v4 + AWS cleanup executed. Ingest redesigned around 2026 realities: mainstream H.265 capture (R18, Starlink Gen 4 uplink 15 to 35 Mbps makes it feasible), no VPN anywhere (R17, SSM hybrid nodes now free to register), retention tiers PUT directly into matching storage classes with instant GETs on all tiers (R19: Standard / Standard-IA / Glacier Instant Retrieval = "Arctic"). Zero-touch technician provisioning (9.2.3), full cost model (9.2.4), business ops integration incl. per-site margin visibility (9.2.7). AWS cleaned: six legacy EB apps deleted, only Data Drops (EB + RDS) remains (1.4, D10) |
+| 2026-07-05 | Resolution tiers added (R20): per-camera 1080p/1440p/2160p storage choice. 2160p and 1080p are native stream copies; 1440p uses Quick Sync transcode (Quick Sync now a D8 hardware requirement). Cost model rebuilt as a retention x resolution wholesale matrix (9.2.4) with a 9-cell retail recommendation at ~60% margin (9.2.7); Stripe model updated to per-camera prices per cell (9.1) |
 
 ## 14. Decision Log
 
@@ -867,3 +892,4 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-04 | R18: mainstream (full resolution) capture is the default so retrieved footage is evidence-grade; camera-side H.265/U-code keeps it to 2 to 3 Mbps |
 | 2026-07-04 | R19: tiers map to storage classes with matching minimum durations (Standard / Standard-IA / Glacier Instant Retrieval); direct-to-class PUT, expiration-only lifecycle, instant retrieval on every product tier (9.2.5). Restore-job path dormant unless a Deep Archive tier is sold |
 | 2026-07-04 | D10 executed: legacy AWS decommissioned (six EB apps deleted, both regions); Data Drops EB + RDS are the only remaining AWS workloads (1.4) |
+| 2026-07-05 | R20: client-selectable storage resolution per camera (1080p/1440p/2160p); native stream copy preferred, Quick Sync transcode only for 1440p; billing per camera per (retention, resolution) cell |
