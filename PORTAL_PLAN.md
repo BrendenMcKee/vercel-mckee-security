@@ -782,15 +782,17 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 
 - [x] D1: reuse existing Supabase project, renamed "McKee Security Platform" (2026-07-04)
 - [x] Dev-environment strategy: Supabase development branch (paid plan confirmed, R15)
-- [ ] **[HUMAN]** Add to Vercel (all environments) and `.env.local`: `NEXT_PUBLIC_SUPABASE_URL=https://cxmydfhbclfwzboqibmo.supabase.co` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_4YC9QGFgdzv7GVReW5u3iA_EFKLH-LP` (both values are public-safe by design)
-- [ ] `npm install @supabase/ssr` in `website/`
-- [ ] Create `lib/portal/supabase/{server,client,admin}.ts` + `proxy.ts` with portal-scoped matcher
-- [ ] Scaffold `(portal)` + `(admin-portal)` route groups: branded empty shells, `noindex` metadata, mobile-checked
-- [ ] Remove the 5 legacy redirects from `next.config.ts`
-- [ ] `supabase init` at repo root (`supabase/` directory), link to project
-- [ ] Read `node_modules/next/dist/docs/` guides for proxy, route handlers, server actions before writing auth code
+- [x] **[HUMAN]** Add to Vercel (all environments) and `.env.local`: `NEXT_PUBLIC_SUPABASE_URL=https://cxmydfhbclfwzboqibmo.supabase.co` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_4YC9QGFgdzv7GVReW5u3iA_EFKLH-LP` (both values are public-safe by design) (Vercel by stakeholder, `.env.local` appended 2026-07-05)
+- [x] `npm install @supabase/ssr` in `website/` (2026-07-05)
+- [x] Create `lib/portal/supabase/{server,client,admin}.ts` + `src/proxy.ts` with portal-scoped matcher (`/user-dashboard`, `/admin-dashboard`, `/account`); session refresh logic lives in `lib/portal/supabase/proxy-session.ts` (2026-07-05)
+- [x] Scaffold `(portal)` + `(admin-portal)` route groups: branded empty shells, `noindex` metadata (2026-07-05; visual desktop/mobile check on the next deploy)
+- [x] Remove the 5 legacy redirects from `next.config.ts` (`/login`, `/registration`, `/registration-success`, `/profile`, `/user-dashboard`; 2026-07-05)
+- [x] `supabase init` at repo root (`supabase/` directory), link to project (2026-07-05)
+- [x] Read `node_modules/next/dist/docs/` guides for proxy, route handlers, server actions before writing auth code (proxy.md re-verified 2026-07-05: named `proxy` export + scoped matcher confirmed)
 
 **Gate:** shells render inside site chrome on desktop + mobile preview deploy; a server component successfully queries Supabase; `npm run build` clean; existing Starlink admin and Data Drops still work.
+
+**Gate result (2026-07-05, local production build):** `npm run build` clean; `next start` smoke test: `/user-dashboard`, `/account/activate`, `/admin-dashboard` all 200 with `noindex` and site chrome; `/user-dashboard` server component round-trips Supabase via publishable key (RLS returns zero rows to anon, as designed); `/starlink-admin` and `/data-drops-mckeesecurity` still 200; removed redirects confirmed gone (`/login` now 404). Remaining: visual desktop/mobile check on the Vercel deploy.
 
 ### Phase 1: Auth, Roles, RLS
 
@@ -954,6 +956,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | Line-by-line cross-audit of this plan against all 23 sections + appendices of `PRODUCT_HANDOVER.md`. Five small gaps found and closed: address field on the create-client action (7.2), Q11 privacy review + paused-vs-cancelled semantics tracked in D6, Q5/Q10/Q12/Q13/Q14/Q15 recorded as resolved in D6, admin confirm dialogs for destructive actions (14.2), observability + origin-posture items added to Phase 7 (22.2/22.3). Verdict: full coverage, ready for Phase 0 |
 | 2026-07-05 | R23 per stakeholder: caller ID lists editable by admin as well as client (amends handover 7.5 view-only). Same save action, validation, history (`changed_by`), and diff email on both paths; email documents itself as the Lanvac update trigger with a "changed by" line. RLS, admin client detail, Phase 4 tasks and gate updated |
 | 2026-07-05 | R24 per stakeholder: admin caller ID changes hardened for reconciliation. `caller_id_changes` extended (`changed_via`, `authorized_via`, required `change_reason`, `client_notified_at`) with a DB CHECK and append-only immutability; admin editor blocks save until authorization method + reason are entered; client always emailed the diff + reason with a dispute prompt. Phase 4 gate now tests the rejection, the notification, and the immutability |
+| 2026-07-05 | **Phase 0 executed and gate passed** (local production build). `@supabase/ssr` installed; `lib/portal/supabase/{server,client,admin,proxy-session}.ts` created (publishable-key SSR clients, lazy service-role client mirroring the Starlink pattern); `src/proxy.ts` added with matcher scoped to `/user-dashboard`, `/admin-dashboard`, `/account` (session refresh only, no authorization); `(portal)` and `(admin-portal)` shells live with `noindex`; 5 legacy redirects removed; `supabase init` + `link` done at repo root. Smoke test: portal routes 200 inside site chrome, server component queries Supabase through RLS, Starlink admin + Data Drops unaffected, build clean |
 
 ## 14. Decision Log
 

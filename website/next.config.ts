@@ -18,11 +18,6 @@ const nextConfig: NextConfig = {
       { source: "/checkout", destination: "/contact-us", permanent: true },
       { source: "/monitoring-information", destination: "/security#monitoring", permanent: true },
       { source: "/terms-conditions", destination: "/privacy-policy", permanent: true },
-      { source: "/login", destination: "/our-courses", permanent: true },
-      { source: "/registration", destination: "/our-courses", permanent: true },
-      { source: "/registration-success", destination: "/our-courses", permanent: true },
-      { source: "/profile", destination: "/our-courses", permanent: true },
-      { source: "/user-dashboard", destination: "/our-courses", permanent: true },
       { source: "/our-courses-technician", destination: "/courses/mckee-security-technician", permanent: true },
     ];
   },
