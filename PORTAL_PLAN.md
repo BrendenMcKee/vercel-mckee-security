@@ -113,6 +113,7 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | R20 | Storage resolution tiers | Clients choose stored resolution **per camera**: 1080p, 1440p, or 2160p (full 4K). Implementation is **pure stream copy at every tier, no transcoding**: 2160p pulls the 4K mainstream; 1080p/1440p pull the camera sub-stream, which is set to the purchased resolution on the NVR/camera at install (sub-stream resolution is fully configurable on the fleet, per ops). Lower future tiers (e.g. 720p) are just config plus a new price cell. The NVR records full 4K mainstream locally in every case. Pricing = retention x resolution matrix (9.2.4, 9.2.7) |
 | R21 | Cloud backup plan management is **admin-only** | Supersedes handover 6.3 self-service (stakeholder, 2026-07-05). Clients view backup status and request footage; **all plan assignment, tier/resolution changes, and cancellation are admin actions.** Rationale: the service runs on McKee-managed on-site hardware and NVR/sub-stream configuration (R20), so a plan change is an operational event (config-sync, possibly a camera reconfig), not a self-service toggle. The only client-initiated money action anywhere in the portal is Pay Now checkout for an admin-assigned tier |
 | R22 | Dual billing rails: autopay + manual | Every paid service is `billing_method = 'stripe'` (autopay via Checkout/webhooks) or `'manual'` (legacy e-transfer/cheque/cash). Manual services carry `monthly_amount_cents` + `next_due_on`; a daily cron reminds the client before due and when overdue (R14-style `due_alerted_at` guard, once per cycle) and sends the admin a collections digest so no legacy payment is missed. Payments are recorded in an append-only `manual_payments` ledger that advances `next_due_on`. The admin Billing tab (7.2/7.3) is the collections console; failed Stripe payments land on the same board |
+| R23 | Caller ID lists are editable by **both** client and admin | Amends handover 7.5 (admin was view-only; stakeholder, 2026-07-05). Clients self-manage their list from the dashboard; admins can edit any client's list from client detail (e.g. a change phoned in). **Both paths run the same save action**: transactional replace, diff compute, history row with `changed_by` attribution, and the green/red diff email to the admin inbox. The email fires on every change regardless of who made it, with a "changed by" line, so the Lanvac (monitoring station) update queue stays a single inbox and nothing is missed |
 
 ### Open (stakeholder or phase-gated)
 
@@ -186,7 +187,7 @@ website/
     │   ├── actions/                            # server actions by feature
     │   │   ├── admin-clients.ts                # create/invite/resend/tier changes/cancel/restart
     │   │   ├── activation.ts                   # link auth user to pending profile
-    │   │   ├── caller-id.ts                    # save list + diff + history + admin email
+    │   │   ├── caller-id.ts                    # save list + diff + history + admin email (client and admin paths, R23)
     │   │   ├── devices.ts                      # admin date updates
     │   │   ├── billing.ts                      # checkout session; admin-only plan change/cancel (Phase 5, R21)
     │   │   ├── payments.ts                     # record manual payment, billing method switch (Phase 5, R22)
@@ -440,8 +441,8 @@ grant execute on function private.is_admin() to authenticated;
 | `profiles` | none | SELECT own (`user_id = auth.uid()`). No INSERT/UPDATE/DELETE (name/address changes go through admin) | SELECT/INSERT/UPDATE all via `private.is_admin()`. DELETE withheld (disable instead) |
 | `invitations` | none | none (validation happens server-side pre-session via service role) | SELECT/INSERT/UPDATE |
 | `services` | none | SELECT own via profile join | SELECT/INSERT/UPDATE all. Client tier/status changes happen only through server actions and webhooks (service role), never direct client writes |
-| `caller_id_contacts` | none | SELECT/INSERT/DELETE own (+ SELECT required for any UPDATE; list saves are delete+insert in a transaction) | SELECT all. No admin writes (handover 7.5: admin views, client manages) |
-| `caller_id_changes` | none | none (server action writes with user context INSERT-own policy) | SELECT all |
+| `caller_id_contacts` | none | SELECT/INSERT/DELETE own (+ SELECT required for any UPDATE; list saves are delete+insert in a transaction) | SELECT/INSERT/DELETE all (R23: admin edits on behalf of clients; same save action) |
+| `caller_id_changes` | none | none (server action writes with user context INSERT-own policy) | SELECT all + INSERT (admin-context saves write their own history rows, `changed_by` = admin) |
 | `devices` | none | SELECT own | SELECT/INSERT/UPDATE all |
 | `sites` | none | SELECT own (via profile join), minus ops columns if needed (view or column grants) | SELECT/INSERT/UPDATE all |
 | `cameras` | none | SELECT own active cameras (`id`, `name` only; `rtsp_path` excluded via a `security_invoker` view or column-level grants) | SELECT/INSERT/UPDATE all |
@@ -553,7 +554,7 @@ Layout pattern: follow `starlink-admin` component density. The admin dashboard i
 |-----|--------------|-------|
 | Overview | KPI cards + simple trends: active clients, pending activations, services by type and tier, revenue split autopay vs manual, unpaid services, overdue manual payers, failed card payments (last 30 days), recent activity feed (activations, tier changes, caller ID changes, payments recorded) | 3 skeleton, completed in 5 |
 | Clients | searchable table: instant text filter on name/email, filters for status, service type, tier, billing method, and overdue; sortable columns; pagination; create-client form; row click opens client detail | 2 basic table, 3 search + filters |
-| Client detail | one page per client: profile info, services (assign/modify tier, cancel/restart, set billing method, amount, next due), payment history (both rails), devices, caller IDs + change history, invitation state + resend | 3 core, 5 billing fields |
+| Client detail | one page per client: profile info, services (assign/modify tier, cancel/restart, set billing method, amount, next due), payment history (both rails), devices, caller IDs (view **and edit**, R23) + change history, invitation state + resend | 3 core, 4 caller ID editor, 5 billing fields |
 | Billing | the collections console (7.3): autopay board (active subscriptions, failed payments needing follow-up) and manual board (upcoming dues, overdue highlighted amber/red, one-click record-payment) | 5 |
 | Fleet | gateway health, per-site storage and margin (9.2.7) | 6A (Track 2) |
 | Alerts | recent device expiry alerts, failed email sends, payment follow-ups | 7 |
@@ -580,7 +581,7 @@ Task 2.1 extends `src/lib/email.ts`: optional `to: string | string[]` and `cc` i
 | Template | Trigger | To | Phase |
 |----------|---------|----|----|
 | Account invitation | admin creates client / resend | client | 2 |
-| Caller ID change alert | client saves list | admin inbox (`PORTAL_ADMIN_ALERT_EMAIL`, fallback `CONTACT_EMAIL`) | 4 |
+| Caller ID change alert | client **or admin** saves a list (R23); includes a "changed by" line | admin inbox (`PORTAL_ADMIN_ALERT_EMAIL`, fallback `CONTACT_EMAIL`) | 4 |
 | Device expiry alert | nightly cron detects newly expired | admin + client | 7 |
 | Footage ready | retrieval presigns links, request marked ready | client | 6B |
 | Footage failed | retrieval failure | client + admin | 6B |
@@ -590,7 +591,7 @@ Task 2.1 extends `src/lib/email.ts`: optional `to: string | string[]` and `cc` i
 | Collections digest | cron: any manual payer due or overdue | admin inbox | 7 |
 | Card payment failed | Stripe `invoice.payment_failed` webhook | admin inbox | 5 |
 
-Caller ID diff email: added contacts styled green, removed styled red (handover 6.4), plain-text fallback included. Email send failures are logged and surfaced in the admin alerts area (handover 22.3); a failed notification never rolls back the underlying save.
+Caller ID diff email: added contacts styled green, removed styled red (handover 6.4), plain-text fallback included. This email is the operational trigger for staff to update Lanvac (the alarm monitoring station), so it fires on every list change from either side (R23) and names who made the change. Email send failures are logged and surfaced in the admin alerts area (handover 22.3); a failed notification never rolls back the underlying save.
 
 ---
 
@@ -820,12 +821,12 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 ### Phase 4: Caller ID & Devices
 
 - [ ] Migration 3: `caller_id_contacts`, `caller_id_changes`, `devices` (+ RLS)
-- [ ] `phone.ts` normalization; caller ID card with add/remove/save; save action: transactional replace, diff compute, history insert, admin email (green/red diff)
+- [ ] `phone.ts` normalization; caller ID card with add/remove/save; save action: transactional replace, diff compute, history insert with `changed_by`, admin email (green/red diff + "changed by" line)
 - [ ] Devices card with expiry highlighting; admin device date editor (updates clear `expiry_alerted_at`)
-- [ ] Admin caller ID viewer + history
+- [ ] Admin caller ID editor + history in client detail (R23: same save action in admin context, same email and validation rules)
 - [ ] **[HUMAN]** D6/Q16+Q9 answered (cap, history in UI)
 
-**Gate:** saving a change emails admin with the exact correct diff; duplicate phone rejected; invalid format rejected; device installed 2018 renders expired with amber/error styling; admin date update clears the expired state.
+**Gate:** saving a change (from the client dashboard and separately from the admin editor) emails admin with the exact correct diff and correct "changed by" attribution; duplicate phone rejected; invalid format rejected on both paths; history shows both actors; device installed 2018 renders expired with amber/error styling; admin date update clears the expired state.
 
 ### Phase 5: Stripe & Billing
 
@@ -888,7 +889,7 @@ Track 1 scope: build the complete billing rails on **both methods** (R22): Strip
 | Cloud backup: client requests footage; plan is admin-managed (6.3 as amended 2026-07-05, R21) | Phase 6B request flow (9.3); admin-only plan actions on Phase 5 rails; no client change/cancel UI anywhere |
 | Legacy (non-card) payers are reminded, tracked, and collected (stakeholder 2026-07-05) | R22: `billing_method` + `manual_payments` ledger + payment-due cron + Billing tab (4.2, 7.3, 9.4) |
 | Admin can search, analyze, and manage the whole client base from one console (7, stakeholder 2026-07-05) | Tabbed admin dashboard: Overview KPIs, searchable Clients, Billing collections console (7.2/7.3) |
-| Caller ID changes alert admin with green/red diff (6.4, 12) | Save action diff + email (Section 8); history table |
+| Caller ID changes alert admin with green/red diff (6.4, 12; 7.5 as amended by R23) | Single save action for client and admin edits: diff + email with attribution (Section 8); `caller_id_changes` history with `changed_by` |
 | Device expiry 5yr battery / 10yr smoke, alerts to both parties (6.5, 11.9) | Computed expiry (4.2); nightly cron + `expiry_alerted_at` (9.4, R14) |
 | Cloud retention tiers 7/30/90-day actually enforced (9.2 handover) | Direct-to-class PUT + expiration-only lifecycle per site prefix (9.2.5, R19) |
 | Footage stored durably off-site at evidence quality and retrievable (6.3, 13) | Mainstream gateway ingestion (9.2, R18), outbound-only through CGNAT with no VPN (1.5, R17); instant presigned retrieval on all tiers (9.3) |
@@ -942,6 +943,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | Final pre-build audit passed. Build order locked: Track 1 = core portal (Phases 0-5, 7), Track 2 = camera cloud backup (6A/6B) after launch. Cloud backup client purchase flows deferred to Track 2; Q2 pricing moved to the 6A gate. Plan v4.2, ready for Phase 0 |
 | 2026-07-05 | Plan v4.3 per stakeholder: cloud backup plan management locked to admin (R21, supersedes handover 6.3 self-service). Admin console fully specified: Overview analytics, searchable Clients tab, Billing collections console (7.2/7.3). Dual billing rails added (R22): `billing_method` on services, append-only `manual_payments` ledger, payment-due reminder cron with admin collections digest, new emails, D11 opened. Schema, RLS, Stripe, phases, traceability all updated |
 | 2026-07-05 | Line-by-line cross-audit of this plan against all 23 sections + appendices of `PRODUCT_HANDOVER.md`. Five small gaps found and closed: address field on the create-client action (7.2), Q11 privacy review + paused-vs-cancelled semantics tracked in D6, Q5/Q10/Q12/Q13/Q14/Q15 recorded as resolved in D6, admin confirm dialogs for destructive actions (14.2), observability + origin-posture items added to Phase 7 (22.2/22.3). Verdict: full coverage, ready for Phase 0 |
+| 2026-07-05 | R23 per stakeholder: caller ID lists editable by admin as well as client (amends handover 7.5 view-only). Same save action, validation, history (`changed_by`), and diff email on both paths; email documents itself as the Lanvac update trigger with a "changed by" line. RLS, admin client detail, Phase 4 tasks and gate updated |
 
 ## 14. Decision Log
 
@@ -962,3 +964,4 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | Two-track build order: core portal ships first (0-5, 7), camera cloud backup (6A/6B) starts after launch. Camera design stays fully specified in this plan; nothing in Track 1 depends on it |
 | 2026-07-05 | R21: cloud backup plan management is admin-only (stakeholder override of handover 6.3 self-service): the service runs on McKee-managed hardware, so plan changes are operational events. Clients keep footage requests and Pay Now only |
 | 2026-07-05 | R22: dual billing rails. `billing_method` per service (`stripe`/`manual`); manual payers get automated due reminders and an admin collections digest; payments recorded in append-only `manual_payments`. Admin Billing tab is the collections console |
+| 2026-07-05 | R23: caller ID lists editable by both client and admin (amends handover 7.5). One shared save action; every change emails the admin inbox with attribution because that email drives the Lanvac (monitoring station) update |
