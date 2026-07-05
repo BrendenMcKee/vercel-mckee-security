@@ -36,6 +36,7 @@ export function SignIn({
 }) {
   const copy = COPY[variant];
   const router = useRouter();
+  const [mode, setMode] = useState<"signin" | "forgot" | "sent">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +72,101 @@ export function SignIn({
       return;
     }
     router.refresh();
+  }
+
+  async function sendResetLink(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setPending(true);
+    const supabase = createPortalBrowserClient();
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent("/account/reset-password")}`,
+    });
+    setPending(false);
+    if (resetError) {
+      setError("Could not send the reset email right now. Please try again in a few minutes.");
+      return;
+    }
+    setMode("sent");
+  }
+
+  if (mode === "sent") {
+    return (
+      <section className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-4 py-20">
+        <p className="text-sm font-bold uppercase tracking-widest text-primary">
+          {copy.eyebrow}
+        </p>
+        <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
+          Check Your Email
+        </h1>
+        <p className="mt-4 max-w-sm text-center text-base leading-relaxed text-white/65">
+          If an account exists for{" "}
+          <span className="font-bold text-white">{email}</span>, a password
+          reset link is on its way. The link expires after one hour.
+        </p>
+        <button
+          type="button"
+          onClick={() => setMode("signin")}
+          className="mt-6 cursor-pointer text-sm font-bold text-white/70 underline underline-offset-4 hover:text-white"
+        >
+          Back to sign in
+        </button>
+      </section>
+    );
+  }
+
+  if (mode === "forgot") {
+    return (
+      <section className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-4 py-20">
+        <p className="text-sm font-bold uppercase tracking-widest text-primary">
+          {copy.eyebrow}
+        </p>
+        <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
+          Forgot Password
+        </h1>
+        <p className="mt-4 max-w-sm text-center text-base leading-relaxed text-white/65">
+          Enter your email and we&apos;ll send you a link to reset your password.
+        </p>
+        <form
+          onSubmit={sendResetLink}
+          className="mt-8 flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-surface p-6"
+        >
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Email
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-xl border border-white/15 bg-background px-4 py-3 text-white outline-none transition-colors focus:border-primary"
+            />
+          </label>
+          {error && (
+            <p role="alert" className="text-sm text-[#f57c00]">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={pending}
+            className="cursor-pointer rounded-xl bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+          >
+            {pending ? "Sending..." : "Send Reset Link"}
+          </button>
+        </form>
+        <button
+          type="button"
+          onClick={() => {
+            setMode("signin");
+            setError(null);
+          }}
+          className="mt-6 cursor-pointer text-sm font-bold text-white/70 underline underline-offset-4 hover:text-white"
+        >
+          Back to sign in
+        </button>
+      </section>
+    );
   }
 
   return (
@@ -130,6 +226,17 @@ export function SignIn({
               className="rounded-xl border border-white/15 bg-background px-4 py-3 text-white outline-none transition-colors focus:border-primary"
             />
           </label>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("forgot");
+              setError(null);
+            }}
+            className="-mt-2 cursor-pointer self-end text-xs font-bold text-white/50 underline underline-offset-4 transition-colors hover:text-white"
+          >
+            Forgot password?
+          </button>
 
           {error && (
             <p role="alert" className="text-sm text-[#f57c00]">

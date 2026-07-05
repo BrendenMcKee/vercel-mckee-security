@@ -28,12 +28,21 @@ const TOKEN_ERROR =
  * `user_id is null` + `status='pending'` so a concurrent activation loses
  * cleanly (zero rows) instead of stealing the profile.
  */
-async function linkProfileToUser(profileId: string, invitationId: string, userId: string): Promise<boolean> {
+async function linkProfileToUser(
+  profileId: string,
+  invitationId: string,
+  userId: string,
+  opts?: { passwordSet?: boolean },
+): Promise<boolean> {
   const admin = getPortalAdminClient();
 
   const { data: linked, error } = await admin
     .from("profiles")
-    .update({ user_id: userId, status: "active" })
+    .update({
+      user_id: userId,
+      status: "active",
+      ...(opts?.passwordSet ? { password_set_at: new Date().toISOString() } : {}),
+    })
     .eq("id", profileId)
     .is("user_id", null)
     .eq("status", "pending")
@@ -115,7 +124,9 @@ export async function activateWithPassword(input: {
     return { ok: false, error: "Could not create your account. Please try again." };
   }
 
-  const linked = await linkProfileToUser(profile.id, invitation.id, created.user.id);
+  const linked = await linkProfileToUser(profile.id, invitation.id, created.user.id, {
+    passwordSet: true,
+  });
   if (!linked) {
     await admin.auth.admin.deleteUser(created.user.id).catch((cleanupError) => {
       console.error("[portal] Activation compensation failed:", cleanupError);

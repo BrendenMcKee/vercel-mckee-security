@@ -22,5 +22,9 @@ export async function GET(request: NextRequest) {
     console.warn("[portal] OAuth code exchange failed:", error.message);
   }
 
-  return NextResponse.redirect(`${origin}/user-dashboard?auth_error=callback`);
+  // Land failures on the intended destination: sign-in pages render the
+  // logged-out state and /account/reset-password renders its link-expired
+  // state, each with a retry path.
+  const separator = safeNext.includes("?") ? "&" : "?";
+  return NextResponse.redirect(`${origin}${safeNext}${separator}auth_error=callback`);
 }

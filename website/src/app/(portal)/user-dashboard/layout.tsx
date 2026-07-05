@@ -1,6 +1,7 @@
 import { getAuthContext } from "@/lib/portal/auth";
 import { SignIn } from "@/components/portal/sign-in";
 import { OrphanAccount } from "@/components/portal/orphan-account";
+import { PasswordSetup } from "@/components/portal/password-setup";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
 /**
@@ -29,6 +30,19 @@ export default async function UserDashboardLayout({
 
   if (profile.status === "disabled") {
     return <OrphanAccount email={user.email} />;
+  }
+
+  // Dummy-proofing (stakeholder 2026-07-05): a client who activated via Google
+  // must set a backup password before the dashboard opens, so "I forgot which
+  // way I sign in" can never lock anyone out. Enforced on every visit until set.
+  if (profile.role === "client" && !profile.password_set_at) {
+    return (
+      <PasswordSetup
+        variant="first-access"
+        googleLinked={user.providers.includes("google")}
+        email={user.email}
+      />
+    );
   }
 
   return (

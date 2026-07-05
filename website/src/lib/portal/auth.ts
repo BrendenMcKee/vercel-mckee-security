@@ -8,7 +8,12 @@ export type PortalProfile = Tables<"profiles">;
 
 export type AuthContext = {
   /** JWT-derived identity, null when signed out. */
-  user: { id: string; email: string | null } | null;
+  user: {
+    id: string;
+    email: string | null;
+    /** Linked auth providers from JWT app_metadata (e.g. ["google"], ["email"]). */
+    providers: string[];
+  } | null;
   /** Linked profile row (RLS: own row only), null when signed out or orphaned. */
   profile: PortalProfile | null;
 };
@@ -36,8 +41,14 @@ export const getAuthContext = cache(async (): Promise<AuthContext> => {
     .eq("user_id", claims.sub)
     .maybeSingle();
 
+  const appMetadata = claims.app_metadata as { providers?: string[] } | undefined;
+
   return {
-    user: { id: claims.sub, email: (claims.email as string | undefined) ?? null },
+    user: {
+      id: claims.sub,
+      email: (claims.email as string | undefined) ?? null,
+      providers: appMetadata?.providers ?? [],
+    },
     profile: profile ?? null,
   };
 });

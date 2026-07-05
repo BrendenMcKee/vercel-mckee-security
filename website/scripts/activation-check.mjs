@@ -198,6 +198,48 @@ try {
     check("activated client A sees exactly own 2 services via RLS", ownServices?.length === 2);
   }
 
+  // --- F2: forced password setup after Google activation ---------------------
+  // Google-path activations leave password_set_at null, so the dashboard gate
+  // must show the set-password screen instead of the dashboard.
+  {
+    const cookies = await sessionCookiesFor(googleA.email, googleA.password);
+    const res = await fetch(`${baseUrl}/user-dashboard`, { headers: { cookie: cookies } });
+    const html = await res.text();
+    check(
+      "google-activated client is forced to set a password",
+      res.status === 200 && html.includes("One Last Step") && !html.includes("Welcome,"),
+      `status=${res.status}`,
+    );
+  }
+  {
+    // Setting a password (simulated: stamp as the updatePassword action does)
+    // releases the gate.
+    await admin.from("profiles")
+      .update({ password_set_at: new Date().toISOString() })
+      .eq("id", profileIdA);
+    const cookies = await sessionCookiesFor(googleA.email, googleA.password);
+    const res = await fetch(`${baseUrl}/user-dashboard`, { headers: { cookie: cookies } });
+    const html = await res.text();
+    check(
+      "dashboard opens once password_set_at is stamped",
+      res.status === 200 && html.includes("Alice"),
+      `status=${res.status}`,
+    );
+  }
+
+  // --- F3: reset-password page states ----------------------------------------
+  {
+    const res = await fetch(`${baseUrl}/account/reset-password`);
+    const html = await res.text();
+    check("reset page without session shows link-expired state", res.status === 200 && html.includes("Link Expired"), `status=${res.status}`);
+  }
+  {
+    const cookies = await sessionCookiesFor(googleA.email, googleA.password);
+    const res = await fetch(`${baseUrl}/account/reset-password`, { headers: { cookie: cookies } });
+    const html = await res.text();
+    check("reset page with session shows password form", res.status === 200 && html.includes("Reset Your Password"), `status=${res.status}`);
+  }
+
   // --- G: token reuse fails --------------------------------------------------
   {
     const res = await fetch(`${baseUrl}/account/activate?token=${tokenA.raw}`);

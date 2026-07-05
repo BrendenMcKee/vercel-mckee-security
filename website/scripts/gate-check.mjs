@@ -63,6 +63,9 @@ async function makeUser(role, firstName) {
     email,
     role,
     status: "active",
+    // These users authenticate with a password, so the first-access password
+    // gate must not intercept them.
+    password_set_at: new Date().toISOString(),
   });
   if (profileError) throw profileError;
   return { email, password };
