@@ -526,7 +526,7 @@ Resend (handover 7.3): expire open invitation, create new token, re-send. Availa
 
 ### 6.5 Admin access gate
 
-`(admin-portal)/layout.tsx`: `getClaims()`; then fetch own profile via user-context client; `role !== 'admin'` renders a neutral not-found response (do not advertise the route). Every admin server action independently calls `requireAdmin()` (fresh DB check, not JWT claims, so demotions apply immediately).
+`(admin-portal)/layout.tsx`: `getClaims()`; then fetch own profile via user-context client. **Signed-out visitors get the shared `SignIn` screen in place** (stakeholder, 2026-07-05: admins should be able to sign in directly at `/admin-dashboard`; the Google flow returns them there via `next=/admin-dashboard`). A **signed-in** user whose `role !== 'admin'` still gets the neutral not-found response, so authenticated clients never learn the admin console exists. Every admin server action independently calls `requireAdmin()` (fresh DB check, not JWT claims, so demotions apply immediately).
 
 ### 6.6 Orphan and hygiene rules
 

@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { createPortalBrowserClient } from "@/lib/portal/supabase/client";
 
 /**
- * Logged-out state for /user-dashboard (PORTAL_PLAN.md 6.1): prominent
- * Google sign-in, secondary email/password form. Rendered in place by the
- * dashboard layout; no dedicated /login route exists.
+ * Logged-out state for /user-dashboard and /admin-dashboard (PORTAL_PLAN.md
+ * 6.1): prominent Google sign-in, secondary email/password form. Rendered in
+ * place by the layout gates; no dedicated /login route exists.
+ *
+ * `next` controls where the Google OAuth callback lands (email/password uses
+ * router.refresh(), which re-renders the current route either way).
  */
-export function SignIn() {
+export function SignIn({ next = "/user-dashboard" }: { next?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +27,7 @@ export function SignIn() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=/user-dashboard`,
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
     if (oauthError) {
@@ -65,7 +68,7 @@ export function SignIn() {
           type="button"
           onClick={signInWithGoogle}
           disabled={googlePending || pending}
-          className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-6 py-3 text-sm font-bold uppercase tracking-wide text-neutral-900 transition-all duration-200 hover:bg-white/90 disabled:opacity-50"
+          className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl bg-white px-6 py-3 text-sm font-bold uppercase tracking-wide text-neutral-900 transition-all duration-200 hover:bg-white/90 disabled:cursor-default disabled:opacity-50"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" />
@@ -115,7 +118,7 @@ export function SignIn() {
           <button
             type="submit"
             disabled={pending || googlePending}
-            className="rounded-xl bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:opacity-50"
+            className="cursor-pointer rounded-xl bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
           >
             {pending ? "Signing in..." : "Sign In"}
           </button>
