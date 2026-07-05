@@ -174,7 +174,7 @@ export function SignIn({
             />
           </label>
           {error && (
-            <p role="alert" className="text-sm text-[#f57c00]">
+            <p role="alert" className="text-center text-sm text-[#f57c00]">
               {error}
             </p>
           )}
@@ -270,7 +270,7 @@ export function SignIn({
           </button>
 
           {error && (
-            <p role="alert" className="text-sm text-[#f57c00]">
+            <p role="alert" className="text-center text-sm text-[#f57c00]">
               {error}
             </p>
           )}
