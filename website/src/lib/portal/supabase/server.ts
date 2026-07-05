@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/lib/portal/database.types";
 
 /**
  * Per-request Supabase client for Server Components, Server Actions, and
@@ -12,7 +13,7 @@ import { createServerClient } from "@supabase/ssr";
 export async function createPortalServerClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {

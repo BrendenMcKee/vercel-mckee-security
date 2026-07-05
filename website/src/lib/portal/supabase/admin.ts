@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/portal/database.types";
 
 /**
  * Server-only service-role Supabase client for the portal.
@@ -15,14 +16,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * the build.
  */
 
-let cached: SupabaseClient | null = null;
+let cached: SupabaseClient<Database> | null = null;
 
 export function isPortalAdminConfigured(): boolean {
   const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   return Boolean(url && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-export function getPortalAdminClient(): SupabaseClient {
+export function getPortalAdminClient(): SupabaseClient<Database> {
   const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -33,7 +34,7 @@ export function getPortalAdminClient(): SupabaseClient {
   }
 
   if (!cached) {
-    cached = createClient(url, key, {
+    cached = createClient<Database>(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
   }

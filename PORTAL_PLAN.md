@@ -797,14 +797,16 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 ### Phase 1: Auth, Roles, RLS
 
 - [ ] **[HUMAN]** D2/D3: Google OAuth client created; provider enabled in Supabase dashboard
-- [ ] Agent: PATCH auth config (`site_url`, redirect allow-list) via Management API
-- [ ] Migration 1: enums, `private.is_admin()`, `profiles`, `set_updated_at()`, RLS policies per 4.3
-- [ ] `auth.ts` helpers; `SignIn` component; OAuth callback route; orphan screen (6.1 step 5)
-- [ ] Admin layout gate; seed first admin user (5.5)
-- [ ] Generate `database.types.ts`
-- [ ] Run `get_advisors` (security) and resolve findings
+- [x] Agent: PATCH auth config (`site_url`, redirect allow-list) via Management API (2026-07-05: `site_url=https://mckeesecurity.ca`, 4-entry allow-list verified)
+- [x] Migration 1: enums, `private.is_admin()`, `profiles`, `set_updated_at()`, RLS policies per 4.3 (`20260705164500_portal_foundation.sql`; iterated on the `develop` branch per 4.4, promoted via `supabase db push`; the two 2026-06-29 Starlink migrations backfilled as local files to sync history)
+- [x] `auth.ts` helpers; `SignIn` component; OAuth callback route; orphan screen (6.1 step 5) (2026-07-05; the auth gate lives in `user-dashboard/layout.tsx`, not the `(portal)` group layout, so `/account/activate` stays anonymous-accessible for invitees)
+- [x] Admin layout gate; seed first admin user (5.5) (brenden@mckeesecurity.ca seeded active admin via `scripts/seed-admin.mjs`; auth user created without password, signs in via Google once the provider is enabled)
+- [x] Generate `database.types.ts` (2026-07-05, wired into all three portal Supabase clients)
+- [x] Run `get_advisors` (security) and resolve findings (fixed `function_search_path_mutable` on `private.set_updated_at`; remaining: the two intentional INFO lints on `units`/`rentals`)
 
 **Gate (test matrix):** Google sign-in works on preview; email sign-in works; signed-out visitor to `/admin-dashboard` and client-role visitor both denied; two test users cannot read each other's `profiles` rows through the publishable-key client (scripted check); advisors clean.
+
+**Gate result (2026-07-05, all scripted except Google):** `scripts/rls-check.mjs` 8/8 PASS on production (anon zero rows; user A sees exactly own profile, cannot read B, cannot INSERT, cannot self-promote; `units`/`rentals` closed to authenticated). `scripts/gate-check.mjs` 5/5 PASS with real session cookies against the production build (client sees welcome dashboard; client gets 404 on `/admin-dashboard`; admin reaches it; signed-out gets SignIn on `/user-dashboard` and 404 on `/admin-dashboard`). Email sign-in verified via `signInWithPassword` in both scripts. Build clean. **Remaining: Google sign-in on preview, blocked on the [HUMAN] OAuth step.**
 
 ### Phase 2: Provisioning & Activation
 
@@ -957,6 +959,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | R23 per stakeholder: caller ID lists editable by admin as well as client (amends handover 7.5 view-only). Same save action, validation, history (`changed_by`), and diff email on both paths; email documents itself as the Lanvac update trigger with a "changed by" line. RLS, admin client detail, Phase 4 tasks and gate updated |
 | 2026-07-05 | R24 per stakeholder: admin caller ID changes hardened for reconciliation. `caller_id_changes` extended (`changed_via`, `authorized_via`, required `change_reason`, `client_notified_at`) with a DB CHECK and append-only immutability; admin editor blocks save until authorization method + reason are entered; client always emailed the diff + reason with a dispute prompt. Phase 4 gate now tests the rejection, the notification, and the immutability |
 | 2026-07-05 | **Phase 0 executed and gate passed** (local production build). `@supabase/ssr` installed; `lib/portal/supabase/{server,client,admin,proxy-session}.ts` created (publishable-key SSR clients, lazy service-role client mirroring the Starlink pattern); `src/proxy.ts` added with matcher scoped to `/user-dashboard`, `/admin-dashboard`, `/account` (session refresh only, no authorization); `(portal)` and `(admin-portal)` shells live with `noindex`; 5 legacy redirects removed; `supabase init` + `link` done at repo root. Smoke test: portal routes 200 inside site chrome, server component queries Supabase through RLS, Starlink admin + Data Drops unaffected, build clean |
+| 2026-07-05 | **Phase 1 executed; gate passed except the Google [HUMAN] item.** Supabase `develop` branch created (R15, ~$0.013/hr) and used to iterate Migration 1 per 4.4; advisors caught a mutable `search_path` on `set_updated_at`, fixed before promotion. `portal_foundation` migration live on production (enums, `private.is_admin()`, `profiles` + RLS); the two 2026-06-29 Starlink migrations backfilled as local files to sync CLI history. Auth config PATCHed (`site_url`, allow-list). `auth.ts` (`getAuthContext` cached per request, `requireUser`, `requireAdmin` with fresh DB role checks), `SignIn`, sign-out, orphan screen, PKCE callback route, dashboard + admin layout gates built; gate moved to `user-dashboard/layout.tsx` so `/account/activate` stays anonymous. `database.types.ts` generated and typed into all portal clients. First admin seeded (brenden@mckeesecurity.ca, Google sign-in pending provider enable). Scripted verification: `rls-check.mjs` 8/8, `gate-check.mjs` 5/5 (real session cookies against the production build). Service-role key added to `.env.local` via CLI without chat exposure |
 
 ## 14. Decision Log
 

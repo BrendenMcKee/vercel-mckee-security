@@ -7,8 +7,9 @@ export const metadata: Metadata = {
 /**
  * Client portal route group: /user-dashboard, /account/activate.
  *
- * Phase 0: branded shell only. Phase 1 adds the getClaims() gate that renders
- * <SignIn/> for logged-out visitors (PORTAL_PLAN.md Section 6.1).
+ * Deliberately gate-free: /account/activate must render for anonymous
+ * invitees (PORTAL_PLAN.md 6.3). The auth gate lives in
+ * user-dashboard/layout.tsx.
  */
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   return <div className="portal-area">{children}</div>;
