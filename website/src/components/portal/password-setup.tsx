@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updatePassword } from "@/lib/portal/actions/password";
+import { PasswordInput } from "@/components/portal/password-input";
 
 const COPY = {
   "first-access": {
@@ -34,6 +35,7 @@ export function PasswordSetup({
   const copy = COPY[variant];
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [revealed, setRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -97,27 +99,27 @@ export function PasswordSetup({
       >
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
           New password
-          <input
-            type="password"
+          <PasswordInput
             required
             minLength={8}
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-xl border border-white/15 bg-background px-4 py-3 text-white outline-none transition-colors focus:border-primary"
+            revealed={revealed}
+            onToggleReveal={() => setRevealed((v) => !v)}
           />
           <span className="text-xs text-white/40">At least 8 characters.</span>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
           Confirm password
-          <input
-            type="password"
+          <PasswordInput
             required
             minLength={8}
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="rounded-xl border border-white/15 bg-background px-4 py-3 text-white outline-none transition-colors focus:border-primary"
+            revealed={revealed}
+            onToggleReveal={() => setRevealed((v) => !v)}
           />
         </label>
 

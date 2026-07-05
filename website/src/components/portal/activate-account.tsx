@@ -6,6 +6,7 @@ import {
   activateWithPassword,
   beginGoogleActivation,
 } from "@/lib/portal/actions/activation";
+import { PasswordInput } from "@/components/portal/password-input";
 
 /**
  * Activation chooser (PORTAL_PLAN.md 6.3 step 2 / 6.4 step 1): Google first,
@@ -22,6 +23,7 @@ export function ActivateAccount({
   const [email, setEmail] = useState(targetEmail ?? "");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [revealed, setRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [googlePending, setGooglePending] = useState(false);
   const [confirmEmailSent, setConfirmEmailSent] = useState(false);
@@ -127,27 +129,27 @@ export function ActivateAccount({
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
           Password
-          <input
-            type="password"
+          <PasswordInput
             required
             minLength={8}
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-xl border border-white/15 bg-background px-4 py-3 text-white outline-none transition-colors focus:border-primary"
+            revealed={revealed}
+            onToggleReveal={() => setRevealed((v) => !v)}
           />
           <span className="text-xs text-white/40">At least 8 characters.</span>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
           Confirm password
-          <input
-            type="password"
+          <PasswordInput
             required
             minLength={8}
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="rounded-xl border border-white/15 bg-background px-4 py-3 text-white outline-none transition-colors focus:border-primary"
+            revealed={revealed}
+            onToggleReveal={() => setRevealed((v) => !v)}
           />
         </label>
 

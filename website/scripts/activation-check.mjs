@@ -142,6 +142,7 @@ try {
     const res = await fetch(`${baseUrl}/account/activate?token=${tokenA.raw}`);
     const html = await res.text();
     check("valid token renders chooser with first name", res.status === 200 && html.includes("Alice") && html.includes("Continue with Google"), `status=${res.status}`);
+    check("password fields have reveal eyeballs (hidden by default)", (html.match(/aria-label="Show passwords"/g) ?? []).length === 2);
   }
   {
     const res = await fetch(`${baseUrl}/account/activate?token=not-a-real-token`);
