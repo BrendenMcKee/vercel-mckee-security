@@ -2,7 +2,7 @@
 
 > **Single source of truth for building the portal in this repo.** Read this before each portal work session so context never drifts.
 >
-> **Requirements source of truth:** [`PRODUCT_HANDOVER.md`](./PRODUCT_HANDOVER.md) defines *what* the portal must do and *why* (business rules, roles, workflows). This document defines *how* it gets built in this repository: exact routes, files, schema, RLS policies, flows, phases, and checkpoints. If the two conflict on a business rule, the handover wins. If they conflict on implementation detail, this plan wins because it is verified against the actual codebase and live infrastructure.
+> **Requirements source of truth:** [`PRODUCT_HANDOVER.md`](./PRODUCT_HANDOVER.md) defines *what* the portal must do and *why* (business rules, roles, workflows). This document defines *how* it gets built in this repository: exact routes, files, schema, RLS policies, flows, phases, and checkpoints. If the two conflict on a business rule, the handover wins, **unless a dated stakeholder decision in the Decision Register amends the handover** (e.g. R21). If they conflict on implementation detail, this plan wins because it is verified against the actual codebase and live infrastructure.
 
 **Product:** Client and admin portal built natively into the live `mckeesecurity.ca` Next.js site.
 **Scope:** Handover Sections 1 to 22 (core portal, Phases 0 to 7). QuickBooks plumbing (Scope B) and the accounting agent (Scope C) are deferred; the only obligation toward them is clean Stripe event and customer record-keeping (Section 8 of this plan).
@@ -111,6 +111,8 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | R18 | Capture quality | **Mainstream (full resolution H.265) capture is the default**, so retrieved footage is evidence-grade. Continuous recording by default; motion-gated upload available per camera as a cost lever (D9). The NVR remains the on-site system of record |
 | R19 | Retention tiers map to S3 storage classes | 7-day tier = S3 Standard, 30-day = Standard-IA, 90-day = **Glacier Instant Retrieval** ("Arctic"). Each tier's retention window equals its class minimum-duration billing floor, so zero early-delete penalties, and every class serves instant GETs: **no restore jobs anywhere in the product** (9.2.5) |
 | R20 | Storage resolution tiers | Clients choose stored resolution **per camera**: 1080p, 1440p, or 2160p (full 4K). Implementation is **pure stream copy at every tier, no transcoding**: 2160p pulls the 4K mainstream; 1080p/1440p pull the camera sub-stream, which is set to the purchased resolution on the NVR/camera at install (sub-stream resolution is fully configurable on the fleet, per ops). Lower future tiers (e.g. 720p) are just config plus a new price cell. The NVR records full 4K mainstream locally in every case. Pricing = retention x resolution matrix (9.2.4, 9.2.7) |
+| R21 | Cloud backup plan management is **admin-only** | Supersedes handover 6.3 self-service (stakeholder, 2026-07-05). Clients view backup status and request footage; **all plan assignment, tier/resolution changes, and cancellation are admin actions.** Rationale: the service runs on McKee-managed on-site hardware and NVR/sub-stream configuration (R20), so a plan change is an operational event (config-sync, possibly a camera reconfig), not a self-service toggle. The only client-initiated money action anywhere in the portal is Pay Now checkout for an admin-assigned tier |
+| R22 | Dual billing rails: autopay + manual | Every paid service is `billing_method = 'stripe'` (autopay via Checkout/webhooks) or `'manual'` (legacy e-transfer/cheque/cash). Manual services carry `monthly_amount_cents` + `next_due_on`; a daily cron reminds the client before due and when overdue (R14-style `due_alerted_at` guard, once per cycle) and sends the admin a collections digest so no legacy payment is missed. Payments are recorded in an append-only `manual_payments` ledger that advances `next_due_on`. The admin Billing tab (7.2/7.3) is the collections console; failed Stripe payments land on the same board |
 
 ### Open (stakeholder or phase-gated)
 
@@ -125,6 +127,7 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | D8 | Gateway site kit | Phase 6A | Recommendation: fanless x86 mini PC (Intel N100 class, 8GB RAM, 500GB to 1TB NVMe, ~$200 to $280 one-time per site): native NVMe, headroom, and Quick Sync as free contingency (not required since all tiers are stream copy, R20). Human approves hardware SKU + pilot site (recommendation: one McKee-controlled Starlink site first to prove CGNAT behavior end to end) |
 | D9 | Per-site capture tuning | Phase 6A | Default is continuous mainstream H.265 (R18). Per-camera knobs: bitrate cap pushed to the camera (U-code, target 2 to 3 Mbps for 4MP), motion-gated upload for constrained links or budget-sensitive clients. Confirm defaults against pilot bandwidth data |
 | D10 | Legacy AWS decommission | **Done 2026-07-04** | Executed with stakeholder approval: all six legacy EB applications deleted across both regions, orphaned S3 objects removed, stale security groups detached from RDS, Data Drops + RDS untouched and verified healthy (1.4). Remaining human items: rotate the exposed Gmail app password; remove stale DNS records for the deleted load balancer |
+| D11 | Manual payment instructions + reminder cadence | Phase 5 | E-transfer address (or other instructions) for the reminder email, days-before-due for the first reminder (default 7), overdue re-reminder cadence (default: on due date, then the admin digest carries it until recorded). Copy for the client dashboard's manual-payment banner |
 
 ---
 
@@ -152,6 +155,7 @@ website/
     │       └── cron/
     │           ├── device-expiry/route.ts      # Phase 7
     │           ├── cleanup/route.ts            # Phase 7: orphan auth users, expired invites, expired footage links
+    │           ├── payment-due/route.ts        # Phase 7: manual-payer reminders + admin collections digest (R22)
     │           ├── gateway-health/route.ts     # Track 2 (6A): offline alerting + site_usage rollup
     │           └── footage-poller/route.ts     # dormant (only if a Deep Archive tier is ever sold, 9.3)
     ├── components/portal/
@@ -159,14 +163,17 @@ website/
     │   ├── activate-account.tsx                # Google / set-password chooser
     │   ├── dashboard/                          # client dashboard section components
     │   │   ├── monitoring-card.tsx
-    │   │   ├── cloud-backup-card.tsx           # + change/cancel plan + footage request form
+    │   │   ├── cloud-backup-card.tsx           # status display + footage request form (no plan controls, R21)
     │   │   ├── caller-id-card.tsx
     │   │   ├── devices-card.tsx
     │   │   └── payment-banner.tsx
-    │   └── admin/                              # admin dashboard components
-    │       ├── client-table.tsx
+    │   └── admin/                              # admin dashboard components (tab spec in 7.2)
+    │       ├── overview-stats.tsx              # KPI cards + activity feed
+    │       ├── client-table.tsx                # search, filters, sort, pagination
     │       ├── create-client-form.tsx
-    │       ├── client-detail.tsx               # services, devices, caller IDs, invites per client
+    │       ├── client-detail.tsx               # services, billing, devices, caller IDs, invites per client
+    │       ├── billing-board.tsx               # autopay failures + manual dues/overdues (7.3)
+    │       ├── record-payment-form.tsx         # manual_payments insert (7.3)
     │       └── ...
     ├── lib/portal/
     │   ├── supabase/
@@ -181,7 +188,8 @@ website/
     │   │   ├── activation.ts                   # link auth user to pending profile
     │   │   ├── caller-id.ts                    # save list + diff + history + admin email
     │   │   ├── devices.ts                      # admin date updates
-    │   │   ├── billing.ts                      # checkout session, plan change, cancel (Phase 5)
+    │   │   ├── billing.ts                      # checkout session; admin-only plan change/cancel (Phase 5, R21)
+    │   │   ├── payments.ts                     # record manual payment, billing method switch (Phase 5, R22)
     │   │   └── footage.ts                      # create request (Phase 6B)
     │   ├── emails.ts                           # portal template builders (uses lib/email.ts)
     │   ├── phone.ts                            # NANP/E.164 normalization + validation
@@ -239,6 +247,8 @@ create type public.cloud_tier       as enum ('7day', '30day', '90day');
 create type public.service_status   as enum ('active', 'paused', 'cancelled', 'unpaid');
 create type public.device_type      as enum ('battery', 'smoke_detector');
 create type public.footage_status   as enum ('pending', 'processing', 'ready', 'failed', 'expired');
+create type public.billing_method   as enum ('stripe', 'manual');
+create type public.payment_method   as enum ('etransfer', 'cheque', 'cash', 'other');
 ```
 
 `service_status.unpaid` covers "assigned but not yet paid" (handover 6.6: Pay Now shown when tier assigned but unpaid). Tier columns are typed per service, stored as a single `text tier` column with a CHECK per `service_type` (see 4.2) to keep one `services` table.
@@ -282,6 +292,10 @@ Partial unique index: at most one unused invitation per profile (`unique (profil
 | `tier` | text | not null. CHECK: `monitoring` in ('basic','standard','pro'); `cloud_backup` in ('7day','30day','90day') |
 | `status` | service_status | not null default `'unpaid'` |
 | `stripe_subscription_id` | text | nullable, unique when set |
+| `billing_method` | billing_method | not null default `'manual'` (R22); set to `'stripe'` when a subscription activates via webhook |
+| `monthly_amount_cents` | integer | nullable; required when `billing_method='manual'` (reminder emails and the Billing tab quote it) |
+| `next_due_on` | date | nullable; manual billing only; advanced one cycle each time a payment is recorded |
+| `due_alerted_at` | timestamptz | nullable; R14-style guard so each due cycle reminds once; cleared when a payment is recorded |
 | `unique (profile_id, service_type)` | | one row per client per product (handover 9.4) |
 
 **`caller_id_contacts`**
@@ -390,6 +404,21 @@ Expiry is computed, not stored: battery `installed_on + interval '5 years'`, smo
 
 Duplicate webhook delivery = PK conflict = safe no-op. This table is the future source for QB task enqueueing (handover 23.1) without portal rework.
 
+**`manual_payments`** (Phase 5; append-only ledger for legacy e-transfer/cheque/cash payers, R22)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | uuid | PK |
+| `service_id` | uuid | FK services, not null |
+| `profile_id` | uuid | FK profiles, not null (denormalized for reporting) |
+| `amount_cents` | integer | not null, CHECK `> 0` |
+| `method` | payment_method | not null |
+| `paid_on` | date | not null |
+| `recorded_by` | uuid | FK auth.users (the admin), not null |
+| `note` | text | nullable (e.g. e-transfer reference) |
+
+Append-only: no UPDATE or DELETE policies exist; a mistake is corrected by a reversing note and a new row. Recording a payment advances the service's `next_due_on` by one cycle, clears `due_alerted_at`, and sets `status='active'` if it was `'unpaid'`. This ledger plus `billing_events` gives QB Scope B a complete money trail across both rails.
+
 ### 4.3 RLS policy matrix
 
 Helper (unexposed schema, per Supabase security checklist):
@@ -419,6 +448,7 @@ grant execute on function private.is_admin() to authenticated;
 | `gateways` | none | none (ops-only; heartbeat writes use service role) | SELECT/INSERT/UPDATE all |
 | `footage_requests` | none | SELECT own, INSERT own (status forced `'pending'` via column default and policy `with check`; `camera_id` must belong to own site, enforced in policy) | SELECT/UPDATE all |
 | `billing_events` | none | none | SELECT (service role writes) |
+| `manual_payments` | none | none (v1; clients get email confirmation when a payment is recorded) | SELECT/INSERT. No UPDATE/DELETE policies: append-only ledger, corrections are reversing entries |
 | `units`, `rentals` (existing) | none | **none, leave as-is** | none (Starlink admin uses service role) |
 
 Every policy is written with the `(select auth.uid())` wrapping pattern for performance. RLS penetration tests in Phase 1/7 verify this matrix exactly.
@@ -508,24 +538,38 @@ Global chrome: site `Header`/`Footer` stay (portal is native to the site); welco
 | Section | Content | Client actions | Rules enforced |
 |---------|---------|----------------|----------------|
 | Security Monitoring | tier + status badge | **none** (read-only; no controls rendered at all) | Handover 6.2: client never changes tier/status |
-| Cloud Backup | tier + status (display from Phase 3; card hidden if client has no cloud service) | Change Plan + Cancel Plan (rails built in Phase 5, surfaced to clients in Track 2), Request Footage (Phase 6B) | Handover 6.3 |
+| Cloud Backup | tier + status (display from Phase 3; card hidden if client has no cloud service) | Request Footage (Phase 6B). **No plan controls: plan assignment, changes, and cancellation are admin-only (R21).** Card copy points plan questions at McKee | Handover 6.3 as amended by stakeholder 2026-07-05 (R21) |
 | Caller ID | contact list (phone + label) | add, remove, save (single save action commits the batch) | Validation: NANP format, no duplicates, cap (D6). Save triggers admin diff email |
 | Device Maintenance | battery + smoke install dates, expiry state | none | Expired = amber/error highlight, not brand red (handover 14) |
-| Payment banner | shown when any service `status='unpaid'` | Pay Now -> Stripe Checkout (Phase 5) | Tier server-validated, success/cancel return states |
+| Payment banner | shown when any service is `'unpaid'` or a manual payment is due/overdue | Autopay services: Pay Now -> Stripe Checkout (Phase 5). Manual services: due date + amount + payment instructions (D11), no checkout button | Tier server-validated, success/cancel return states; banner variant driven by `billing_method` (R22) |
 
 Mobile: cards stack, 44px touch targets, no horizontal scroll (handover 14.2). Empty states for every section.
 
 ### 7.2 Admin dashboard `/admin-dashboard` (handover 7)
 
-Layout pattern: follow `starlink-admin` component density. Tabs or sections:
+Layout pattern: follow `starlink-admin` component density. The admin dashboard is the **operating console for the whole business**: every client, service, and payment (and every camera site in Track 2) is visible, searchable, and manageable from one place. The admin should be able to answer "who pays by card, who is overdue, who is healthy" in one glance and reach any client in two clicks. Tabs:
 
-| Area | Capabilities |
-|------|--------------|
-| Clients | table (name, email, status, services, invite state); create client form; client detail view |
-| Client detail | modify tiers, cancel/restart services, add cloud backup manually, resend invite, view/edit devices, view caller IDs + change history |
-| Alerts (Phase 7) | recent expiry alerts, failed emails |
+| Tab | Capabilities | Phase |
+|-----|--------------|-------|
+| Overview | KPI cards + simple trends: active clients, pending activations, services by type and tier, revenue split autopay vs manual, unpaid services, overdue manual payers, failed card payments (last 30 days), recent activity feed (activations, tier changes, caller ID changes, payments recorded) | 3 skeleton, completed in 5 |
+| Clients | searchable table: instant text filter on name/email, filters for status, service type, tier, billing method, and overdue; sortable columns; pagination; create-client form; row click opens client detail | 2 basic table, 3 search + filters |
+| Client detail | one page per client: profile info, services (assign/modify tier, cancel/restart, set billing method, amount, next due), payment history (both rails), devices, caller IDs + change history, invitation state + resend | 3 core, 5 billing fields |
+| Billing | the collections console (7.3): autopay board (active subscriptions, failed payments needing follow-up) and manual board (upcoming dues, overdue highlighted amber/red, one-click record-payment) | 5 |
+| Fleet | gateway health, per-site storage and margin (9.2.7) | 6A (Track 2) |
+| Alerts | recent device expiry alerts, failed email sends, payment follow-ups | 7 |
 
-All writes are server actions with `requireAdmin()`. Tier changes reflect immediately on the client dashboard (no caching of dashboard data: portal pages are dynamic).
+All writes are server actions with `requireAdmin()`. Tier changes reflect immediately on the client dashboard (no caching of dashboard data: portal pages are dynamic). Analytics are plain SQL aggregates over the portal tables computed at request time; at McKee's scale this needs no analytics infrastructure, and if a query ever slows down the fix is a materialized view, not a new system.
+
+### 7.3 Payments oversight: autopay and manual billing (R22)
+
+Not every client pays by credit card, and the business must never depend on someone remembering to chase a legacy payer. Billing method is a first-class per-service attribute:
+
+- **`stripe` (autopay):** the Phase 5 rails. Client pays once via Checkout for the admin-assigned tier; renewals are automatic; webhooks keep `services.status` truthful. `invoice.payment_failed` events surface on the Billing tab and email the admin, so a bounced card is a task, not a surprise.
+- **`manual` (legacy e-transfer/cheque/cash):** admin sets `monthly_amount_cents` and `next_due_on` when assigning the service. The system then drives collection:
+  1. Daily cron (9.4) finds manual services due within the reminder window (D11, default 7 days) or overdue, where `due_alerted_at` is null: emails the client the amount, due date, and payment instructions, and stamps the guard.
+  2. The same cron sends the admin a **collections digest** (who is due, who is overdue, totals) whenever the list is non-empty; the Billing tab shows the live version.
+  3. Admin records the received payment (one click from the Billing tab or client detail): inserts a `manual_payments` row, advances `next_due_on` one cycle, clears `due_alerted_at`, flips `'unpaid'` to `'active'`, and emails the client a confirmation.
+- **Switching a client to autopay is one action:** admin flips `billing_method` to `'stripe'`; the client sees the Pay Now banner on next visit; the webhook completes the switch. The manual ledger stays as history.
 
 ---
 
@@ -541,6 +585,10 @@ Task 2.1 extends `src/lib/email.ts`: optional `to: string | string[]` and `cc` i
 | Footage ready | retrieval presigns links, request marked ready | client | 6B |
 | Footage failed | retrieval failure | client + admin | 6B |
 | Payment success | Stripe webhook (optional per handover 12) | client | 5 |
+| Manual payment reminder | cron: `next_due_on` within window or overdue (R22) | client | 5 template, 7 cron |
+| Manual payment recorded | admin records a payment (7.3) | client | 5 |
+| Collections digest | cron: any manual payer due or overdue | admin inbox | 7 |
+| Card payment failed | Stripe `invoice.payment_failed` webhook | admin inbox | 5 |
 
 Caller ID diff email: added contacts styled green, removed styled red (handover 6.4), plain-text fallback included. Email send failures are logged and surfaced in the admin alerts area (handover 22.3); a failed notification never rolls back the underlying save.
 
@@ -552,7 +600,8 @@ Caller ID diff email: added contacts styled green, removed styled red (handover 
 
 - **Model:** one Stripe Product per service type. Monitoring: one recurring Price per tier (3 prices, only if Q3 confirms in-portal monitoring payment). Cloud backup: one recurring **per-camera** Price per (retention tier, resolution) cell (9 prices, matrix in 9.2.7); the subscription carries an item per cell in use with quantity = camera count. Price IDs live in a server-side map in `lib/portal/stripe.ts`, keyed by `(service_type, tier, resolution)`. Client code never sends price IDs.
 - **Checkout:** server action verifies the caller owns the `services` row and reads the **admin-assigned tier from the database** (anti-spoofing, handover 9.3), creates a subscription-mode Checkout Session with `customer` (created/reused `stripe_customer_id`), `metadata: { profile_id, service_id, service_type, tier }`, success URL `/user-dashboard?payment=success`, cancel URL `/user-dashboard?payment=cancelled`.
-- **Change Plan (cloud backup):** active subscription exists = server-side `subscriptions.update` swapping the price (proration default), after an explicit confirm dialog. No subscription = new Checkout. **Cancel Plan:** `cancel_at_period_end` (data retention policy per D6/Q4).
+- **Plan changes and cancellation are admin-only for every service type (R21).** Admin tier/resolution change with an active subscription = server-side `subscriptions.update` swapping the price (proration default) from the admin client-detail page. Cancel = `cancel_at_period_end` (data retention policy per D6/Q4). Clients never see change or cancel controls; their only money action is Pay Now checkout for the admin-assigned tier.
+- **Billing method (R22):** checkout success webhook sets `services.billing_method='stripe'`. Manual-billing services never touch Stripe; they are tracked via `next_due_on` + `manual_payments` (7.3).
 - **Webhook `/api/stripe/webhook`:** raw body via `await req.text()`, `stripe.webhooks.constructEvent` signature verification. Insert into `billing_events` first (PK conflict = already processed, return 200). Handle: `checkout.session.completed` (service -> `active`, store subscription id), `customer.subscription.updated` (tier/status sync), `customer.subscription.deleted` (-> `cancelled`), `invoice.payment_failed` (-> flag + optional admin email). All writes via service role.
 - **Webhook is the source of truth** for payment state; the success redirect only drives UX (handover/discovery rule).
 
@@ -675,9 +724,9 @@ Remote management stack (R17): amazon-ssm-agent registers each gateway as a free
 
 #### 9.2.7 Business operations integration
 
-- **Client experience:** the cloud backup card shows per-camera protection status ("Driveway: backed up 3 minutes ago" from heartbeat data), the tier and its retention window, and the footage request form (camera + date/time range). Requests return working links typically within a minute (9.3). No client ever interacts with AWS concepts.
+- **Client experience:** the cloud backup card shows per-camera protection status ("Driveway: backed up 3 minutes ago" from heartbeat data), the tier and its retention window, and the footage request form (camera + date/time range). Requests return working links typically within a minute (9.3). No client ever interacts with AWS concepts, and no plan controls are rendered: tier, resolution, and cancellation go through McKee (R21).
 - **Admin experience:** a fleet board in the admin dashboard: every site, gateway health (last heartbeat, queue depth, disk, per-camera state), storage consumption, and open footage requests. Offline gateways surface red within 30 minutes and email the admin (9.4).
-- **Accounting:** heartbeats carry cumulative uploaded bytes; a nightly rollup writes per-site daily usage (`site_usage` table: `site_id`, `day`, `bytes_uploaded`, unique on both). The admin fleet board shows per-site GB stored and estimated wholesale cost next to the subscription price, so margin per client is visible at a glance. Pricing is **per camera per (retention, resolution) cell** (R20): one Stripe Price per cell (9 prices), the site's subscription carries one item per cell in use with quantity = camera count, and resolution changes ride the Change Plan flow (subscription item swap with proration + config-sync to the gateway). Flat per-site pricing is avoided because cost scales linearly with cameras. `billing_events` capture keeps this QB Scope B ready.
+- **Accounting:** heartbeats carry cumulative uploaded bytes; a nightly rollup writes per-site daily usage (`site_usage` table: `site_id`, `day`, `bytes_uploaded`, unique on both). The admin fleet board shows per-site GB stored and estimated wholesale cost next to the subscription price, so margin per client is visible at a glance. Pricing is **per camera per (retention, resolution) cell** (R20): one Stripe Price per cell (9 prices), the site's subscription carries one item per cell in use with quantity = camera count, and resolution changes are admin actions (R21) that swap the subscription item with proration and config-sync the gateway. Flat per-site pricing is avoided because cost scales linearly with cameras. `billing_events` capture keeps this QB Scope B ready.
 
 Recommended retail matrix at ~60% gross margin, pending D6/Q2 sign-off (wholesale from 9.2.4 in parentheses):
 
@@ -708,6 +757,7 @@ Vercel-side IAM (separate from gateway credentials): list + read (+ restore for 
 |-------|----------|------|
 | `/api/cron/device-expiry` | daily 06:00 UTC | expired devices where `expiry_alerted_at is null` -> email admin + client, stamp `expiry_alerted_at` (R14) |
 | `/api/cron/cleanup` | daily | orphan auth users >7d, invitations expired >90d, footage links past TTL |
+| `/api/cron/payment-due` | daily 06:00 UTC | manual services with `next_due_on` inside the reminder window or overdue and `due_alerted_at is null` -> remind client (amount, date, instructions per D11), stamp guard; send admin the collections digest when any manual payer is due or overdue (R22, 7.3) |
 | `/api/cron/gateway-health` | every 30 min (plan permitting, else hourly + dashboard-first). Added in Track 2 (6A) | gateways with `last_seen_at` older than 30 min and not already alerted -> email admin; also writes the nightly `site_usage` rollup on its midnight run |
 | `/api/cron/footage-poller` | dormant | only if a Deep Archive tier is ever sold (9.3 step 4) |
 
@@ -760,10 +810,12 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 ### Phase 3: Services Display & Management
 
 - [ ] **[HUMAN]** D6/Q1+Q3: tier feature copy; whether monitoring is paid in-portal
-- [ ] Client dashboard: monitoring card (read-only), cloud backup card (display-only), welcome header, skeletons, empty states, error boundaries
+- [ ] Client dashboard: monitoring card (read-only), cloud backup card (display-only, no plan controls per R21), welcome header, skeletons, empty states, error boundaries
 - [ ] Admin: client detail with tier modify, cancel/restart, manual cloud-backup assign (all server actions, `requireAdmin()`)
+- [ ] Admin Clients tab: search (name/email instant filter), filters (status, service type, tier), sortable columns, pagination (7.2)
+- [ ] Admin Overview tab skeleton: active clients, pending activations, services by type/tier, activity feed (billing KPIs join in Phase 5)
 
-**Gate:** admin tier change appears on client dashboard on next load; client session has no UI or action path that mutates `services` (verified by scripted RLS write attempt).
+**Gate:** admin tier change appears on client dashboard on next load; client session has no UI or action path that mutates `services` (verified by scripted RLS write attempt); admin finds any client by partial name or email in one search.
 
 ### Phase 4: Caller ID & Devices
 
@@ -777,14 +829,16 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 
 ### Phase 5: Stripe & Billing
 
-Track 1 scope: build the complete billing rails (checkout, webhook, banner, change/cancel plumbing) and put monitoring prices live if Q3 confirms in-portal monitoring payment. The cloud backup 9-cell matrix (9.2.7) is set up in test mode only and is **not exposed to clients until Track 2 ships** (selling cloud backup in-portal before ingestion exists would sell a service that cannot run). Admins can still record a cloud backup `services` row for any manually-arranged client (Phase 3 client detail), but the client-facing purchase and Change Plan paths for cloud backup stay hidden until Track 2.
+Track 1 scope: build the complete billing rails on **both methods** (R22): Stripe checkout/webhooks for autopay, and the manual-payment ledger + reminder machinery for legacy payers. Monitoring prices go live if Q3 confirms in-portal monitoring payment. The cloud backup 9-cell matrix (9.2.7) is set up in test mode only and is **not client-payable until Track 2 ships** (the service cannot run before ingestion exists); admins can still record cloud backup `services` rows for manually-arranged clients. All plan changes and cancellations are admin actions per R21.
 
-- [ ] **[HUMAN]** D4: Stripe account; products/prices per 9.1; webhook endpoint registered; keys in Vercel. D6/Q3 confirmed (monitoring paid in portal?); Q2 cloud pricing can wait for Track 2
-- [ ] Migration 4: `billing_events`; `profiles.stripe_customer_id`; `services.stripe_subscription_id`
-- [ ] `stripe.ts` (SDK + price map); checkout server action with DB-side tier validation; webhook route (9.1); payment banner; change/cancel plan flows; success/cancel UX
-- [ ] Payment success email (optional, per handover 12)
+- [ ] **[HUMAN]** D4: Stripe account; products/prices per 9.1; webhook endpoint registered; keys in Vercel. D6/Q3 confirmed (monitoring paid in portal?). D11: payment instructions + reminder window. Q2 cloud pricing can wait for Track 2
+- [ ] Migration 4: `billing_events`; `manual_payments`; `profiles.stripe_customer_id`; `services.stripe_subscription_id`, `billing_method`, `monthly_amount_cents`, `next_due_on`, `due_alerted_at`
+- [ ] `stripe.ts` (SDK + price map); checkout server action with DB-side tier validation; webhook route (9.1); payment banner (both variants, 7.1); admin-only plan change/cancel actions (R21); success/cancel UX
+- [ ] `payments.ts` actions: record manual payment (ledger insert + due-date advance + confirmation email), switch billing method (7.3)
+- [ ] Admin Billing tab (7.3): autopay board with failed payments, manual board with dues/overdues, record-payment flow; Overview billing KPIs (revenue split, overdue count, failed payments)
+- [ ] Email templates: manual payment reminder, manual payment recorded, card payment failed (admin); payment success (optional, per handover 12)
 
-**Gate (Stripe test mode):** full checkout activates the service via webhook (not redirect); webhook replay is a no-op; tampered tier/price attempts are impossible via API surface; cancel sets `cancel_at_period_end`; plan change swaps price with proration.
+**Gate (Stripe test mode):** full checkout activates the service via webhook (not redirect); webhook replay is a no-op; tampered tier/price attempts are impossible via API surface; admin cancel sets `cancel_at_period_end`; admin plan change swaps price with proration; client session exposes no change/cancel path (R21); recording a manual payment advances `next_due_on`, clears the guard, activates the service, and emails the client; a simulated `invoice.payment_failed` lands on the Billing tab and emails the admin.
 
 ### Phase 6A: Camera Cloud Backup Ingestion (Track 2, starts after Phase 7 launch)
 
@@ -811,7 +865,7 @@ Track 1 scope: build the complete billing rails (checkout, webhook, banner, chan
 
 ### Phase 7: Automation, Hardening, Launch (core portal goes live here)
 
-- [ ] `vercel.json` crons + `CRON_SECRET`; device-expiry job (R14 semantics); cleanup job (6.6). Gateway-health cron joins in Track 2 (9.4)
+- [ ] `vercel.json` crons + `CRON_SECRET`; device-expiry job (R14 semantics); cleanup job (6.6); payment-due job (R22: client reminders + admin collections digest, 7.3). Gateway-health cron joins in Track 2 (9.4)
 - [ ] Rate limiting on activation endpoints (6.6); footage endpoints get the same treatment in Track 2
 - [ ] RLS penetration script: for every portal table x {anon, client A, client B, admin}, assert the 4.3 matrix; run against production before launch
 - [ ] Security sweep: webhook signature tests, `get_advisors` clean, no service-role usage outside `admin.ts`/webhook/cron, secrets audit
@@ -819,7 +873,7 @@ Track 1 scope: build the complete billing rails (checkout, webhook, banner, chan
 - [ ] Cross-browser smoke (Chrome, Firefox, Safari, iOS Safari, Android Chrome) per handover 22.4
 - [ ] **[HUMAN]** stakeholder walkthrough (mobile + desktop) and production sign-off
 
-**Gate:** handover Section 22 checklist fully satisfied; cron observed firing in preview; sign-off recorded in Progress Log.
+**Gate:** handover Section 22 checklist fully satisfied; crons observed firing in preview (including a payment-due run that reminds a test manual payer exactly once per cycle); sign-off recorded in Progress Log.
 
 ---
 
@@ -830,7 +884,9 @@ Track 1 scope: build the complete billing rails (checkout, webhook, banner, chan
 | Admin-provisioned accounts, no open registration (4, 8) | No signup UI; activation requires valid token (6.3/6.4); orphan handling + cleanup (6.6); R9 |
 | Client never changes monitoring tier/status (6.2, 9.1) | No UI controls; no client RLS write on `services` (4.3); tier changes only via admin actions + webhooks |
 | Client pays only the admin-assigned tier (6.6, 9.3) | Checkout server action reads tier from DB; price map server-side only (9.1) |
-| Cloud backup self-service: change, cancel, footage (6.3, 9.2) | Phase 5 billing rails + Phase 6B requests (9.3); client-facing cloud backup controls surface in Track 2 |
+| Cloud backup: client requests footage; plan is admin-managed (6.3 as amended 2026-07-05, R21) | Phase 6B request flow (9.3); admin-only plan actions on Phase 5 rails; no client change/cancel UI anywhere |
+| Legacy (non-card) payers are reminded, tracked, and collected (stakeholder 2026-07-05) | R22: `billing_method` + `manual_payments` ledger + payment-due cron + Billing tab (4.2, 7.3, 9.4) |
+| Admin can search, analyze, and manage the whole client base from one console (7, stakeholder 2026-07-05) | Tabbed admin dashboard: Overview KPIs, searchable Clients, Billing collections console (7.2/7.3) |
 | Caller ID changes alert admin with green/red diff (6.4, 12) | Save action diff + email (Section 8); history table |
 | Device expiry 5yr battery / 10yr smoke, alerts to both parties (6.5, 11.9) | Computed expiry (4.2); nightly cron + `expiry_alerted_at` (9.4, R14) |
 | Cloud retention tiers 7/30/90-day actually enforced (9.2 handover) | Direct-to-class PUT + expiration-only lifecycle per site prefix (9.2.5, R19) |
@@ -857,6 +913,7 @@ Track 1 scope: build the complete billing rails (checkout, webhook, banner, chan
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Vercel + local | 0 |
 | `SUPABASE_SERVICE_ROLE_KEY` | Vercel only | exists (Starlink) |
 | `PORTAL_ADMIN_ALERT_EMAIL` | Vercel | 2 (fallback `CONTACT_EMAIL`) |
+| `PORTAL_ETRANSFER_EMAIL` | Vercel | 5 (payment instructions in manual reminder emails, D11) |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Vercel only | 5 |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel + local | 5 |
 | `FOOTAGE_AWS_ACCESS_KEY_ID`, `FOOTAGE_AWS_SECRET_ACCESS_KEY`, `FOOTAGE_AWS_REGION`, `FOOTAGE_BUCKET` | Vercel only | 6B (read/list/restore-only credential, 9.3) |
@@ -882,6 +939,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-05 | Resolution tiers added (R20): per-camera 1080p/1440p/2160p storage choice. Cost model rebuilt as a retention x resolution wholesale matrix (9.2.4) with a 9-cell retail recommendation at ~60% margin (9.2.7); Stripe model updated to per-camera prices per cell (9.1) |
 | 2026-07-05 | R20 simplified per ops input: the camera sub-stream resolution is fully configurable via the NVR, so 1080p and 1440p are sub-stream copies set to the purchased resolution at install. **No transcoding anywhere**; Quick Sync demoted from D8 requirement to contingency. Bench test now verifies per-model sub-stream resolution options |
 | 2026-07-05 | Final pre-build audit passed. Build order locked: Track 1 = core portal (Phases 0-5, 7), Track 2 = camera cloud backup (6A/6B) after launch. Cloud backup client purchase flows deferred to Track 2; Q2 pricing moved to the 6A gate. Plan v4.2, ready for Phase 0 |
+| 2026-07-05 | Plan v4.3 per stakeholder: cloud backup plan management locked to admin (R21, supersedes handover 6.3 self-service). Admin console fully specified: Overview analytics, searchable Clients tab, Billing collections console (7.2/7.3). Dual billing rails added (R22): `billing_method` on services, append-only `manual_payments` ledger, payment-due reminder cron with admin collections digest, new emails, D11 opened. Schema, RLS, Stripe, phases, traceability all updated |
 
 ## 14. Decision Log
 
@@ -900,3 +958,5 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-04 | D10 executed: legacy AWS decommissioned (six EB apps deleted, both regions); Data Drops EB + RDS are the only remaining AWS workloads (1.4) |
 | 2026-07-05 | R20: client-selectable storage resolution per camera (1080p/1440p/2160p); stream copy at every tier (sub-stream resolution set on the NVR to the purchased tier, per ops); billing per camera per (retention, resolution) cell |
 | 2026-07-05 | Two-track build order: core portal ships first (0-5, 7), camera cloud backup (6A/6B) starts after launch. Camera design stays fully specified in this plan; nothing in Track 1 depends on it |
+| 2026-07-05 | R21: cloud backup plan management is admin-only (stakeholder override of handover 6.3 self-service): the service runs on McKee-managed hardware, so plan changes are operational events. Clients keep footage requests and Pay Now only |
+| 2026-07-05 | R22: dual billing rails. `billing_method` per service (`stripe`/`manual`); manual payers get automated due reminders and an admin collections digest; payments recorded in append-only `manual_payments`. Admin Billing tab is the collections console |
