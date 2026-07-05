@@ -80,7 +80,7 @@ try {
   const adminUser = await makeUser("admin", "Adminetta");
 
   // Caller ID card requires a monitoring service.
-  await admin.from("services").insert({ profile_id: clientUser.profileId, service_type: "monitoring", tier: "basic" });
+  await admin.from("services").insert({ profile_id: clientUser.profileId, service_type: "monitoring", tier: "landline" });
 
   const clientSession = ssrClientWithJar();
   {

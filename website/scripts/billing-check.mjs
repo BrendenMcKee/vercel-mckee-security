@@ -88,7 +88,7 @@ try {
     .insert({
       profile_id: clientUser.profileId,
       service_type: "monitoring",
-      tier: "basic",
+      tier: "landline",
       status: "unpaid",
       billing_method: "manual",
       monthly_amount_cents: 4500,

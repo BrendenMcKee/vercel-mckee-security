@@ -8,6 +8,7 @@ import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
 import { sendInvitationEmail } from "@/lib/portal/emails";
+import { MONITORING_MONTHLY_CENTS } from "@/lib/portal/billing";
 import { siteConfig } from "@/lib/site-config";
 
 const createClientSchema = z.object({
@@ -15,7 +16,7 @@ const createClientSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required").max(100),
   email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address"))]),
   address: z.string().trim().max(300),
-  monitoringTier: z.enum(["", "basic", "standard", "pro"]),
+  monitoringTier: z.enum(["", "landline", "cellular", "cellular_tc", "cellular_tc_home"]),
   cloudTier: z.enum(["", "7day", "30day", "90day"]),
 });
 
@@ -74,6 +75,17 @@ export async function createClientAction(
   if (error || !profileId) {
     console.error("[portal] createClient failed:", error);
     return { ok: false, error: "Could not create the client. Please try again." };
+  }
+
+  // The RPC created the monitoring service as annual-invoiced; prefill the
+  // confirmed monthly rate here so pricing has a single source (billing.ts).
+  if (monitoringTier && MONITORING_MONTHLY_CENTS[monitoringTier]) {
+    const { error: priceError } = await supabase
+      .from("services")
+      .update({ monthly_amount_cents: MONITORING_MONTHLY_CENTS[monitoringTier] })
+      .eq("profile_id", profileId)
+      .eq("service_type", "monitoring");
+    if (priceError) console.error("[portal] monitoring price prefill failed:", priceError);
   }
 
   const activateUrl = `${await getOrigin()}/account/activate?token=${raw}`;

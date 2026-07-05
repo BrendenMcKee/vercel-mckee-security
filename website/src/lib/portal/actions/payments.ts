@@ -8,6 +8,7 @@ import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { getStripeClient, isStripeConfigured, priceIdFor } from "@/lib/portal/stripe";
 import { sendManualPaymentRecorded } from "@/lib/portal/emails";
+import { intervalMonths } from "@/lib/portal/billing";
 import { siteConfig } from "@/lib/site-config";
 
 // ---------------------------------------------------------------------------
@@ -98,6 +99,11 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
       },
       subscription_data: {
         metadata: { profile_id: profile.id, service_id: service.id },
+        // Pricing is advertised pre-tax ("plus tax"); a fixed HST tax rate is
+        // applied when configured (STRIPE_TAX_RATE_ID, e.g. 13% Ontario HST).
+        ...(process.env.STRIPE_TAX_RATE_ID
+          ? { default_tax_rates: [process.env.STRIPE_TAX_RATE_ID] }
+          : {}),
       },
     });
 
@@ -126,11 +132,11 @@ export type RecordPaymentResult =
   | { ok: true; nextDueOn: string | null; emailSent: boolean | null }
   | { ok: false; error: string };
 
-function addOneMonth(isoDate: string): string {
+function addMonths(isoDate: string, months: number): string {
   const [y, m, d] = isoDate.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1 + 1, d));
+  const date = new Date(Date.UTC(y, m - 1 + months, d));
   // Clamp overflow (e.g. Jan 31 + 1 month) to the last day of the month.
-  if (date.getUTCMonth() !== (m % 12)) date.setUTCDate(0);
+  if (date.getUTCMonth() !== (((m - 1 + months) % 12) + 12) % 12) date.setUTCDate(0);
   return date.toISOString().slice(0, 10);
 }
 
@@ -152,7 +158,7 @@ export async function recordManualPayment(input: {
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, profile_id, service_type, status, billing_method, next_due_on, profiles(first_name, email)")
+    .select("id, profile_id, service_type, status, billing_method, billing_interval, next_due_on, profiles(first_name, email)")
     .eq("id", serviceId)
     .maybeSingle();
 
@@ -177,9 +183,12 @@ export async function recordManualPayment(input: {
   }
 
   // Advance the cycle from the scheduled due date (not the paid date), so
-  // early/late payments keep the anniversary. Clear the reminder guard and
+  // early/late payments keep the anniversary — one interval (monitoring is
+  // invoiced annually per the site terms). Clear the reminder guard and
   // activate an unpaid service.
-  const nextDueOn = service.next_due_on ? addOneMonth(service.next_due_on) : null;
+  const nextDueOn = service.next_due_on
+    ? addMonths(service.next_due_on, intervalMonths(service.billing_interval))
+    : null;
   const { error: serviceError } = await supabase
     .from("services")
     .update({
@@ -218,6 +227,7 @@ export async function recordManualPayment(input: {
 const billingConfigSchema = z.object({
   serviceId: z.uuid(),
   billingMethod: z.enum(["stripe", "manual"]),
+  billingInterval: z.enum(["monthly", "annual"]),
   monthlyAmountCents: z.number().int().positive().max(10_000_00).nullable(),
   nextDueOn: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
 });
@@ -227,6 +237,7 @@ export type BillingConfigResult = { ok: true } | { ok: false; error: string };
 export async function updateServiceBilling(input: {
   serviceId: string;
   billingMethod: "stripe" | "manual";
+  billingInterval: "monthly" | "annual";
   monthlyAmountCents: number | null;
   nextDueOn: string;
 }): Promise<BillingConfigResult> {
@@ -236,7 +247,7 @@ export async function updateServiceBilling(input: {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { serviceId, billingMethod, monthlyAmountCents, nextDueOn } = parsed.data;
+  const { serviceId, billingMethod, billingInterval, monthlyAmountCents, nextDueOn } = parsed.data;
 
   if (billingMethod === "manual" && !monthlyAmountCents) {
     return { ok: false, error: "Manual billing needs a monthly amount for reminders and collections." };
@@ -258,6 +269,7 @@ export async function updateServiceBilling(input: {
     .from("services")
     .update({
       billing_method: billingMethod,
+      billing_interval: billingInterval,
       monthly_amount_cents: monthlyAmountCents,
       next_due_on: billingMethod === "manual" ? nextDueOn || null : null,
       due_alerted_at: null,

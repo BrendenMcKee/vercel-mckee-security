@@ -110,7 +110,7 @@ try {
     p_last_name: "ActCheck",
     p_email: emailA,
     p_address: "1 Test Lane",
-    p_monitoring_tier: "standard",
+    p_monitoring_tier: "cellular",
     p_cloud_tier: "30day",
     p_token_hash: tokenA.hash,
     p_target_email: emailA,
@@ -121,7 +121,7 @@ try {
   const { data: servicesA } = await admin.from("services").select("*").eq("profile_id", profileIdA);
   check("client A has 2 services (standard + 30day)",
     servicesA?.length === 2 &&
-    servicesA.some((s) => s.service_type === "monitoring" && s.tier === "standard") &&
+    servicesA.some((s) => s.service_type === "monitoring" && s.tier === "cellular") &&
     servicesA.some((s) => s.service_type === "cloud_backup" && s.tier === "30day"));
 
   // --- B: non-admin RPC is denied -------------------------------------------
@@ -130,7 +130,7 @@ try {
     p_last_name: "Outsider",
     p_email: "",
     p_address: "",
-    p_monitoring_tier: "basic",
+    p_monitoring_tier: "landline",
     p_cloud_tier: "",
     p_token_hash: newToken().hash,
     p_target_email: "",
@@ -158,7 +158,7 @@ try {
     p_last_name: "ActCheck",
     p_email: emailE,
     p_address: "",
-    p_monitoring_tier: "basic",
+    p_monitoring_tier: "landline",
     p_cloud_tier: "",
     p_token_hash: tokenE.hash,
     p_target_email: emailE,
@@ -265,7 +265,7 @@ try {
     p_last_name: "ActCheck",
     p_email: emailM,
     p_address: "",
-    p_monitoring_tier: "pro",
+    p_monitoring_tier: "cellular_tc",
     p_cloud_tier: "",
     p_token_hash: tokenM.hash,
     p_target_email: emailM,

@@ -18,7 +18,7 @@ export async function AdminBilling() {
     supabase
       .from("services")
       .select(
-        "id, service_type, tier, status, billing_method, monthly_amount_cents, next_due_on, stripe_subscription_id, profiles(id, first_name, last_name, email, stripe_customer_id)",
+        "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, next_due_on, stripe_subscription_id, profiles(id, first_name, last_name, email, stripe_customer_id)",
       )
       .neq("status", "cancelled"),
     supabase
@@ -108,7 +108,7 @@ export async function AdminBilling() {
                 <tr className="border-b border-white/10 text-xs uppercase tracking-widest text-white/40">
                   <th className="py-2 pr-4 font-bold">Client</th>
                   <th className="py-2 pr-4 font-bold">Service</th>
-                  <th className="py-2 pr-4 font-bold">Monthly</th>
+                  <th className="py-2 pr-4 font-bold">Rate</th>
                   <th className="py-2 pr-4 font-bold">Next due</th>
                   <th className="py-2 font-bold">Status</th>
                 </tr>
@@ -129,7 +129,12 @@ export async function AdminBilling() {
                       </td>
                       <td className="py-3 pr-4 text-white/70">
                         {service.monthly_amount_cents != null ? (
-                          formatCents(service.monthly_amount_cents)
+                          <>
+                            {formatCents(service.monthly_amount_cents)}/mo
+                            {service.billing_interval === "annual" && (
+                              <span className="text-white/40"> (annual invoice)</span>
+                            )}
+                          </>
                         ) : (
                           <span className="text-amber-300">Not set</span>
                         )}

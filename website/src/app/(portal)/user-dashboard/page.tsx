@@ -5,7 +5,7 @@ import {
   SERVICE_TYPE_LABELS,
   tierLabel,
 } from "@/lib/portal/service-labels";
-import { PAYMENT_INSTRUCTIONS, formatCents } from "@/lib/portal/billing";
+import { PAYMENT_INSTRUCTIONS, formatCents, intervalMonths } from "@/lib/portal/billing";
 import { DEVICE_LABELS, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
 import { ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor } from "@/components/portal/caller-id-editor";
@@ -47,7 +47,7 @@ export default async function UserDashboardPage({
   const [servicesResult, contactsResult, devicesResult] = await Promise.all([
     supabase
       .from("services")
-      .select("id, service_type, tier, status, billing_method, monthly_amount_cents, next_due_on")
+      .select("id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, next_due_on")
       .eq("profile_id", profile.id)
       .order("service_type"),
     supabase
@@ -118,7 +118,11 @@ export default async function UserDashboardPage({
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-amber-200/90">
               <p>
                 {service.monthly_amount_cents
-                  ? `Amount due: ${formatCents(service.monthly_amount_cents)}${service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""}.`
+                  ? `Amount due: ${formatCents(service.monthly_amount_cents * intervalMonths(service.billing_interval))} plus tax${
+                      service.billing_interval === "annual"
+                        ? ` (${formatCents(service.monthly_amount_cents)}/month, invoiced annually)`
+                        : ""
+                    }${service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""}.`
                   : "A payment is due on this service."}
               </p>
               <p>{PAYMENT_INSTRUCTIONS}</p>
@@ -137,6 +141,12 @@ export default async function UserDashboardPage({
               <span className="text-2xl font-bold text-white">{tierLabel(monitoring.tier)}</span>
               <ServiceStatusBadge status={monitoring.status} />
             </div>
+            {monitoring.monthly_amount_cents != null && (
+              <p className="text-sm text-white/50">
+                {formatCents(monitoring.monthly_amount_cents)}/month plus tax
+                {monitoring.billing_interval === "annual" && ", invoiced annually"}
+              </p>
+            )}
             <p className="text-sm leading-relaxed text-white/65">
               Your monitoring plan is managed by McKee Security. To make changes,
               call{" "}

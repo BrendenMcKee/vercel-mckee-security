@@ -1,6 +1,29 @@
 import type { Database } from "@/lib/portal/database.types";
 
 export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
+export type BillingInterval = Database["public"]["Enums"]["billing_interval"];
+
+/**
+ * Monitoring pricing (stakeholder-confirmed 2026-07-05): per month, PLUS TAX,
+ * invoiced ANNUALLY (site disclaimer; 30-day written notice to cancel, pro-rated
+ * refund). Amounts are pre-tax monthly cents; an annual invoice is 12x + tax.
+ */
+export const MONITORING_MONTHLY_CENTS: Record<string, number> = {
+  landline: 2495,
+  cellular: 3495,
+  cellular_tc: 3995,
+  cellular_tc_home: 4495,
+};
+
+export const BILLING_INTERVAL_LABELS: Record<BillingInterval, string> = {
+  monthly: "Monthly",
+  annual: "Annual (12 months per invoice)",
+};
+
+/** Months a paid invoice covers. */
+export function intervalMonths(interval: BillingInterval): number {
+  return interval === "annual" ? 12 : 1;
+}
 
 /**
  * D11 default copy (pending stakeholder confirmation): how legacy-rail

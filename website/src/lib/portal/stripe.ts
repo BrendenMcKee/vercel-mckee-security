@@ -6,7 +6,9 @@ import Stripe from "stripe";
  * manual billing rail work before the Stripe account exists (D4). Price IDs
  * live server-side only, mapped from env vars, keyed (service_type, tier):
  *
- *   STRIPE_PRICE_MONITORING_BASIC / _STANDARD / _PRO
+ *   STRIPE_PRICE_MONITORING_LANDLINE / _CELLULAR / _CELLULAR_TC / _CELLULAR_TC_HOME
+ *     (annual-interval prices: 12 x the monthly rate, plus tax via Stripe Tax
+ *      or a tax rate — monitoring is invoiced annually per the site terms)
  *   STRIPE_PRICE_CLOUD_7DAY / _30DAY / _90DAY   (Track 2; test mode only)
  *
  * Client code never sees or sends price IDs; checkout reads the admin-assigned
@@ -31,9 +33,10 @@ export function getStripeClient(): Stripe {
 }
 
 const PRICE_ENV_KEYS: Record<string, string> = {
-  "monitoring:basic": "STRIPE_PRICE_MONITORING_BASIC",
-  "monitoring:standard": "STRIPE_PRICE_MONITORING_STANDARD",
-  "monitoring:pro": "STRIPE_PRICE_MONITORING_PRO",
+  "monitoring:landline": "STRIPE_PRICE_MONITORING_LANDLINE",
+  "monitoring:cellular": "STRIPE_PRICE_MONITORING_CELLULAR",
+  "monitoring:cellular_tc": "STRIPE_PRICE_MONITORING_CELLULAR_TC",
+  "monitoring:cellular_tc_home": "STRIPE_PRICE_MONITORING_CELLULAR_TC_HOME",
   "cloud_backup:7day": "STRIPE_PRICE_CLOUD_7DAY",
   "cloud_backup:30day": "STRIPE_PRICE_CLOUD_30DAY",
   "cloud_backup:90day": "STRIPE_PRICE_CLOUD_90DAY",

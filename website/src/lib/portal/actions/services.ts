@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { SERVICE_TIERS } from "@/lib/portal/service-labels";
+import { MONITORING_MONTHLY_CENTS } from "@/lib/portal/billing";
 import { getStripeClient, isStripeConfigured, priceIdFor } from "@/lib/portal/stripe";
 
 export type ServiceActionResult = { ok: true } | { ok: false; error: string };
@@ -36,11 +37,19 @@ export async function assignServiceAction(input: {
     return { ok: false, error: "That tier does not exist for this service." };
   }
 
+  // Monitoring is invoiced annually (site terms); the confirmed monthly rate
+  // is prefilled so reminders and revenue KPIs are correct from day one.
   const supabase = await createPortalServerClient();
   const { error } = await supabase.from("services").insert({
     profile_id: profileId,
     service_type: serviceType,
     tier,
+    ...(serviceType === "monitoring"
+      ? {
+          billing_interval: "annual" as const,
+          monthly_amount_cents: MONITORING_MONTHLY_CENTS[tier] ?? null,
+        }
+      : {}),
   });
 
   if (error) {
@@ -107,7 +116,17 @@ export async function updateServiceTierAction(input: {
     }
   }
 
-  const { error } = await supabase.from("services").update({ tier }).eq("id", serviceId);
+  // A monitoring tier change re-syncs the amount to the confirmed rate; the
+  // admin can still override it afterwards in the Billing card.
+  const { error } = await supabase
+    .from("services")
+    .update({
+      tier,
+      ...(service.service_type === "monitoring" && MONITORING_MONTHLY_CENTS[tier]
+        ? { monthly_amount_cents: MONITORING_MONTHLY_CENTS[tier] }
+        : {}),
+    })
+    .eq("id", serviceId);
   if (error) {
     console.error("[portal] updateServiceTier failed:", error);
     return { ok: false, error: "Could not change the tier. Please try again." };

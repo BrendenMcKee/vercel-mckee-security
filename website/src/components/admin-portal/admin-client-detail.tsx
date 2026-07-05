@@ -24,8 +24,11 @@ import { setDeviceInstallDate } from "@/lib/portal/actions/caller-id";
 import { recordManualPayment, updateServiceBilling } from "@/lib/portal/actions/payments";
 import { formatPhone } from "@/lib/portal/phone";
 import {
+  BILLING_INTERVAL_LABELS,
   PAYMENT_METHOD_LABELS,
   formatCents,
+  intervalMonths,
+  type BillingInterval,
   type PaymentMethod,
 } from "@/lib/portal/billing";
 import {
@@ -543,13 +546,18 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<"stripe" | "manual">(service.billing_method);
+  const [cycle, setCycle] = useState<BillingInterval>(service.billing_interval);
   const [amount, setAmount] = useState(
     service.monthly_amount_cents != null ? (service.monthly_amount_cents / 100).toFixed(2) : "",
   );
   const [dueOn, setDueOn] = useState(service.next_due_on ?? "");
 
+  // Prefill the received amount with one full invoice (monthly rate x
+  // interval, pre-tax); the admin adjusts for tax or partial payments.
   const [payAmount, setPayAmount] = useState(
-    service.monthly_amount_cents != null ? (service.monthly_amount_cents / 100).toFixed(2) : "",
+    service.monthly_amount_cents != null
+      ? ((service.monthly_amount_cents * intervalMonths(service.billing_interval)) / 100).toFixed(2)
+      : "",
   );
   const [payMethod, setPayMethod] = useState<PaymentMethod>("etransfer");
   const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -566,6 +574,7 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
       const result = await updateServiceBilling({
         serviceId: service.id,
         billingMethod: method,
+        billingInterval: cycle,
         monthlyAmountCents: cents,
         nextDueOn: dueOn,
       });
@@ -638,10 +647,24 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
-          Monthly amount ($)
+          Invoice cycle
+          <select
+            value={cycle}
+            onChange={(e) => setCycle(e.target.value as BillingInterval)}
+            className={`${adminInputClass} cursor-pointer`}
+          >
+            {(Object.keys(BILLING_INTERVAL_LABELS) as BillingInterval[]).map((value) => (
+              <option key={value} value={value}>
+                {BILLING_INTERVAL_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          Monthly rate ($, pre-tax)
           <input
             inputMode="decimal"
-            placeholder="45.00"
+            placeholder="34.95"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className={adminInputClass}
@@ -661,6 +684,12 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
         <button type="button" disabled={pending} onClick={saveBilling} className={buttonSecondary}>
           {pending ? "Saving..." : "Save Billing"}
         </button>
+        {cycle === "annual" && amount.trim() && Number.isFinite(Number.parseFloat(amount)) && (
+          <p className="w-full text-xs text-white/40">
+            Annual invoice: ${(Number.parseFloat(amount) * 12).toFixed(2)} + tax
+            (monitoring is invoiced annually per the site terms).
+          </p>
+        )}
       </div>
 
       {service.billing_method === "manual" && (

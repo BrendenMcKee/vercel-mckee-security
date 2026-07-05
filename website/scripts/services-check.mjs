@@ -76,7 +76,7 @@ try {
   // Client starts with monitoring basic only (no cloud service).
   const { data: service, error: svcError } = await admin
     .from("services")
-    .insert({ profile_id: clientUser.profileId, service_type: "monitoring", tier: "basic" })
+    .insert({ profile_id: clientUser.profileId, service_type: "monitoring", tier: "landline" })
     .select("id")
     .single();
   if (svcError) throw svcError;
@@ -104,7 +104,7 @@ try {
       headers: { cookie: clientSession.cookieHeader() },
     });
     const html = await res.text();
-    check("client dashboard shows monitoring tier Basic", res.status === 200 && html.includes("Basic"), `status=${res.status}`);
+    check("client dashboard shows monitoring tier Telephone Land Line", res.status === 200 && html.includes("Telephone Land Line"), `status=${res.status}`);
     check("cloud backup card hidden when client has no cloud service", !html.includes("Camera Cloud Backup"));
     check("client dashboard exposes no tier controls", !html.includes("<select"));
   }
@@ -113,7 +113,7 @@ try {
   {
     const { data: updated, error } = await clientSession.ssr
       .from("services")
-      .update({ tier: "pro" })
+      .update({ tier: "cellular_tc" })
       .eq("id", service.id)
       .select("id");
     check(
@@ -132,14 +132,14 @@ try {
   }
   {
     const { data: after } = await admin.from("services").select("tier").eq("id", service.id).single();
-    check("service tier unchanged after client write attempts", after?.tier === "basic", `tier=${after?.tier}`);
+    check("service tier unchanged after client write attempts", after?.tier === "landline", `tier=${after?.tier}`);
   }
 
   // --- Admin changes the tier via RLS; client sees it on next load ---------
   {
     const { data: updated, error } = await adminSession.ssr
       .from("services")
-      .update({ tier: "pro" })
+      .update({ tier: "cellular_tc" })
       .eq("id", service.id)
       .select("id");
     check("admin UPDATE on services succeeds (RLS)", !error && (updated ?? []).length === 1, error?.code ?? "");
@@ -149,7 +149,7 @@ try {
       headers: { cookie: clientSession.cookieHeader() },
     });
     const html = await res.text();
-    check("tier change appears on client dashboard next load", res.status === 200 && html.includes("Pro"), `status=${res.status}`);
+    check("tier change appears on client dashboard next load", res.status === 200 && html.includes("Cellular + Total Connect 2.0"), `status=${res.status}`);
   }
 
   // --- Admin assigns cloud service; card appears ----------------------------

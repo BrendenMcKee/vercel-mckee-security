@@ -410,6 +410,7 @@ export type Database = {
       }
       services: {
         Row: {
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
           billing_method: Database["public"]["Enums"]["billing_method"]
           created_at: string
           due_alerted_at: string | null
@@ -424,6 +425,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_interval?: Database["public"]["Enums"]["billing_interval"]
           billing_method?: Database["public"]["Enums"]["billing_method"]
           created_at?: string
           due_alerted_at?: string | null
@@ -438,6 +440,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_interval?: Database["public"]["Enums"]["billing_interval"]
           billing_method?: Database["public"]["Enums"]["billing_method"]
           created_at?: string
           due_alerted_at?: string | null
@@ -519,11 +522,12 @@ export type Database = {
       }
     }
     Enums: {
+      billing_interval: "monthly" | "annual"
       billing_method: "stripe" | "manual"
       cloud_tier: "7day" | "30day" | "90day"
       device_type: "battery" | "smoke_detector"
       footage_status: "pending" | "processing" | "ready" | "failed" | "expired"
-      monitoring_tier: "basic" | "standard" | "pro"
+      monitoring_tier: "landline" | "cellular" | "cellular_tc" | "cellular_tc_home"
       payment_method: "etransfer" | "cheque" | "cash" | "other"
       profile_status: "pending" | "active" | "disabled"
       service_status: "active" | "paused" | "cancelled" | "unpaid"
@@ -656,11 +660,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      billing_interval: ["monthly", "annual"],
       billing_method: ["stripe", "manual"],
       cloud_tier: ["7day", "30day", "90day"],
       device_type: ["battery", "smoke_detector"],
       footage_status: ["pending", "processing", "ready", "failed", "expired"],
-      monitoring_tier: ["basic", "standard", "pro"],
+      monitoring_tier: ["landline", "cellular", "cellular_tc", "cellular_tc_home"],
       payment_method: ["etransfer", "cheque", "cash", "other"],
       profile_status: ["pending", "active", "disabled"],
       service_status: ["active", "paused", "cancelled", "unpaid"],
