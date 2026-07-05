@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { AdminClientsPanel } from "@/components/admin-portal/admin-clients-panel";
+import { AdminOverview } from "@/components/admin-portal/admin-overview";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
 export const metadata: Metadata = {
@@ -8,23 +10,26 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+const TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "clients", label: "Clients" },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
 /**
- * Phase 2: Clients tab with create-client + invitation management
- * (PORTAL_PLAN.md 7.2). Reads run on the user-context client: admin RLS
- * policies authorize them (R13). Phase 3 adds Overview and client detail.
+ * Phase 3: tabbed operating console (PORTAL_PLAN.md 7.2). Overview (KPIs +
+ * activity feed) and Clients (search, filters, create, row click to detail).
+ * Billing, Fleet, and Alerts tabs join in Phases 5/6A/7. Reads run on the
+ * user-context client: admin RLS policies authorize them (R13).
  */
-export default async function AdminDashboardPage() {
-  const supabase = await createPortalServerClient();
-
-  const { data: clients, error } = await supabase
-    .from("profiles")
-    .select("*, services(*), invitations(id, target_email, expires_at, used_at, created_at)")
-    .eq("role", "client")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("[portal] Admin clients query failed:", error);
-  }
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  const activeTab: TabId = tab === "clients" ? "clients" : "overview";
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-12">
@@ -40,15 +45,42 @@ export default async function AdminDashboardPage() {
         <SignOutButton />
       </div>
 
-      <div className="mt-10">
-        {error ? (
-          <p className="rounded-xl border border-white/10 bg-surface p-6 text-sm text-[#f57c00]">
-            Could not load clients. Refresh the page to try again.
-          </p>
-        ) : (
-          <AdminClientsPanel clients={clients ?? []} />
-        )}
+      <nav className="mt-8 flex gap-2 border-b border-white/10" aria-label="Dashboard sections">
+        {TABS.map((t) => (
+          <Link
+            key={t.id}
+            href={t.id === "overview" ? "/admin-dashboard" : `/admin-dashboard?tab=${t.id}`}
+            className={`rounded-t-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-colors ${
+              activeTab === t.id
+                ? "border border-b-0 border-white/10 bg-surface text-white"
+                : "text-white/50 hover:text-white"
+            }`}
+            aria-current={activeTab === t.id ? "page" : undefined}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="mt-8">
+        {activeTab === "overview" ? <AdminOverview /> : <ClientsTab />}
       </div>
     </section>
   );
+}
+
+async function ClientsTab() {
+  const supabase = await createPortalServerClient();
+  const { data: clients, error } = await supabase
+    .from("profiles")
+    .select("*, services(*), invitations(id, target_email, expires_at, used_at, created_at)")
+    .eq("role", "client")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[portal] Admin clients query failed:", error);
+    throw new Error("Clients failed to load.");
+  }
+
+  return <AdminClientsPanel clients={clients ?? []} />;
 }

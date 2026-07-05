@@ -842,13 +842,13 @@ Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-dai
 
 ### Phase 3: Services Display & Management
 
-- [ ] **[HUMAN]** D6/Q1+Q3: tier feature copy; whether monitoring is paid in-portal
-- [ ] Client dashboard: monitoring card (read-only), cloud backup card (display-only, no plan controls per R21), welcome header, skeletons, empty states, error boundaries
-- [ ] Admin: client detail with tier modify, cancel/restart, manual cloud-backup assign (all server actions, `requireAdmin()`)
-- [ ] Admin Clients tab: search (name/email instant filter), filters (status, service type, tier), sortable columns, pagination (7.2)
-- [ ] Admin Overview tab skeleton: active clients, pending activations, services by type/tier, activity feed (billing KPIs join in Phase 5)
+- [ ] **[HUMAN]** D6/Q1+Q3: tier feature copy; whether monitoring is paid in-portal. **Open, not blocking:** shipped cards use neutral copy (tier name + status + "call McKee to change"); Q1 feature bullets slot into the cards whenever answered, Q3 gates Phase 5 checkout only
+- [x] Client dashboard: monitoring card (read-only), cloud backup card (display-only, no plan controls per R21, hidden without a cloud service), welcome header, skeletons (`loading.tsx`), empty states, error boundaries with retry (`error.tsx`)
+- [x] Admin: client detail page (`/admin-dashboard/clients/[profileId]`) with profile editing, tier modify, pause/cancel/restart, service assignment, invitation state + resend, disable/re-enable, delete (all server actions behind `requireAdmin()`, writes via admin RLS per R13)
+- [x] Admin Clients tab: search (name/email instant filter), filters (status, service type, tier, no-services), sortable columns (name/email/status/created), pagination (25/page), row click opens client detail (7.2)
+- [x] Admin Overview tab skeleton: KPI cards (active clients, pending activations, unpaid services, disabled accounts), services-by-tier counts, recent activity feed linking to client detail (billing KPIs join in Phase 5). Tabbed console shell (`?tab=`) ready for Billing/Fleet/Alerts tabs
 
-**Gate:** admin tier change appears on client dashboard on next load; client session has no UI or action path that mutates `services` (verified by scripted RLS write attempt); admin finds any client by partial name or email in one search.
+**Gate:** admin tier change appears on client dashboard on next load; client session has no UI or action path that mutates `services` (verified by scripted RLS write attempt); admin finds any client by partial name or email in one search. **Passed 2026-07-05: `scripts/services-check.mjs`, 15/15 checks against the production build** (RLS write attempts fail both UPDATE and INSERT, tier change propagates, cloud card hides/appears correctly, detail page renders and 404s appropriately).
 
 ### Phase 4: Caller ID & Devices
 
@@ -966,6 +966,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-07-05 | **Phase 3 executed; gate passed 15/15 (`services-check.mjs`).** No new schema needed (invitations/services shipped in Phase 2). Built: `services.ts` admin actions (assign with duplicate guard, tier change validated against the per-type tier list, status change for pause/cancel/restart), `updateClientProfileAction` + `setClientStatusAction` (disable locks out on next request via the layout gate), admin client detail page at `/admin-dashboard/clients/[profileId]` (profile edit, service management with confirm on cancel, invitation state + resend, account controls), Clients tab upgraded (status/service/tier filters, sortable columns, 25-row pagination, row click to detail), tabbed admin console with Overview (KPI cards, services-by-tier counts, activity feed derived from profile/activation/service events), client dashboard cards (monitoring read-only, cloud backup display-only per R21 and hidden without a service), `loading.tsx` skeletons + `error.tsx` retry boundaries on both dashboards. Key Next.js detail: pages render in parallel with layout gates, so portal pages return null/harmless output for the states their layout gates away. Q1/Q3 remain open with neutral card copy; not blocking |
 | 2026-07-04 | Handover audited against repo; plan v1 created |
 | 2026-07-04 | Supabase project renamed to "McKee Security Platform" (Management API, verified via MCP). Auth config audited: site_url still localhost, Google disabled, publishable key available. Advisors: INFO-only (units/rentals no policies, intentional) |
 | 2026-07-04 | Plan hardened to v2: verified Next 16 proxy/cookies facts from bundled docs, adopted `getClaims()` + publishable key + required `proxy.ts` per current Supabase SSR guidance, full schema + RLS matrix + flow specs + traceability added. `npm install` run in `website/` (node_modules present). Phase 0 remaining items ready to start |

@@ -94,7 +94,7 @@ export async function createClientAction(
     });
   }
 
-  revalidatePath("/admin-dashboard");
+  revalidatePath("/admin-dashboard", "layout");
   return { ok: true, profileId, activateUrl, emailSent, emailAttempted: Boolean(email) };
 }
 
@@ -175,8 +175,117 @@ export async function resendInviteAction(profileId: string): Promise<ResendInvit
     });
   }
 
-  revalidatePath("/admin-dashboard");
+  revalidatePath("/admin-dashboard", "layout");
   return { ok: true, activateUrl, emailSent, emailAttempted: Boolean(profile.email) };
+}
+
+const updateProfileSchema = z.object({
+  profileId: z.uuid(),
+  firstName: z.string().trim().min(1, "First name is required").max(100),
+  lastName: z.string().trim().min(1, "Last name is required").max(100),
+  email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address"))]),
+  address: z.string().trim().max(300),
+});
+
+export type UpdateClientProfileInput = z.infer<typeof updateProfileSchema>;
+export type UpdateClientProfileResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Phase 3 client detail: admin edits identity fields (handover: clients cannot
+ * change their own name/address; changes go through McKee). Email here is the
+ * contact/invite email on the profile; it does not change the sign-in email of
+ * an already-activated auth user.
+ */
+export async function updateClientProfileAction(
+  input: UpdateClientProfileInput,
+): Promise<UpdateClientProfileResult> {
+  await requireAdmin();
+
+  const parsed = updateProfileSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const { profileId, firstName, lastName, email, address } = parsed.data;
+
+  const supabase = await createPortalServerClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("id, role")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!target) return { ok: false, error: "Client not found." };
+  if (target.role !== "client") {
+    return { ok: false, error: "Only client profiles can be edited here." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      first_name: firstName,
+      last_name: lastName,
+      email: email || null,
+      address: address || null,
+    })
+    .eq("id", profileId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, error: "Another client already uses that email." };
+    }
+    console.error("[portal] updateClientProfile failed:", error);
+    return { ok: false, error: "Could not save the changes. Please try again." };
+  }
+
+  revalidatePath("/admin-dashboard", "layout");
+  return { ok: true };
+}
+
+export type SetClientStatusResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Disable locks the client out on next request (layout gate + requireUser both
+ * reject disabled profiles); enable restores access. Distinct from deletion:
+ * data and sign-in are preserved.
+ */
+export async function setClientStatusAction(input: {
+  profileId: string;
+  status: "active" | "disabled";
+}): Promise<SetClientStatusResult> {
+  await requireAdmin();
+
+  if (!z.uuid().safeParse(input.profileId).success) {
+    return { ok: false, error: "Invalid client." };
+  }
+  if (input.status !== "active" && input.status !== "disabled") {
+    return { ok: false, error: "Invalid status." };
+  }
+
+  const supabase = await createPortalServerClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("id, role, user_id")
+    .eq("id", input.profileId)
+    .maybeSingle();
+  if (!target) return { ok: false, error: "Client not found." };
+  if (target.role !== "client") {
+    return { ok: false, error: "Only client accounts can be changed here." };
+  }
+  if (input.status === "active" && !target.user_id) {
+    return { ok: false, error: "This client has not activated yet. Resend their invitation instead." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ status: input.status })
+    .eq("id", input.profileId);
+
+  if (error) {
+    console.error("[portal] setClientStatus failed:", error);
+    return { ok: false, error: "Could not update the account. Please try again." };
+  }
+
+  revalidatePath("/admin-dashboard", "layout");
+  return { ok: true };
 }
 
 export type DeleteClientResult = { ok: true } | { ok: false; error: string };
@@ -227,6 +336,6 @@ export async function deleteClientAction(profileId: string): Promise<DeleteClien
     return { ok: false, error: "Sign-in removed, but profile data deletion failed. Retry to finish." };
   }
 
-  revalidatePath("/admin-dashboard");
+  revalidatePath("/admin-dashboard", "layout");
   return { ok: true };
 }

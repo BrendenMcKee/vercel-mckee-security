@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { Tables } from "@/lib/portal/database.types";
 import {
   createClientAction,
@@ -8,6 +9,13 @@ import {
   resendInviteAction,
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
+import {
+  SERVICE_TIERS,
+  SERVICE_TYPE_LABELS,
+  tierLabel,
+  type ServiceType,
+} from "@/lib/portal/service-labels";
+import { adminInputClass, ProfileStatusBadge } from "@/components/admin-portal/ui";
 
 type InvitationSummary = Pick<
   Tables<"invitations">,
@@ -19,9 +27,6 @@ export type AdminClientRow = Tables<"profiles"> & {
   invitations: InvitationSummary[];
 };
 
-const MONITORING_TIERS = ["basic", "standard", "pro"] as const;
-const CLOUD_TIERS = ["7day", "30day", "90day"] as const;
-
 const EMPTY_FORM: CreateClientInput = {
   firstName: "",
   lastName: "",
@@ -31,21 +36,10 @@ const EMPTY_FORM: CreateClientInput = {
   cloudTier: "",
 };
 
-const inputClass =
-  "rounded-xl border border-white/15 bg-background px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-primary";
+const PAGE_SIZE = 25;
 
-function StatusBadge({ status }: { status: Tables<"profiles">["status"] }) {
-  const styles: Record<string, string> = {
-    active: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-    pending: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-    disabled: "bg-white/10 text-white/50 border-white/15",
-  };
-  return (
-    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${styles[status]}`}>
-      {status}
-    </span>
-  );
-}
+type SortKey = "name" | "email" | "status" | "created";
+type SortDir = "asc" | "desc";
 
 function inviteState(client: AdminClientRow): {
   label: string;
@@ -60,21 +54,38 @@ function inviteState(client: AdminClientRow): {
   const msLeft = new Date(open.expires_at).getTime() - Date.now();
   if (msLeft <= 0) return { label: "Invite expired", tone: "warn", canResend: true };
   const days = Math.ceil(msLeft / 86400_000);
-  return {
-    label: `Invited · ${days}d left`,
-    tone: "ok",
-    canResend: true,
-  };
+  return { label: `Invited · ${days}d left`, tone: "ok", canResend: true };
 }
 
 function serviceChips(services: Tables<"services">[]): string[] {
-  return services.map((s) =>
-    s.service_type === "monitoring" ? `Monitoring · ${s.tier}` : `Cloud · ${s.tier}`,
+  return services.map(
+    (s) =>
+      `${s.service_type === "monitoring" ? "Monitoring" : "Cloud"} · ${tierLabel(s.tier)}${s.status !== "active" ? ` (${s.status})` : ""}`,
   );
 }
 
+function compare(a: AdminClientRow, b: AdminClientRow, key: SortKey): number {
+  switch (key) {
+    case "name":
+      return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+    case "email":
+      return (a.email ?? "").localeCompare(b.email ?? "");
+    case "status":
+      return a.status.localeCompare(b.status);
+    case "created":
+      return a.created_at.localeCompare(b.created_at);
+  }
+}
+
 export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | Tables<"profiles">["status"]>("");
+  const [serviceFilter, setServiceFilter] = useState<"" | ServiceType | "none">("");
+  const [tierFilter, setTierFilter] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("created");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateClientInput>(EMPTY_FORM);
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string; link?: string } | null>(null);
@@ -84,12 +95,57 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter((c) =>
-      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
-      (c.email ?? "").toLowerCase().includes(q),
-    );
-  }, [clients, search]);
+    let rows = clients;
+    if (q) {
+      rows = rows.filter(
+        (c) =>
+          `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
+          (c.email ?? "").toLowerCase().includes(q),
+      );
+    }
+    if (statusFilter) rows = rows.filter((c) => c.status === statusFilter);
+    if (serviceFilter === "none") {
+      rows = rows.filter((c) => c.services.length === 0);
+    } else if (serviceFilter) {
+      rows = rows.filter((c) => c.services.some((s) => s.service_type === serviceFilter));
+    }
+    if (tierFilter) {
+      rows = rows.filter((c) =>
+        c.services.some(
+          (s) => s.tier === tierFilter && (serviceFilter === "" || serviceFilter === "none" || s.service_type === serviceFilter),
+        ),
+      );
+    }
+    const sorted = [...rows].sort((a, b) => {
+      const result = compare(a, b, sortKey);
+      return sortDir === "asc" ? result : -result;
+    });
+    return sorted;
+  }, [clients, search, statusFilter, serviceFilter, tierFilter, sortKey, sortDir]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageRows = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+
+  const tierOptions =
+    serviceFilter && serviceFilter !== "none"
+      ? SERVICE_TIERS[serviceFilter]
+      : [...SERVICE_TIERS.monitoring, ...SERVICE_TIERS.cloud_backup];
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "created" ? "desc" : "asc");
+    }
+    setPage(0);
+  }
+
+  function sortIndicator(key: SortKey) {
+    if (sortKey !== key) return null;
+    return <span aria-hidden="true"> {sortDir === "asc" ? "▲" : "▼"}</span>;
+  }
 
   function set<K extends keyof CreateClientInput>(key: K, value: CreateClientInput[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -172,29 +228,85 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
     });
   }
 
+  const selectClass = `${adminInputClass} cursor-pointer`;
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-white">Clients</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="search"
-            placeholder="Search name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={`${inputClass} min-w-[14rem]`}
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setShowForm((v) => !v);
-              setNotice(null);
+        <button
+          type="button"
+          onClick={() => {
+            setShowForm((v) => !v);
+            setNotice(null);
+          }}
+          className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)]"
+        >
+          {showForm ? "Close" : "New Client"}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          placeholder="Search name or email..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          className={`${adminInputClass} min-w-[14rem] flex-1 sm:flex-none`}
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value as typeof statusFilter);
+            setPage(0);
+          }}
+          className={selectClass}
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="disabled">Disabled</option>
+        </select>
+        <select
+          value={serviceFilter}
+          onChange={(e) => {
+            setServiceFilter(e.target.value as typeof serviceFilter);
+            setTierFilter("");
+            setPage(0);
+          }}
+          className={selectClass}
+          aria-label="Filter by service"
+        >
+          <option value="">All services</option>
+          <option value="monitoring">{SERVICE_TYPE_LABELS.monitoring}</option>
+          <option value="cloud_backup">{SERVICE_TYPE_LABELS.cloud_backup}</option>
+          <option value="none">No services</option>
+        </select>
+        {serviceFilter !== "none" && (
+          <select
+            value={tierFilter}
+            onChange={(e) => {
+              setTierFilter(e.target.value);
+              setPage(0);
             }}
-            className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)]"
+            className={selectClass}
+            aria-label="Filter by tier"
           >
-            {showForm ? "Close" : "New Client"}
-          </button>
-        </div>
+            <option value="">All tiers</option>
+            {tierOptions.map((tier) => (
+              <option key={tier} value={tier}>
+                {tierLabel(tier)}
+              </option>
+            ))}
+          </select>
+        )}
+        <span className="text-xs text-white/40">
+          {filtered.length} of {clients.length}
+        </span>
       </div>
 
       {notice && (
@@ -235,7 +347,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               required
               value={form.firstName}
               onChange={(e) => set("firstName", e.target.value)}
-              className={inputClass}
+              className={adminInputClass}
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-white/80">
@@ -244,7 +356,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               required
               value={form.lastName}
               onChange={(e) => set("lastName", e.target.value)}
-              className={inputClass}
+              className={adminInputClass}
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-white/80">
@@ -253,7 +365,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               type="email"
               value={form.email}
               onChange={(e) => set("email", e.target.value)}
-              className={inputClass}
+              className={adminInputClass}
             />
             <span className="text-xs text-white/40">
               Invitation is emailed when set; otherwise you get a link to deliver.
@@ -264,7 +376,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             <input
               value={form.address}
               onChange={(e) => set("address", e.target.value)}
-              className={inputClass}
+              className={adminInputClass}
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-white/80">
@@ -272,12 +384,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             <select
               value={form.monitoringTier}
               onChange={(e) => set("monitoringTier", e.target.value as CreateClientInput["monitoringTier"])}
-              className={`${inputClass} cursor-pointer`}
+              className={selectClass}
             >
               <option value="">None</option>
-              {MONITORING_TIERS.map((tier) => (
+              {SERVICE_TIERS.monitoring.map((tier) => (
                 <option key={tier} value={tier}>
-                  {tier}
+                  {tierLabel(tier)}
                 </option>
               ))}
             </select>
@@ -287,12 +399,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             <select
               value={form.cloudTier}
               onChange={(e) => set("cloudTier", e.target.value as CreateClientInput["cloudTier"])}
-              className={`${inputClass} cursor-pointer`}
+              className={selectClass}
             >
               <option value="">None</option>
-              {CLOUD_TIERS.map((tier) => (
+              {SERVICE_TIERS.cloud_backup.map((tier) => (
                 <option key={tier} value={tier}>
-                  {tier}
+                  {tierLabel(tier)}
                 </option>
               ))}
             </select>
@@ -313,9 +425,21 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         <table className="w-full min-w-[44rem] text-left text-sm">
           <thead>
             <tr className="border-b border-white/10 text-xs uppercase tracking-widest text-white/40">
-              <th className="px-4 py-3 font-bold">Name</th>
-              <th className="px-4 py-3 font-bold">Email</th>
-              <th className="px-4 py-3 font-bold">Status</th>
+              <th className="px-4 py-3 font-bold">
+                <button type="button" onClick={() => toggleSort("name")} className="cursor-pointer uppercase tracking-widest hover:text-white">
+                  Name{sortIndicator("name")}
+                </button>
+              </th>
+              <th className="px-4 py-3 font-bold">
+                <button type="button" onClick={() => toggleSort("email")} className="cursor-pointer uppercase tracking-widest hover:text-white">
+                  Email{sortIndicator("email")}
+                </button>
+              </th>
+              <th className="px-4 py-3 font-bold">
+                <button type="button" onClick={() => toggleSort("status")} className="cursor-pointer uppercase tracking-widest hover:text-white">
+                  Status{sortIndicator("status")}
+                </button>
+              </th>
               <th className="px-4 py-3 font-bold">Services</th>
               <th className="px-4 py-3 font-bold">Invitation</th>
               <th className="px-4 py-3 text-right font-bold">
@@ -324,25 +448,29 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && (
+            {pageRows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-white/40">
                   {clients.length === 0
                     ? "No clients yet. Create the first one with New Client."
-                    : "No clients match your search."}
+                    : "No clients match your search or filters."}
                 </td>
               </tr>
             )}
-            {filtered.map((client) => {
+            {pageRows.map((client) => {
               const invite = inviteState(client);
               return (
-                <tr key={client.id} className="border-b border-white/5 last:border-0">
+                <tr
+                  key={client.id}
+                  onClick={() => router.push(`/admin-dashboard/clients/${client.id}`)}
+                  className="cursor-pointer border-b border-white/5 transition-colors last:border-0 hover:bg-white/5"
+                >
                   <td className="px-4 py-3 font-bold text-white">
                     {client.first_name} {client.last_name}
                   </td>
                   <td className="px-4 py-3 text-white/70">{client.email ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={client.status} />
+                    <ProfileStatusBadge status={client.status} />
                   </td>
                   <td className="px-4 py-3 text-white/70">
                     {client.services.length === 0 ? (
@@ -377,7 +505,10 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                         <button
                           type="button"
                           disabled={pending}
-                          onClick={() => resend(client.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            resend(client.id);
+                          }}
                           className="cursor-pointer rounded-lg border border-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50"
                         >
                           {resendingId === client.id ? "Sending..." : "Resend"}
@@ -389,7 +520,10 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                     <button
                       type="button"
                       disabled={pending}
-                      onClick={() => remove(client)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        remove(client);
+                      }}
                       className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
                     >
                       {deletingId === client.id ? "Deleting..." : "Delete"}
@@ -401,6 +535,30 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
           </tbody>
         </table>
       </div>
+
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between text-sm text-white/60">
+          <button
+            type="button"
+            disabled={currentPage === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            className="cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span>
+            Page {currentPage + 1} of {pageCount}
+          </span>
+          <button
+            type="button"
+            disabled={currentPage >= pageCount - 1}
+            onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            className="cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
