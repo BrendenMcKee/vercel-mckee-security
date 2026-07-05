@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createPortalBrowserClient } from "@/lib/portal/supabase/client";
 
 const COPY = {
@@ -18,6 +18,19 @@ const COPY = {
     footer: "staff",
   },
 } as const;
+
+/** Errors handed back by /api/auth/callback via ?auth_error=. */
+function mapAuthError(code: string | null, variant: keyof typeof COPY): string | null {
+  if (code === "no_account") {
+    return variant === "admin"
+      ? "That Google account is not set up for McKee Security staff access. No account was created."
+      : "There is no McKee Security account for that Google sign-in, so nothing was created. If you received an invitation, use your activation link to set up your account, or contact McKee Security.";
+  }
+  if (code === "callback") {
+    return "Sign-in did not complete. Please try again.";
+  }
+  return null;
+}
 
 /**
  * Logged-out state for /user-dashboard and /admin-dashboard (PORTAL_PLAN.md
@@ -36,10 +49,13 @@ export function SignIn({
 }) {
   const copy = COPY[variant];
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<"signin" | "forgot" | "sent">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    mapAuthError(searchParams.get("auth_error"), variant),
+  );
   const [pending, setPending] = useState(false);
   const [googlePending, setGooglePending] = useState(false);
 
@@ -65,12 +81,27 @@ export function SignIn({
     setError(null);
     setPending(true);
     const supabase = createPortalBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     if (signInError) {
       setError("Incorrect email or password.");
       setPending(false);
       return;
     }
+
+    // Credentials valid but no linked account: stay on the sign-in screen
+    // with a clear message instead of pushing into the portal.
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", signInData.user.id)
+      .maybeSingle();
+    if (!profileError && !profile) {
+      await supabase.auth.signOut();
+      setError(mapAuthError("no_account", variant));
+      setPending(false);
+      return;
+    }
+
     router.refresh();
   }
 
