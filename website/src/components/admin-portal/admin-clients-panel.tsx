@@ -183,15 +183,21 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
 
   function remove(client: AdminClientRow) {
     const name = `${client.first_name} ${client.last_name}`;
-    // Explicit confirm for destructive admin actions (handover 14.2).
-    const confirmed = window.confirm(
-      `Permanently delete ${name}?\n\nThis removes their sign-in, profile, services, and invitations everywhere. This cannot be undone.`,
+    // Destructive admin action (handover 14.2): type-to-confirm, verified
+    // again on the server. Deleting erases the client everywhere and stops
+    // any automatic card payments in Stripe first.
+    const typed = window.prompt(
+      `Permanently delete ${name}?\n\nThis erases their sign-in, profile, services, contact list, devices, payment history, and invitations, and stops any automatic card payments. This cannot be undone.\n\nTo confirm, type the client's full name exactly:`,
     );
-    if (!confirmed) return;
+    if (typed === null) return;
+    if (typed.trim().replace(/\s+/g, " ").toLowerCase() !== name.trim().replace(/\s+/g, " ").toLowerCase()) {
+      setNotice({ kind: "error", text: `The name you typed does not match ${name}. Nothing was deleted.` });
+      return;
+    }
     setNotice(null);
     setDeletingId(client.id);
     startTransition(async () => {
-      const result = await deleteClientAction(client.id);
+      const result = await deleteClientAction({ profileId: client.id, confirmName: typed });
       setDeletingId(null);
       if (!result.ok) {
         setNotice({ kind: "error", text: result.error });

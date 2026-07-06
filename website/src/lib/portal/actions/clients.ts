@@ -9,6 +9,7 @@ import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
 import { sendInvitationEmail } from "@/lib/portal/emails";
 import { MONITORING_MONTHLY_CENTS } from "@/lib/portal/billing";
+import { getStripeClient, isStripeConfigured } from "@/lib/portal/stripe";
 import { siteConfig } from "@/lib/site-config";
 
 const createClientSchema = z.object({
@@ -318,16 +319,33 @@ export async function setClientStatusAction(input: {
 
 export type DeleteClientResult = { ok: true } | { ok: false; error: string };
 
+/** Whitespace/case-insensitive name comparison for the delete confirmation. */
+function namesMatch(a: string, b: string): boolean {
+  const normalize = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+  return normalize(a) === normalize(b);
+}
+
 /**
  * Permanently deletes a client and every trace of them: auth user (sign-in),
  * profile, and via cascade their services and invitations. Restricted to
  * `role='client'` so an admin can never delete an admin account (or
  * themselves) from this surface. Runs on the service role because it spans
  * Supabase Auth + database; `requireAdmin()` is the authorization gate.
+ *
+ * Two extra safety gates (stakeholder round 3):
+ * - the admin must type the client's full name, verified here on the server,
+ *   not just in the browser;
+ * - any live card subscriptions are cancelled in Stripe first, so a deleted
+ *   client can never keep getting charged. If Stripe refuses, nothing is
+ *   deleted.
  */
-export async function deleteClientAction(profileId: string): Promise<DeleteClientResult> {
+export async function deleteClientAction(input: {
+  profileId: string;
+  confirmName: string;
+}): Promise<DeleteClientResult> {
   if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
+  const { profileId, confirmName } = input;
   if (!z.uuid().safeParse(profileId).success) {
     return { ok: false, error: "Invalid client." };
   }
@@ -344,6 +362,48 @@ export async function deleteClientAction(profileId: string): Promise<DeleteClien
   if (!profile) return { ok: false, error: "Client not found." };
   if (profile.role !== "client") {
     return { ok: false, error: "Only client accounts can be deleted here." };
+  }
+
+  const fullName = `${profile.first_name} ${profile.last_name}`;
+  if (!namesMatch(confirmName ?? "", fullName)) {
+    return {
+      ok: false,
+      error: `The name you typed does not match this client (${fullName}). Nothing was deleted.`,
+    };
+  }
+
+  // Stop live card subscriptions before anything is removed.
+  const { data: subscribedServices } = await supabase
+    .from("services")
+    .select("id, stripe_subscription_id")
+    .eq("profile_id", profileId)
+    .not("stripe_subscription_id", "is", null);
+  const subscriptionIds = (subscribedServices ?? [])
+    .map((s) => s.stripe_subscription_id)
+    .filter((id): id is string => Boolean(id));
+
+  if (subscriptionIds.length > 0) {
+    if (!isStripeConfigured()) {
+      return {
+        ok: false,
+        error: "This client has automatic card payments but Stripe is not configured on the server. Nothing was deleted.",
+      };
+    }
+    try {
+      const stripe = getStripeClient();
+      for (const subscriptionId of subscriptionIds) {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        if (subscription.status !== "canceled") {
+          await stripe.subscriptions.cancel(subscriptionId, { prorate: false });
+        }
+      }
+    } catch (error) {
+      console.error("[portal] deleteClient Stripe cancel failed:", error);
+      return {
+        ok: false,
+        error: "Could not stop the client's automatic card payments in Stripe, so nothing was deleted. Try again or check the Stripe dashboard.",
+      };
+    }
   }
 
   const admin = getPortalAdminClient();

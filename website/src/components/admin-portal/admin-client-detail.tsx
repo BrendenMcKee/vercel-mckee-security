@@ -359,9 +359,14 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
   const router = useRouter();
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
 
   const disabled = client.status === "disabled";
   const name = `${client.first_name} ${client.last_name}`;
+  const nameMatches =
+    confirmName.trim().replace(/\s+/g, " ").toLowerCase() ===
+    name.trim().replace(/\s+/g, " ").toLowerCase();
 
   function toggleStatus() {
     const confirmed = window.confirm(
@@ -378,20 +383,17 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
       });
       setNotice(
         result.ok
-          ? { kind: "ok", text: disabled ? "Account re-enabled." : "Account disabled." }
+          ? { kind: "ok", text: disabled ? "Account re-enabled. They can sign in again." : "Account disabled. They can no longer sign in." }
           : { kind: "error", text: result.error },
       );
     });
   }
 
   function remove() {
-    const confirmed = window.confirm(
-      `Permanently delete ${name}?\n\nThis removes their sign-in, profile, services, and invitations everywhere. This cannot be undone.`,
-    );
-    if (!confirmed) return;
+    if (!nameMatches) return;
     setNotice(null);
     startTransition(async () => {
-      const result = await deleteClientAction(client.id);
+      const result = await deleteClientAction({ profileId: client.id, confirmName });
       if (!result.ok) {
         setNotice({ kind: "error", text: result.error });
         return;
@@ -405,20 +407,94 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
       <h2 className="text-lg font-bold text-white">Account Controls</h2>
       <div className="mt-4 space-y-3">
         <NoticeBanner notice={notice} />
-        <div className="flex flex-wrap gap-3">
-          {(client.user_id || disabled) && (
+
+        {(client.user_id || disabled) && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-background p-4">
+            <div className="max-w-xl">
+              <p className="text-sm font-bold text-white">
+                {disabled ? "Re-enable account" : "Disable account"}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-white/50">
+                {disabled
+                  ? "This account is currently disabled. Re-enabling lets the client sign in again; everything is exactly as they left it."
+                  : "Temporarily locks the client out of the portal; they cannot sign in until you re-enable them. Nothing is removed: their services, billing, contact list, and history all stay, and automatic card payments keep running. Use this instead of deleting when a situation might get resolved."}
+              </p>
+            </div>
             <button type="button" disabled={pending} onClick={toggleStatus} className={buttonSecondary}>
               {disabled ? "Re-enable Account" : "Disable Account"}
             </button>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-red-500/25 bg-background p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="max-w-xl">
+              <p className="text-sm font-bold text-white">Delete client</p>
+              <p className="mt-1 text-xs leading-relaxed text-white/50">
+                Permanently erases this client everywhere: their sign-in,
+                profile, services, alarm contact list, devices, payment
+                history, and invitations. Any automatic card payments are
+                stopped in Stripe first. This cannot be undone. If you just
+                need to lock them out for a while, disable the account
+                instead.
+              </p>
+            </div>
+            {!confirmingDelete && (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setConfirmingDelete(true);
+                  setConfirmName("");
+                  setNotice(null);
+                }}
+                className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
+              >
+                Delete Client...
+              </button>
+            )}
+          </div>
+
+          {confirmingDelete && (
+            <div className="mt-4 space-y-3 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+              <p className="text-sm text-white/80">
+                To confirm, type the client&apos;s full name exactly:{" "}
+                <span className="font-bold text-white">{name}</span>
+              </p>
+              <input
+                value={confirmName}
+                onChange={(e) => setConfirmName(e.target.value)}
+                placeholder={name}
+                autoComplete="off"
+                className={adminInputClass}
+                aria-label="Type the client's full name to confirm deletion"
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  disabled={pending || !nameMatches}
+                  onClick={remove}
+                  className="cursor-pointer rounded-lg border border-red-500/50 bg-red-500/15 px-4 py-2 text-xs font-bold uppercase tracking-wide text-red-200 transition-colors hover:bg-red-500/25 disabled:cursor-default disabled:opacity-40"
+                >
+                  {pending ? "Deleting..." : "Permanently Delete This Client"}
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    setConfirmingDelete(false);
+                    setConfirmName("");
+                  }}
+                  className={buttonSecondary}
+                >
+                  Keep the Client
+                </button>
+                {confirmName.trim() !== "" && !nameMatches && (
+                  <p className="text-xs text-white/45">The name does not match yet.</p>
+                )}
+              </div>
+            </div>
           )}
-          <button
-            type="button"
-            disabled={pending}
-            onClick={remove}
-            className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
-          >
-            Delete Client
-          </button>
         </div>
       </div>
     </div>
