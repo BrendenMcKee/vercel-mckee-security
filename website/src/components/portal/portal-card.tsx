@@ -84,15 +84,15 @@ export function PortalCard({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-white/10 bg-surface p-6 transition-colors hover:border-white/20 ${className ?? ""}`}
+      className={`rounded-2xl border border-white/10 bg-surface p-6 transition-colors hover:border-white/20 sm:p-7 ${className ?? ""}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-4">
           <PortalCardIcon icon={icon} />
           <div>
-            <h2 className="text-lg font-bold leading-snug text-white">{title}</h2>
+            <h2 className="text-xl font-bold leading-snug tracking-tight text-white">{title}</h2>
             {description && (
-              <p className="mt-0.5 text-sm leading-relaxed text-white/50">{description}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-white/50">{description}</p>
             )}
           </div>
         </div>

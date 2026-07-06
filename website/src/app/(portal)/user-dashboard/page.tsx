@@ -144,11 +144,11 @@ export default async function UserDashboardPage({
   const hasCardOnFile = services.some((s) => s.stripe_subscription_id);
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="space-y-6">
       {payment === "success" && (
         <p
           role="status"
-          className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-sm leading-relaxed text-emerald-200 md:col-span-2"
+          className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-sm leading-relaxed text-emerald-200"
         >
           Payment set up successfully. Thank you! A confirmation email is on
           its way. If anything below still looks out of date, refresh in a few
@@ -158,7 +158,7 @@ export default async function UserDashboardPage({
       {payment === "cancelled" && (
         <p
           role="status"
-          className="rounded-2xl border border-white/15 bg-surface p-5 text-sm leading-relaxed text-white/70 md:col-span-2"
+          className="rounded-2xl border border-white/15 bg-surface p-5 text-sm leading-relaxed text-white/70"
         >
           Checkout was cancelled and no charge was made. You can set up payment
           any time from the Billing &amp; Payments section below.
@@ -168,7 +168,7 @@ export default async function UserDashboardPage({
       {unpaidServices.map((service) => (
         <div
           key={service.id}
-          className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-6 md:col-span-2"
+          className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-6"
         >
           <h2 className="text-lg font-bold text-amber-100">
             Payment needed: {SERVICE_TYPE_LABELS[service.service_type]}
@@ -203,7 +203,7 @@ export default async function UserDashboardPage({
       {cardSetupNeeded.map((service) => (
         <div
           key={service.id}
-          className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-6 md:col-span-2"
+          className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-6"
         >
           <h2 className="text-lg font-bold text-sky-100">
             Set up automatic payments: {SERVICE_TYPE_LABELS[service.service_type]}
@@ -229,25 +229,35 @@ export default async function UserDashboardPage({
         action={monitoring ? <ServiceStatusBadge status={monitoring.status} /> : undefined}
       >
         {monitoring ? (
-          <div className="space-y-3">
-            <p className="text-2xl font-bold text-white">{tierLabel(monitoring.tier)}</p>
-            {monitoring.monthly_amount_cents != null && (
-              <p className="text-sm text-white/50">
-                {formatCents(monitoring.monthly_amount_cents)}/month plus tax
-                {monitoring.billing_interval === "annual" && ", invoiced annually"}
+          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
+            <div>
+              <p className="text-3xl font-bold tracking-tight text-white">
+                {tierLabel(monitoring.tier)}
               </p>
-            )}
-            <p className="border-t border-white/10 pt-3 text-sm leading-relaxed text-white/65">
+              {monitoring.monthly_amount_cents != null && (
+                <p className="mt-2 text-[15px] text-white/55">
+                  <span className="font-semibold text-white/80">
+                    {formatCents(monitoring.monthly_amount_cents)}
+                  </span>
+                  /month plus tax
+                  {monitoring.billing_interval === "annual" && ", invoiced annually"}
+                </p>
+              )}
+            </div>
+            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
               Your monitoring plan is managed by McKee Security. To make changes,
               call{" "}
-              <a href="tel:+17054572156" className="font-bold text-white hover:text-primary">
+              <a
+                href="tel:+17054572156"
+                className="whitespace-nowrap font-bold text-white hover:text-primary"
+              >
                 (705) 457-2156
               </a>
               .
             </p>
           </div>
         ) : (
-          <p className="text-sm leading-relaxed text-white/65">
+          <p className="border-t border-white/10 pt-5 text-sm leading-relaxed text-white/65">
             No monitoring service on this account. Interested? Call{" "}
             <a href="tel:+17054572156" className="font-bold text-white hover:text-primary">
               (705) 457-2156
@@ -264,12 +274,15 @@ export default async function UserDashboardPage({
           description="Camera footage stored securely off-site"
           action={<ServiceStatusBadge status={cloud.status} />}
         >
-          <div className="space-y-3">
-            <p className="text-2xl font-bold text-white">{tierLabel(cloud.tier)}</p>
-            <p className="border-t border-white/10 pt-3 text-sm leading-relaxed text-white/65">
+          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
+            <p className="text-3xl font-bold tracking-tight text-white">{tierLabel(cloud.tier)}</p>
+            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
               Your cloud backup plan runs on McKee-managed equipment. For plan
               questions or changes, contact McKee Security at{" "}
-              <a href="tel:+17054572156" className="font-bold text-white hover:text-primary">
+              <a
+                href="tel:+17054572156"
+                className="whitespace-nowrap font-bold text-white hover:text-primary"
+              >
                 (705) 457-2156
               </a>
               .
@@ -283,21 +296,20 @@ export default async function UserDashboardPage({
           icon="card"
           title={<>Billing &amp; Payments</>}
           description="What you pay, when it comes out, and every payment you have made"
-          className="md:col-span-2"
         >
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 border-t border-white/10 pt-5 md:grid-cols-2">
             {billableServices.map((service) => {
               const invoiceCents =
                 service.monthly_amount_cents != null
                   ? service.monthly_amount_cents * intervalMonths(service.billing_interval)
                   : null;
               return (
-                <div key={service.id} className="rounded-xl border border-white/10 bg-background p-4">
+                <div key={service.id} className="rounded-xl border border-white/10 bg-background p-5">
                   <p className="font-bold text-white">{SERVICE_TYPE_LABELS[service.service_type]}</p>
-                  <dl className="mt-3 space-y-2 text-sm">
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-white/45">How you pay</dt>
-                      <dd className="text-right text-white/80">
+                  <dl className="mt-3.5 space-y-2.5 text-sm">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <dt className="shrink-0 text-white/45">How you pay</dt>
+                      <dd className="text-right text-white/85">
                         {service.billing_method === "stripe"
                           ? service.stripe_subscription_id
                             ? "Automatic (card on file)"
@@ -306,16 +318,17 @@ export default async function UserDashboardPage({
                       </dd>
                     </div>
                     {invoiceCents != null && (
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-white/45">Amount</dt>
-                        <dd className="text-right text-white/80">
-                          {formatCents(invoiceCents)} plus tax
+                      <div className="flex items-baseline justify-between gap-4">
+                        <dt className="shrink-0 text-white/45">Amount</dt>
+                        <dd className="text-right tabular-nums text-white/85">
+                          <span className="font-semibold text-white">{formatCents(invoiceCents)}</span>
+                          {" "}plus tax
                           {service.billing_interval === "annual" ? " per year" : " per month"}
                         </dd>
                       </div>
                     )}
-                    <div className="flex justify-between gap-3 border-t border-white/10 pt-2">
-                      <dt className="text-white/45">Next payment</dt>
+                    <div className="flex items-baseline justify-between gap-4 border-t border-white/10 pt-2.5">
+                      <dt className="shrink-0 text-white/45">Next payment</dt>
                       <dd className="text-right font-semibold text-white">
                         {service.next_due_on ? formatDate(service.next_due_on) : "To be confirmed"}
                       </dd>
@@ -346,21 +359,24 @@ export default async function UserDashboardPage({
                 {history.map((entry) => (
                   <li
                     key={entry.key}
-                    className="flex flex-wrap items-baseline justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+                    className="flex flex-wrap items-baseline justify-between gap-2 py-3 first:pt-0 last:pb-0"
                   >
                     <span className="text-white/80">
-                      <span className="font-bold text-white">
+                      <span className="text-[15px] font-bold tabular-nums text-white">
                         {entry.amountCents != null ? formatCents(entry.amountCents) : "Payment"}
-                      </span>{" "}
-                      &middot; {entry.how}
+                      </span>
+                      <span className="text-white/60">
+                        {" "}
+                        &middot; {entry.how}
+                      </span>
                       {entry.serviceType && (
-                        <span className="text-white/45">
+                        <span className="text-white/40">
                           {" "}
                           &middot; {SERVICE_TYPE_LABELS[entry.serviceType as keyof typeof SERVICE_TYPE_LABELS] ?? entry.serviceType}
                         </span>
                       )}
                     </span>
-                    <span className="text-xs text-white/40">{formatDate(entry.paidOn)}</span>
+                    <span className="text-xs text-white/45">{formatDate(entry.paidOn)}</span>
                   </li>
                 ))}
               </ul>
@@ -374,16 +390,17 @@ export default async function UserDashboardPage({
           icon="phone"
           title="Alarm Contact List (Caller ID)"
           description="Who the monitoring station calls when your alarm goes off"
-          className="md:col-span-2"
         >
-          <p className="text-sm leading-relaxed text-white/65">
-            These are the people the monitoring station calls, in order, when
-            your alarm goes off. Each person has a passcode they give the
-            station to confirm who they are. Add or remove contacts and save.
-            McKee Security is notified automatically and updates the station.
-          </p>
-          <div className="mt-5">
-            <CallerIdEditor variant="client" initialContacts={contactsResult.data} />
+          <div className="border-t border-white/10 pt-5">
+            <p className="max-w-3xl text-sm leading-relaxed text-white/55">
+              These are the people the monitoring station calls, in order, when
+              your alarm goes off. Each person has a passcode they give the
+              station to confirm who they are. Add or remove contacts and save.
+              McKee Security is notified automatically and updates the station.
+            </p>
+            <div className="mt-5">
+              <CallerIdEditor variant="client" initialContacts={contactsResult.data} />
+            </div>
           </div>
         </PortalCard>
       )}
@@ -393,9 +410,8 @@ export default async function UserDashboardPage({
           icon="wrench"
           title="Equipment Maintenance"
           description="Install dates and upcoming replacements for your system's hardware"
-          className="md:col-span-2"
         >
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 border-t border-white/10 pt-5 md:grid-cols-2">
             {devicesResult.data.map((device) => {
               const expired = isDeviceExpired(device.device_type, device.installed_on);
               const expiry = deviceExpiryDate(device.device_type, device.installed_on);
