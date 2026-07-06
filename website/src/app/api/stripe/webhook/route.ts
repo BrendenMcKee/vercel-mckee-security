@@ -114,13 +114,26 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const admin = getPortalAdminClient();
   const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
 
+  // Read the renewal date straight from the subscription instead of waiting
+  // for invoice.paid: Stripe does not guarantee event order, and the first
+  // invoice.paid may arrive before this handler stores the subscription id.
+  let nextDueOn: string | null = null;
+  if (subscriptionId) {
+    try {
+      const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
+      nextDueOn = subscriptionPeriodEnd(subscription);
+    } catch (error) {
+      console.error("[portal] checkout.session.completed subscription lookup failed:", error);
+    }
+  }
+
   const { error } = await admin
     .from("services")
     .update({
       status: "active",
       billing_method: "stripe",
       stripe_subscription_id: subscriptionId ?? null,
-      next_due_on: null,
+      next_due_on: nextDueOn,
       due_alerted_at: null,
     })
     .eq("id", serviceId);
@@ -166,12 +179,30 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   if (!subscriptionId) return;
 
   const admin = getPortalAdminClient();
-  const { data: service } = await admin
+  let { data: service } = await admin
     .from("services")
     .select("id, status, profile_id")
     .eq("stripe_subscription_id", subscriptionId)
     .maybeSingle();
-  if (!service) return;
+
+  // Stripe does not guarantee event order: the first invoice.paid can land
+  // before checkout.session.completed stores the subscription id. Fall back
+  // to the subscription metadata (stamped at checkout) and store the id here.
+  if (!service) {
+    const metaServiceId = invoice.parent?.subscription_details?.metadata?.service_id;
+    if (!metaServiceId) return;
+    const { data: byMeta } = await admin
+      .from("services")
+      .select("id, status, profile_id")
+      .eq("id", metaServiceId)
+      .maybeSingle();
+    if (!byMeta) return;
+    service = byMeta;
+    await admin
+      .from("services")
+      .update({ stripe_subscription_id: subscriptionId, billing_method: "stripe" })
+      .eq("id", service.id);
+  }
 
   const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
   const { error } = await admin
