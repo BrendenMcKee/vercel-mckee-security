@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SESSION_ERROR_MESSAGE, tryRequireAdmin } from "@/lib/portal/auth";
+import { DEVICE_CATEGORIES } from "@/lib/portal/devices";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +20,7 @@ const labelSchema = z
   .trim()
   .min(1, "Give the device a name.")
   .max(80, "Keep the name under 80 characters.");
+const categorySchema = z.enum(DEVICE_CATEGORIES, "Pick a device category.");
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date.");
 const yearsSchema = z
   .number()
@@ -36,6 +38,7 @@ function validateInstallDate(installedOn: string): string | null {
 const addSchema = z.object({
   profileId: z.uuid(),
   label: labelSchema,
+  category: categorySchema,
   installedOn: dateSchema,
   lifetimeYears: yearsSchema,
 });
@@ -43,6 +46,7 @@ const addSchema = z.object({
 export async function addDeviceAction(input: {
   profileId: string;
   label: string;
+  category: string;
   installedOn: string;
   lifetimeYears: number;
 }): Promise<DeviceActionResult> {
@@ -59,6 +63,7 @@ export async function addDeviceAction(input: {
   const { error } = await supabase.from("devices").insert({
     profile_id: parsed.data.profileId,
     label: parsed.data.label,
+    category: parsed.data.category,
     installed_on: parsed.data.installedOn,
     lifetime_years: parsed.data.lifetimeYears,
   });
@@ -76,6 +81,7 @@ export async function addDeviceAction(input: {
 const updateSchema = z.object({
   deviceId: z.uuid(),
   label: labelSchema,
+  category: categorySchema,
   installedOn: dateSchema,
   lifetimeYears: yearsSchema,
 });
@@ -83,6 +89,7 @@ const updateSchema = z.object({
 export async function updateDeviceAction(input: {
   deviceId: string;
   label: string;
+  category: string;
   installedOn: string;
   lifetimeYears: number;
 }): Promise<DeviceActionResult> {
@@ -113,6 +120,7 @@ export async function updateDeviceAction(input: {
     .from("devices")
     .update({
       label: parsed.data.label,
+      category: parsed.data.category,
       installed_on: parsed.data.installedOn,
       lifetime_years: parsed.data.lifetimeYears,
       ...(rearm ? { expiry_alerted_at: null } : {}),

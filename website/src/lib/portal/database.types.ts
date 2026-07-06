@@ -143,6 +143,7 @@ export type Database = {
       }
       devices: {
         Row: {
+          category: string
           created_at: string
           expiry_alerted_at: string | null
           id: string
@@ -153,6 +154,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string
           created_at?: string
           expiry_alerted_at?: string | null
           id?: string
@@ -163,6 +165,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string
           created_at?: string
           expiry_alerted_at?: string | null
           id?: string

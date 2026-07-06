@@ -35,7 +35,15 @@ import {
   type BillingInterval,
   type PaymentMethod,
 } from "@/lib/portal/billing";
-import { DEVICE_PRESETS, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
+import {
+  DEVICE_CATEGORIES,
+  DEVICE_CATEGORY_LABELS,
+  DEVICE_PRESETS,
+  deviceCategoryLabel,
+  deviceExpiryDate,
+  isDeviceExpired,
+  type DeviceCategory,
+} from "@/lib/portal/devices";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor, type CallerIdContact } from "@/components/portal/caller-id-editor";
 
@@ -1096,6 +1104,7 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
   const [label, setLabel] = useState(device.label);
+  const [category, setCategory] = useState(device.category);
   const [installedOn, setInstalledOn] = useState(device.installed_on);
   const [years, setYears] = useState(String(device.lifetime_years));
 
@@ -1106,6 +1115,7 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
   );
   const dirty =
     label !== device.label ||
+    category !== device.category ||
     installedOn !== device.installed_on ||
     years !== String(device.lifetime_years);
 
@@ -1120,6 +1130,7 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
       const result = await updateDeviceAction({
         deviceId: device.id,
         label,
+        category,
         installedOn,
         lifetimeYears,
       });
@@ -1150,7 +1161,12 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-bold text-white">{device.label}</p>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <p className="font-bold text-white">{device.label}</p>
+          <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white/55">
+            {deviceCategoryLabel(device.category)}
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           {expired && (
             <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
@@ -1182,6 +1198,20 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
               onChange={(e) => setLabel(e.target.value)}
               className={adminInputClass}
             />
+          </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs text-white/60">
+            Category
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className={`${adminSelectClass} max-w-full`}
+            >
+              {DEVICE_CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {DEVICE_CATEGORY_LABELS[value]}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex min-w-0 flex-col gap-1.5 text-xs text-white/60">
             Installed / last replaced
@@ -1227,14 +1257,18 @@ function DevicesCard({
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
   const [label, setLabel] = useState("");
+  const [category, setCategory] = useState<DeviceCategory>("other");
   const [installedOn, setInstalledOn] = useState("");
   const [years, setYears] = useState("5");
 
   function handleLabelChange(value: string) {
     setLabel(value);
-    // Picking a suggestion prefills its usual replacement interval.
+    // Picking a suggestion prefills its category and usual replacement interval.
     const preset = DEVICE_PRESETS.find((p) => p.label === value);
-    if (preset) setYears(String(preset.years));
+    if (preset) {
+      setCategory(preset.category);
+      setYears(String(preset.years));
+    }
   }
 
   function add(event: React.FormEvent<HTMLFormElement>) {
@@ -1249,6 +1283,7 @@ function DevicesCard({
       const result = await addDeviceAction({
         profileId: client.id,
         label,
+        category,
         installedOn,
         lifetimeYears,
       });
@@ -1257,6 +1292,7 @@ function DevicesCard({
         return;
       }
       setLabel("");
+      setCategory("other");
       setInstalledOn("");
       setYears("5");
       setNotice({ kind: "ok", text: "Device added. It now shows on the client's dashboard too." });
@@ -1295,7 +1331,7 @@ function DevicesCard({
             <input
               required
               list="device-name-suggestions"
-              placeholder="e.g. Alarm Backup Battery"
+              placeholder="e.g. 7Ah Security System Battery"
               maxLength={80}
               value={label}
               onChange={(e) => handleLabelChange(e.target.value)}
@@ -1306,6 +1342,20 @@ function DevicesCard({
                 <option key={preset.label} value={preset.label} />
               ))}
             </datalist>
+          </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+            Category
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as DeviceCategory)}
+              className={`${adminSelectClass} max-w-full`}
+            >
+              {DEVICE_CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {DEVICE_CATEGORY_LABELS[value]}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Installed on

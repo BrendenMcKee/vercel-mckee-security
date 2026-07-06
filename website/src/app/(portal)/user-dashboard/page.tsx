@@ -12,7 +12,7 @@ import {
   intervalMonths,
   type PaymentMethod,
 } from "@/lib/portal/billing";
-import { deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
+import { deviceCategoryLabel, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
 import { ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor } from "@/components/portal/caller-id-editor";
 import { PayNowButton } from "@/components/portal/pay-now-button";
@@ -79,7 +79,7 @@ export default async function UserDashboardPage({
         .order("created_at"),
       supabase
         .from("devices")
-        .select("id, label, installed_on, lifetime_years")
+        .select("id, label, category, installed_on, lifetime_years")
         .eq("profile_id", profile.id)
         .order("created_at"),
       supabase
@@ -425,7 +425,10 @@ export default async function UserDashboardPage({
                   }`}
                 >
                   <p className="font-bold text-white">{device.label}</p>
-                  <p className="mt-1 text-sm text-white/65">
+                  <p className="mt-0.5 text-[11px] font-bold uppercase tracking-widest text-white/35">
+                    {deviceCategoryLabel(device.category)}
+                  </p>
+                  <p className="mt-1.5 text-sm text-white/65">
                     Installed {formatDate(device.installed_on)}
                   </p>
                   <p className={`mt-1 text-sm font-semibold ${expired ? "text-amber-300" : "text-white/65"}`}>

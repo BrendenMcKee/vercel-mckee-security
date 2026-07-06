@@ -4,6 +4,7 @@ import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { AdminAlerts } from "@/components/admin-portal/admin-alerts";
 import { AdminBilling } from "@/components/admin-portal/admin-billing";
 import { AdminClientsPanel } from "@/components/admin-portal/admin-clients-panel";
+import { AdminDevices } from "@/components/admin-portal/admin-devices";
 import { AdminOverview } from "@/components/admin-portal/admin-overview";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
@@ -16,6 +17,7 @@ const TABS = [
   { id: "overview", label: "Overview" },
   { id: "clients", label: "Clients" },
   { id: "billing", label: "Billing" },
+  { id: "devices", label: "Devices" },
   { id: "alerts", label: "Alerts" },
 ] as const;
 
@@ -24,9 +26,10 @@ type TabId = (typeof TABS)[number]["id"];
 /**
  * Tabbed operating console (PORTAL_PLAN.md 7.2). Overview (KPIs + activity
  * feed), Clients (search, filters, create, row click to detail), Billing
- * (autopay + manual collection boards, Phase 5), and Alerts (operational
- * failures, Phase 7). Fleet joins in Phase 6A. Reads run on the user-context
- * client: admin RLS policies authorize them (R13).
+ * (autopay + manual collection boards, Phase 5), Devices (all tracked
+ * equipment across clients, filterable by category and due status), and
+ * Alerts (operational failures, Phase 7). Fleet joins in Phase 6A. Reads run
+ * on the user-context client: admin RLS policies authorize them (R13).
  */
 export default async function AdminDashboardPage({
   searchParams,
@@ -35,7 +38,15 @@ export default async function AdminDashboardPage({
 }) {
   const { tab } = await searchParams;
   const activeTab: TabId =
-    tab === "clients" ? "clients" : tab === "billing" ? "billing" : tab === "alerts" ? "alerts" : "overview";
+    tab === "clients"
+      ? "clients"
+      : tab === "billing"
+        ? "billing"
+        : tab === "devices"
+          ? "devices"
+          : tab === "alerts"
+            ? "alerts"
+            : "overview";
 
   const supabase = await createPortalServerClient();
   const { count: openAlerts } = await supabase
@@ -87,6 +98,8 @@ export default async function AdminDashboardPage({
           <AdminOverview />
         ) : activeTab === "billing" ? (
           <AdminBilling />
+        ) : activeTab === "devices" ? (
+          <AdminDevices />
         ) : activeTab === "alerts" ? (
           <AdminAlerts />
         ) : (

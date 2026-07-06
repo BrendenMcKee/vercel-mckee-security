@@ -82,8 +82,9 @@ await admin.from("caller_id_contacts").insert([
   { profile_id: clientUser.profileId, phone: "+17055550102", label: "Neighbour With A Long Name", passcode: "acorn" },
 ]);
 await admin.from("devices").insert([
-  { profile_id: clientUser.profileId, label: "Alarm Backup Battery", lifetime_years: 5, installed_on: "2019-02-01" },
-  { profile_id: clientUser.profileId, label: "Smoke Detector - Upstairs Hallway", lifetime_years: 10, installed_on: "2024-06-15" },
+  { profile_id: clientUser.profileId, label: "7Ah Security System Battery", category: "system_battery", lifetime_years: 5, installed_on: "2019-02-01" },
+  { profile_id: clientUser.profileId, label: "Smoke Detector - Upstairs Hallway", category: "detector", lifetime_years: 10, installed_on: "2024-06-15" },
+  { profile_id: clientUser.profileId, label: "Wireless Door Contact - Front", category: "wireless_device", lifetime_years: 10, installed_on: "2022-09-01" },
 ]);
 await admin.from("manual_payments").insert({
   profile_id: clientUser.profileId,
@@ -101,10 +102,14 @@ const adminSession = ssrClientWithJar();
 await adminSession.ssr.auth.signInWithPassword({ email: adminUser.email, password: adminUser.password });
 
 const browser = await chromium.launch();
-const iphone = devices["iPhone 13"];
+// AUDIT_VIEWPORT=1440 turns this into a desktop screenshot pass; default is iPhone.
+const desktopWidth = Number.parseInt(process.env.AUDIT_VIEWPORT ?? "", 10);
+const emulation = Number.isFinite(desktopWidth)
+  ? { viewport: { width: desktopWidth, height: 900 } }
+  : devices["iPhone 13"];
 
 async function audit(name, path, session) {
-  const context = await browser.newContext({ ...iphone, baseURL: baseUrl });
+  const context = await browser.newContext({ ...emulation, baseURL: baseUrl });
   if (session) {
     const u = new URL(baseUrl);
     await context.addCookies(
@@ -167,6 +172,7 @@ try {
   await audit("admin-overview", "/admin-dashboard", adminSession);
   await audit("admin-clients", "/admin-dashboard?tab=clients", adminSession);
   await audit("admin-billing", "/admin-dashboard?tab=billing", adminSession);
+  await audit("admin-devices", "/admin-dashboard?tab=devices", adminSession);
   await audit("admin-alerts", "/admin-dashboard?tab=alerts", adminSession);
   await audit("admin-client-detail", `/admin-dashboard/clients/${clientUser.profileId}`, adminSession);
 } finally {
