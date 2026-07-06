@@ -111,6 +111,7 @@ export type Database = {
           created_at: string
           id: string
           label: string
+          passcode: string | null
           phone: string
           profile_id: string
         }
@@ -118,6 +119,7 @@ export type Database = {
           created_at?: string
           id?: string
           label: string
+          passcode?: string | null
           phone: string
           profile_id: string
         }
@@ -125,6 +127,7 @@ export type Database = {
           created_at?: string
           id?: string
           label?: string
+          passcode?: string | null
           phone?: string
           profile_id?: string
         }

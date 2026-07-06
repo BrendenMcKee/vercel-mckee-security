@@ -5,11 +5,18 @@ import {
   SERVICE_TYPE_LABELS,
   tierLabel,
 } from "@/lib/portal/service-labels";
-import { PAYMENT_INSTRUCTIONS, formatCents, intervalMonths } from "@/lib/portal/billing";
+import {
+  PAYMENT_INSTRUCTIONS,
+  PAYMENT_METHOD_LABELS,
+  formatCents,
+  intervalMonths,
+  type PaymentMethod,
+} from "@/lib/portal/billing";
 import { DEVICE_LABELS, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
 import { ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor } from "@/components/portal/caller-id-editor";
 import { PayNowButton } from "@/components/portal/pay-now-button";
+import { ManageBillingButton } from "@/components/portal/manage-billing-button";
 
 export const metadata: Metadata = {
   title: "Manage Account",
@@ -24,11 +31,22 @@ function formatDate(isoDate: string): string {
   });
 }
 
+type PaymentHistoryEntry = {
+  key: string;
+  paidOn: string;
+  amountCents: number | null;
+  how: string;
+  serviceType: string | null;
+};
+
 /**
  * Client dashboard (PORTAL_PLAN.md 7.1). Phase 3 gave it the read-only
  * monitoring/cloud cards; Phase 4 adds caller ID list management and device
  * maintenance; Phase 5 adds the payment banner (Stripe Pay Now vs manual
- * instructions). Reads go through RLS: a client can only see their own rows.
+ * instructions). Stakeholder round 2 adds the Billing & Payments card:
+ * next payment date, full payment history (manual ledger + card payments),
+ * card setup for autopay services, and the Stripe portal for receipts/card
+ * updates. Reads go through RLS: a client can only see their own rows.
  */
 export default async function UserDashboardPage({
   searchParams,
@@ -44,23 +62,39 @@ export default async function UserDashboardPage({
   const { payment } = await searchParams;
 
   const supabase = await createPortalServerClient();
-  const [servicesResult, contactsResult, devicesResult] = await Promise.all([
-    supabase
-      .from("services")
-      .select("id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, next_due_on")
-      .eq("profile_id", profile.id)
-      .order("service_type"),
-    supabase
-      .from("caller_id_contacts")
-      .select("phone, label")
-      .eq("profile_id", profile.id)
-      .order("created_at"),
-    supabase
-      .from("devices")
-      .select("device_type, installed_on")
-      .eq("profile_id", profile.id)
-      .order("device_type"),
-  ]);
+  const [servicesResult, contactsResult, devicesResult, manualPaymentsResult, cardPaymentsResult] =
+    await Promise.all([
+      supabase
+        .from("services")
+        .select(
+          "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, next_due_on, stripe_subscription_id",
+        )
+        .eq("profile_id", profile.id)
+        .order("service_type"),
+      supabase
+        .from("caller_id_contacts")
+        .select("phone, label, passcode")
+        .eq("profile_id", profile.id)
+        .order("created_at"),
+      supabase
+        .from("devices")
+        .select("device_type, installed_on")
+        .eq("profile_id", profile.id)
+        .order("device_type"),
+      supabase
+        .from("manual_payments")
+        .select("id, service_id, amount_cents, method, paid_on")
+        .eq("profile_id", profile.id)
+        .order("paid_on", { ascending: false })
+        .limit(24),
+      supabase
+        .from("billing_events")
+        .select("id, service_id, created_at, payload")
+        .eq("profile_id", profile.id)
+        .eq("type", "invoice.paid")
+        .order("created_at", { ascending: false })
+        .limit(24),
+    ]);
 
   if (servicesResult.error || contactsResult.error || devicesResult.error) {
     console.error(
@@ -74,6 +108,39 @@ export default async function UserDashboardPage({
   const monitoring = services.find((s) => s.service_type === "monitoring");
   const cloud = services.find((s) => s.service_type === "cloud_backup");
   const unpaidServices = services.filter((s) => s.status === "unpaid");
+  const serviceTypeById = new Map(services.map((s) => [s.id, s.service_type]));
+
+  // Autopay services with no card on file yet, but nothing owing right now:
+  // prompt for card setup (billing starts at their anniversary).
+  const cardSetupNeeded = services.filter(
+    (s) => s.billing_method === "stripe" && !s.stripe_subscription_id && s.status === "active",
+  );
+
+  // Unified payment history: manual ledger + successful card payments.
+  const history: PaymentHistoryEntry[] = [
+    ...(manualPaymentsResult.data ?? []).map((p) => ({
+      key: `m-${p.id}`,
+      paidOn: p.paid_on,
+      amountCents: p.amount_cents,
+      how: PAYMENT_METHOD_LABELS[p.method as PaymentMethod] ?? "Payment",
+      serviceType: serviceTypeById.get(p.service_id) ?? null,
+    })),
+    ...(cardPaymentsResult.data ?? []).map((e) => {
+      const payload = e.payload as { amount_paid?: number } | null;
+      return {
+        key: `c-${e.id}`,
+        paidOn: e.created_at.slice(0, 10),
+        amountCents: typeof payload?.amount_paid === "number" ? payload.amount_paid : null,
+        how: "Card (automatic)",
+        serviceType: e.service_id ? (serviceTypeById.get(e.service_id) ?? null) : null,
+      };
+    }),
+  ]
+    .sort((a, b) => b.paidOn.localeCompare(a.paidOn))
+    .slice(0, 12);
+
+  const billableServices = services.filter((s) => s.status !== "cancelled");
+  const hasCardOnFile = services.some((s) => s.stripe_subscription_id);
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -82,9 +149,9 @@ export default async function UserDashboardPage({
           role="status"
           className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-sm leading-relaxed text-emerald-200 md:col-span-2"
         >
-          Payment successful — thank you! Your service is being activated now.
-          A confirmation email is on its way; if the status below still shows
-          unpaid, refresh in a few seconds.
+          Payment set up successfully — thank you! A confirmation email is on
+          its way. If anything below still looks out of date, refresh in a few
+          seconds.
         </p>
       )}
       {payment === "cancelled" && (
@@ -92,8 +159,8 @@ export default async function UserDashboardPage({
           role="status"
           className="rounded-2xl border border-white/15 bg-surface p-5 text-sm leading-relaxed text-white/70 md:col-span-2"
         >
-          Checkout was cancelled — no charge was made. You can pay any time
-          from the banner below.
+          Checkout was cancelled — no charge was made. You can set up payment
+          any time from the Billing &amp; Payments section below.
         </p>
       )}
 
@@ -109,8 +176,9 @@ export default async function UserDashboardPage({
             <div className="mt-3 space-y-4">
               <p className="text-sm leading-relaxed text-amber-200/90">
                 Your {SERVICE_TYPE_LABELS[service.service_type].toLowerCase()} plan
-                ({tierLabel(service.tier)}) is waiting on a payment. Pay securely
-                by card below — renewals are automatic after that.
+                ({tierLabel(service.tier)}) is waiting on a payment. Enter your
+                card below — after that, payments happen automatically each
+                billing period.
               </p>
               <PayNowButton serviceId={service.id} />
             </div>
@@ -128,6 +196,28 @@ export default async function UserDashboardPage({
               <p>{PAYMENT_INSTRUCTIONS}</p>
             </div>
           )}
+        </div>
+      ))}
+
+      {cardSetupNeeded.map((service) => (
+        <div
+          key={service.id}
+          className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-6 md:col-span-2"
+        >
+          <h2 className="text-lg font-bold text-sky-100">
+            Set up automatic payments: {SERVICE_TYPE_LABELS[service.service_type]}
+          </h2>
+          <div className="mt-3 space-y-4">
+            <p className="text-sm leading-relaxed text-sky-200/90">
+              Your account is set up for automatic card payments, but no card is
+              on file yet. Add your card below — you will not be charged today
+              {service.next_due_on
+                ? `; your first automatic payment happens on your regular billing date, ${formatDate(service.next_due_on)}`
+                : ""}
+              .
+            </p>
+            <PayNowButton serviceId={service.id} label="Set Up Automatic Payments" />
+          </div>
         </div>
       ))}
 
@@ -189,13 +279,102 @@ export default async function UserDashboardPage({
         </div>
       )}
 
+      {billableServices.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-surface p-6 md:col-span-2">
+          <h2 className="text-lg font-bold text-white">Billing &amp; Payments</h2>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {billableServices.map((service) => {
+              const invoiceCents =
+                service.monthly_amount_cents != null
+                  ? service.monthly_amount_cents * intervalMonths(service.billing_interval)
+                  : null;
+              return (
+                <div key={service.id} className="rounded-xl border border-white/10 bg-background p-4">
+                  <p className="font-bold text-white">{SERVICE_TYPE_LABELS[service.service_type]}</p>
+                  <dl className="mt-2 space-y-1.5 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-white/45">How you pay</dt>
+                      <dd className="text-white/80">
+                        {service.billing_method === "stripe"
+                          ? service.stripe_subscription_id
+                            ? "Automatic (card on file)"
+                            : "Automatic card payments (card not set up yet)"
+                          : "e-Transfer, cheque, or cash"}
+                      </dd>
+                    </div>
+                    {invoiceCents != null && (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-white/45">Amount</dt>
+                        <dd className="text-white/80">
+                          {formatCents(invoiceCents)} plus tax
+                          {service.billing_interval === "annual" ? " per year" : " per month"}
+                        </dd>
+                      </div>
+                    )}
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-white/45">Next payment</dt>
+                      <dd className="text-white/80">
+                        {service.next_due_on ? formatDate(service.next_due_on) : "To be confirmed"}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
+
+          {hasCardOnFile && (
+            <div className="mt-4">
+              <ManageBillingButton />
+            </div>
+          )}
+
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-white/40">
+              Payment history
+            </p>
+            {history.length === 0 ? (
+              <p className="mt-3 text-sm text-white/45">
+                No payments on record yet. Once you make a payment, it shows up
+                here.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm">
+                {history.map((entry) => (
+                  <li
+                    key={entry.key}
+                    className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0"
+                  >
+                    <span className="text-white/80">
+                      <span className="font-bold text-white">
+                        {entry.amountCents != null ? formatCents(entry.amountCents) : "Payment"}
+                      </span>{" "}
+                      &middot; {entry.how}
+                      {entry.serviceType && (
+                        <span className="text-white/45">
+                          {" "}
+                          &middot; {SERVICE_TYPE_LABELS[entry.serviceType as keyof typeof SERVICE_TYPE_LABELS] ?? entry.serviceType}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs text-white/40">{formatDate(entry.paidOn)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       {monitoring && (
         <div className="rounded-2xl border border-white/10 bg-surface p-6 md:col-span-2">
           <h2 className="text-lg font-bold text-white">Alarm Contact List (Caller ID)</h2>
           <p className="mt-2 text-sm leading-relaxed text-white/65">
             These are the people the monitoring station calls, in order, when
-            your alarm goes off. Add or remove contacts and save — McKee
-            Security is notified automatically and updates the station.
+            your alarm goes off. Each person has a passcode they give the
+            station to confirm who they are. Add or remove contacts and save —
+            McKee Security is notified automatically and updates the station.
           </p>
           <div className="mt-5">
             <CallerIdEditor variant="client" initialContacts={contactsResult.data} />

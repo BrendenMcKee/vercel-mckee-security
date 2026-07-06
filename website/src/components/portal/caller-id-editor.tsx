@@ -8,7 +8,7 @@ import {
   type SaveCallerIdResult,
 } from "@/lib/portal/actions/caller-id";
 
-export type CallerIdContact = { phone: string; label: string };
+export type CallerIdContact = { phone: string; label: string; passcode: string | null };
 
 const AUTHORIZATION_OPTIONS = [
   { value: "client_email", label: "Client emailed the request (preferred)" },
@@ -20,11 +20,16 @@ const AUTHORIZATION_OPTIONS = [
 const inputClass =
   "rounded-xl border border-white/15 bg-background px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-primary";
 
+const contactKey = (c: { phone: string; label: string; passcode?: string | null }) =>
+  `${c.phone}|${c.label}|${c.passcode ?? ""}`;
+
 /**
  * Shared caller ID list editor (R23): the client dashboard and the admin
  * client-detail page render the same list UI and run the same save pipeline.
- * The admin variant additionally requires an authorization method + reason
- * note (R24) and shows the exact diff in the confirm dialog before saving.
+ * Every contact carries the passcode the monitoring station uses to verify
+ * them. The admin variant additionally requires an authorization method +
+ * reason note (R24) and shows the exact diff in the confirm dialog before
+ * saving.
  */
 export function CallerIdEditor({
   variant,
@@ -37,8 +42,9 @@ export function CallerIdEditor({
   initialContacts: CallerIdContact[];
 }) {
   const [contacts, setContacts] = useState<CallerIdContact[]>(initialContacts);
-  const [newPhone, setNewPhone] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newPasscode, setNewPasscode] = useState("");
   const [authorizedVia, setAuthorizedVia] = useState("");
   const [changeReason, setChangeReason] = useState("");
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -46,21 +52,32 @@ export function CallerIdEditor({
 
   const dirty = useMemo(() => {
     if (contacts.length !== initialContacts.length) return true;
-    const key = (c: CallerIdContact) => `${c.phone}|${c.label}`;
-    const initial = new Set(initialContacts.map(key));
-    return contacts.some((c) => !initial.has(key(c)));
+    const initial = new Set(initialContacts.map(contactKey));
+    return contacts.some((c) => !initial.has(contactKey(c)));
   }, [contacts, initialContacts]);
+
+  // Existing contacts saved before passcodes existed need one before the
+  // next save goes through.
+  const missingPasscodes = contacts.filter((c) => !c.passcode?.trim());
 
   function addContact() {
     setNotice(null);
+    const label = newLabel.trim();
+    if (!label) {
+      setNotice({ kind: "error", text: "Add the person's name first." });
+      return;
+    }
     const phone = normalizePhone(newPhone);
     if (!phone) {
       setNotice({ kind: "error", text: `"${newPhone}" is not a valid North American phone number.` });
       return;
     }
-    const label = newLabel.trim();
-    if (!label) {
-      setNotice({ kind: "error", text: "Add a name for this contact." });
+    const passcode = newPasscode.trim();
+    if (!passcode) {
+      setNotice({
+        kind: "error",
+        text: "Add this person's passcode — it's the word they give the monitoring station to confirm who they are.",
+      });
       return;
     }
     if (contacts.some((c) => c.phone === phone)) {
@@ -71,9 +88,10 @@ export function CallerIdEditor({
       setNotice({ kind: "error", text: "The list is capped at 15 contacts." });
       return;
     }
-    setContacts((list) => [...list, { phone, label }]);
-    setNewPhone("");
+    setContacts((list) => [...list, { phone, label, passcode }]);
     setNewLabel("");
+    setNewPhone("");
+    setNewPasscode("");
   }
 
   function removeContact(phone: string) {
@@ -81,48 +99,63 @@ export function CallerIdEditor({
     setContacts((list) => list.filter((c) => c.phone !== phone));
   }
 
+  function setPasscode(phone: string, passcode: string) {
+    setNotice(null);
+    setContacts((list) => list.map((c) => (c.phone === phone ? { ...c, passcode } : c)));
+  }
+
   function describeDiff(): string {
-    const key = (c: CallerIdContact) => `${c.phone}|${c.label}`;
-    const initial = new Map(initialContacts.map((c) => [key(c), c]));
-    const next = new Map(contacts.map((c) => [key(c), c]));
-    const added = contacts.filter((c) => !initial.has(key(c)));
-    const removed = initialContacts.filter((c) => !next.has(key(c)));
+    const initial = new Set(initialContacts.map(contactKey));
+    const next = new Set(contacts.map(contactKey));
+    const added = contacts.filter((c) => !initial.has(contactKey(c)));
+    const removed = initialContacts.filter((c) => !next.has(contactKey(c)));
+    const line = (c: CallerIdContact) =>
+      `${c.label} — ${formatPhone(c.phone)}${c.passcode ? ` — passcode: ${c.passcode}` : ""}`;
     return [
-      ...added.map((c) => `+ ${formatPhone(c.phone)} (${c.label})`),
-      ...removed.map((c) => `- ${formatPhone(c.phone)} (${c.label})`),
+      ...added.map((c) => `+ ${line(c)}`),
+      ...removed.map((c) => `- ${line(c)}`),
     ].join("\n");
   }
 
   function save() {
     setNotice(null);
 
+    if (missingPasscodes.length > 0) {
+      setNotice({
+        kind: "error",
+        text: `Every contact needs a passcode before saving. Missing: ${missingPasscodes.map((c) => c.label).join(", ")}.`,
+      });
+      return;
+    }
+
     if (variant === "admin") {
       if (!authorizedVia) {
-        setNotice({ kind: "error", text: "Select how the client authorized this change before saving (R24)." });
+        setNotice({ kind: "error", text: "Select how the client authorized this change before saving." });
         return;
       }
       if (changeReason.trim().length < 10) {
-        setNotice({ kind: "error", text: "Describe the client's request (at least 10 characters) so the change can be reconciled later." });
+        setNotice({ kind: "error", text: "Describe the client's request (at least 10 characters) so the change can be verified later if questions come up." });
         return;
       }
       // R24: the exact diff is confirmed before an admin save commits.
       const confirmed = window.confirm(
-        `Save these caller ID changes on the client's behalf?\n\n${describeDiff()}\n\nThe client will be emailed this exact diff and the reason you recorded.`,
+        `Save these contact list changes on the client's behalf?\n\n${describeDiff()}\n\nThe client will be emailed these exact changes and the reason you recorded.`,
       );
       if (!confirmed) return;
     }
 
     startTransition(async () => {
+      const payload = contacts.map((c) => ({ phone: c.phone, label: c.label, passcode: c.passcode ?? "" }));
       let result: SaveCallerIdResult;
       if (variant === "admin") {
         result = await saveClientCallerIdList({
           profileId: profileId!,
-          contacts,
+          contacts: payload,
           authorizedVia,
           changeReason: changeReason.trim(),
         });
       } else {
-        result = await saveMyCallerIdList({ contacts });
+        result = await saveMyCallerIdList({ contacts: payload });
       }
 
       if (!result.ok) {
@@ -142,7 +175,7 @@ export function CallerIdEditor({
       if (variant === "admin") {
         parts.push(
           result.clientEmailSent
-            ? "The client was emailed the diff and reason."
+            ? "The client was emailed the changes and reason."
             : "Client notification email did NOT send (no email on file or send failure). Notify them another way and note it.",
         );
         setAuthorizedVia("");
@@ -166,10 +199,27 @@ export function CallerIdEditor({
               key={contact.phone}
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-background px-4 py-3"
             >
-              <div className="flex items-baseline gap-3">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span className="text-xs font-bold text-white/30">{index + 1}.</span>
-                <span className="font-bold text-white">{formatPhone(contact.phone)}</span>
-                <span className="text-sm text-white/60">{contact.label}</span>
+                <span className="font-bold text-white">{contact.label}</span>
+                <span className="text-sm text-white/60">{formatPhone(contact.phone)}</span>
+                {contact.passcode?.trim() ? (
+                  <span className="text-sm text-white/45">
+                    Passcode: <span className="font-semibold text-white/75">{contact.passcode}</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2 text-sm text-amber-300">
+                    Passcode needed
+                    <input
+                      aria-label={`Passcode for ${contact.label}`}
+                      placeholder="Add passcode"
+                      maxLength={40}
+                      value={contact.passcode ?? ""}
+                      onChange={(e) => setPasscode(contact.phone, e.target.value)}
+                      className={`${inputClass} !py-1.5 w-36`}
+                    />
+                  </span>
+                )}
               </div>
               <button
                 type="button"
@@ -186,6 +236,16 @@ export function CallerIdEditor({
 
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-white/15 p-4">
         <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
+          Name / relation
+          <input
+            placeholder="e.g. Sarah (daughter)"
+            maxLength={80}
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            className={inputClass}
+          />
+        </label>
+        <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
           Phone number
           <input
             type="tel"
@@ -196,12 +256,12 @@ export function CallerIdEditor({
           />
         </label>
         <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
-          Name / relation
+          Passcode
           <input
-            placeholder="e.g. Sarah (daughter)"
-            maxLength={80}
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
+            placeholder="Their verification word"
+            maxLength={40}
+            value={newPasscode}
+            onChange={(e) => setNewPasscode(e.target.value)}
             className={inputClass}
           />
         </label>
@@ -213,6 +273,10 @@ export function CallerIdEditor({
         >
           Add
         </button>
+        <p className="w-full text-xs text-white/40">
+          The passcode is the word this person gives the monitoring station to
+          prove who they are when the alarm goes off.
+        </p>
       </div>
 
       {variant === "admin" && dirty && (
@@ -243,9 +307,9 @@ export function CallerIdEditor({
             />
           </label>
           <p className="text-xs leading-relaxed text-amber-200/80 sm:col-span-2">
-            This change is recorded in the permanent audit history and the
-            client is emailed the exact diff with this reason. Email requests
-            are the preferred evidence; verbal changes are allowed but flagged.
+            This change is recorded in the permanent history and the client is
+            emailed the exact changes with this reason. Email requests are the
+            preferred evidence; verbal changes are allowed but flagged.
           </p>
         </div>
       )}
@@ -267,7 +331,7 @@ export function CallerIdEditor({
         <p className="text-xs text-white/40">
           {variant === "client"
             ? "Saving notifies McKee Security, who update the monitoring station."
-            : "Both McKee and the client are emailed the exact diff on save."}
+            : "Both McKee and the client are emailed the exact changes on save."}
         </p>
         <button
           type="button"

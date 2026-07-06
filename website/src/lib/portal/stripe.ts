@@ -58,3 +58,48 @@ export function tierForPriceId(priceId: string): { serviceType: string; tier: st
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Customer portal configuration: clients can see their card-payment history
+// and update their card, but NEVER cancel or change plans themselves (R21 —
+// service changes go through McKee). Created once via the API, found again by
+// its metadata marker, and cached for the life of the server process.
+// ---------------------------------------------------------------------------
+
+const PORTAL_CONFIG_MARKER = "mckee-client-portal";
+let portalConfigurationId: string | null = null;
+
+export async function getBillingPortalConfigurationId(stripe: Stripe): Promise<string | null> {
+  if (portalConfigurationId) return portalConfigurationId;
+
+  try {
+    const existing = await stripe.billingPortal.configurations.list({ limit: 100 });
+    const match = existing.data.find(
+      (c) => c.active && c.metadata?.marker === PORTAL_CONFIG_MARKER,
+    );
+    if (match) {
+      portalConfigurationId = match.id;
+      return match.id;
+    }
+
+    const created = await stripe.billingPortal.configurations.create({
+      business_profile: {
+        headline: "McKee Security — billing and payment history",
+      },
+      features: {
+        invoice_history: { enabled: true },
+        payment_method_update: { enabled: true },
+        customer_update: { enabled: false },
+        subscription_cancel: { enabled: false },
+        subscription_update: { enabled: false },
+      },
+      metadata: { marker: PORTAL_CONFIG_MARKER },
+    });
+    portalConfigurationId = created.id;
+    return created.id;
+  } catch (error) {
+    // Fall back to the account's default portal configuration if one exists.
+    console.error("[portal] billing portal configuration setup failed:", error);
+    return null;
+  }
+}

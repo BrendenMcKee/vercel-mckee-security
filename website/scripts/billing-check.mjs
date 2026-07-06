@@ -5,9 +5,11 @@
 // Run: node --env-file=.env.local scripts/billing-check.mjs [baseUrl]
 //
 // Verifies with real sessions against the running server:
-//  - manual_payments: admin INSERT works, client INSERT/SELECT denied,
-//    ledger is append-only (UPDATE/DELETE affect 0 rows for everyone)
-//  - billing_events: only service role writes; admin reads; client reads 0
+//  - manual_payments: admin INSERT works, client INSERT denied, client SELECT
+//    sees only their own rows, ledger is append-only (UPDATE/DELETE affect 0
+//    rows for everyone)
+//  - billing_events: only service role writes; admin reads everything; client
+//    reads only their own invoice.paid rows (payment history), nothing else
 //  - unpaid manual service shows amount + payment instructions on the client
 //    dashboard; unpaid stripe service shows Pay Now
 //  - admin Billing tab renders both boards and flags the overdue manual row
@@ -166,8 +168,13 @@ try {
     check("admin INSERT with spoofed recorded_by denied (RLS)", Boolean(error), error?.code ?? "no error");
   }
   {
-    const { data } = await clientSession.ssr.from("manual_payments").select("id");
-    check("client SELECT on manual_payments returns 0 rows (RLS)", (data ?? []).length === 0, `rows=${data?.length}`);
+    const { data } = await clientSession.ssr.from("manual_payments").select("id, profile_id");
+    const rows = data ?? [];
+    check(
+      "client SELECT on manual_payments sees only own rows (RLS)",
+      rows.length >= 1 && rows.every((r) => r.profile_id === clientUser.profileId),
+      `rows=${rows.length}`,
+    );
   }
   for (const [label, session] of [["client", clientSession], ["admin", adminSession]]) {
     const { data: updated } = await session.ssr
@@ -208,9 +215,28 @@ try {
     const { data } = await adminSession.ssr.from("billing_events").select("id").eq("id", eventId);
     check("admin SELECT on billing_events works", (data ?? []).length === 1, `rows=${data?.length}`);
   }
+  // A successful card payment (invoice.paid) IS visible to the client — it is
+  // their payment history. Everything else in the event stream stays hidden.
+  const paidEventId = `evt_gatecheck_paid_${stamp}`;
   {
-    const { data } = await clientSession.ssr.from("billing_events").select("id");
-    check("client SELECT on billing_events returns 0 rows", (data ?? []).length === 0, `rows=${data?.length}`);
+    const { error } = await admin.from("billing_events").insert({
+      id: paidEventId,
+      type: "invoice.paid",
+      profile_id: clientUser.profileId,
+      service_id: manualService.id,
+      payload: { amount_paid: 4500 },
+    });
+    createdEvents.push(paidEventId);
+    if (error) throw error;
+  }
+  {
+    const { data } = await clientSession.ssr.from("billing_events").select("id, type");
+    const rows = data ?? [];
+    check(
+      "client SELECT on billing_events sees only own invoice.paid rows",
+      rows.length === 1 && rows[0].id === paidEventId,
+      `rows=${rows.length}`,
+    );
   }
 
   // --- Client dashboard payment banners ---------------------------------------
@@ -225,6 +251,11 @@ try {
       `status=${res.status}`,
     );
     check("unpaid stripe service shows Pay Now", html.includes("Pay Now"));
+    check(
+      "client dashboard renders Billing & Payments card with history",
+      html.includes("Billing &amp; Payments") && html.includes("Payment history"),
+    );
+    check("client history shows the automatic card payment", html.includes("Card (automatic)"));
   }
 
   // --- Admin Billing tab + Overview KPIs ----------------------------------------
@@ -234,8 +265,10 @@ try {
     });
     const html = await res.text();
     check(
-      "Billing tab renders manual + autopay boards",
-      res.status === 200 && html.includes("Manual billing") && html.includes("Stripe autopay"),
+      "Billing tab renders direct-pay + card boards",
+      res.status === 200 &&
+        html.includes("Pay by e-Transfer, cheque, or cash") &&
+        html.includes("Automatic card payments"),
       `status=${res.status}`,
     );
     check("overdue manual row flagged", html.includes("overdue"));
@@ -248,7 +281,7 @@ try {
     const html = await res.text();
     check(
       "Overview renders billing KPI row",
-      res.status === 200 && html.includes("Booked monthly revenue") && html.includes("Overdue manual payments"),
+      res.status === 200 && html.includes("Booked monthly revenue") && html.includes("Overdue payments to collect"),
       `status=${res.status}`,
     );
   }

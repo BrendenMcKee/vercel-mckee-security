@@ -104,8 +104,8 @@ try {
     const { data, error } = await clientSession.ssr.rpc("save_caller_id_list", {
       p_profile_id: clientUser.profileId,
       p_contacts: [
-        { phone: "+17055550101", label: "Callerina (self)" },
-        { phone: "+17055550102", label: "Neighbour Ned" },
+        { phone: "+17055550101", label: "Callerina (self)", passcode: "ruby" },
+        { phone: "+17055550102", label: "Neighbour Ned", passcode: "acorn" },
       ],
       p_changed_via: "client_dashboard",
       p_changed_by_email: clientUser.email,
@@ -116,6 +116,20 @@ try {
       data?.added?.length === 2 && data?.removed?.length === 0,
       JSON.stringify({ added: data?.added?.length, removed: data?.removed?.length }),
     );
+    check(
+      "diff entries carry the passcode",
+      (data?.added ?? []).every((e) => typeof e.passcode === "string" && e.passcode.length > 0),
+      JSON.stringify((data?.added ?? []).map((e) => e.passcode)),
+    );
+  }
+  {
+    const { data } = await admin
+      .from("caller_id_contacts")
+      .select("phone, passcode")
+      .eq("profile_id", clientUser.profileId)
+      .eq("phone", "+17055550101")
+      .single();
+    check("passcode persisted on the contact", data?.passcode === "ruby", data?.passcode ?? "null");
   }
   {
     const { data } = await admin
@@ -138,8 +152,8 @@ try {
     const { data, error } = await clientSession.ssr.rpc("save_caller_id_list", {
       p_profile_id: clientUser.profileId,
       p_contacts: [
-        { phone: "+17055550101", label: "Callerina (self)" },
-        { phone: "+17055550103", label: "Cousin Cal" },
+        { phone: "+17055550101", label: "Callerina (self)", passcode: "ruby" },
+        { phone: "+17055550103", label: "Cousin Cal", passcode: "maple" },
       ],
       p_changed_via: "client_dashboard",
       p_changed_by_email: clientUser.email,
@@ -154,6 +168,28 @@ try {
         removedPhones.length === 1 &&
         removedPhones[0] === "+17055550102",
       JSON.stringify({ addedPhones, removedPhones }),
+    );
+  }
+
+  // --- Passcode-only change audits as remove + add ---------------------------
+  {
+    const { data, error } = await clientSession.ssr.rpc("save_caller_id_list", {
+      p_profile_id: clientUser.profileId,
+      p_contacts: [
+        { phone: "+17055550101", label: "Callerina (self)", passcode: "garnet" },
+        { phone: "+17055550103", label: "Cousin Cal", passcode: "maple" },
+      ],
+      p_changed_via: "client_dashboard",
+      p_changed_by_email: clientUser.email,
+    });
+    const added = data?.added ?? [];
+    const removed = data?.removed ?? [];
+    check(
+      "passcode change on 0101 audits as remove(ruby) + add(garnet)",
+      !error &&
+        added.length === 1 && added[0].phone === "+17055550101" && added[0].passcode === "garnet" &&
+        removed.length === 1 && removed[0].phone === "+17055550101" && removed[0].passcode === "ruby",
+      JSON.stringify({ added, removed }),
     );
   }
   {

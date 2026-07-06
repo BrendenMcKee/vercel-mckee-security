@@ -3,8 +3,12 @@
 import { useState, useTransition } from "react";
 import { createCheckoutSession } from "@/lib/portal/actions/payments";
 
-/** Starts Stripe Checkout for an unpaid autopay service (PORTAL_PLAN.md 9.1). */
-export function PayNowButton({ serviceId }: { serviceId: string }) {
+/**
+ * Starts Stripe Checkout (PORTAL_PLAN.md 9.1) — either paying an unpaid
+ * service now, or putting a card on file so billing starts at the client's
+ * existing anniversary (label reflects which).
+ */
+export function PayNowButton({ serviceId, label = "Pay Now" }: { serviceId: string; label?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -28,7 +32,7 @@ export function PayNowButton({ serviceId }: { serviceId: string }) {
         onClick={pay}
         className="cursor-pointer rounded-xl bg-primary px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
       >
-        {pending ? "Opening secure checkout..." : "Pay Now"}
+        {pending ? "Opening secure checkout..." : label}
       </button>
       {error && (
         <p role="alert" className="text-sm text-amber-200">

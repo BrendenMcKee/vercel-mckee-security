@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/portal/auth";
+import { SESSION_ERROR_MESSAGE, tryRequireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { SERVICE_TIERS } from "@/lib/portal/service-labels";
 import { MONITORING_MONTHLY_CENTS } from "@/lib/portal/billing";
@@ -27,7 +27,7 @@ export async function assignServiceAction(input: {
   serviceType: "monitoring" | "cloud_backup";
   tier: string;
 }): Promise<ServiceActionResult> {
-  await requireAdmin();
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = assignSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input." };
@@ -73,7 +73,7 @@ export async function updateServiceTierAction(input: {
   serviceId: string;
   tier: string;
 }): Promise<ServiceActionResult> {
-  await requireAdmin();
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = tierChangeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input." };
@@ -151,7 +151,7 @@ export async function updateServiceStatusAction(input: {
   serviceId: string;
   status: "active" | "paused" | "cancelled" | "unpaid";
 }): Promise<ServiceActionResult> {
-  await requireAdmin();
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = statusChangeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input." };

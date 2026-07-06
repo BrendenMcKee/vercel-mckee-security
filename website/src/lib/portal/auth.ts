@@ -35,11 +35,23 @@ export const getAuthContext = cache(async (): Promise<AuthContext> => {
     return { user: null, profile: null };
   }
 
-  const { data: profile } = await supabase
+  let { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
     .eq("user_id", claims.sub)
     .maybeSingle();
+
+  // A transient read failure here would cascade into requireUser/requireAdmin
+  // throwing and the whole page hitting its error boundary, so retry once
+  // before giving up (observed during Supabase platform blips).
+  if (profileError) {
+    console.warn("[portal] profile read failed, retrying once:", profileError.message);
+    ({ data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", claims.sub)
+      .maybeSingle());
+  }
 
   const appMetadata = claims.app_metadata as { providers?: string[] } | undefined;
 
@@ -72,4 +84,33 @@ export async function requireAdmin(): Promise<{ user: NonNullable<AuthContext["u
     throw new Error("Not authorized.");
   }
   return { user, profile };
+}
+
+/**
+ * Shown when a server action is invoked with a stale/expired session. Kept
+ * friendly because it reaches end users verbatim.
+ */
+export const SESSION_ERROR_MESSAGE =
+  "Your sign-in session needs a refresh. Reload the page and try again.";
+
+/**
+ * Non-throwing variants for server actions: a stale session or a transient
+ * auth read becomes an inline `{ ok: false }` error in the form that
+ * triggered it, never a full-page error boundary ("Something went wrong /
+ * This section failed to load").
+ */
+export async function tryRequireUser(): Promise<{ user: NonNullable<AuthContext["user"]>; profile: PortalProfile } | null> {
+  try {
+    return await requireUser();
+  } catch {
+    return null;
+  }
+}
+
+export async function tryRequireAdmin(): Promise<{ user: NonNullable<AuthContext["user"]>; profile: PortalProfile } | null> {
+  try {
+    return await requireAdmin();
+  } catch {
+    return null;
+  }
 }

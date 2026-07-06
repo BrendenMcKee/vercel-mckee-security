@@ -209,6 +209,13 @@ function ProfileCard({ client }: { client: AdminClientDetailRow }) {
   );
 }
 
+export type CardPaymentEntry = {
+  id: string;
+  serviceId: string | null;
+  paidOn: string;
+  amountCents: number | null;
+};
+
 function ServicesCard({ client }: { client: AdminClientDetailRow }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
@@ -279,8 +286,8 @@ function ServicesCard({ client }: { client: AdminClientDetailRow }) {
     <div className="rounded-2xl border border-white/10 bg-surface p-6">
       <h2 className="text-lg font-bold text-white">Services</h2>
       <p className="mt-1 text-xs text-white/40">
-        Plan assignment, tier changes, and cancellation are admin-only (R21). Clients see
-        these read-only.
+        Only McKee can add, change, or cancel a client&apos;s services. The
+        client sees their plans on their dashboard but cannot change them.
       </p>
 
       <div className="mt-4 space-y-3">
@@ -570,6 +577,14 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
       setNotice({ kind: "error", text: "Enter a valid monthly amount." });
       return;
     }
+    // Moving off autopay stops the client's card subscription in Stripe;
+    // confirm because it changes how they get billed from today.
+    if (method === "manual" && service.billing_method === "stripe" && service.stripe_subscription_id) {
+      const confirmed = window.confirm(
+        "Switch this client to manual billing?\n\nTheir automatic card payments will be stopped in Stripe. They are paid through the current period; after that you collect payments yourself (the system will send them due-date reminders).",
+      );
+      if (!confirmed) return;
+    }
     startTransition(async () => {
       const result = await updateServiceBilling({
         serviceId: service.id,
@@ -580,7 +595,7 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
       });
       setNotice(
         result.ok
-          ? { kind: "ok", text: "Billing settings saved." }
+          ? { kind: "ok", text: result.message ?? "Billing settings saved." }
           : { kind: "error", text: result.error },
       );
     });
@@ -626,28 +641,38 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
         <span className="text-xs uppercase tracking-widest text-white/40">
           {service.billing_method === "stripe"
             ? service.stripe_subscription_id
-              ? "Autopay (card on file)"
-              : "Autopay (awaiting first payment)"
-            : "Manual billing"}
+              ? "Card on file — pays automatically"
+              : "Card payments chosen — card not set up yet"
+            : "Paid by e-Transfer / cheque / cash"}
         </span>
       </div>
+
+      {service.billing_method === "stripe" && service.next_due_on && (
+        <p className="text-xs text-white/45">Next automatic payment: {service.next_due_on}</p>
+      )}
+      {service.billing_method === "stripe" && !service.stripe_subscription_id && (
+        <p className="text-xs text-white/45">
+          The client sees a &ldquo;Set up automatic payments&rdquo; button on
+          their dashboard until they enter their card.
+        </p>
+      )}
 
       <NoticeBanner notice={notice} />
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
-          Billing rail
+          How they pay
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as "stripe" | "manual")}
             className={`${adminInputClass} cursor-pointer`}
           >
-            <option value="manual">Manual (e-Transfer / cheque / cash)</option>
-            <option value="stripe">Stripe autopay (card)</option>
+            <option value="stripe">Automatic card payments</option>
+            <option value="manual">e-Transfer / cheque / cash</option>
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
-          Invoice cycle
+          Billed
           <select
             value={cycle}
             onChange={(e) => setCycle(e.target.value as BillingInterval)}
@@ -661,7 +686,7 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
-          Monthly rate ($, pre-tax)
+          Monthly rate ($, before tax)
           <input
             inputMode="decimal"
             placeholder="34.95"
@@ -672,7 +697,7 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
         </label>
         {method === "manual" && (
           <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            Next due
+            Next payment due
             <input
               type="date"
               value={dueOn}
@@ -686,8 +711,8 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
         </button>
         {cycle === "annual" && amount.trim() && Number.isFinite(Number.parseFloat(amount)) && (
           <p className="w-full text-xs text-white/40">
-            Annual invoice: ${(Number.parseFloat(amount) * 12).toFixed(2)} + tax
-            (monitoring is invoiced annually per the site terms).
+            Yearly invoice: ${(Number.parseFloat(amount) * 12).toFixed(2)} plus tax
+            (monitoring is billed once a year).
           </p>
         )}
       </div>
@@ -760,50 +785,77 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
 function BillingCard({
   client,
   manualPayments,
+  cardPayments,
 }: {
   client: AdminClientDetailRow;
   manualPayments: Tables<"manual_payments">[];
+  cardPayments: CardPaymentEntry[];
 }) {
-  const serviceLabel = (serviceId: string) => {
-    const service = client.services.find((s) => s.id === serviceId);
+  const serviceLabel = (serviceId: string | null) => {
+    const service = serviceId ? client.services.find((s) => s.id === serviceId) : null;
     return service ? SERVICE_TYPE_LABELS[service.service_type] : "Removed service";
   };
+
+  // One combined history, newest first: hand-recorded payments and automatic
+  // card payments side by side — the same view the client sees.
+  const history = [
+    ...manualPayments.map((payment) => ({
+      key: `m-${payment.id}`,
+      paidOn: payment.paid_on,
+      amountCents: payment.amount_cents as number | null,
+      how: PAYMENT_METHOD_LABELS[payment.method],
+      service: serviceLabel(payment.service_id),
+      note: payment.note,
+      recordedBy: payment.recorded_by_email,
+    })),
+    ...cardPayments.map((payment) => ({
+      key: `c-${payment.id}`,
+      paidOn: payment.paidOn,
+      amountCents: payment.amountCents,
+      how: "Card (automatic)",
+      service: serviceLabel(payment.serviceId),
+      note: null as string | null,
+      recordedBy: null as string | null,
+    })),
+  ].sort((a, b) => b.paidOn.localeCompare(a.paidOn));
 
   return (
     <div className="rounded-2xl border border-white/10 bg-surface p-6">
       <h2 className="text-lg font-bold text-white">Billing</h2>
       <p className="mt-1 text-xs text-white/40">
-        Two rails (R22): Stripe autopay renews itself; manual clients get
-        reminders and payments are recorded here. The ledger is append-only —
-        fix mistakes with a correcting entry, never by editing history.
+        Clients either pay automatically by card, or pay you directly and you
+        record it here. Recorded payments can&apos;t be edited afterwards — if
+        you make a mistake, record a correcting entry (a negative amount works).
       </p>
 
       <div className="mt-4 space-y-4">
         {client.services.length === 0 && (
           <p className="rounded-xl border border-white/10 bg-background p-4 text-sm text-white/40">
-            Assign a service first, then configure its billing.
+            Assign a service first, then set up its billing.
           </p>
         )}
         {client.services.map((service) => (
           <BillingServiceRow key={service.id} service={service} />
         ))}
 
-        {manualPayments.length > 0 && (
+        {history.length > 0 && (
           <div className="rounded-xl border border-white/10 bg-background p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-white/40">
               Payment history
             </p>
             <ul className="mt-3 space-y-2 text-sm">
-              {manualPayments.map((payment) => (
-                <li key={payment.id} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+              {history.map((payment) => (
+                <li key={payment.key} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/5 pb-2 last:border-0 last:pb-0">
                   <span className="text-white/80">
-                    <span className="font-bold text-white">{formatCents(payment.amount_cents)}</span>
-                    {" "}&middot; {PAYMENT_METHOD_LABELS[payment.method]} &middot; {serviceLabel(payment.service_id)}
+                    <span className="font-bold text-white">
+                      {payment.amountCents != null ? formatCents(payment.amountCents) : "Payment"}
+                    </span>
+                    {" "}&middot; {payment.how} &middot; {payment.service}
                     {payment.note && <span className="text-white/40"> &mdash; {payment.note}</span>}
                   </span>
                   <span className="text-xs text-white/40">
-                    {payment.paid_on}
-                    {payment.recorded_by_email && ` · by ${payment.recorded_by_email}`}
+                    {payment.paidOn}
+                    {payment.recordedBy && ` · by ${payment.recordedBy}`}
                   </span>
                 </li>
               ))}
@@ -827,7 +879,7 @@ const AUTHORIZED_VIA_LABELS: Record<string, string> = {
   mckee_initiated: "McKee-initiated",
 };
 
-type DiffEntry = { phone: string; label: string };
+type DiffEntry = { phone: string; label: string; passcode?: string | null };
 
 function HistoryDiffList({ entries, kind }: { entries: DiffEntry[]; kind: "added" | "removed" }) {
   if (entries.length === 0) return null;
@@ -837,7 +889,10 @@ function HistoryDiffList({ entries, kind }: { entries: DiffEntry[]; kind: "added
     <>
       {entries.map((entry) => (
         <p key={`${kind}-${entry.phone}-${entry.label}`} className={`text-sm ${color}`}>
-          {sign} {formatPhone(entry.phone)} <span className="text-white/50">({entry.label})</span>
+          {sign} {entry.label} <span className="text-white/50">{formatPhone(entry.phone)}</span>
+          {entry.passcode && (
+            <span className="text-white/40"> &middot; passcode: {entry.passcode}</span>
+          )}
         </p>
       ))}
     </>
@@ -864,14 +919,14 @@ function CallerIdCard({
         </button>
       </div>
       <p className="mt-1 text-xs text-white/40">
-        Changes here are made on the client&apos;s behalf (R23): authorization
-        method and reason are mandatory, the audit trail is permanent, and the
-        client is emailed the exact diff (R24).
+        Changes here are made on the client&apos;s behalf. You must record how
+        they authorized it and why; the history below is permanent and the
+        client is automatically emailed exactly what changed.
       </p>
 
       <div className="mt-5">
         <CallerIdEditor
-          key={contacts.map((c) => `${c.phone}|${c.label}`).join(",")}
+          key={contacts.map((c) => `${c.phone}|${c.label}|${c.passcode ?? ""}`).join(",")}
           variant="admin"
           profileId={client.id}
           initialContacts={contacts}
@@ -881,7 +936,7 @@ function CallerIdCard({
       {showHistory && (
         <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
           <p className="text-xs font-bold uppercase tracking-widest text-white/40">
-            Change history (append-only)
+            Change history (permanent record)
           </p>
           {changes.length === 0 && (
             <p className="text-sm text-white/40">No changes recorded yet.</p>
@@ -972,10 +1027,10 @@ function DevicesCard({
     <div className="rounded-2xl border border-white/10 bg-surface p-6">
       <h2 className="text-lg font-bold text-white">Devices</h2>
       <p className="mt-1 text-xs text-white/40">
-        Set the install/replacement date after each site visit. Batteries flag
-        at {DEVICE_LIFETIME_YEARS.battery} years, smoke detectors at{" "}
-        {DEVICE_LIFETIME_YEARS.smoke_detector} (handover 6.5); the weekly cron
-        emails the client and McKee when one expires.
+        Set the install/replacement date after each site visit. Batteries are
+        flagged after {DEVICE_LIFETIME_YEARS.battery} years, smoke detectors
+        after {DEVICE_LIFETIME_YEARS.smoke_detector}. When one comes due, the
+        system automatically emails both the client and the McKee inbox.
       </p>
 
       <div className="mt-4 space-y-3">
@@ -1036,18 +1091,20 @@ export function AdminClientDetail({
   callerIdChanges,
   devices,
   manualPayments,
+  cardPayments,
 }: {
   client: AdminClientDetailRow;
   callerIdContacts: CallerIdContact[];
   callerIdChanges: Tables<"caller_id_changes">[];
   devices: Tables<"devices">[];
   manualPayments: Tables<"manual_payments">[];
+  cardPayments: CardPaymentEntry[];
 }) {
   return (
     <div className="space-y-6">
       <ProfileCard client={client} />
       <ServicesCard client={client} />
-      <BillingCard client={client} manualPayments={manualPayments} />
+      <BillingCard client={client} manualPayments={manualPayments} cardPayments={cardPayments} />
       <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
       <DevicesCard client={client} devices={devices} />
       <InvitationCard client={client} />

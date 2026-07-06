@@ -117,20 +117,25 @@ export async function sendInvitationEmail({
 // Caller ID change emails (PORTAL_PLAN.md Section 8, R23/R24)
 // ---------------------------------------------------------------------------
 
-export type CallerIdDiffEntry = { phone: string; label: string };
+export type CallerIdDiffEntry = { phone: string; label: string; passcode?: string | null };
 
 const DIFF_GREEN = "#22c55e";
 const DIFF_GREEN_BG = "rgba(34, 197, 94, 0.12)";
 const DIFF_RED = "#ef4444";
 const DIFF_RED_BG = "rgba(239, 68, 68, 0.12)";
 
+// Display order per stakeholder: name first, then phone, then the
+// monitoring-station passcode (needed verbatim for the Lanvac entry).
 function diffRowHtml(entry: CallerIdDiffEntry, kind: "added" | "removed"): string {
   const color = kind === "added" ? DIFF_GREEN : DIFF_RED;
   const bg = kind === "added" ? DIFF_GREEN_BG : DIFF_RED_BG;
   const sign = kind === "added" ? "+" : "&minus;";
+  const passcode = entry.passcode
+    ? `<span style="color:#a3a3a3;">&nbsp;&mdash;&nbsp;passcode:&nbsp;</span><span style="color:#f5f5f5;font-weight:700;">${escapeHtml(entry.passcode)}</span>`
+    : "";
   return `<div style="background:${bg};border:1px solid ${color};border-radius:8px;padding:8px 12px;margin:0 0 6px;">
-    <span style="color:${color};font-weight:700;">${sign}&nbsp;${escapeHtml(formatPhone(entry.phone))}</span>
-    <span style="color:#f5f5f5;">&nbsp;&mdash;&nbsp;${escapeHtml(entry.label)}</span>
+    <span style="color:${color};font-weight:700;">${sign}&nbsp;${escapeHtml(entry.label)}</span>
+    <span style="color:#f5f5f5;">&nbsp;&mdash;&nbsp;${escapeHtml(formatPhone(entry.phone))}</span>${passcode}
   </div>`;
 }
 
@@ -143,9 +148,11 @@ function diffHtml(added: CallerIdDiffEntry[], removed: CallerIdDiffEntry[]): str
 }
 
 function diffText(added: CallerIdDiffEntry[], removed: CallerIdDiffEntry[]): string {
+  const line = (e: CallerIdDiffEntry) =>
+    `${e.label} — ${formatPhone(e.phone)}${e.passcode ? ` — passcode: ${e.passcode}` : ""}`;
   return [
-    ...added.map((e) => `+ ${formatPhone(e.phone)} (${e.label})`),
-    ...removed.map((e) => `- ${formatPhone(e.phone)} (${e.label})`),
+    ...added.map((e) => `+ ${line(e)}`),
+    ...removed.map((e) => `- ${line(e)}`),
   ].join("\n");
 }
 

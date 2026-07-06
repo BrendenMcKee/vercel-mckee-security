@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/portal/auth";
+import { SESSION_ERROR_MESSAGE, tryRequireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 
 export type ResolveAlertResult = { ok: true } | { ok: false; error: string };
@@ -13,7 +13,9 @@ export type ResolveAlertResult = { ok: true } | { ok: false; error: string };
  * Alerts are never deleted; resolution is a stamp, not an erase.
  */
 export async function resolveAlertAction(alertId: string): Promise<ResolveAlertResult> {
-  const { user } = await requireAdmin();
+  const auth = await tryRequireAdmin();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const { user } = auth;
 
   if (!z.uuid().safeParse(alertId).success) {
     return { ok: false, error: "Invalid alert." };

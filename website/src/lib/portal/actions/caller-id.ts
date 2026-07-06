@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireAdmin, requireUser } from "@/lib/portal/auth";
+import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireUser } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { normalizePhone } from "@/lib/portal/phone";
@@ -19,6 +19,12 @@ const MAX_CONTACTS = 15;
 const contactSchema = z.object({
   phone: z.string().trim().min(1, "Phone number is required"),
   label: z.string().trim().min(1, "Name is required").max(80, "Name is too long (80 max)"),
+  // The word this person gives the monitoring station to prove who they are.
+  passcode: z
+    .string()
+    .trim()
+    .min(1, "Each contact needs their passcode — it's how the monitoring station verifies them.")
+    .max(40, "Passcode is too long (40 max)"),
 });
 
 const AUTHORIZED_VIA = ["client_email", "client_verbal", "client_in_person", "mckee_initiated"] as const;
@@ -29,7 +35,7 @@ export type SaveCallerIdResult =
 
 type NormalizedList = { contacts: CallerIdDiffEntry[] } | { error: string };
 
-function normalizeList(raw: { phone: string; label: string }[]): NormalizedList {
+function normalizeList(raw: { phone: string; label: string; passcode: string }[]): NormalizedList {
   if (raw.length < MIN_CONTACTS) {
     return { error: "The list needs at least one contact. The monitoring station must have someone to call." };
   }
@@ -51,7 +57,7 @@ function normalizeList(raw: { phone: string; label: string }[]): NormalizedList 
       return { error: `${parsed.data.phone} appears more than once. Each number can only be listed once.` };
     }
     seen.add(phone);
-    contacts.push({ phone, label: parsed.data.label });
+    contacts.push({ phone, label: parsed.data.label, passcode: parsed.data.passcode });
   }
   return { contacts };
 }
@@ -146,9 +152,11 @@ async function runSave(opts: {
 
 /** Client saves their own list (handover 6.4). The session is the authorization. */
 export async function saveMyCallerIdList(input: {
-  contacts: { phone: string; label: string }[];
+  contacts: { phone: string; label: string; passcode: string }[];
 }): Promise<SaveCallerIdResult> {
-  const { user, profile } = await requireUser();
+  const auth = await tryRequireUser();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const { user, profile } = auth;
   if (profile.role !== "client") {
     return { ok: false, error: "Admins edit lists from the client's detail page." };
   }
@@ -181,11 +189,13 @@ const adminSaveSchema = z.object({
  */
 export async function saveClientCallerIdList(input: {
   profileId: string;
-  contacts: { phone: string; label: string }[];
+  contacts: { phone: string; label: string; passcode: string }[];
   authorizedVia: string;
   changeReason: string;
 }): Promise<SaveCallerIdResult> {
-  const { user } = await requireAdmin();
+  const auth = await tryRequireAdmin();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const { user } = auth;
 
   const parsed = adminSaveSchema.safeParse(input);
   if (!parsed.success) {
@@ -237,7 +247,7 @@ export async function setDeviceInstallDate(input: {
   deviceType: "battery" | "smoke_detector";
   installedOn: string;
 }): Promise<DeviceActionResult> {
-  await requireAdmin();
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = deviceSchema.safeParse(input);
   if (!parsed.success) {

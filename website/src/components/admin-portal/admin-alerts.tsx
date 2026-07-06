@@ -3,8 +3,8 @@ import { ResolveAlertButton } from "@/components/admin-portal/resolve-alert-butt
 import type { Tables } from "@/lib/portal/database.types";
 
 const KIND_LABELS: Record<string, string> = {
-  email_failure: "Email delivery",
-  cron_failure: "Scheduled job",
+  email_failure: "An email didn't send",
+  cron_failure: "An automatic task didn't finish",
 };
 
 function formatWhen(iso: string): string {
@@ -60,12 +60,15 @@ export async function AdminAlerts() {
           Open alerts {open.length > 0 && <span className="text-amber-300">({open.length})</span>}
         </h2>
         <p className="mt-1 text-sm text-white/50">
-          Failed email sends and scheduled-job errors land here. Resolve an alert once you have
-          handled it (e.g. re-sent the email or confirmed the next cron run succeeded).
+          If the system tries to send an email (an invoice reminder, an
+          invitation, a contact-list notice) and it doesn&apos;t go through, it
+          shows up here so nothing slips past you. Once you&apos;ve handled one
+          — say, phoned the client instead — mark it resolved.
         </p>
         {open.length === 0 ? (
           <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">
-            No open alerts. Everything that was supposed to send, sent.
+            Nothing needs your attention. Everything the system was supposed to
+            send went out.
           </p>
         ) : (
           <ul className="mt-5 space-y-3">

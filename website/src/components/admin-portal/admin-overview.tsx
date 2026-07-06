@@ -124,22 +124,22 @@ export async function AdminOverview() {
         <KpiCard
           label="Booked monthly revenue"
           value={dollars(autopayCents + manualCents)}
-          sub="Non-cancelled services with an amount set"
+          sub="Across all active services with a rate set"
         />
         <KpiCard
-          label="Autopay vs manual"
+          label="Card vs direct payers"
           value={`${dollars(autopayCents)} / ${dollars(manualCents)}`}
-          sub="Card on file vs legacy collection"
+          sub="Automatic card payments vs e-Transfer/cheque/cash"
         />
         <KpiCard
-          label="Overdue manual payments"
+          label="Overdue payments to collect"
           value={overdueManual}
-          sub="Collect these — see the Billing tab"
+          sub="Direct payers past their due date — see Billing"
         />
         <KpiCard
           label="Failed card payments"
           value={failedPayments30d}
-          sub="Last 30 days, via Stripe webhook"
+          sub="Last 30 days"
         />
       </div>
 

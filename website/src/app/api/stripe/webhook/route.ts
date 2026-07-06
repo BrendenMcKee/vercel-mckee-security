@@ -68,6 +68,9 @@ export async function POST(request: Request) {
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event.data.object);
         break;
+      case "invoice.paid":
+        await handleInvoicePaid(event.data.object);
+        break;
       case "invoice.payment_failed":
         await handlePaymentFailed(event.data.object);
         break;
@@ -83,8 +86,17 @@ export async function POST(request: Request) {
 }
 
 function extractIds(event: Stripe.Event): { serviceId: string | null; profileId: string | null } {
-  const object = event.data.object as { metadata?: Record<string, string> | null };
-  const metadata = object.metadata ?? {};
+  const object = event.data.object as {
+    metadata?: Record<string, string> | null;
+    parent?: { subscription_details?: { metadata?: Record<string, string> | null } | null } | null;
+  };
+  // Invoices carry the subscription's metadata under parent.subscription_details;
+  // stamping the ids here lets the client-side payment history (RLS on
+  // profile_id + type='invoice.paid') see the row without any backfill.
+  const metadata = {
+    ...(object.parent?.subscription_details?.metadata ?? {}),
+    ...(object.metadata ?? {}),
+  };
   return {
     serviceId: metadata.service_id ?? null,
     profileId: metadata.profile_id ?? null,
@@ -136,17 +148,60 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 }
 
+/** Subscription current period end (renewal date) as YYYY-MM-DD. */
+function subscriptionPeriodEnd(subscription: Stripe.Subscription): string | null {
+  const end = subscription.items.data[0]?.current_period_end;
+  return end ? new Date(end * 1000).toISOString().slice(0, 10) : null;
+}
+
+/**
+ * invoice.paid: the renewal (or first charge) went through. Stamp the next
+ * payment date on the service so both dashboards can show "next payment",
+ * and activate a service that was waiting on its first payment. The
+ * billing_events row doubles as the client-visible payment history.
+ */
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  const subscriptionRef = invoice.parent?.subscription_details?.subscription;
+  const subscriptionId = typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id;
+  if (!subscriptionId) return;
+
+  const admin = getPortalAdminClient();
+  const { data: service } = await admin
+    .from("services")
+    .select("id, status, profile_id")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  if (!service) return;
+
+  const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
+  const { error } = await admin
+    .from("services")
+    .update({
+      next_due_on: subscriptionPeriodEnd(subscription),
+      due_alerted_at: null,
+      ...(service.status === "unpaid" ? { status: "active" as const } : {}),
+    })
+    .eq("id", service.id);
+  if (error) throw error;
+}
+
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const admin = getPortalAdminClient();
 
   const { data: service } = await admin
     .from("services")
-    .select("id, status, tier, service_type")
+    .select("id, status, tier, service_type, next_due_on")
     .eq("stripe_subscription_id", subscription.id)
     .maybeSingle();
   if (!service) return;
 
-  const updates: { status?: "active" | "unpaid" | "cancelled"; tier?: string } = {};
+  const updates: { status?: "active" | "unpaid" | "cancelled"; tier?: string; next_due_on?: string | null } = {};
+
+  // Keep "next payment" current (renewal = current period end).
+  const periodEnd = subscriptionPeriodEnd(subscription);
+  if (periodEnd && periodEnd !== service.next_due_on) {
+    updates.next_due_on = periodEnd;
+  }
 
   // Status sync: Stripe is the source of truth for autopay services.
   if (subscription.status === "active" && service.status !== "active") {

@@ -3,10 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { requireAdmin, requireUser } from "@/lib/portal/auth";
+import type Stripe from "stripe";
+import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireUser } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
-import { getStripeClient, isStripeConfigured, priceIdFor } from "@/lib/portal/stripe";
+import {
+  getBillingPortalConfigurationId,
+  getStripeClient,
+  isStripeConfigured,
+  priceIdFor,
+} from "@/lib/portal/stripe";
 import { sendManualPaymentRecorded } from "@/lib/portal/emails";
 import { intervalMonths } from "@/lib/portal/billing";
 import { siteConfig } from "@/lib/site-config";
@@ -27,8 +33,18 @@ async function getOrigin(): Promise<string> {
   return `${proto}://${host}`;
 }
 
+/** Stripe wants trial_end at least 48h out; use it only when clearly future. */
+function trialEndFor(nextDueOn: string | null): number | undefined {
+  if (!nextDueOn) return undefined;
+  const dueMs = new Date(`${nextDueOn}T12:00:00Z`).getTime();
+  if (dueMs - Date.now() < 3 * 86_400_000) return undefined;
+  return Math.floor(dueMs / 1000);
+}
+
 export async function createCheckoutSession(input: { serviceId: string }): Promise<CheckoutResult> {
-  const { user, profile } = await requireUser();
+  const auth = await tryRequireUser();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const { user, profile } = auth;
 
   if (!z.uuid().safeParse(input.serviceId).success) {
     return { ok: false, error: "Invalid service." };
@@ -42,7 +58,7 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, profile_id, service_type, tier, status, billing_method, stripe_subscription_id")
+    .select("id, profile_id, service_type, tier, status, billing_method, stripe_subscription_id, next_due_on")
     .eq("id", input.serviceId)
     .eq("profile_id", profile.id)
     .maybeSingle();
@@ -51,17 +67,22 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
   if (service.billing_method !== "stripe") {
     return { ok: false, error: "This service is billed manually. See the payment instructions on your dashboard." };
   }
-  if (service.status !== "unpaid") {
+  // "unpaid" pays now; "active" is a paid-up client putting a card on file
+  // (e.g. switched from manual billing) — their subscription starts at the
+  // next due date via a trial, so nobody is double-billed.
+  if (service.status !== "unpaid" && service.status !== "active") {
     return { ok: false, error: "This service does not need a payment right now." };
   }
   if (service.stripe_subscription_id) {
-    return { ok: false, error: "This service already has an active subscription. Contact McKee if something looks wrong." };
+    return { ok: false, error: "This service already has automatic payments set up. Contact McKee if something looks wrong." };
   }
 
   const priceId = priceIdFor(service.service_type, service.tier);
   if (!priceId) {
     return { ok: false, error: "This plan is not available for online payment yet. Please contact McKee Security." };
   }
+
+  const trialEnd = service.status === "active" ? trialEndFor(service.next_due_on) : undefined;
 
   try {
     const stripe = getStripeClient();
@@ -99,6 +120,8 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
       },
       subscription_data: {
         metadata: { profile_id: profile.id, service_id: service.id },
+        // Paid-up clients start billing at their existing anniversary.
+        ...(trialEnd ? { trial_end: trialEnd } : {}),
         // Pricing is advertised pre-tax ("plus tax"); a fixed HST tax rate is
         // applied when configured (STRIPE_TAX_RATE_ID, e.g. 13% Ontario HST).
         ...(process.env.STRIPE_TAX_RATE_ID
@@ -112,6 +135,42 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
   } catch (error) {
     console.error("[portal] createCheckoutSession failed:", error);
     return { ok: false, error: "Could not start checkout. Please try again or contact McKee Security." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Stripe customer portal: clients view card-payment history and update their
+// card themselves. Our configuration disables cancellation and plan changes
+// (R21: only McKee changes services).
+// ---------------------------------------------------------------------------
+
+export type PortalSessionResult = { ok: true; url: string } | { ok: false; error: string };
+
+export async function createBillingPortalSession(): Promise<PortalSessionResult> {
+  const auth = await tryRequireUser();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const { profile } = auth;
+
+  if (!isStripeConfigured()) {
+    return { ok: false, error: "Online billing is not available yet." };
+  }
+  if (!profile.stripe_customer_id) {
+    return { ok: false, error: "No card payments on file yet. Set up automatic payments first." };
+  }
+
+  try {
+    const stripe = getStripeClient();
+    const configuration = await getBillingPortalConfigurationId(stripe);
+    const origin = await getOrigin();
+    const session = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      return_url: `${origin}/user-dashboard`,
+      ...(configuration ? { configuration } : {}),
+    });
+    return { ok: true, url: session.url };
+  } catch (error) {
+    console.error("[portal] createBillingPortalSession failed:", error);
+    return { ok: false, error: "Could not open the billing page. Please try again or contact McKee Security." };
   }
 }
 
@@ -147,7 +206,9 @@ export async function recordManualPayment(input: {
   paidOn: string;
   note?: string;
 }): Promise<RecordPaymentResult> {
-  const { user } = await requireAdmin();
+  const auth = await tryRequireAdmin();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const { user } = auth;
 
   const parsed = recordPaymentSchema.safeParse(input);
   if (!parsed.success) {
@@ -164,7 +225,7 @@ export async function recordManualPayment(input: {
 
   if (!service) return { ok: false, error: "Service not found." };
   if (service.billing_method !== "manual") {
-    return { ok: false, error: "This service is on autopay; Stripe records its payments." };
+    return { ok: false, error: "This service is on automatic card payments; those record themselves." };
   }
 
   const { error: ledgerError } = await supabase.from("manual_payments").insert({
@@ -222,6 +283,9 @@ export async function recordManualPayment(input: {
 
 // ---------------------------------------------------------------------------
 // Billing configuration (7.3): switch rails, set amount and due date.
+// Rail switches keep Stripe in sync (stakeholder 2026-07-06): moving an
+// autopay client to manual cancels their card subscription and resumes manual
+// invoicing at the date they are already paid through.
 // ---------------------------------------------------------------------------
 
 const billingConfigSchema = z.object({
@@ -232,7 +296,12 @@ const billingConfigSchema = z.object({
   nextDueOn: z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]),
 });
 
-export type BillingConfigResult = { ok: true } | { ok: false; error: string };
+export type BillingConfigResult = { ok: true; message?: string } | { ok: false; error: string };
+
+function periodEndDate(subscription: Stripe.Subscription): string | null {
+  const end = subscription.items.data[0]?.current_period_end;
+  return end ? new Date(end * 1000).toISOString().slice(0, 10) : null;
+}
 
 export async function updateServiceBilling(input: {
   serviceId: string;
@@ -241,7 +310,8 @@ export async function updateServiceBilling(input: {
   monthlyAmountCents: number | null;
   nextDueOn: string;
 }): Promise<BillingConfigResult> {
-  await requireAdmin();
+  const auth = await tryRequireAdmin();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = billingConfigSchema.safeParse(input);
   if (!parsed.success) {
@@ -250,20 +320,58 @@ export async function updateServiceBilling(input: {
   const { serviceId, billingMethod, billingInterval, monthlyAmountCents, nextDueOn } = parsed.data;
 
   if (billingMethod === "manual" && !monthlyAmountCents) {
-    return { ok: false, error: "Manual billing needs a monthly amount for reminders and collections." };
+    return { ok: false, error: "Manual billing needs a monthly amount so reminders and the collections list are right." };
   }
 
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, stripe_subscription_id")
+    .select("id, billing_method, stripe_subscription_id, next_due_on")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
 
+  let message: string | undefined;
+  let cancelledSubscription = false;
+  let paidThrough: string | null = null;
+
+  // Autopay -> manual with a live subscription: cancel the card subscription
+  // so the client is never charged by both rails. They are paid through the
+  // current period, so manual invoicing picks up from that date.
   if (billingMethod === "manual" && service.stripe_subscription_id) {
-    return { ok: false, error: "Cancel the Stripe subscription before switching this service to manual billing." };
+    if (!isStripeConfigured()) {
+      return { ok: false, error: "This service has automatic card payments but Stripe is not configured on the server." };
+    }
+    try {
+      const stripe = getStripeClient();
+      const subscription = await stripe.subscriptions.retrieve(service.stripe_subscription_id);
+      paidThrough = periodEndDate(subscription);
+      if (subscription.status !== "canceled") {
+        await stripe.subscriptions.cancel(service.stripe_subscription_id, {
+          prorate: false,
+        });
+      }
+      cancelledSubscription = true;
+      message = paidThrough
+        ? `Automatic card payments stopped. The client is paid through ${paidThrough}; manual invoicing starts from that date.`
+        : "Automatic card payments stopped. Set the next due date to when their manual invoicing should start.";
+    } catch (error) {
+      console.error("[portal] Stripe subscription cancel failed:", error);
+      return { ok: false, error: "Stripe could not stop the card subscription, so nothing was changed. Try again or check the Stripe dashboard." };
+    }
   }
+
+  if (billingMethod === "stripe" && service.billing_method === "manual") {
+    message =
+      "Switched to automatic card payments. The client will see a “Set up automatic payments” button on their dashboard to enter their card.";
+  }
+
+  const nextDue =
+    billingMethod === "manual"
+      ? nextDueOn || paidThrough || service.next_due_on
+      : // Keep the anniversary: checkout uses it to start billing at the
+        // right date, and the webhook maintains it afterwards.
+        service.next_due_on;
 
   const { error } = await supabase
     .from("services")
@@ -271,8 +379,9 @@ export async function updateServiceBilling(input: {
       billing_method: billingMethod,
       billing_interval: billingInterval,
       monthly_amount_cents: monthlyAmountCents,
-      next_due_on: billingMethod === "manual" ? nextDueOn || null : null,
+      next_due_on: nextDue,
       due_alerted_at: null,
+      ...(cancelledSubscription ? { stripe_subscription_id: null } : {}),
     })
     .eq("id", serviceId);
 
@@ -283,5 +392,5 @@ export async function updateServiceBilling(input: {
 
   revalidatePath("/admin-dashboard", "layout");
   revalidatePath("/user-dashboard");
-  return { ok: true };
+  return { ok: true, message };
 }

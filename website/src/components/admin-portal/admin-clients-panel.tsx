@@ -34,6 +34,7 @@ const EMPTY_FORM: CreateClientInput = {
   address: "",
   monitoringTier: "",
   cloudTier: "",
+  billingMethod: "stripe",
 };
 
 const PAGE_SIZE = 25;
@@ -409,6 +410,24 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               ))}
             </select>
           </label>
+          {(form.monitoringTier || form.cloudTier) && (
+            <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              How will they pay?
+              <select
+                value={form.billingMethod}
+                onChange={(e) => set("billingMethod", e.target.value as CreateClientInput["billingMethod"])}
+                className={selectClass}
+              >
+                <option value="stripe">Automatic card payments (recommended)</option>
+                <option value="manual">e-Transfer / cheque / cash</option>
+              </select>
+              <span className="text-xs text-white/40">
+                {form.billingMethod === "stripe"
+                  ? "The client is asked for their card when they activate their account."
+                  : "You will record payments by hand and the system sends the client due-date reminders."}
+              </span>
+            </label>
+          )}
           <div className="sm:col-span-2">
             <button
               type="submit"

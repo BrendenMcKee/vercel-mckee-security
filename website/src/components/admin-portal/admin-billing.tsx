@@ -87,20 +87,24 @@ export async function AdminBilling() {
             ))}
           </ul>
           <p className="mt-3 text-xs text-red-200/60">
-            Stripe retries failed cards automatically. If retries keep failing, get an updated card from the client.
+            Failed cards are retried automatically over the next few days. If
+            the retries keep failing, call the client for an updated card.
           </p>
         </div>
       )}
 
       <div className="rounded-2xl border border-white/10 bg-surface p-6">
-        <h2 className="text-lg font-bold text-white">Manual billing ({manual.length})</h2>
+        <h2 className="text-lg font-bold text-white">
+          Pay by e-Transfer, cheque, or cash ({manual.length})
+        </h2>
         <p className="mt-1 text-xs text-white/40">
-          Legacy rail (R22): the daily reminder cron emails these clients before
-          their due date and when overdue. Click a client to record a received
-          payment; that advances the due date a month.
+          These clients pay you directly. The system emails them a reminder
+          before their due date and again if they go overdue. When a payment
+          arrives, click the client and record it — their next due date moves
+          forward automatically.
         </p>
         {manual.length === 0 ? (
-          <p className="mt-4 text-sm text-white/40">No services on manual billing.</p>
+          <p className="mt-4 text-sm text-white/40">Nobody pays this way right now.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[40rem] text-left text-sm">
@@ -171,14 +175,16 @@ export async function AdminBilling() {
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-surface p-6">
-        <h2 className="text-lg font-bold text-white">Stripe autopay ({autopay.length})</h2>
+        <h2 className="text-lg font-bold text-white">
+          Automatic card payments ({autopay.length})
+        </h2>
         <p className="mt-1 text-xs text-white/40">
-          Card-on-file subscriptions renew themselves; Stripe is the source of
-          truth and the webhook keeps statuses in sync. Nothing to collect
-          manually here.
+          These clients have (or are being set up with) a card on file that is
+          charged automatically each billing period. Nothing to collect by
+          hand — if a card ever fails, it shows at the top of this page.
         </p>
         {autopay.length === 0 ? (
-          <p className="mt-4 text-sm text-white/40">No services on autopay yet.</p>
+          <p className="mt-4 text-sm text-white/40">No clients on automatic card payments yet.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[40rem] text-left text-sm">
@@ -201,7 +207,7 @@ export async function AdminBilling() {
                       {service.stripe_subscription_id ? (
                         "Card on file"
                       ) : (
-                        <span className="text-amber-300">Awaiting first payment</span>
+                        <span className="text-amber-300">Card not entered yet</span>
                       )}
                     </td>
                     <td className="py-3">

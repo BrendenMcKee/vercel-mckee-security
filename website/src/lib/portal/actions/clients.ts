@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/portal/auth";
+import { SESSION_ERROR_MESSAGE, tryRequireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
@@ -18,6 +18,9 @@ const createClientSchema = z.object({
   address: z.string().trim().max(300),
   monitoringTier: z.enum(["", "landline", "cellular", "cellular_tc", "cellular_tc_home"]),
   cloudTier: z.enum(["", "7day", "30day", "90day"]),
+  // Stakeholder 2026-07-06: billing is chosen at creation. Autopay is the
+  // default — the client is asked for their card as part of activation.
+  billingMethod: z.enum(["stripe", "manual"]),
 });
 
 export type CreateClientInput = z.infer<typeof createClientSchema>;
@@ -50,13 +53,13 @@ async function getOrigin(): Promise<string> {
 export async function createClientAction(
   input: CreateClientInput,
 ): Promise<CreateClientResult> {
-  await requireAdmin();
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = createClientSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { firstName, lastName, email, address, monitoringTier, cloudTier } = parsed.data;
+  const { firstName, lastName, email, address, monitoringTier, cloudTier, billingMethod } = parsed.data;
 
   const { raw, hash } = generateInvitationToken();
   const supabase = await createPortalServerClient();
@@ -75,6 +78,17 @@ export async function createClientAction(
   if (error || !profileId) {
     console.error("[portal] createClient failed:", error);
     return { ok: false, error: "Could not create the client. Please try again." };
+  }
+
+  // The RPC created the services on the default (manual) rail; apply the
+  // chosen billing method to all of them. Autopay clients are asked for
+  // their card right on the dashboard after activation.
+  if (monitoringTier || cloudTier) {
+    const { error: railError } = await supabase
+      .from("services")
+      .update({ billing_method: billingMethod })
+      .eq("profile_id", profileId);
+    if (railError) console.error("[portal] billing method set failed:", railError);
   }
 
   // The RPC created the monitoring service as annual-invoiced; prefill the
@@ -121,7 +135,9 @@ export type ResendInviteResult =
  * cleaned up after 90 days).
  */
 export async function resendInviteAction(profileId: string): Promise<ResendInviteResult> {
-  const { user } = await requireAdmin();
+  const auth = await tryRequireAdmin();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const { user } = auth;
 
   if (!z.uuid().safeParse(profileId).success) {
     return { ok: false, error: "Invalid client." };
@@ -211,7 +227,7 @@ export type UpdateClientProfileResult = { ok: true } | { ok: false; error: strin
 export async function updateClientProfileAction(
   input: UpdateClientProfileInput,
 ): Promise<UpdateClientProfileResult> {
-  await requireAdmin();
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = updateProfileSchema.safeParse(input);
   if (!parsed.success) {
@@ -263,7 +279,7 @@ export async function setClientStatusAction(input: {
   profileId: string;
   status: "active" | "disabled";
 }): Promise<SetClientStatusResult> {
-  await requireAdmin();
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   if (!z.uuid().safeParse(input.profileId).success) {
     return { ok: false, error: "Invalid client." };
@@ -310,7 +326,7 @@ export type DeleteClientResult = { ok: true } | { ok: false; error: string };
  * Supabase Auth + database; `requireAdmin()` is the authorization gate.
  */
 export async function deleteClientAction(profileId: string): Promise<DeleteClientResult> {
-  await requireAdmin();
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   if (!z.uuid().safeParse(profileId).success) {
     return { ok: false, error: "Invalid client." };

@@ -51,33 +51,45 @@ export default async function AdminClientDetailPage({
   }
   if (!client) notFound();
 
-  const [contactsResult, changesResult, devicesResult, paymentsResult] = await Promise.all([
-    supabase
-      .from("caller_id_contacts")
-      .select("phone, label")
-      .eq("profile_id", profileId)
-      .order("created_at"),
-    supabase
-      .from("caller_id_changes")
-      .select("*")
-      .eq("profile_id", profileId)
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("devices")
-      .select("*")
-      .eq("profile_id", profileId)
-      .order("device_type"),
-    supabase
-      .from("manual_payments")
-      .select("*")
-      .eq("profile_id", profileId)
-      .order("paid_on", { ascending: false })
-      .limit(24),
-  ]);
+  const [contactsResult, changesResult, devicesResult, paymentsResult, cardPaymentsResult] =
+    await Promise.all([
+      supabase
+        .from("caller_id_contacts")
+        .select("phone, label, passcode")
+        .eq("profile_id", profileId)
+        .order("created_at"),
+      supabase
+        .from("caller_id_changes")
+        .select("*")
+        .eq("profile_id", profileId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("devices")
+        .select("*")
+        .eq("profile_id", profileId)
+        .order("device_type"),
+      supabase
+        .from("manual_payments")
+        .select("*")
+        .eq("profile_id", profileId)
+        .order("paid_on", { ascending: false })
+        .limit(24),
+      supabase
+        .from("billing_events")
+        .select("id, service_id, created_at, payload")
+        .eq("profile_id", profileId)
+        .eq("type", "invoice.paid")
+        .order("created_at", { ascending: false })
+        .limit(24),
+    ]);
 
   const subError =
-    contactsResult.error ?? changesResult.error ?? devicesResult.error ?? paymentsResult.error;
+    contactsResult.error ??
+    changesResult.error ??
+    devicesResult.error ??
+    paymentsResult.error ??
+    cardPaymentsResult.error;
   if (subError) {
     console.error("[portal] Admin client detail sub-queries failed:", subError);
     throw new Error("Client detail failed to load.");
@@ -107,6 +119,15 @@ export default async function AdminClientDetailPage({
           callerIdChanges={changesResult.data ?? []}
           devices={devicesResult.data ?? []}
           manualPayments={paymentsResult.data ?? []}
+          cardPayments={(cardPaymentsResult.data ?? []).map((event) => {
+            const payload = event.payload as { amount_paid?: number } | null;
+            return {
+              id: event.id,
+              serviceId: event.service_id,
+              paidOn: event.created_at.slice(0, 10),
+              amountCents: typeof payload?.amount_paid === "number" ? payload.amount_paid : null,
+            };
+          })}
         />
       </div>
     </section>
