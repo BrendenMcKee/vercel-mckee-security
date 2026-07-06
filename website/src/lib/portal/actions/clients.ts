@@ -19,7 +19,7 @@ const createClientSchema = z.object({
   monitoringTier: z.enum(["", "landline", "cellular", "cellular_tc", "cellular_tc_home"]),
   cloudTier: z.enum(["", "7day", "30day", "90day"]),
   // Stakeholder 2026-07-06: billing is chosen at creation. Autopay is the
-  // default — the client is asked for their card as part of activation.
+  // default; the client is asked for their card as part of activation.
   billingMethod: z.enum(["stripe", "manual"]),
 });
 

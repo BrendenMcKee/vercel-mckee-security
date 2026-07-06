@@ -25,8 +25,8 @@ function contextSummary(context: Tables<"portal_alerts">["context"]): string | n
 }
 
 /**
- * Alerts tab (PORTAL_PLAN.md Phase 7, handover 22.3): operational failures —
- * undelivered emails, failed cron runs — surfaced where an admin will see
+ * Alerts tab (PORTAL_PLAN.md Phase 7, handover 22.3): operational failures
+ * (undelivered emails, failed cron runs) surfaced where an admin will see
  * them, with a resolve stamp for triage. Empty tab = healthy system.
  */
 export async function AdminAlerts() {
@@ -63,7 +63,7 @@ export async function AdminAlerts() {
           If the system tries to send an email (an invoice reminder, an
           invitation, a contact-list notice) and it doesn&apos;t go through, it
           shows up here so nothing slips past you. Once you&apos;ve handled one
-          — say, phoned the client instead — mark it resolved.
+          (say, you phoned the client instead), mark it resolved.
         </p>
         {open.length === 0 ? (
           <p className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-300">

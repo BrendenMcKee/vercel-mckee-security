@@ -47,7 +47,7 @@ export default async function UserDashboardLayout({
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
         <div>
           <p className="text-sm font-bold uppercase tracking-widest text-primary">
             McKee Security Client Portal
@@ -55,6 +55,7 @@ export default async function UserDashboardLayout({
           <h1 className="mt-1 text-3xl font-bold text-white">
             Welcome, {profile.first_name}
           </h1>
+          {profile.email && <p className="mt-1 text-sm text-white/45">{profile.email}</p>}
         </div>
         <SignOutButton />
       </div>

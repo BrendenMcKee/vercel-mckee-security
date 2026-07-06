@@ -76,7 +76,7 @@ export function CallerIdEditor({
     if (!passcode) {
       setNotice({
         kind: "error",
-        text: "Add this person's passcode — it's the word they give the monitoring station to confirm who they are.",
+        text: "Add this person's passcode. It's the word they give the monitoring station to confirm who they are.",
       });
       return;
     }
@@ -110,7 +110,7 @@ export function CallerIdEditor({
     const added = contacts.filter((c) => !initial.has(contactKey(c)));
     const removed = initialContacts.filter((c) => !next.has(contactKey(c)));
     const line = (c: CallerIdContact) =>
-      `${c.label} — ${formatPhone(c.phone)}${c.passcode ? ` — passcode: ${c.passcode}` : ""}`;
+      `${c.label}, ${formatPhone(c.phone)}${c.passcode ? `, passcode: ${c.passcode}` : ""}`;
     return [
       ...added.map((c) => `+ ${line(c)}`),
       ...removed.map((c) => `- ${line(c)}`),
@@ -199,27 +199,34 @@ export function CallerIdEditor({
               key={contact.phone}
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-background px-4 py-3"
             >
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-xs font-bold text-white/30">{index + 1}.</span>
-                <span className="font-bold text-white">{contact.label}</span>
-                <span className="text-sm text-white/60">{formatPhone(contact.phone)}</span>
-                {contact.passcode?.trim() ? (
-                  <span className="text-sm text-white/45">
-                    Passcode: <span className="font-semibold text-white/75">{contact.passcode}</span>
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2 text-sm text-amber-300">
-                    Passcode needed
-                    <input
-                      aria-label={`Passcode for ${contact.label}`}
-                      placeholder="Add passcode"
-                      maxLength={40}
-                      value={contact.passcode ?? ""}
-                      onChange={(e) => setPasscode(contact.phone, e.target.value)}
-                      className={`${inputClass} !py-1.5 w-36`}
-                    />
-                  </span>
-                )}
+              <div className="flex min-w-0 items-center gap-3.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/60">
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-bold text-white">{contact.label}</p>
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/55">
+                    {formatPhone(contact.phone)}
+                    {contact.passcode?.trim() ? (
+                      <span className="text-white/45">
+                        &middot; Passcode:{" "}
+                        <span className="font-semibold text-white/75">{contact.passcode}</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2 text-amber-300">
+                        &middot; Passcode needed
+                        <input
+                          aria-label={`Passcode for ${contact.label}`}
+                          placeholder="Add passcode"
+                          maxLength={40}
+                          value={contact.passcode ?? ""}
+                          onChange={(e) => setPasscode(contact.phone, e.target.value)}
+                          className={`${inputClass} !py-1 w-36`}
+                        />
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -337,9 +344,15 @@ export function CallerIdEditor({
           type="button"
           disabled={pending || !dirty}
           onClick={save}
-          className="cursor-pointer rounded-xl bg-primary px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+          aria-busy={pending}
+          className="relative cursor-pointer rounded-xl bg-primary px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-60"
         >
-          {pending ? "Saving..." : "Save List"}
+          <span className={pending ? "invisible" : undefined}>Save List</span>
+          {pending && (
+            <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            </span>
+          )}
         </button>
       </div>
     </div>

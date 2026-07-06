@@ -8,7 +8,7 @@ import Stripe from "stripe";
  *
  *   STRIPE_PRICE_MONITORING_LANDLINE / _CELLULAR / _CELLULAR_TC / _CELLULAR_TC_HOME
  *     (annual-interval prices: 12 x the monthly rate, plus tax via Stripe Tax
- *      or a tax rate — monitoring is invoiced annually per the site terms)
+ *      or a tax rate; monitoring is invoiced annually per the site terms)
  *   STRIPE_PRICE_CLOUD_7DAY / _30DAY / _90DAY   (Track 2; test mode only)
  *
  * Client code never sees or sends price IDs; checkout reads the admin-assigned
@@ -61,7 +61,7 @@ export function tierForPriceId(priceId: string): { serviceType: string; tier: st
 
 // ---------------------------------------------------------------------------
 // Customer portal configuration: clients can see their card-payment history
-// and update their card, but NEVER cancel or change plans themselves (R21 —
+// and update their card, but NEVER cancel or change plans themselves (R21;
 // service changes go through McKee). Created once via the API, found again by
 // its metadata marker, and cached for the life of the server process.
 // ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ export async function getBillingPortalConfigurationId(stripe: Stripe): Promise<s
 
     const created = await stripe.billingPortal.configurations.create({
       business_profile: {
-        headline: "McKee Security — billing and payment history",
+        headline: "McKee Security billing and payment history",
       },
       features: {
         invoice_history: { enabled: true },

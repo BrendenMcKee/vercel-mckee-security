@@ -6,7 +6,7 @@ export type AlertKind = "email_failure" | "cron_failure";
 /**
  * Operational alert surface (PORTAL_PLAN.md Phase 7, handover 22.3): failures
  * that would otherwise only live in server logs (email sends, cron runs) are
- * written where an admin will actually see them — the Alerts tab. Best-effort
+ * written where an admin will actually see them: the Alerts tab. Best-effort
  * by design: recording an alert must never take down the operation that was
  * trying to report a problem.
  */

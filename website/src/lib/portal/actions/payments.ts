@@ -68,7 +68,7 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
     return { ok: false, error: "This service is billed manually. See the payment instructions on your dashboard." };
   }
   // "unpaid" pays now; "active" is a paid-up client putting a card on file
-  // (e.g. switched from manual billing) — their subscription starts at the
+  // (e.g. switched from manual billing): their subscription starts at the
   // next due date via a trial, so nobody is double-billed.
   if (service.status !== "unpaid" && service.status !== "active") {
     return { ok: false, error: "This service does not need a payment right now." };
@@ -244,7 +244,7 @@ export async function recordManualPayment(input: {
   }
 
   // Advance the cycle from the scheduled due date (not the paid date), so
-  // early/late payments keep the anniversary — one interval (monitoring is
+  // early/late payments keep the anniversary. One interval (monitoring is
   // invoiced annually per the site terms). Clear the reminder guard and
   // activate an unpaid service.
   const nextDueOn = service.next_due_on

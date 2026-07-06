@@ -134,7 +134,7 @@ export async function AdminOverview() {
         <KpiCard
           label="Overdue payments to collect"
           value={overdueManual}
-          sub="Direct payers past their due date — see Billing"
+          sub="Direct payers past their due date. See the Billing tab"
         />
         <KpiCard
           label="Failed card payments"

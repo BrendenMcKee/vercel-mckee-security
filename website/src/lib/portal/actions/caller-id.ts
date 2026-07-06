@@ -23,7 +23,7 @@ const contactSchema = z.object({
   passcode: z
     .string()
     .trim()
-    .min(1, "Each contact needs their passcode — it's how the monitoring station verifies them.")
+    .min(1, "Each contact needs their passcode. It's how the monitoring station verifies them.")
     .max(40, "Passcode is too long (40 max)"),
 });
 

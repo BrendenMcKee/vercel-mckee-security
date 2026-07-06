@@ -48,7 +48,7 @@ function inviteState(client: AdminClientRow): {
   canResend: boolean;
 } {
   if (client.status !== "pending") {
-    return { label: "—", tone: "muted", canResend: false };
+    return { label: "Activated", tone: "muted", canResend: false };
   }
   const open = client.invitations.find((inv) => !inv.used_at);
   if (!open) return { label: "No invite", tone: "warn", canResend: true };
@@ -166,7 +166,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       if (!result.emailAttempted) {
         setNotice({
           kind: "ok",
-          text: "Client created. No email on file — copy the activation link and deliver it yourself:",
+          text: "Client created. There is no email on file, so copy the activation link and deliver it yourself:",
           link: result.activateUrl,
         });
       } else if (!result.emailSent) {
@@ -214,7 +214,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       if (!result.emailAttempted) {
         setNotice({
           kind: "ok",
-          text: "New invitation created. No email on file — copy the activation link:",
+          text: "New invitation created. There is no email on file, so copy the activation link:",
           link: result.activateUrl,
         });
       } else if (!result.emailSent) {
@@ -487,7 +487,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   <td className="px-4 py-3 font-bold text-white">
                     {client.first_name} {client.last_name}
                   </td>
-                  <td className="px-4 py-3 text-white/70">{client.email ?? "—"}</td>
+                  <td className="px-4 py-3 text-white/70">{client.email ?? "No email"}</td>
                   <td className="px-4 py-3">
                     <ProfileStatusBadge status={client.status} />
                   </td>

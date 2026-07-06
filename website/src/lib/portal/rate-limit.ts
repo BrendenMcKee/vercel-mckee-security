@@ -7,7 +7,7 @@ import { getPortalAdminClient, isPortalAdminConfigured } from "@/lib/portal/supa
  * 6.6): a Postgres counter behind the service-role-only consume_rate_limit
  * RPC. Serverless instances share no memory, so the counter lives in the DB.
  *
- * Fail-open: if the RPC errors (DB blip), the request proceeds — activation
+ * Fail-open: if the RPC errors (DB blip), the request proceeds; activation
  * links are already single-use hashed tokens, so rate limiting is a brake on
  * enumeration, not the security boundary.
  */

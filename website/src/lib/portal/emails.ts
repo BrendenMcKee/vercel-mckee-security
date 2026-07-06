@@ -131,11 +131,11 @@ function diffRowHtml(entry: CallerIdDiffEntry, kind: "added" | "removed"): strin
   const bg = kind === "added" ? DIFF_GREEN_BG : DIFF_RED_BG;
   const sign = kind === "added" ? "+" : "&minus;";
   const passcode = entry.passcode
-    ? `<span style="color:#a3a3a3;">&nbsp;&mdash;&nbsp;passcode:&nbsp;</span><span style="color:#f5f5f5;font-weight:700;">${escapeHtml(entry.passcode)}</span>`
+    ? `<span style="color:#a3a3a3;">&nbsp;&middot;&nbsp;passcode:&nbsp;</span><span style="color:#f5f5f5;font-weight:700;">${escapeHtml(entry.passcode)}</span>`
     : "";
   return `<div style="background:${bg};border:1px solid ${color};border-radius:8px;padding:8px 12px;margin:0 0 6px;">
     <span style="color:${color};font-weight:700;">${sign}&nbsp;${escapeHtml(entry.label)}</span>
-    <span style="color:#f5f5f5;">&nbsp;&mdash;&nbsp;${escapeHtml(formatPhone(entry.phone))}</span>${passcode}
+    <span style="color:#f5f5f5;">&nbsp;&middot;&nbsp;${escapeHtml(formatPhone(entry.phone))}</span>${passcode}
   </div>`;
 }
 
@@ -149,7 +149,7 @@ function diffHtml(added: CallerIdDiffEntry[], removed: CallerIdDiffEntry[]): str
 
 function diffText(added: CallerIdDiffEntry[], removed: CallerIdDiffEntry[]): string {
   const line = (e: CallerIdDiffEntry) =>
-    `${e.label} — ${formatPhone(e.phone)}${e.passcode ? ` — passcode: ${e.passcode}` : ""}`;
+    `${e.label}, ${formatPhone(e.phone)}${e.passcode ? `, passcode: ${e.passcode}` : ""}`;
   return [
     ...added.map((e) => `+ ${line(e)}`),
     ...removed.map((e) => `- ${line(e)}`),
@@ -498,7 +498,7 @@ export async function sendDeviceExpiryAdminAlert({
   ];
 
   return dispatchPortalEmail("Device expiry admin alert", {
-    subject: `Device replacement due: ${deviceLabel} — ${clientName}`,
+    subject: `Device replacement due: ${deviceLabel} (${clientName})`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
@@ -551,7 +551,7 @@ export type CollectionsDigestRow = {
 };
 
 /**
- * R22: the admin collections digest — every manual payer due within the
+ * R22: the admin collections digest. Every manual payer due within the
  * reminder window or overdue, in one email, so no legacy payment is missed.
  * Sent by the daily cron only when the list is non-empty.
  */
@@ -559,9 +559,9 @@ export async function sendCollectionsDigest(rows: CollectionsDigestRow[]): Promi
   const overdueRows = rows.filter((r) => r.overdue);
   const dueRows = rows.filter((r) => !r.overdue);
   const line = (r: CollectionsDigestRow) =>
-    `${r.clientName}${r.clientEmail ? ` (${r.clientEmail})` : ""} — ${SERVICE_LABELS[r.serviceType] ?? r.serviceType} — ${
+    `${r.clientName}${r.clientEmail ? ` (${r.clientEmail})` : ""}: ${SERVICE_LABELS[r.serviceType] ?? r.serviceType}, ${
       r.amountCents != null ? dollars(r.amountCents) : "amount not set"
-    } — due ${r.dueOn}`;
+    }, due ${r.dueOn}`;
 
   const meta = {
     emoji: "📋",

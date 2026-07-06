@@ -641,8 +641,8 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
         <span className="text-xs uppercase tracking-widest text-white/40">
           {service.billing_method === "stripe"
             ? service.stripe_subscription_id
-              ? "Card on file — pays automatically"
-              : "Card payments chosen — card not set up yet"
+              ? "Card on file, pays automatically"
+              : "Card payments chosen, card not set up yet"
             : "Paid by e-Transfer / cheque / cash"}
         </span>
       </div>
@@ -797,7 +797,7 @@ function BillingCard({
   };
 
   // One combined history, newest first: hand-recorded payments and automatic
-  // card payments side by side — the same view the client sees.
+  // card payments side by side, the same view the client sees.
   const history = [
     ...manualPayments.map((payment) => ({
       key: `m-${payment.id}`,
@@ -824,7 +824,7 @@ function BillingCard({
       <h2 className="text-lg font-bold text-white">Billing</h2>
       <p className="mt-1 text-xs text-white/40">
         Clients either pay automatically by card, or pay you directly and you
-        record it here. Recorded payments can&apos;t be edited afterwards — if
+        record it here. Recorded payments can&apos;t be edited afterwards. If
         you make a mistake, record a correcting entry (a negative amount works).
       </p>
 
@@ -851,7 +851,7 @@ function BillingCard({
                       {payment.amountCents != null ? formatCents(payment.amountCents) : "Payment"}
                     </span>
                     {" "}&middot; {payment.how} &middot; {payment.service}
-                    {payment.note && <span className="text-white/40"> &mdash; {payment.note}</span>}
+                    {payment.note && <span className="text-white/40"> &middot; {payment.note}</span>}
                   </span>
                   <span className="text-xs text-white/40">
                     {payment.paidOn}
@@ -974,7 +974,7 @@ function CallerIdCard({
                     <p>
                       {change.client_notified_at
                         ? `Client notified ${new Date(change.client_notified_at).toLocaleString("en-CA")}`
-                        : "Client notification email NOT confirmed — follow up manually."}
+                        : "Client notification email NOT confirmed. Follow up manually."}
                     </p>
                   </div>
                 )}

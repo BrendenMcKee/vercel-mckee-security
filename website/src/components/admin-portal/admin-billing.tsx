@@ -6,7 +6,7 @@ import { ServiceStatusBadge } from "@/components/admin-portal/ui";
 
 /**
  * Phase 5 Billing tab (PORTAL_PLAN.md 7.2/7.3): answers the owner's daily
- * questions — who pays by card, who is on the legacy rail, which manual
+ * questions: who pays by card, who is on the legacy rail, which manual
  * payments are due or overdue, and which card payments failed. Recording a
  * payment happens on the client detail page (one click through).
  */
@@ -78,7 +78,7 @@ export async function AdminBilling() {
                     {nameByProfileId.get(event.profile_id) ?? "View client"}
                   </Link>
                 ) : (
-                  <span className="text-white/70">Unmatched Stripe customer — check the Stripe dashboard</span>
+                  <span className="text-white/70">Unmatched Stripe customer. Check the Stripe dashboard.</span>
                 )}
                 <span className="text-xs text-red-200/70">
                   {new Date(event.created_at).toLocaleString("en-CA")}
@@ -100,8 +100,8 @@ export async function AdminBilling() {
         <p className="mt-1 text-xs text-white/40">
           These clients pay you directly. The system emails them a reminder
           before their due date and again if they go overdue. When a payment
-          arrives, click the client and record it — their next due date moves
-          forward automatically.
+          arrives, click the client and record it, and their next due date
+          moves forward automatically.
         </p>
         {manual.length === 0 ? (
           <p className="mt-4 text-sm text-white/40">Nobody pays this way right now.</p>
@@ -180,8 +180,9 @@ export async function AdminBilling() {
         </h2>
         <p className="mt-1 text-xs text-white/40">
           These clients have (or are being set up with) a card on file that is
-          charged automatically each billing period. Nothing to collect by
-          hand — if a card ever fails, it shows at the top of this page.
+          charged automatically each billing period. There is nothing to
+          collect by hand. If a card ever fails, it shows at the top of this
+          page.
         </p>
         {autopay.length === 0 ? (
           <p className="mt-4 text-sm text-white/40">No clients on automatic card payments yet.</p>
