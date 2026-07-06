@@ -15,7 +15,7 @@ import {
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
-import { adminInputClass, ProfileStatusBadge } from "@/components/admin-portal/ui";
+import { adminInputClass, adminSelectClass, ProfileStatusBadge } from "@/components/admin-portal/ui";
 
 type InvitationSummary = Pick<
   Tables<"invitations">,
@@ -229,7 +229,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
     });
   }
 
-  const selectClass = `${adminInputClass} cursor-pointer`;
+  const selectClass = adminSelectClass;
 
   return (
     <div className="space-y-5">

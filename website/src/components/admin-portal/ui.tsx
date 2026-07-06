@@ -7,6 +7,9 @@ import {
 export const adminInputClass =
   "rounded-xl border border-white/15 bg-background px-4 py-2.5 text-sm text-white outline-none transition-colors focus:border-primary";
 
+/** For <select> elements: custom chevron inset from the right edge. */
+export const adminSelectClass = `${adminInputClass} select-chevron cursor-pointer`;
+
 export function ProfileStatusBadge({ status }: { status: Tables<"profiles">["status"] }) {
   const styles: Record<string, string> = {
     active: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",

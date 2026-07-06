@@ -53,6 +53,21 @@ body {
 }
 
 /*
+ * Shared <select> arrow: replaces the native chevron (which hugs the right
+ * edge on Windows) with an inline SVG inset a comfortable 14px, plus enough
+ * right padding that option text never runs into it.
+ */
+.select-chevron {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1rem 1rem;
+  padding-right: 2.75rem;
+}
+
+/*
  * Hero entrance runs as a pure-CSS compositor animation so it starts at first
  * paint, independent of (and without competing with) React hydration. This
  * avoids the choppy entrance that JS-driven motion causes on initial load and

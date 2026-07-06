@@ -38,7 +38,7 @@ import {
   isDeviceExpired,
   type DeviceType,
 } from "@/lib/portal/devices";
-import { adminInputClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
+import { adminInputClass, adminSelectClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor, type CallerIdContact } from "@/components/portal/caller-id-editor";
 
 type InvitationSummary = Pick<
@@ -322,7 +322,7 @@ function ServicesCard({ client }: { client: AdminClientDetailRow }) {
                 value={service.tier}
                 disabled={pending}
                 onChange={(e) => changeTier(service, e.target.value)}
-                className={`${adminInputClass} cursor-pointer`}
+                className={adminSelectClass}
                 aria-label={`${SERVICE_TYPE_LABELS[service.service_type]} tier`}
               >
                 {SERVICE_TIERS[service.service_type].map((tier) => (
@@ -377,7 +377,7 @@ function ServicesCard({ client }: { client: AdminClientDetailRow }) {
                   setAssignType(e.target.value as ServiceType | "");
                   setAssignTier("");
                 }}
-                className={`${adminInputClass} cursor-pointer`}
+                className={adminSelectClass}
               >
                 <option value="">Choose...</option>
                 {unassignedTypes.map((type) => (
@@ -393,7 +393,7 @@ function ServicesCard({ client }: { client: AdminClientDetailRow }) {
                 value={assignTier}
                 onChange={(e) => setAssignTier(e.target.value)}
                 disabled={!assignType}
-                className={`${adminInputClass} cursor-pointer disabled:opacity-50`}
+                className={`${adminSelectClass} disabled:opacity-50`}
               >
                 <option value="">Choose...</option>
                 {assignType &&
@@ -665,7 +665,7 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as "stripe" | "manual")}
-            className={`${adminInputClass} cursor-pointer`}
+            className={adminSelectClass}
           >
             <option value="stripe">Automatic card payments</option>
             <option value="manual">e-Transfer / cheque / cash</option>
@@ -676,7 +676,7 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
           <select
             value={cycle}
             onChange={(e) => setCycle(e.target.value as BillingInterval)}
-            className={`${adminInputClass} cursor-pointer`}
+            className={adminSelectClass}
           >
             {(Object.keys(BILLING_INTERVAL_LABELS) as BillingInterval[]).map((value) => (
               <option key={value} value={value}>
@@ -740,7 +740,7 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
             <select
               value={payMethod}
               onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
-              className={`${adminInputClass} cursor-pointer`}
+              className={adminSelectClass}
             >
               {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>

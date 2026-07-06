@@ -108,7 +108,7 @@ export function RentalsTable({
   }, [rentals, statusFilter, unitFilter, search]);
 
   const selectClass =
-    "rounded-lg border border-white/10 bg-surface/60 px-3 py-2 text-sm text-white outline-none focus:border-primary";
+    "select-chevron cursor-pointer rounded-lg border border-white/10 bg-surface/60 px-3 py-2 text-sm text-white outline-none focus:border-primary";
 
   return (
     <div className="space-y-4">

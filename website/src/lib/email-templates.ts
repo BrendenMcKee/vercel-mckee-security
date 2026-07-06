@@ -94,14 +94,16 @@ function renderFieldValue(field: EmailField): string {
 }
 
 function renderFieldRow(field: EmailField): string {
+  // Note ordering: the border shorthand must come before border-left, or it
+  // resets the red accent bar on highlighted rows.
   const highlightStyle = field.highlight
-    ? `background:${BRAND_RED_SOFT};border-left:4px solid ${BRAND_RED};padding:16px 18px;border-radius:12px;border:1px solid rgba(201,24,24,0.22);`
+    ? `background:${BRAND_RED_SOFT};border:1px solid rgba(201,24,24,0.22);border-left:4px solid ${BRAND_RED};padding:16px 18px;border-radius:12px;`
     : `background:${FIELD};padding:14px 16px;border-radius:12px;border:1px solid ${BORDER};`;
 
   return `
     <tr>
       <td style="padding:0 0 12px;">
-        <div style="${highlightStyle}">
+        <div class="ee-box" style="${highlightStyle}">
           <p style="margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND_RED};">
             ${escapeHtml(field.label)}
           </p>
@@ -123,7 +125,7 @@ function renderCtaRow(field: EmailField): string {
   return `
     <tr>
       <td style="padding:0 0 18px;">
-        <div style="background:${ACTION_SOFT};border:1px solid ${ACTION_BORDER};border-radius:14px;padding:18px 18px 20px;">
+        <div class="ee-cta" style="background:${ACTION_SOFT};border:1px solid ${ACTION_BORDER};border-radius:14px;padding:18px 18px 20px;">
           <p style="margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${ACTION_GREEN};">
             ${escapeHtml(field.label)}
           </p>
@@ -175,24 +177,40 @@ export function buildBrandedEmailHtml(
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <meta name="supported-color-schemes" content="dark" />
     <title>${escapeHtml(meta.title)}</title>
+    <style>
+      /* Mobile: give the content the horizontal room the desktop chrome eats.
+         Clients that strip <style> (rare) just keep the desktop layout. */
+      @media only screen and (max-width: 520px) {
+        .ee-outer { padding: 12px 5px !important; }
+        .ee-pad-head { padding: 18px 14px 12px !important; }
+        .ee-pad-body { padding: 4px 14px 6px !important; }
+        .ee-pad-foot { padding: 8px 14px 16px !important; }
+        .ee-icon-cell { width: 44px !important; padding-right: 10px !important; }
+        .ee-icon { width: 40px !important; height: 40px !important; line-height: 40px !important; font-size: 20px !important; border-radius: 10px !important; }
+        .ee-title { font-size: 20px !important; }
+        .ee-box { padding: 12px !important; }
+        .ee-cta { padding: 14px 12px 16px !important; }
+      }
+    </style>
   </head>
   <body style="margin:0;padding:0;background:${BG};font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};padding:32px 12px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};">
       <tr>
-        <td align="center">
+        <td align="center" class="ee-outer" style="padding:32px 12px;">
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${CARD};border:1px solid ${BORDER};border-radius:18px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.45);">
             <tr>
               <td style="height:4px;background:linear-gradient(90deg, ${BRAND_RED} 0%, #8f1010 100%);font-size:0;line-height:0;">&nbsp;</td>
             </tr>
             <tr>
-              <td style="padding:24px 24px 18px;">
+              <td class="ee-pad-head" style="padding:24px 24px 18px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td width="56" valign="top" style="padding-right:14px;">
-                      <div style="width:52px;height:52px;border-radius:14px;background:${BRAND_RED_SOFT};border:1px solid rgba(201,24,24,0.25);text-align:center;line-height:52px;font-size:26px;">
+                    <td width="56" valign="top" class="ee-icon-cell" style="padding-right:14px;">
+                      <div class="ee-icon" style="width:52px;height:52px;border-radius:14px;background:${BRAND_RED_SOFT};border:1px solid rgba(201,24,24,0.25);text-align:center;line-height:52px;font-size:26px;">
                         ${meta.emoji}
                       </div>
                     </td>
@@ -200,7 +218,7 @@ export function buildBrandedEmailHtml(
                       <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${MUTED};">
                         ${escapeHtml(siteConfig.name)}
                       </p>
-                      <h1 style="margin:6px 0 0;font-size:24px;line-height:1.25;font-weight:700;color:#ffffff;">
+                      <h1 class="ee-title" style="margin:6px 0 0;font-size:24px;line-height:1.25;font-weight:700;color:#ffffff;">
                         ${escapeHtml(meta.title)}
                       </h1>
                       <p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:${MUTED};">
@@ -212,14 +230,14 @@ export function buildBrandedEmailHtml(
               </td>
             </tr>
             <tr>
-              <td style="padding:4px 24px 8px;">
+              <td class="ee-pad-body" style="padding:4px 24px 8px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   ${rows}
                 </table>
               </td>
             </tr>
             <tr>
-              <td style="padding:8px 24px 22px;border-top:1px solid ${BORDER};">
+              <td class="ee-pad-foot" style="padding:8px 24px 22px;border-top:1px solid ${BORDER};">
                 <p style="margin:0;font-size:12px;line-height:1.6;color:${MUTED};">
                   ${footer}
                 </p>

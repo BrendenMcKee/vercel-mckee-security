@@ -293,7 +293,7 @@ export function CallerIdEditor({
             <select
               value={authorizedVia}
               onChange={(e) => setAuthorizedVia(e.target.value)}
-              className={`${inputClass} cursor-pointer`}
+              className={`${inputClass} select-chevron cursor-pointer`}
             >
               <option value="">Choose...</option>
               {AUTHORIZATION_OPTIONS.map((opt) => (

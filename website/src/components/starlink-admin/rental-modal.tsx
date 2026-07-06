@@ -359,7 +359,7 @@ export function RentalModal({
                 }
               >
                 <select
-                  className={inputClass}
+                  className={cn(inputClass, "select-chevron cursor-pointer")}
                   style={
                     unitColor
                       ? {
@@ -382,7 +382,7 @@ export function RentalModal({
               </Field>
               <Field label="Status">
                 <select
-                  className={cn(inputClass, "font-semibold")}
+                  className={cn(inputClass, "select-chevron cursor-pointer font-semibold")}
                   style={{
                     borderLeft: `4px solid ${statusHex}`,
                     backgroundColor: hexToRgba(statusHex, 0.12),
