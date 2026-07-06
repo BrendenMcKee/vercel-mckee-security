@@ -68,7 +68,7 @@ export default async function AdminClientDetailPage({
         .from("devices")
         .select("*")
         .eq("profile_id", profileId)
-        .order("device_type"),
+        .order("created_at"),
       supabase
         .from("manual_payments")
         .select("*")

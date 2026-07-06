@@ -88,7 +88,7 @@ try {
 
   const { data: device, error: deviceError } = await admin
     .from("devices")
-    .insert({ profile_id: profile.id, device_type: "battery", installed_on: "2019-01-01" })
+    .insert({ profile_id: profile.id, label: "Alarm Backup Battery", lifetime_years: 5, installed_on: "2019-01-01" })
     .select("id")
     .single();
   if (deviceError) throw deviceError;

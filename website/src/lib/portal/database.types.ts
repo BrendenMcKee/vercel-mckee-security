@@ -144,28 +144,31 @@ export type Database = {
       devices: {
         Row: {
           created_at: string
-          device_type: Database["public"]["Enums"]["device_type"]
           expiry_alerted_at: string | null
           id: string
           installed_on: string
+          label: string
+          lifetime_years: number
           profile_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
-          device_type: Database["public"]["Enums"]["device_type"]
           expiry_alerted_at?: string | null
           id?: string
           installed_on: string
+          label: string
+          lifetime_years: number
           profile_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
-          device_type?: Database["public"]["Enums"]["device_type"]
           expiry_alerted_at?: string | null
           id?: string
           installed_on?: string
+          label?: string
+          lifetime_years?: number
           profile_id?: string
           updated_at?: string
         }
@@ -570,7 +573,6 @@ export type Database = {
       billing_interval: "monthly" | "annual"
       billing_method: "stripe" | "manual"
       cloud_tier: "7day" | "30day" | "90day"
-      device_type: "battery" | "smoke_detector"
       footage_status: "pending" | "processing" | "ready" | "failed" | "expired"
       monitoring_tier: "landline" | "cellular" | "cellular_tc" | "cellular_tc_home"
       payment_method: "etransfer" | "cheque" | "cash" | "other"
@@ -708,7 +710,6 @@ export const Constants = {
       billing_interval: ["monthly", "annual"],
       billing_method: ["stripe", "manual"],
       cloud_tier: ["7day", "30day", "90day"],
-      device_type: ["battery", "smoke_detector"],
       footage_status: ["pending", "processing", "ready", "failed", "expired"],
       monitoring_tier: ["landline", "cellular", "cellular_tc", "cellular_tc_home"],
       payment_method: ["etransfer", "cheque", "cash", "other"],

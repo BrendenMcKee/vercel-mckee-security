@@ -14,7 +14,7 @@ import {
   priceIdFor,
 } from "@/lib/portal/stripe";
 import { sendManualPaymentRecorded } from "@/lib/portal/emails";
-import { intervalMonths } from "@/lib/portal/billing";
+import { MONITORING_MONTHLY_CENTS, intervalMonths } from "@/lib/portal/billing";
 import { siteConfig } from "@/lib/site-config";
 
 // ---------------------------------------------------------------------------
@@ -326,7 +326,7 @@ export async function updateServiceBilling(input: {
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, billing_method, stripe_subscription_id, next_due_on")
+    .select("id, service_type, tier, billing_method, stripe_subscription_id, next_due_on")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
@@ -373,12 +373,20 @@ export async function updateServiceBilling(input: {
         // right date, and the webhook maintains it afterwards.
         service.next_due_on;
 
+  // On autopay the charge is the plan's Stripe price, so the stored amount is
+  // re-synced to the plan rate (display/KPIs only); hand-entered rates apply
+  // to the manual rail alone.
+  const amountCents =
+    billingMethod === "stripe" && service.service_type === "monitoring"
+      ? (MONITORING_MONTHLY_CENTS[service.tier] ?? monthlyAmountCents)
+      : monthlyAmountCents;
+
   const { error } = await supabase
     .from("services")
     .update({
       billing_method: billingMethod,
       billing_interval: billingInterval,
-      monthly_amount_cents: monthlyAmountCents,
+      monthly_amount_cents: amountCents,
       next_due_on: nextDue,
       due_alerted_at: null,
       ...(cancelledSubscription ? { stripe_subscription_id: null } : {}),

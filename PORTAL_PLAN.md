@@ -343,18 +343,18 @@ Contact cap (default 15, pending D6/Q16) enforced in the server action, not the 
 
 Integrity CHECK: `changed_via = 'client_dashboard' OR (authorized_via IS NOT NULL AND length(trim(change_reason)) > 0)`. The table is append-only: no UPDATE or DELETE policies for any role, so the audit trail cannot be rewritten. Together the row answers: who (`changed_by`), when (`created_at`), what (`added`/`removed`), where and how (`changed_via`), on whose authority (`authorized_via`), why (`change_reason`), and whether the client was told (`client_notified_at`).
 
-**`devices`**
+**`devices`** (reshaped by R31: open admin-managed list, no fixed pair)
 
 | Column | Type | Constraints |
 |--------|------|-------------|
 | `id` | uuid | PK |
 | `profile_id` | uuid | FK profiles, not null |
-| `device_type` | device_type | not null |
+| `label` | text | not null, 1..80 chars (CHECK) — free-text device name |
+| `lifetime_years` | integer | not null, 1..50 (CHECK) — per-device replacement interval |
 | `installed_on` | date | not null |
-| `expiry_alerted_at` | timestamptz | nullable, cleared on `installed_on` change (R14) |
-| `unique (profile_id, device_type)` | | one battery + one smoke detector per client (extend later if multi-device needed) |
+| `expiry_alerted_at` | timestamptz | nullable, cleared on `installed_on`/`lifetime_years` change (R14); renames keep it |
 
-Expiry is computed, not stored: battery `installed_on + interval '5 years'`, smoke detector `+ 10 years` (handover 6.5).
+Expiry is computed, not stored: `installed_on + lifetime_years`. Accounts start with zero devices; admins add whatever they want reminders for (the old `device_type` enum and its unique pair constraint were dropped in migration `20260706210000`).
 
 **`sites`** (Phase 6A; one row per physical install location)
 
@@ -464,7 +464,7 @@ grant execute on function private.is_admin() to authenticated;
 | `services` | none | SELECT own via profile join | SELECT/INSERT/UPDATE all. Client tier/status changes happen only through server actions and webhooks (service role), never direct client writes |
 | `caller_id_contacts` | none | SELECT/INSERT/DELETE own (+ SELECT required for any UPDATE; list saves are delete+insert in a transaction) | SELECT/INSERT/DELETE all (R23: admin edits on behalf of clients; same save action) |
 | `caller_id_changes` | none | none (server action writes with user context INSERT-own policy) | SELECT all + INSERT (admin-context saves write their own history rows, `changed_by` = admin). **No UPDATE/DELETE for any role: immutable audit trail (R24)** |
-| `devices` | none | SELECT own | SELECT/INSERT/UPDATE all |
+| `devices` | none | SELECT own | SELECT/INSERT/UPDATE/DELETE all (R31: admins can remove tracked devices) |
 | `sites` | none | SELECT own (via profile join), minus ops columns if needed (view or column grants) | SELECT/INSERT/UPDATE all |
 | `cameras` | none | SELECT own active cameras (`id`, `name` only; `rtsp_path` excluded via a `security_invoker` view or column-level grants) | SELECT/INSERT/UPDATE all |
 | `gateways` | none | none (ops-only; heartbeat writes use service role) | SELECT/INSERT/UPDATE all |
@@ -1051,3 +1051,5 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-06 | R29: billing method is chosen at client creation (autopay default) and switchable later with real Stripe sync — autopay→manual cancels the subscription without proration (client stays paid through the period; admin confirm dialog), manual→autopay surfaces a "Set up automatic payments" card-entry button on the client dashboard that starts billing at the existing anniversary via `trial_end` (no double-billing). Card self-service (receipts, card updates) via the Stripe customer portal with cancel/plan-change disabled (R21) |
 | 2026-07-06 | The "Something went wrong" save error was **deployment skew**, not a billing bug: a browser tab from an older deploy invokes a server action id that no longer exists, which throws into the error boundary. Server actions now use non-throwing auth guards returning a friendly "reload the page" message, and profile reads retry once against platform blips. A hard refresh after each deploy remains the operator guidance |
 | 2026-07-06 | Admin portal language pass (stakeholder): all operator-facing copy rewritten for non-technical readers — "Automatic card payments" / "Pay by e-Transfer, cheque, or cash" instead of rail jargon, alerts tab explains itself as "emails that didn't send", no cron/webhook/RLS terms anywhere an operator reads |
+| 2026-07-06 | R30 (stakeholder round 3): admin client detail merges Services + Billing into one **Services & Billing** card — one box per service holds the plan and how it's paid, ending the duplicated headers. On autopay the rate/interval inputs are gone: the plan's Stripe price is what actually charges the card (plan changes swap the subscription price, synced), so the card shows a read-only "Charges $X plus tax per year, set by the plan" summary and `updateServiceBilling` re-syncs the stored amount to the plan rate. Hand-entered rates exist only on the manual rail, where they genuinely drive reminders and collections |
+| 2026-07-06 | R31 (stakeholder round 3): device tracking is an open list, not a fixed battery/smoke pair — `devices` drops the `device_type` enum for a free-text `label` + per-device `lifetime_years` (1..50, CHECK'd); accounts start with **zero** devices and admins add/rename/re-date/remove what they want reminders for (delete policy added; renames keep the alert guard, date/interval changes re-arm it per R14). Clients see the list read-only on their dashboard; the expiry cron and emails use the row's label and interval |

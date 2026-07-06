@@ -20,7 +20,11 @@ import {
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
-import { setDeviceInstallDate } from "@/lib/portal/actions/caller-id";
+import {
+  addDeviceAction,
+  deleteDeviceAction,
+  updateDeviceAction,
+} from "@/lib/portal/actions/devices";
 import { recordManualPayment, updateServiceBilling } from "@/lib/portal/actions/payments";
 import { formatPhone } from "@/lib/portal/phone";
 import {
@@ -31,13 +35,7 @@ import {
   type BillingInterval,
   type PaymentMethod,
 } from "@/lib/portal/billing";
-import {
-  DEVICE_LABELS,
-  DEVICE_LIFETIME_YEARS,
-  deviceExpiryDate,
-  isDeviceExpired,
-  type DeviceType,
-} from "@/lib/portal/devices";
+import { DEVICE_PRESETS, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor, type CallerIdContact } from "@/components/portal/caller-id-editor";
 
@@ -216,51 +214,16 @@ export type CardPaymentEntry = {
   amountCents: number | null;
 };
 
-function ServicesCard({ client }: { client: AdminClientDetailRow }) {
+function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [assignType, setAssignType] = useState<ServiceType | "">("");
   const [assignTier, setAssignTier] = useState("");
 
   const unassignedTypes = (Object.keys(SERVICE_TIERS) as ServiceType[]).filter(
     (type) => !client.services.some((s) => s.service_type === type),
   );
-
-  function changeTier(service: Tables<"services">, tier: string) {
-    if (tier === service.tier) return;
-    setNotice(null);
-    setBusyId(service.id);
-    startTransition(async () => {
-      const result = await updateServiceTierAction({ serviceId: service.id, tier });
-      setBusyId(null);
-      setNotice(
-        result.ok
-          ? { kind: "ok", text: `${SERVICE_TYPE_LABELS[service.service_type]} tier changed to ${tierLabel(tier)}. The client dashboard reflects this immediately.` }
-          : { kind: "error", text: result.error },
-      );
-    });
-  }
-
-  function changeStatus(service: Tables<"services">, status: "active" | "paused" | "cancelled") {
-    const label = SERVICE_TYPE_LABELS[service.service_type];
-    if (status === "cancelled") {
-      // Destructive admin action: explicit confirm (handover 14.2).
-      const confirmed = window.confirm(`Cancel ${label} for this client?`);
-      if (!confirmed) return;
-    }
-    setNotice(null);
-    setBusyId(service.id);
-    startTransition(async () => {
-      const result = await updateServiceStatusAction({ serviceId: service.id, status });
-      setBusyId(null);
-      setNotice(
-        result.ok
-          ? { kind: "ok", text: `${label} is now ${status}.` }
-          : { kind: "error", text: result.error },
-      );
-    });
-  }
+  if (unassignedTypes.length === 0) return null;
 
   function assign(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -278,142 +241,60 @@ function ServicesCard({ client }: { client: AdminClientDetailRow }) {
       }
       setAssignType("");
       setAssignTier("");
-      setNotice({ kind: "ok", text: "Service assigned." });
+      setNotice({ kind: "ok", text: "Service added. Set up its billing below." });
     });
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-6">
-      <h2 className="text-lg font-bold text-white">Services</h2>
-      <p className="mt-1 text-xs text-white/40">
-        Only McKee can add, change, or cancel a client&apos;s services. The
-        client sees their plans on their dashboard but cannot change them.
-      </p>
-
-      <div className="mt-4 space-y-3">
-        <NoticeBanner notice={notice} />
-
-        {client.services.length === 0 && (
-          <p className="rounded-xl border border-white/10 bg-background p-4 text-sm text-white/40">
-            No services assigned.
-          </p>
-        )}
-
-        {client.services.map((service) => (
-          <div
-            key={service.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-background p-4"
+    <div className="space-y-3">
+      <NoticeBanner notice={notice} />
+      <form
+        onSubmit={assign}
+        className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-white/15 p-4"
+      >
+        <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          Add service
+          <select
+            value={assignType}
+            onChange={(e) => {
+              setAssignType(e.target.value as ServiceType | "");
+              setAssignTier("");
+            }}
+            className={adminSelectClass}
           >
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="font-bold text-white">
-                  {SERVICE_TYPE_LABELS[service.service_type]}
-                </span>
-                <ServiceStatusBadge status={service.status} />
-              </div>
-              {service.service_type === "cloud_backup" && (
-                <p className="mt-1 text-xs text-white/40">
-                  Runs on McKee-managed on-site hardware; footage service ships with Track 2.
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={service.tier}
-                disabled={pending}
-                onChange={(e) => changeTier(service, e.target.value)}
-                className={adminSelectClass}
-                aria-label={`${SERVICE_TYPE_LABELS[service.service_type]} tier`}
-              >
-                {SERVICE_TIERS[service.service_type].map((tier) => (
-                  <option key={tier} value={tier}>
-                    {tierLabel(tier)}
-                  </option>
-                ))}
-              </select>
-              {service.status === "cancelled" || service.status === "paused" ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => changeStatus(service, "active")}
-                  className={buttonSecondary}
-                >
-                  {busyId === service.id ? "Working..." : "Restart"}
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => changeStatus(service, "paused")}
-                    className={buttonSecondary}
-                  >
-                    {busyId === service.id ? "Working..." : "Pause"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => changeStatus(service, "cancelled")}
-                    className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {unassignedTypes.length > 0 && (
-          <form
-            onSubmit={assign}
-            className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-white/15 p-4"
+            <option value="">Choose...</option>
+            {unassignedTypes.map((type) => (
+              <option key={type} value={type}>
+                {SERVICE_TYPE_LABELS[type]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          Plan
+          <select
+            value={assignTier}
+            onChange={(e) => setAssignTier(e.target.value)}
+            disabled={!assignType}
+            className={`${adminSelectClass} disabled:opacity-50`}
           >
-            <label className="flex flex-col gap-1.5 text-sm text-white/80">
-              Add service
-              <select
-                value={assignType}
-                onChange={(e) => {
-                  setAssignType(e.target.value as ServiceType | "");
-                  setAssignTier("");
-                }}
-                className={adminSelectClass}
-              >
-                <option value="">Choose...</option>
-                {unassignedTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {SERVICE_TYPE_LABELS[type]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm text-white/80">
-              Tier
-              <select
-                value={assignTier}
-                onChange={(e) => setAssignTier(e.target.value)}
-                disabled={!assignType}
-                className={`${adminSelectClass} disabled:opacity-50`}
-              >
-                <option value="">Choose...</option>
-                {assignType &&
-                  SERVICE_TIERS[assignType].map((tier) => (
-                    <option key={tier} value={tier}>
-                      {tierLabel(tier)}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <button
-              type="submit"
-              disabled={pending || !assignType || !assignTier}
-              className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
-            >
-              {pending ? "Assigning..." : "Assign"}
-            </button>
-          </form>
-        )}
-      </div>
+            <option value="">Choose...</option>
+            {assignType &&
+              SERVICE_TIERS[assignType].map((tier) => (
+                <option key={tier} value={tier}>
+                  {tierLabel(tier)}
+                </option>
+              ))}
+          </select>
+        </label>
+        <button
+          type="submit"
+          disabled={pending || !assignType || !assignTier}
+          className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+        >
+          {pending ? "Adding..." : "Add Service"}
+        </button>
+      </form>
     </div>
   );
 }
@@ -545,11 +426,14 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 5: billing card. Per-service rails (R22), record-payment flow, and
-// the append-only manual payment ledger.
+// Services & Billing (merged, stakeholder round 3): one box per service holds
+// the plan (what they have) and the billing (how they pay) together. Plan
+// changes on autopay swap the Stripe subscription price; the custom rate and
+// interval inputs only exist on the manual rail because on autopay the plan's
+// Stripe price is what actually gets charged.
 // ---------------------------------------------------------------------------
 
-function BillingServiceRow({ service }: { service: Tables<"services"> }) {
+function ServiceRow({ service }: { service: Tables<"services"> }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<"stripe" | "manual">(service.billing_method);
@@ -570,10 +454,56 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
   const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [payNote, setPayNote] = useState("");
 
+  const serviceLabel = SERVICE_TYPE_LABELS[service.service_type];
+
+  function changeTier(tier: string) {
+    if (tier === service.tier) return;
+    setNotice(null);
+    startTransition(async () => {
+      const result = await updateServiceTierAction({ serviceId: service.id, tier });
+      setNotice(
+        result.ok
+          ? {
+              kind: "ok",
+              text: `Plan changed to ${tierLabel(tier)}.${
+                service.stripe_subscription_id
+                  ? " Their automatic card payments now charge the new plan's rate; the next invoice reflects it."
+                  : " The client dashboard reflects this immediately."
+              }`,
+            }
+          : { kind: "error", text: result.error },
+      );
+    });
+  }
+
+  function changeStatus(status: "active" | "paused" | "cancelled") {
+    if (status === "cancelled") {
+      // Destructive admin action: explicit confirm (handover 14.2).
+      const confirmed = window.confirm(`Cancel ${serviceLabel} for this client?`);
+      if (!confirmed) return;
+    }
+    setNotice(null);
+    startTransition(async () => {
+      const result = await updateServiceStatusAction({ serviceId: service.id, status });
+      setNotice(
+        result.ok
+          ? { kind: "ok", text: `${serviceLabel} is now ${status}.` }
+          : { kind: "error", text: result.error },
+      );
+    });
+  }
+
   function saveBilling() {
     setNotice(null);
-    const cents = amount.trim() ? Math.round(Number.parseFloat(amount) * 100) : null;
-    if (amount.trim() && (!Number.isFinite(cents) || cents! <= 0)) {
+    // On autopay the amount stays whatever the plan sets; only manual billing
+    // takes a hand-entered rate.
+    const cents =
+      method === "stripe"
+        ? service.monthly_amount_cents
+        : amount.trim()
+          ? Math.round(Number.parseFloat(amount) * 100)
+          : null;
+    if (method === "manual" && amount.trim() && (!Number.isFinite(cents) || cents! <= 0)) {
       setNotice({ kind: "error", text: "Enter a valid monthly amount." });
       return;
     }
@@ -589,9 +519,9 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
       const result = await updateServiceBilling({
         serviceId: service.id,
         billingMethod: method,
-        billingInterval: cycle,
+        billingInterval: method === "stripe" ? service.billing_interval : cycle,
         monthlyAmountCents: cents,
-        nextDueOn: dueOn,
+        nextDueOn: method === "stripe" ? "" : dueOn,
       });
       setNotice(
         result.ok
@@ -631,11 +561,16 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
     });
   }
 
+  const invoiceCents =
+    service.monthly_amount_cents != null
+      ? service.monthly_amount_cents * intervalMonths(service.billing_interval)
+      : null;
+
   return (
-    <div className="space-y-4 rounded-xl border border-white/10 bg-background p-4">
+    <div className="space-y-4 rounded-xl border border-white/10 bg-background p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="font-bold text-white">{SERVICE_TYPE_LABELS[service.service_type]}</span>
+          <span className="font-bold text-white">{serviceLabel}</span>
           <ServiceStatusBadge status={service.status} />
         </div>
         <span className="text-xs uppercase tracking-widest text-white/40">
@@ -647,73 +582,153 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
         </span>
       </div>
 
-      {service.billing_method === "stripe" && service.next_due_on && (
-        <p className="text-xs text-white/45">Next automatic payment: {service.next_due_on}</p>
-      )}
-      {service.billing_method === "stripe" && !service.stripe_subscription_id && (
-        <p className="text-xs text-white/45">
-          The client sees a &ldquo;Set up automatic payments&rdquo; button on
-          their dashboard until they enter their card.
-        </p>
-      )}
-
       <NoticeBanner notice={notice} />
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
-          How they pay
+          Plan
           <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value as "stripe" | "manual")}
+            value={service.tier}
+            disabled={pending}
+            onChange={(e) => changeTier(e.target.value)}
             className={adminSelectClass}
+            aria-label={`${serviceLabel} plan`}
           >
-            <option value="stripe">Automatic card payments</option>
-            <option value="manual">e-Transfer / cheque / cash</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm text-white/80">
-          Billed
-          <select
-            value={cycle}
-            onChange={(e) => setCycle(e.target.value as BillingInterval)}
-            className={adminSelectClass}
-          >
-            {(Object.keys(BILLING_INTERVAL_LABELS) as BillingInterval[]).map((value) => (
-              <option key={value} value={value}>
-                {BILLING_INTERVAL_LABELS[value]}
+            {SERVICE_TIERS[service.service_type].map((tier) => (
+              <option key={tier} value={tier}>
+                {tierLabel(tier)}
               </option>
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5 text-sm text-white/80">
-          Monthly rate ($, before tax)
-          <input
-            inputMode="decimal"
-            placeholder="34.95"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className={adminInputClass}
-          />
-        </label>
-        {method === "manual" && (
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            Next payment due
-            <input
-              type="date"
-              value={dueOn}
-              onChange={(e) => setDueOn(e.target.value)}
-              className={adminInputClass}
-            />
-          </label>
+        {service.status === "cancelled" || service.status === "paused" ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => changeStatus("active")}
+            className={buttonSecondary}
+          >
+            Restart
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => changeStatus("paused")}
+              className={buttonSecondary}
+            >
+              Pause
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => changeStatus("cancelled")}
+              className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </>
         )}
-        <button type="button" disabled={pending} onClick={saveBilling} className={buttonSecondary}>
-          {pending ? "Saving..." : "Save Billing"}
-        </button>
-        {cycle === "annual" && amount.trim() && Number.isFinite(Number.parseFloat(amount)) && (
+        {service.service_type === "cloud_backup" && (
           <p className="w-full text-xs text-white/40">
-            Yearly invoice: ${(Number.parseFloat(amount) * 12).toFixed(2)} plus tax
-            (monitoring is billed once a year).
+            Runs on McKee-managed on-site hardware; footage service ships with Track 2.
           </p>
+        )}
+      </div>
+
+      <div className="space-y-3 border-t border-white/10 pt-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            How they pay
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value as "stripe" | "manual")}
+              className={adminSelectClass}
+            >
+              <option value="stripe">Automatic card payments</option>
+              <option value="manual">e-Transfer / cheque / cash</option>
+            </select>
+          </label>
+          {method === "manual" && (
+            <>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Billed
+                <select
+                  value={cycle}
+                  onChange={(e) => setCycle(e.target.value as BillingInterval)}
+                  className={adminSelectClass}
+                >
+                  {(Object.keys(BILLING_INTERVAL_LABELS) as BillingInterval[]).map((value) => (
+                    <option key={value} value={value}>
+                      {BILLING_INTERVAL_LABELS[value]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Monthly rate ($, before tax)
+                <input
+                  inputMode="decimal"
+                  placeholder="34.95"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className={adminInputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Next payment due
+                <input
+                  type="date"
+                  value={dueOn}
+                  onChange={(e) => setDueOn(e.target.value)}
+                  className={adminInputClass}
+                />
+              </label>
+            </>
+          )}
+          <button type="button" disabled={pending} onClick={saveBilling} className={buttonSecondary}>
+            {pending ? "Saving..." : "Save Billing"}
+          </button>
+          {method === "manual" &&
+            cycle === "annual" &&
+            amount.trim() &&
+            Number.isFinite(Number.parseFloat(amount)) && (
+              <p className="w-full text-xs text-white/40">
+                Yearly invoice: ${(Number.parseFloat(amount) * 12).toFixed(2)} plus tax
+                (monitoring is billed once a year).
+              </p>
+            )}
+        </div>
+
+        {method === "stripe" && (
+          <div className="rounded-lg border border-white/10 bg-surface/60 p-3 text-xs leading-relaxed text-white/50">
+            <p>
+              {invoiceCents != null && (
+                <>
+                  Charges{" "}
+                  <span className="font-semibold text-white/80">
+                    {formatCents(invoiceCents)} plus tax
+                    {service.billing_interval === "annual" ? " per year" : " per month"}
+                  </span>
+                  {". "}
+                </>
+              )}
+              The rate comes from the plan above; changing the plan updates the
+              card charge automatically. There is nothing to type in here.
+            </p>
+            {service.next_due_on && (
+              <p className="mt-1">
+                Next automatic payment: <span className="text-white/80">{service.next_due_on}</span>
+              </p>
+            )}
+            {service.billing_method === "stripe" && !service.stripe_subscription_id && (
+              <p className="mt-1">
+                The client sees a &ldquo;Set up automatic payments&rdquo; button
+                on their dashboard until they enter their card.
+              </p>
+            )}
+          </div>
         )}
       </div>
 
@@ -782,7 +797,7 @@ function BillingServiceRow({ service }: { service: Tables<"services"> }) {
   );
 }
 
-function BillingCard({
+function ServicesBillingCard({
   client,
   manualPayments,
   cardPayments,
@@ -821,22 +836,26 @@ function BillingCard({
 
   return (
     <div className="rounded-2xl border border-white/10 bg-surface p-6">
-      <h2 className="text-lg font-bold text-white">Billing</h2>
+      <h2 className="text-lg font-bold text-white">Services &amp; Billing</h2>
       <p className="mt-1 text-xs text-white/40">
+        Each service shows what the client has and how they pay for it, in one
+        place. Only McKee can change plans; the client sees theirs read-only.
         Clients either pay automatically by card, or pay you directly and you
-        record it here. Recorded payments can&apos;t be edited afterwards. If
+        record it here. Recorded payments can&apos;t be edited afterwards; if
         you make a mistake, record a correcting entry (a negative amount works).
       </p>
 
       <div className="mt-4 space-y-4">
         {client.services.length === 0 && (
           <p className="rounded-xl border border-white/10 bg-background p-4 text-sm text-white/40">
-            Assign a service first, then set up its billing.
+            No services yet. Add one below.
           </p>
         )}
         {client.services.map((service) => (
-          <BillingServiceRow key={service.id} service={service} />
+          <ServiceRow key={service.id} service={service} />
         ))}
+
+        <AddServiceForm client={client} />
 
         {history.length > 0 && (
           <div className="rounded-xl border border-white/10 bg-background p-4">
@@ -988,9 +1007,137 @@ function CallerIdCard({
 }
 
 // ---------------------------------------------------------------------------
-// Phase 4: devices card. Admin sets install dates; expiry is computed
-// (battery +5y, smoke +10y) and a date change re-arms the expiry alert (R14).
+// Devices card (stakeholder round 3): an open equipment list. Accounts start
+// with no devices; admins add whatever they want replacement reminders for,
+// with a custom name and a per-device replacement interval. Renames keep the
+// alert guard; a new date or interval re-arms it (R14). Clients see the list
+// read-only on their dashboard.
 // ---------------------------------------------------------------------------
+
+function DeviceRow({ device }: { device: Tables<"devices"> }) {
+  const [notice, setNotice] = useState<Notice>(null);
+  const [pending, startTransition] = useTransition();
+  const [label, setLabel] = useState(device.label);
+  const [installedOn, setInstalledOn] = useState(device.installed_on);
+  const [years, setYears] = useState(String(device.lifetime_years));
+
+  const expired = isDeviceExpired(device.installed_on, device.lifetime_years);
+  const dueDate = deviceExpiryDate(device.installed_on, device.lifetime_years).toLocaleDateString(
+    "en-CA",
+    { year: "numeric", month: "long" },
+  );
+  const dirty =
+    label !== device.label ||
+    installedOn !== device.installed_on ||
+    years !== String(device.lifetime_years);
+
+  function save() {
+    setNotice(null);
+    const lifetimeYears = Number.parseInt(years, 10);
+    if (!Number.isFinite(lifetimeYears) || lifetimeYears < 1) {
+      setNotice({ kind: "error", text: "Enter how many years until replacement." });
+      return;
+    }
+    startTransition(async () => {
+      const result = await updateDeviceAction({
+        deviceId: device.id,
+        label,
+        installedOn,
+        lifetimeYears,
+      });
+      setNotice(
+        result.ok
+          ? { kind: "ok", text: "Device saved." }
+          : { kind: "error", text: result.error },
+      );
+    });
+  }
+
+  function remove() {
+    const confirmed = window.confirm(
+      `Stop tracking "${device.label}"?\n\nIt disappears from this account and the client's dashboard, and no more replacement reminders are sent for it.`,
+    );
+    if (!confirmed) return;
+    setNotice(null);
+    startTransition(async () => {
+      const result = await deleteDeviceAction(device.id);
+      if (!result.ok) setNotice({ kind: "error", text: result.error });
+    });
+  }
+
+  return (
+    <div
+      className={`rounded-xl border p-4 ${
+        expired ? "border-amber-500/40 bg-amber-500/10" : "border-white/10 bg-background"
+      }`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-bold text-white">{device.label}</p>
+        <div className="flex items-center gap-2">
+          {expired && (
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
+              Replacement due
+            </span>
+          )}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={remove}
+            className="cursor-pointer rounded-lg border border-red-500/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+      <p className="mt-1 text-xs text-white/50">
+        {expired ? `Replacement was due ${dueDate}.` : `Next replacement due ${dueDate}.`}
+      </p>
+
+      <div className="mt-3 space-y-3">
+        <NoticeBanner notice={notice} />
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 text-xs text-white/60">
+            Device name
+            <input
+              value={label}
+              maxLength={80}
+              onChange={(e) => setLabel(e.target.value)}
+              className={adminInputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs text-white/60">
+            Installed / last replaced
+            <input
+              type="date"
+              value={installedOn}
+              onChange={(e) => setInstalledOn(e.target.value)}
+              className={adminInputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs text-white/60">
+            Replace every (years)
+            <input
+              type="number"
+              min={1}
+              max={50}
+              value={years}
+              onChange={(e) => setYears(e.target.value)}
+              className={`${adminInputClass} w-24`}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={pending || !dirty || !label.trim() || !installedOn}
+            onClick={save}
+            className={buttonSecondary}
+          >
+            {pending ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DevicesCard({
   client,
@@ -1001,25 +1148,40 @@ function DevicesCard({
 }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
-  const [dates, setDates] = useState<Record<DeviceType, string>>(() => ({
-    battery: devices.find((d) => d.device_type === "battery")?.installed_on ?? "",
-    smoke_detector: devices.find((d) => d.device_type === "smoke_detector")?.installed_on ?? "",
-  }));
+  const [label, setLabel] = useState("");
+  const [installedOn, setInstalledOn] = useState("");
+  const [years, setYears] = useState("5");
 
-  function save(deviceType: DeviceType) {
-    const installedOn = dates[deviceType];
-    if (!installedOn) {
-      setNotice({ kind: "error", text: "Pick the install (or replacement) date first." });
+  function handleLabelChange(value: string) {
+    setLabel(value);
+    // Picking a suggestion prefills its usual replacement interval.
+    const preset = DEVICE_PRESETS.find((p) => p.label === value);
+    if (preset) setYears(String(preset.years));
+  }
+
+  function add(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNotice(null);
+    const lifetimeYears = Number.parseInt(years, 10);
+    if (!Number.isFinite(lifetimeYears) || lifetimeYears < 1) {
+      setNotice({ kind: "error", text: "Enter how many years until replacement." });
       return;
     }
-    setNotice(null);
     startTransition(async () => {
-      const result = await setDeviceInstallDate({ profileId: client.id, deviceType, installedOn });
-      setNotice(
-        result.ok
-          ? { kind: "ok", text: `${DEVICE_LABELS[deviceType]} date saved. Expiry alerts are re-armed.` }
-          : { kind: "error", text: result.error },
-      );
+      const result = await addDeviceAction({
+        profileId: client.id,
+        label,
+        installedOn,
+        lifetimeYears,
+      });
+      if (!result.ok) {
+        setNotice({ kind: "error", text: result.error });
+        return;
+      }
+      setLabel("");
+      setInstalledOn("");
+      setYears("5");
+      setNotice({ kind: "ok", text: "Device added. It now shows on the client's dashboard too." });
     });
   }
 
@@ -1027,59 +1189,76 @@ function DevicesCard({
     <div className="rounded-2xl border border-white/10 bg-surface p-6">
       <h2 className="text-lg font-bold text-white">Devices</h2>
       <p className="mt-1 text-xs text-white/40">
-        Set the install/replacement date after each site visit. Batteries are
-        flagged after {DEVICE_LIFETIME_YEARS.battery} years, smoke detectors
-        after {DEVICE_LIFETIME_YEARS.smoke_detector}. When one comes due, the
-        system automatically emails both the client and the McKee inbox.
+        Track the equipment on this account and when it should be replaced.
+        When a device comes due, the system automatically emails both the
+        client and the McKee inbox. The client sees this list on their
+        dashboard but only McKee can change it.
       </p>
 
       <div className="mt-4 space-y-3">
         <NoticeBanner notice={notice} />
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(Object.keys(DEVICE_LABELS) as DeviceType[]).map((deviceType) => {
-            const existing = devices.find((d) => d.device_type === deviceType);
-            const expired = existing ? isDeviceExpired(deviceType, existing.installed_on) : false;
-            return (
-              <div
-                key={deviceType}
-                className={`rounded-xl border p-4 ${
-                  expired ? "border-amber-500/40 bg-amber-500/10" : "border-white/10 bg-background"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-bold text-white">{DEVICE_LABELS[deviceType]}</p>
-                  {expired && (
-                    <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
-                      Replacement due
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-white/50">
-                  {existing
-                    ? `Installed ${existing.installed_on} · due ${deviceExpiryDate(deviceType, existing.installed_on).toLocaleDateString("en-CA", { year: "numeric", month: "short" })}`
-                    : "Not tracked yet."}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <input
-                    type="date"
-                    value={dates[deviceType]}
-                    onChange={(e) => setDates((d) => ({ ...d, [deviceType]: e.target.value }))}
-                    className={adminInputClass}
-                    aria-label={`${DEVICE_LABELS[deviceType]} install date`}
-                  />
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => save(deviceType)}
-                    className={buttonSecondary}
-                  >
-                    {pending ? "Saving..." : "Save"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+
+        {devices.length === 0 && (
+          <p className="rounded-xl border border-white/10 bg-background p-4 text-sm text-white/40">
+            No devices tracked yet. Add the equipment you want replacement
+            reminders for.
+          </p>
+        )}
+        {devices.map((device) => (
+          <DeviceRow key={device.id} device={device} />
+        ))}
+
+        <form
+          onSubmit={add}
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-white/15 p-4"
+        >
+          <label className="flex min-w-[12rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
+            Add a device
+            <input
+              required
+              list="device-name-suggestions"
+              placeholder="e.g. Alarm Backup Battery"
+              maxLength={80}
+              value={label}
+              onChange={(e) => handleLabelChange(e.target.value)}
+              className={adminInputClass}
+            />
+            <datalist id="device-name-suggestions">
+              {DEVICE_PRESETS.map((preset) => (
+                <option key={preset.label} value={preset.label} />
+              ))}
+            </datalist>
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Installed on
+            <input
+              type="date"
+              required
+              value={installedOn}
+              onChange={(e) => setInstalledOn(e.target.value)}
+              className={adminInputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Replace every (years)
+            <input
+              type="number"
+              required
+              min={1}
+              max={50}
+              value={years}
+              onChange={(e) => setYears(e.target.value)}
+              className={`${adminInputClass} w-24`}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={pending || !label.trim() || !installedOn}
+            className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+          >
+            {pending ? "Adding..." : "Add Device"}
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -1103,8 +1282,7 @@ export function AdminClientDetail({
   return (
     <div className="space-y-6">
       <ProfileCard client={client} />
-      <ServicesCard client={client} />
-      <BillingCard client={client} manualPayments={manualPayments} cardPayments={cardPayments} />
+      <ServicesBillingCard client={client} manualPayments={manualPayments} cardPayments={cardPayments} />
       <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
       <DevicesCard client={client} devices={devices} />
       <InvitationCard client={client} />

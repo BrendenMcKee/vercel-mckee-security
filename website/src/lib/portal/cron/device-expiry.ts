@@ -1,6 +1,6 @@
 import "server-only";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
-import { DEVICE_LABELS, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
+import { deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
 import { sendDeviceExpiryAdminAlert, sendDeviceExpiryClientNotice } from "@/lib/portal/emails";
 
 export type DeviceExpirySummary = {
@@ -10,9 +10,9 @@ export type DeviceExpirySummary = {
 
 /**
  * R14 daily job (PORTAL_PLAN.md 9.4): devices past their computed service
- * life (battery +5y, smoke detector +10y) where expiry_alerted_at is null
- * get one admin alert + one client notice, then the guard is stamped.
- * Changing the install date (a replacement) clears the guard for the next
+ * life (installed_on + lifetime_years) where expiry_alerted_at is null get
+ * one admin alert + one client notice, then the guard is stamped. Changing
+ * the install date or interval (a replacement) clears the guard for the next
  * cycle.
  */
 export async function runDeviceExpiryJob(): Promise<DeviceExpirySummary> {
@@ -20,14 +20,14 @@ export async function runDeviceExpiryJob(): Promise<DeviceExpirySummary> {
 
   const { data: devices, error } = await admin
     .from("devices")
-    .select("id, device_type, installed_on, expiry_alerted_at, profiles(id, first_name, last_name, email)")
+    .select("id, label, lifetime_years, installed_on, expiry_alerted_at, profiles(id, first_name, last_name, email)")
     .not("installed_on", "is", null)
     .is("expiry_alerted_at", null);
 
   if (error) throw new Error(`device-expiry query failed: ${error.message}`);
 
   const expiredDevices = (devices ?? []).filter(
-    (d) => d.installed_on && isDeviceExpired(d.device_type, d.installed_on),
+    (d) => d.installed_on && isDeviceExpired(d.installed_on, d.lifetime_years),
   );
 
   let alerted = 0;
@@ -35,8 +35,8 @@ export async function runDeviceExpiryJob(): Promise<DeviceExpirySummary> {
     const profile = device.profiles;
     if (!profile || !device.installed_on) continue;
 
-    const deviceLabel = DEVICE_LABELS[device.device_type];
-    const expiredOn = deviceExpiryDate(device.device_type, device.installed_on)
+    const deviceLabel = device.label;
+    const expiredOn = deviceExpiryDate(device.installed_on, device.lifetime_years)
       .toISOString()
       .slice(0, 10);
 

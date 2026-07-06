@@ -1,24 +1,21 @@
-import type { Database } from "@/lib/portal/database.types";
+// Devices are an open, admin-managed equipment list (stakeholder round 3):
+// each device has a custom name and its own replacement interval in years.
+// Expiry is always computed from installed_on + lifetime_years, never stored.
 
-export type DeviceType = Database["public"]["Enums"]["device_type"];
+/** Quick-add suggestions for the admin form; free text is equally valid. */
+export const DEVICE_PRESETS: { label: string; years: number }[] = [
+  { label: "Alarm Backup Battery", years: 5 },
+  { label: "Smoke Detector", years: 10 },
+  { label: "Carbon Monoxide Detector", years: 7 },
+  { label: "Keypad Backup Battery", years: 5 },
+];
 
-export const DEVICE_LABELS: Record<DeviceType, string> = {
-  battery: "Alarm Backup Battery",
-  smoke_detector: "Smoke Detector",
-};
-
-/** Handover 6.5: battery lasts 5 years, smoke detector 10. Expiry is computed, never stored. */
-export const DEVICE_LIFETIME_YEARS: Record<DeviceType, number> = {
-  battery: 5,
-  smoke_detector: 10,
-};
-
-export function deviceExpiryDate(deviceType: DeviceType, installedOn: string): Date {
+export function deviceExpiryDate(installedOn: string, lifetimeYears: number): Date {
   const d = new Date(`${installedOn}T00:00:00`);
-  d.setFullYear(d.getFullYear() + DEVICE_LIFETIME_YEARS[deviceType]);
+  d.setFullYear(d.getFullYear() + lifetimeYears);
   return d;
 }
 
-export function isDeviceExpired(deviceType: DeviceType, installedOn: string): boolean {
-  return deviceExpiryDate(deviceType, installedOn).getTime() <= Date.now();
+export function isDeviceExpired(installedOn: string, lifetimeYears: number): boolean {
+  return deviceExpiryDate(installedOn, lifetimeYears).getTime() <= Date.now();
 }

@@ -12,7 +12,7 @@ import {
   intervalMonths,
   type PaymentMethod,
 } from "@/lib/portal/billing";
-import { DEVICE_LABELS, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
+import { deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
 import { ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor } from "@/components/portal/caller-id-editor";
 import { PayNowButton } from "@/components/portal/pay-now-button";
@@ -79,9 +79,9 @@ export default async function UserDashboardPage({
         .order("created_at"),
       supabase
         .from("devices")
-        .select("device_type, installed_on")
+        .select("id, label, installed_on, lifetime_years")
         .eq("profile_id", profile.id)
-        .order("device_type"),
+        .order("created_at"),
       supabase
         .from("manual_payments")
         .select("id, service_id, amount_cents, method, paid_on")
@@ -413,18 +413,18 @@ export default async function UserDashboardPage({
         >
           <div className="grid gap-3 border-t border-white/10 pt-5 md:grid-cols-2">
             {devicesResult.data.map((device) => {
-              const expired = isDeviceExpired(device.device_type, device.installed_on);
-              const expiry = deviceExpiryDate(device.device_type, device.installed_on);
+              const expired = isDeviceExpired(device.installed_on, device.lifetime_years);
+              const expiry = deviceExpiryDate(device.installed_on, device.lifetime_years);
               return (
                 <div
-                  key={device.device_type}
+                  key={device.id}
                   className={`rounded-xl border p-4 ${
                     expired
                       ? "border-amber-500/40 bg-amber-500/10"
                       : "border-white/10 bg-background"
                   }`}
                 >
-                  <p className="font-bold text-white">{DEVICE_LABELS[device.device_type]}</p>
+                  <p className="font-bold text-white">{device.label}</p>
                   <p className="mt-1 text-sm text-white/65">
                     Installed {formatDate(device.installed_on)}
                   </p>

@@ -321,20 +321,28 @@ try {
   }
 
   // --- Devices ---------------------------------------------------------------
+  let deviceId = null;
   {
     const { error } = await clientSession.ssr.from("devices").insert({
       profile_id: clientUser.profileId,
-      device_type: "battery",
+      label: "Alarm Backup Battery",
+      lifetime_years: 5,
       installed_on: "2018-03-01",
     });
     check("client INSERT on devices denied (RLS)", Boolean(error), error?.code ?? "no error");
   }
   {
-    const { error } = await adminSession.ssr.from("devices").insert({
-      profile_id: clientUser.profileId,
-      device_type: "battery",
-      installed_on: "2018-03-01",
-    });
+    const { data, error } = await adminSession.ssr
+      .from("devices")
+      .insert({
+        profile_id: clientUser.profileId,
+        label: "Alarm Backup Battery",
+        lifetime_years: 5,
+        installed_on: "2018-03-01",
+      })
+      .select("id")
+      .single();
+    deviceId = data?.id ?? null;
     check("admin INSERT device succeeds (RLS)", !error, error?.code ?? "");
   }
   {
@@ -353,8 +361,7 @@ try {
     const { error } = await adminSession.ssr
       .from("devices")
       .update({ installed_on: today, expiry_alerted_at: null })
-      .eq("profile_id", clientUser.profileId)
-      .eq("device_type", "battery");
+      .eq("id", deviceId);
     check("admin device date update succeeds (RLS)", !error, error?.code ?? "");
     const res = await fetch(`${baseUrl}/user-dashboard`, {
       headers: { cookie: clientSession.cookieHeader() },
