@@ -54,7 +54,7 @@ export type AdminClientDetailRow = Tables<"profiles"> & {
 type Notice = { kind: "ok" | "error"; text: string; link?: string } | null;
 
 const buttonSecondary =
-  "cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50";
+  "cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-50";
 
 function NoticeBanner({ notice }: { notice: Notice }) {
   if (!notice) return null;

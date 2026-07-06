@@ -10,6 +10,9 @@ import type { Database } from "@/lib/portal/database.types";
  * - auth.admin operations (activation user creation, admin seeding)
  * - invitation validation before a session exists
  * - Stripe webhook and cron contexts
+ * - rate-limit RPC + portal_alerts writes (service-role-only surfaces)
+ * The Phase 7 security sweep greps for getPortalAdminClient and checks every
+ * call site against this list.
  *
  * Mirrors the Starlink admin pattern: lazy creation so a missing env var does
  * not crash unrelated routes, `server-only` so a client-component import fails

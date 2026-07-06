@@ -8,6 +8,37 @@ import {
 } from "@/lib/email-templates";
 import { siteConfig } from "@/lib/site-config";
 import { formatPhone } from "@/lib/portal/phone";
+import { recordPortalAlert } from "@/lib/portal/alerts";
+
+/**
+ * All portal emails dispatch through here so a failed send is never just a
+ * log line: it lands in the admin Alerts tab (handover 22.3) with enough
+ * context to retry manually. Returns sendEmail's semantics (true only when
+ * a message was actually dispatched).
+ */
+async function dispatchPortalEmail(
+  label: string,
+  payload: Parameters<typeof sendEmail>[0],
+): Promise<boolean> {
+  try {
+    const sent = await sendEmail(payload);
+    if (!sent) {
+      await recordPortalAlert("email_failure", `${label}: not sent (email service not configured).`, {
+        subject: payload.subject,
+        to: payload.to ?? "admin inbox",
+      });
+    }
+    return sent;
+  } catch (error) {
+    console.error(`[portal] ${label} failed:`, error);
+    await recordPortalAlert("email_failure", `${label}: send failed.`, {
+      subject: payload.subject,
+      to: payload.to ?? "admin inbox",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
+}
 
 const PORTAL_FOOTER_HTML = `Sent by McKee Security &nbsp;&bull;&nbsp;
   <a href="${siteConfig.url}" style="color:#c91818;text-decoration:none;font-weight:600;">${siteConfig.url.replace("https://", "")}</a>
@@ -74,17 +105,12 @@ export async function sendInvitationEmail({
     },
   ];
 
-  try {
-    return await sendEmail({
-      to,
-      subject: "Activate your McKee Security client portal account",
-      text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
-      html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
-    });
-  } catch (error) {
-    console.error("[portal] Invitation email failed:", error);
-    return false;
-  }
+  return dispatchPortalEmail("Invitation email", {
+    to,
+    subject: "Activate your McKee Security client portal account",
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -177,16 +203,11 @@ export async function sendCallerIdAdminAlert({
     buttonLabel: "Open Client Detail",
   });
 
-  try {
-    return await sendEmail({
-      subject: `Caller ID change: ${clientName}`,
-      text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
-      html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
-    });
-  } catch (error) {
-    console.error("[portal] Caller ID admin alert failed:", error);
-    return false;
-  }
+  return dispatchPortalEmail("Caller ID admin alert", {
+    subject: `Caller ID change: ${clientName}`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
 }
 
 export const AUTHORIZATION_LABELS: Record<string, string> = {
@@ -243,17 +264,12 @@ export async function sendCallerIdClientNotification({
     },
   ];
 
-  try {
-    return await sendEmail({
-      to,
-      subject: "Your McKee Security alarm contact list was updated",
-      text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
-      html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
-    });
-  } catch (error) {
-    console.error("[portal] Caller ID client notification failed:", error);
-    return false;
-  }
+  return dispatchPortalEmail("Caller ID client notification", {
+    to,
+    subject: "Your McKee Security alarm contact list was updated",
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -307,19 +323,14 @@ export async function sendManualPaymentReminder({
     },
   ];
 
-  try {
-    return await sendEmail({
-      to,
-      subject: overdue
-        ? `Payment overdue: ${service} (${dollars(amountCents)})`
-        : `Payment reminder: ${service} due ${dueOn}`,
-      text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
-      html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
-    });
-  } catch (error) {
-    console.error("[portal] Manual payment reminder failed:", error);
-    return false;
-  }
+  return dispatchPortalEmail("Manual payment reminder", {
+    to,
+    subject: overdue
+      ? `Payment overdue: ${service} (${dollars(amountCents)})`
+      : `Payment reminder: ${service} due ${dueOn}`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
 }
 
 /** Confirmation when an admin records a manual payment (7.3). */
@@ -355,17 +366,12 @@ export async function sendManualPaymentRecorded({
     fields.push({ label: "Next payment due", value: nextDueOn });
   }
 
-  try {
-    return await sendEmail({
-      to,
-      subject: `Payment received: ${service} (${dollars(amountCents)})`,
-      text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
-      html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
-    });
-  } catch (error) {
-    console.error("[portal] Manual payment recorded email failed:", error);
-    return false;
-  }
+  return dispatchPortalEmail("Manual payment recorded email", {
+    to,
+    subject: `Payment received: ${service} (${dollars(amountCents)})`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
 }
 
 /** Admin alert for a failed card payment (Stripe invoice.payment_failed). */
@@ -403,16 +409,11 @@ export async function sendCardPaymentFailedAlert({
     },
   ];
 
-  try {
-    return await sendEmail({
-      subject: `Card payment failed: ${clientName}`,
-      text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
-      html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
-    });
-  } catch (error) {
-    console.error("[portal] Card payment failed alert failed:", error);
-    return false;
-  }
+  return dispatchPortalEmail("Card payment failed alert", {
+    subject: `Card payment failed: ${clientName}`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
 }
 
 /** Client confirmation after checkout completes (handover 12, optional). */
@@ -441,15 +442,151 @@ export async function sendPaymentSuccessEmail({
     },
   ];
 
-  try {
-    return await sendEmail({
-      to,
-      subject: `Payment successful: ${service} is active`,
-      text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
-      html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  return dispatchPortalEmail("Payment success email", {
+    to,
+    subject: `Payment successful: ${service} is active`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Cron emails (PORTAL_PLAN.md 9.4, Phase 7)
+// ---------------------------------------------------------------------------
+
+/** R14: one alert per expiry event, to the admin inbox, when the cron finds an expired device. */
+export async function sendDeviceExpiryAdminAlert({
+  clientName,
+  clientEmail,
+  deviceLabel,
+  installedOn,
+  expiredOn,
+  profileId,
+}: {
+  clientName: string;
+  clientEmail: string | null;
+  deviceLabel: string;
+  installedOn: string;
+  expiredOn: string;
+  profileId: string;
+}): Promise<boolean> {
+  const meta = {
+    emoji: "🔋",
+    title: "Device Past Its Service Life",
+    inboxLabel: "Schedule a replacement",
+  };
+
+  const fields: EmailField[] = [
+    { label: "Client", value: `${clientName}${clientEmail ? ` (${clientEmail})` : ""}`, highlight: true },
+    { label: "Device", value: deviceLabel },
+    { label: "Installed", value: installedOn },
+    { label: "Service life ended", value: expiredOn },
+    {
+      label: "Next step",
+      value: "Contact the client to schedule a replacement, then update the install date on their profile (that clears this alert cycle).",
+      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
+      cta: true,
+      buttonLabel: "Open Client Detail",
+    },
+  ];
+
+  return dispatchPortalEmail("Device expiry admin alert", {
+    subject: `Device replacement due: ${deviceLabel} — ${clientName}`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
+}
+
+/** R14: matching client notice (handover 6.5/11.9: both parties are told). */
+export async function sendDeviceExpiryClientNotice({
+  to,
+  firstName,
+  deviceLabel,
+  installedOn,
+}: {
+  to: string;
+  firstName: string;
+  deviceLabel: string;
+  installedOn: string;
+}): Promise<boolean> {
+  const meta = {
+    emoji: "🔋",
+    title: "Time to Replace a Device",
+    inboxLabel: "McKee Security maintenance notice",
+  };
+
+  const fields: EmailField[] = [
+    {
+      label: "Maintenance due",
+      value: `Hi ${firstName},\n\nThe ${deviceLabel} on your alarm system (installed ${installedOn}) has reached the end of its recommended service life and should be replaced to keep your protection reliable.`,
+    },
+    {
+      label: "What to do",
+      value: "McKee Security will reach out to schedule a replacement. You can also call (705) 457-2156 to book a time that works for you.",
+    },
+  ];
+
+  return dispatchPortalEmail("Device expiry client notice", {
+    to,
+    subject: `Maintenance due: your ${deviceLabel} should be replaced`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
+}
+
+export type CollectionsDigestRow = {
+  clientName: string;
+  clientEmail: string | null;
+  serviceType: string;
+  amountCents: number | null;
+  dueOn: string;
+  overdue: boolean;
+};
+
+/**
+ * R22: the admin collections digest — every manual payer due within the
+ * reminder window or overdue, in one email, so no legacy payment is missed.
+ * Sent by the daily cron only when the list is non-empty.
+ */
+export async function sendCollectionsDigest(rows: CollectionsDigestRow[]): Promise<boolean> {
+  const overdueRows = rows.filter((r) => r.overdue);
+  const dueRows = rows.filter((r) => !r.overdue);
+  const line = (r: CollectionsDigestRow) =>
+    `${r.clientName}${r.clientEmail ? ` (${r.clientEmail})` : ""} — ${SERVICE_LABELS[r.serviceType] ?? r.serviceType} — ${
+      r.amountCents != null ? dollars(r.amountCents) : "amount not set"
+    } — due ${r.dueOn}`;
+
+  const meta = {
+    emoji: "📋",
+    title: "Collections Digest",
+    inboxLabel: `${overdueRows.length} overdue, ${dueRows.length} due soon`,
+  };
+
+  const fields: EmailField[] = [];
+  if (overdueRows.length > 0) {
+    fields.push({
+      label: `Overdue (${overdueRows.length})`,
+      value: overdueRows.map(line).join("\n"),
+      highlight: true,
     });
-  } catch (error) {
-    console.error("[portal] Payment success email failed:", error);
-    return false;
   }
+  if (dueRows.length > 0) {
+    fields.push({
+      label: `Due soon (${dueRows.length})`,
+      value: dueRows.map(line).join("\n"),
+    });
+  }
+  fields.push({
+    label: "Record received payments",
+    value: "Open the Billing tab to record e-Transfers, cheques, and cash as they arrive.",
+    href: `${siteConfig.url}/admin-dashboard?tab=billing`,
+    cta: true,
+    buttonLabel: "Open Billing",
+  });
+
+  return dispatchPortalEmail("Collections digest", {
+    subject: `Collections digest: ${overdueRows.length} overdue, ${dueRows.length} due soon`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
 }

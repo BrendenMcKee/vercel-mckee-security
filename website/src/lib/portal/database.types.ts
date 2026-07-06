@@ -319,6 +319,36 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_alerts: {
+        Row: {
+          context: Json
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          context?: Json
+          created_at?: string
+          id?: string
+          kind: string
+          message: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          context?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: []
+      }
       rentals: {
         Row: {
           amount_received: number | null
@@ -508,6 +538,18 @@ export type Database = {
           p_token_hash: string
         }
         Returns: string
+      }
+      cleanup_rate_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      consume_rate_limit: {
+        Args: {
+          p_key: string
+          p_max: number
+          p_window_seconds: number
+        }
+        Returns: boolean
       }
       save_caller_id_list: {
         Args: {

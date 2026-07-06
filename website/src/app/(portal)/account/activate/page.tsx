@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { validateInvitationToken } from "@/lib/portal/invitations";
 import { getAuthContext } from "@/lib/portal/auth";
+import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/portal/rate-limit";
 import { ActivateAccount } from "@/components/portal/activate-account";
 import { ActivateAsCurrentUser } from "@/components/portal/activate-as-current-user";
 import { SignOutButton } from "@/components/portal/sign-out-button";
@@ -76,6 +77,12 @@ export default async function ActivateAccountPage({
     return (
       <ErrorScreen message="This activation link is incomplete. Use the full link from your invitation email, or contact McKee Security for a new one." />
     );
+  }
+
+  // Anonymous token validation is the enumeration surface (PORTAL_PLAN.md
+  // 6.6): generous enough for real visitors, a wall for guessing.
+  if (!(await checkRateLimit("activate-validate", 30, 3600))) {
+    return <ErrorScreen message={RATE_LIMIT_MESSAGE} />;
   }
 
   const validation = await validateInvitationToken(token);

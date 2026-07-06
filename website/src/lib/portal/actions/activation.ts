@@ -7,6 +7,7 @@ import { ACTIVATION_COOKIE, validateInvitationToken } from "@/lib/portal/invitat
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getAuthContext } from "@/lib/portal/auth";
+import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/portal/rate-limit";
 
 export type ActivationResult =
   | { ok: false; error: string }
@@ -85,6 +86,11 @@ export async function activateWithPassword(input: {
   }
   const { token, email, password } = parsed.data;
 
+  // Anonymous endpoint: brake token/credential guessing (PORTAL_PLAN.md 6.6).
+  if (!(await checkRateLimit("activate-password", 10, 3600))) {
+    return { ok: false, error: RATE_LIMIT_MESSAGE };
+  }
+
   const validation = await validateInvitationToken(token);
   if (validation.state !== "valid") {
     return { ok: false, error: TOKEN_ERROR };
@@ -161,6 +167,10 @@ export async function activateWithPassword(input: {
  * consume it after the OAuth round-trip.
  */
 export async function beginGoogleActivation(token: string): Promise<{ ok: boolean; error?: string }> {
+  if (!(await checkRateLimit("activate-google", 10, 3600))) {
+    return { ok: false, error: RATE_LIMIT_MESSAGE };
+  }
+
   const validation = await validateInvitationToken(token);
   if (validation.state !== "valid") {
     return { ok: false, error: TOKEN_ERROR };

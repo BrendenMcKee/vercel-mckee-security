@@ -784,17 +784,18 @@ Vercel-side IAM (separate from gateway credentials): list + read (+ restore for 
 
 ### 9.4 Scheduled jobs (Phase 7)
 
-`vercel.json` crons, all routes check `Authorization: Bearer ${CRON_SECRET}`:
+`vercel.json` crons, all routes check `Authorization: Bearer ${CRON_SECRET}` (401 wrong, 503 unset). **As built (2026-07-06):** the Vercel plan is Hobby (max 2 cron jobs, daily granularity), so one scheduled route — `/api/cron/daily` at 06:00 UTC — dispatches all three jobs (each isolated: one failing never blocks the others; failures land in the Alerts tab). The individual routes below stay live for targeted manual runs and the `cron-check.mjs` gate. Job logic lives in `lib/portal/cron/{payment-due,device-expiry,cleanup}.ts`.
 
 | Route | Schedule | Work |
 |-------|----------|------|
-| `/api/cron/device-expiry` | daily 06:00 UTC | expired devices where `expiry_alerted_at is null` -> email admin + client, stamp `expiry_alerted_at` (R14) |
-| `/api/cron/cleanup` | daily | orphan auth users >7d, invitations expired >90d, footage links past TTL |
-| `/api/cron/payment-due` | daily 06:00 UTC | manual services with `next_due_on` inside the reminder window or overdue and `due_alerted_at is null` -> remind client (amount, date, instructions per D11), stamp guard; send admin the collections digest when any manual payer is due or overdue (R22, 7.3) |
-| `/api/cron/gateway-health` | every 30 min (plan permitting, else hourly + dashboard-first). Added in Track 2 (6A) | gateways with `last_seen_at` older than 30 min and not already alerted -> email admin; also writes the nightly `site_usage` rollup on its midnight run |
+| `/api/cron/daily` | daily 06:00 UTC (the only `vercel.json` entry) | runs the three jobs below in sequence |
+| `/api/cron/device-expiry` | via daily / manual | expired devices where `expiry_alerted_at is null` -> email admin + client, stamp `expiry_alerted_at` (R14) |
+| `/api/cron/cleanup` | via daily / manual | orphan auth users >7d, invitations expired >90d unused, rate-limit counter rows >1d; footage links past TTL joins in Track 2 |
+| `/api/cron/payment-due` | via daily / manual | manual services with `next_due_on` inside the reminder window (D11 default 7 days) or overdue and `due_alerted_at is null` -> remind client (amount for the full invoice cycle, date, instructions per D11), stamp guard; send admin the collections digest when any manual payer is due or overdue (R22, 7.3) |
+| `/api/cron/gateway-health` | every 30 min (needs Pro plan or the `pg_cron` fallback, decided in Track 2, 6A) | gateways with `last_seen_at` older than 30 min and not already alerted -> email admin; also writes the nightly `site_usage` rollup on its midnight run |
 | `/api/cron/footage-poller` | dormant | only if a Deep Archive tier is ever sold (9.3 step 4) |
 
-Fallback if Vercel plan is Hobby: `pg_cron` + Supabase Edge Function for sub-daily jobs (R4).
+Fallback for sub-daily jobs on Hobby: `pg_cron` + Supabase Edge Function (R4).
 
 ---
 
@@ -917,13 +918,13 @@ Track 1 scope: build the complete billing rails on **both methods** (R22): Strip
 
 ### Phase 7: Automation, Hardening, Launch (core portal goes live here)
 
-- [ ] `vercel.json` crons + `CRON_SECRET`; device-expiry job (R14 semantics); cleanup job (6.6); payment-due job (R22: client reminders + admin collections digest, 7.3). Gateway-health cron joins in Track 2 (9.4)
-- [ ] Rate limiting on activation endpoints (6.6); footage endpoints get the same treatment in Track 2
-- [ ] RLS penetration script: for every portal table x {anon, client A, client B, admin}, assert the 4.3 matrix; run against production before launch
-- [ ] Security sweep: webhook signature tests, `get_advisors` clean, no service-role usage outside `admin.ts`/webhook/cron, secrets audit, origin posture on sensitive route handlers (server actions carry Next.js built-in origin checks; webhook/cron/gateway routes are token- or signature-authenticated) per handover 22.2
-- [ ] Observability (handover 22.3): failed login/activation attempts logged without credentials, email send failures surfaced in the Alerts tab, optional error tracking service (Sentry or similar, stakeholder choice)
-- [ ] Full mobile UX pass; accessibility spot check (focus rings, labels, keyboard nav)
-- [ ] Cross-browser smoke (Chrome, Firefox, Safari, iOS Safari, Android Chrome) per handover 22.4
+- [x] `vercel.json` crons + `CRON_SECRET` (set in Vercel + `.env.local` 2026-07-06); single `/api/cron/daily` dispatcher (Hobby plan) running device-expiry (R14 semantics), cleanup (6.6), payment-due (R22: client reminders + admin collections digest, 7.3); per-job routes for manual runs. Gateway-health cron joins in Track 2 (9.4)
+- [x] Rate limiting on activation endpoints (6.6): `private.rate_limits` + service-role-only `consume_rate_limit` RPC (migration `20260706150000`); token validation 30/hr, password + Google activation 10/hr per IP, fail-open on DB errors, denials logged. Footage endpoints get the same treatment in Track 2
+- [x] RLS penetration script (`rls-pentest.mjs`, 71 checks): every portal table x {anon, client A, client B, admin} against the 4.3 matrix — visibility, cross-tenant writes, self-promotion, append-only invariants, RPC lockdown, rate-limit window semantics. Run green against production 2026-07-06; rerun before go-live
+- [x] Security sweep: webhook signature tests (billing gate), service-role audit (every `getPortalAdminClient` call site matches the R13 allow-list, now documented in `admin.ts`), secrets scan of tracked files (clean; `.env*` git-ignored), origin posture confirmed (server actions have Next.js origin checks; webhook signature-verified; cron bearer-authenticated). `get_advisors`: performance INFO-only; security run pending a transient Supabase Management API outage (see Progress Log) — re-run before go-live
+- [x] Observability (handover 22.3): `portal_alerts` table + admin **Alerts tab** (open-alert badge, resolve stamping; admin SELECT/UPDATE only, service-role INSERT). Every portal email dispatches through one wrapper: failures land in the Alerts tab with subject/recipient/error. Cron failures alert the same way. Auth failures logged without credentials (activation actions, rate-limit denials; Supabase Auth logs cover password sign-in failures). Error-tracking service (Sentry) left as an optional stakeholder choice — not blocking
+- [x] Accessibility/mobile code pass: all admin tables in `overflow-x-auto` wrappers with min-widths, inputs share the focus-visible style, buttons get `focus-visible:outline`, status regions use `role="status"`. Real-device pass is the [HUMAN] item below
+- [ ] **[HUMAN]** Full mobile UX pass on real devices; cross-browser smoke (Chrome, Firefox, Safari, iOS Safari, Android Chrome) per handover 22.4
 - [ ] **[HUMAN]** stakeholder walkthrough (mobile + desktop) and production sign-off
 
 **Gate:** handover Section 22 checklist fully satisfied; crons observed firing in preview (including a payment-due run that reminds a test manual payer exactly once per cycle); sign-off recorded in Progress Log.
@@ -973,7 +974,7 @@ Track 1 scope: build the complete billing rails on **both methods** (R22): Strip
 | `STRIPE_TAX_RATE_ID` | Vercel only | 5 — set (13% Ontario HST, exclusive; applied to checkout subscriptions since prices are advertised "plus tax") |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel + local | 5 — not needed (checkout is a server-created redirect; no client-side Stripe.js) |
 | `FOOTAGE_AWS_ACCESS_KEY_ID`, `FOOTAGE_AWS_SECRET_ACCESS_KEY`, `FOOTAGE_AWS_REGION`, `FOOTAGE_BUCKET` | Vercel only | 6B (read/list/restore-only credential, 9.3) |
-| `CRON_SECRET` | Vercel only | 7 |
+| `CRON_SECRET` | Vercel only | 7 — set 2026-07-06 (production + `.env.local`); Vercel cron sends it automatically as the bearer token |
 
 Phase 0 values (public-safe): `NEXT_PUBLIC_SUPABASE_URL=https://cxmydfhbclfwzboqibmo.supabase.co`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_4YC9QGFgdzv7GVReW5u3iA_EFKLH-LP`.
 
@@ -987,6 +988,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-07-06 | **Phase 7 executed; both new gates green + full regression.** Migration `20260706150000` (applied after riding out a transient Supabase platform outage — pooler login + Management API returned OOM errors for ~15 min): `private.rate_limits` + service-role-only `consume_rate_limit`/`cleanup_rate_limits` RPCs, `public.portal_alerts` (admin SELECT/UPDATE, service-role INSERT). Crons built as lib jobs + routes with one scheduled `/api/cron/daily` dispatcher (Hobby plan limit); payment-due (once-per-cycle reminder + collections digest), device-expiry (R14, admin + client emails), cleanup (orphan users, expired invitations, rate-limit rows). Activation surface rate-limited per IP. Admin **Alerts tab** added (4th tab, open-count badge): all portal emails route through a wrapper that records failures as alerts; cron failures too. **Latent bug found and fixed:** `vercel env pull` had written an empty `RESEND_API_KEY=""` into `.env.production.local` (sensitive vars pull empty), which outranks `.env.local` under `next start` — every email from local production runs silently no-op'd (production Vercel unaffected). The Alerts tab caught it on its first run (24 email_failure alerts). Gates: `rls-pentest.mjs` 71/71 against production (visibility matrix, cross-tenant denials, append-only, RPC lockdown, rate-limit cap), `cron-check.mjs` 15/15 (401s, once-per-cycle guards, cleanup, dispatcher), all six existing suites re-run green. Security sweep done except `get_advisors` security scan (Management API outage) — re-run at go-live. `apply-migration-api.ps1`, `run-sql-api.ps1`, `get-advisors-api.ps1` added as Management-API fallbacks for CLI outages |
 | 2026-07-05 | **Phase 3 executed; gate passed 15/15 (`services-check.mjs`).** No new schema needed (invitations/services shipped in Phase 2). Built: `services.ts` admin actions (assign with duplicate guard, tier change validated against the per-type tier list, status change for pause/cancel/restart), `updateClientProfileAction` + `setClientStatusAction` (disable locks out on next request via the layout gate), admin client detail page at `/admin-dashboard/clients/[profileId]` (profile edit, service management with confirm on cancel, invitation state + resend, account controls), Clients tab upgraded (status/service/tier filters, sortable columns, 25-row pagination, row click to detail), tabbed admin console with Overview (KPI cards, services-by-tier counts, activity feed derived from profile/activation/service events), client dashboard cards (monitoring read-only, cloud backup display-only per R21 and hidden without a service), `loading.tsx` skeletons + `error.tsx` retry boundaries on both dashboards. Key Next.js detail: pages render in parallel with layout gates, so portal pages return null/harmless output for the states their layout gates away. Q1/Q3 remain open with neutral card copy; not blocking |
 | 2026-07-04 | Handover audited against repo; plan v1 created |
 | 2026-07-04 | Supabase project renamed to "McKee Security Platform" (Management API, verified via MCP). Auth config audited: site_url still localhost, Google disabled, publishable key available. Advisors: INFO-only (units/rentals no policies, intentional) |

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
+import { AdminAlerts } from "@/components/admin-portal/admin-alerts";
 import { AdminBilling } from "@/components/admin-portal/admin-billing";
 import { AdminClientsPanel } from "@/components/admin-portal/admin-clients-panel";
 import { AdminOverview } from "@/components/admin-portal/admin-overview";
@@ -15,16 +16,17 @@ const TABS = [
   { id: "overview", label: "Overview" },
   { id: "clients", label: "Clients" },
   { id: "billing", label: "Billing" },
+  { id: "alerts", label: "Alerts" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 /**
  * Tabbed operating console (PORTAL_PLAN.md 7.2). Overview (KPIs + activity
- * feed), Clients (search, filters, create, row click to detail), and Billing
- * (autopay + manual collection boards, Phase 5). Fleet and Alerts tabs join
- * in Phases 6A/7. Reads run on the user-context client: admin RLS policies
- * authorize them (R13).
+ * feed), Clients (search, filters, create, row click to detail), Billing
+ * (autopay + manual collection boards, Phase 5), and Alerts (operational
+ * failures, Phase 7). Fleet joins in Phase 6A. Reads run on the user-context
+ * client: admin RLS policies authorize them (R13).
  */
 export default async function AdminDashboardPage({
   searchParams,
@@ -32,7 +34,14 @@ export default async function AdminDashboardPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const activeTab: TabId = tab === "clients" ? "clients" : tab === "billing" ? "billing" : "overview";
+  const activeTab: TabId =
+    tab === "clients" ? "clients" : tab === "billing" ? "billing" : tab === "alerts" ? "alerts" : "overview";
+
+  const supabase = await createPortalServerClient();
+  const { count: openAlerts } = await supabase
+    .from("portal_alerts")
+    .select("id", { count: "exact", head: true })
+    .is("resolved_at", null);
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-12">
@@ -61,6 +70,11 @@ export default async function AdminDashboardPage({
             aria-current={activeTab === t.id ? "page" : undefined}
           >
             {t.label}
+            {t.id === "alerts" && (openAlerts ?? 0) > 0 && (
+              <span className="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-300">
+                {openAlerts}
+              </span>
+            )}
           </Link>
         ))}
       </nav>
@@ -70,6 +84,8 @@ export default async function AdminDashboardPage({
           <AdminOverview />
         ) : activeTab === "billing" ? (
           <AdminBilling />
+        ) : activeTab === "alerts" ? (
+          <AdminAlerts />
         ) : (
           <ClientsTab />
         )}
