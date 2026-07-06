@@ -84,13 +84,15 @@ export function PortalCard({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-white/10 bg-surface p-6 transition-colors hover:border-white/20 sm:p-7 ${className ?? ""}`}
+      className={`rounded-2xl border border-white/10 bg-surface p-4 transition-colors hover:border-white/20 sm:p-7 ${className ?? ""}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <PortalCardIcon icon={icon} />
-          <div>
-            <h2 className="text-xl font-bold leading-snug tracking-tight text-white">{title}</h2>
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold leading-snug tracking-tight text-white sm:text-xl">
+              {title}
+            </h2>
             {description && (
               <p className="mt-1 text-[13px] leading-relaxed text-white/50">{description}</p>
             )}
@@ -98,7 +100,7 @@ export function PortalCard({
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      <div className="mt-5">{children}</div>
+      <div className="mt-4 sm:mt-5">{children}</div>
     </section>
   );
 }

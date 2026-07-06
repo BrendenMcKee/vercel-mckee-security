@@ -168,7 +168,7 @@ export default async function UserDashboardPage({
       {unpaidServices.map((service) => (
         <div
           key={service.id}
-          className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-6"
+          className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6"
         >
           <h2 className="text-lg font-bold text-amber-100">
             Payment needed: {SERVICE_TYPE_LABELS[service.service_type]}
@@ -203,7 +203,7 @@ export default async function UserDashboardPage({
       {cardSetupNeeded.map((service) => (
         <div
           key={service.id}
-          className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-6"
+          className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-4 sm:p-6"
         >
           <h2 className="text-lg font-bold text-sky-100">
             Set up automatic payments: {SERVICE_TYPE_LABELS[service.service_type]}
@@ -231,7 +231,7 @@ export default async function UserDashboardPage({
         {monitoring ? (
           <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
             <div>
-              <p className="text-3xl font-bold tracking-tight text-white">
+              <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
                 {tierLabel(monitoring.tier)}
               </p>
               {monitoring.monthly_amount_cents != null && (
@@ -275,7 +275,7 @@ export default async function UserDashboardPage({
           action={<ServiceStatusBadge status={cloud.status} />}
         >
           <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
-            <p className="text-3xl font-bold tracking-tight text-white">{tierLabel(cloud.tier)}</p>
+            <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{tierLabel(cloud.tier)}</p>
             <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
               Your cloud backup plan runs on McKee-managed equipment. For plan
               questions or changes, contact McKee Security at{" "}
@@ -304,7 +304,7 @@ export default async function UserDashboardPage({
                   ? service.monthly_amount_cents * intervalMonths(service.billing_interval)
                   : null;
               return (
-                <div key={service.id} className="rounded-xl border border-white/10 bg-background p-5">
+                <div key={service.id} className="rounded-xl border border-white/10 bg-background p-4 sm:p-5">
                   <p className="font-bold text-white">{SERVICE_TYPE_LABELS[service.service_type]}</p>
                   <dl className="mt-3.5 space-y-2.5 text-sm">
                     <div className="flex items-baseline justify-between gap-4">

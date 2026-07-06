@@ -47,6 +47,26 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/*
+ * Mobile guard: any element that spills past the viewport (an unwrapped nav,
+ * a wide table outside its scroller) used to widen the whole document, which
+ * expands the phone's layout viewport and breaks every fixed/percent-sized
+ * element on the page. `clip` cuts that off at the root without creating a
+ * scroll container, so position: sticky/fixed still behave.
+ */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* Horizontal scroll areas (tab bars) that shouldn't show a scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 ::selection {
   background: rgba(201, 24, 24, 0.35);
   color: #fff;

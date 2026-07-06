@@ -253,7 +253,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="space-y-3">
         <input
           type="search"
           placeholder="Search name or email..."
@@ -262,58 +262,60 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             setSearch(e.target.value);
             setPage(0);
           }}
-          className={`${adminInputClass} min-w-[14rem] flex-1 sm:flex-none`}
+          className={`${adminInputClass} w-full sm:max-w-sm`}
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value as typeof statusFilter);
-            setPage(0);
-          }}
-          className={selectClass}
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="pending">Pending</option>
-          <option value="disabled">Disabled</option>
-        </select>
-        <select
-          value={serviceFilter}
-          onChange={(e) => {
-            setServiceFilter(e.target.value as typeof serviceFilter);
-            setTierFilter("");
-            setPage(0);
-          }}
-          className={selectClass}
-          aria-label="Filter by service"
-        >
-          <option value="">All services</option>
-          <option value="monitoring">{SERVICE_TYPE_LABELS.monitoring}</option>
-          <option value="cloud_backup">{SERVICE_TYPE_LABELS.cloud_backup}</option>
-          <option value="none">No services</option>
-        </select>
-        {serviceFilter !== "none" && (
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <select
-            value={tierFilter}
+            value={statusFilter}
             onChange={(e) => {
-              setTierFilter(e.target.value);
+              setStatusFilter(e.target.value as typeof statusFilter);
               setPage(0);
             }}
-            className={selectClass}
-            aria-label="Filter by tier"
+            className={`${selectClass} max-w-full`}
+            aria-label="Filter by status"
           >
-            <option value="">All tiers</option>
-            {tierOptions.map((tier) => (
-              <option key={tier} value={tier}>
-                {tierLabel(tier)}
-              </option>
-            ))}
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="disabled">Disabled</option>
           </select>
-        )}
-        <span className="text-xs text-white/40">
-          {filtered.length} of {clients.length}
-        </span>
+          <select
+            value={serviceFilter}
+            onChange={(e) => {
+              setServiceFilter(e.target.value as typeof serviceFilter);
+              setTierFilter("");
+              setPage(0);
+            }}
+            className={`${selectClass} max-w-full`}
+            aria-label="Filter by service"
+          >
+            <option value="">All services</option>
+            <option value="monitoring">{SERVICE_TYPE_LABELS.monitoring}</option>
+            <option value="cloud_backup">{SERVICE_TYPE_LABELS.cloud_backup}</option>
+            <option value="none">No services</option>
+          </select>
+          {serviceFilter !== "none" && (
+            <select
+              value={tierFilter}
+              onChange={(e) => {
+                setTierFilter(e.target.value);
+                setPage(0);
+              }}
+              className={`${selectClass} max-w-full`}
+              aria-label="Filter by tier"
+            >
+              <option value="">All tiers</option>
+              {tierOptions.map((tier) => (
+                <option key={tier} value={tier}>
+                  {tierLabel(tier)}
+                </option>
+              ))}
+            </select>
+          )}
+          <span className="text-xs text-white/40">
+            {filtered.length} of {clients.length}
+          </span>
+        </div>
       </div>
 
       {notice && (
@@ -446,7 +448,97 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         </form>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-surface">
+      {/* Mobile: stacked cards. A six-column table can't work at 390px. */}
+      <div className="space-y-3 md:hidden">
+        {pageRows.length === 0 && (
+          <p className="rounded-2xl border border-white/10 bg-surface px-4 py-8 text-center text-sm text-white/40">
+            {clients.length === 0
+              ? "No clients yet. Create the first one with New Client."
+              : "No clients match your search or filters."}
+          </p>
+        )}
+        {pageRows.map((client) => {
+          const invite = inviteState(client);
+          return (
+            <div
+              key={client.id}
+              role="link"
+              tabIndex={0}
+              onClick={() => router.push(`/admin-dashboard/clients/${client.id}`)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") router.push(`/admin-dashboard/clients/${client.id}`);
+              }}
+              className="cursor-pointer rounded-2xl border border-white/10 bg-surface p-4 transition-colors active:bg-white/5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-white">
+                    {client.first_name} {client.last_name}
+                  </p>
+                  <p className="mt-0.5 truncate text-sm text-white/60">
+                    {client.email ?? "No email"}
+                  </p>
+                </div>
+                <ProfileStatusBadge status={client.status} />
+              </div>
+              {client.services.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {serviceChips(client.services).map((chip) => (
+                    <span
+                      key={chip}
+                      className="rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs text-white/70"
+                    >
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3">
+                <span
+                  className={`text-xs ${
+                    invite.tone === "ok"
+                      ? "text-emerald-300"
+                      : invite.tone === "warn"
+                        ? "text-amber-300"
+                        : "text-white/30"
+                  }`}
+                >
+                  {invite.label}
+                </span>
+                <div className="flex items-center gap-2">
+                  {invite.canResend && (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        resend(client.id);
+                      }}
+                      className="cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50"
+                    >
+                      {resendingId === client.id ? "Sending..." : "Resend"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      remove(client);
+                    }}
+                    className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
+                  >
+                    {deletingId === client.id ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: full table. */}
+      <div className="hidden overflow-x-auto rounded-2xl border border-white/10 bg-surface md:block">
         <table className="w-full min-w-[44rem] text-left text-sm">
           <thead>
             <tr className="border-b border-white/10 text-xs uppercase tracking-widest text-white/40">

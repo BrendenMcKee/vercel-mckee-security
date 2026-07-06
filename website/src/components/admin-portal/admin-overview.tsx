@@ -11,9 +11,9 @@ type FeedItem = { at: string; text: string; href?: string };
 
 function KpiCard({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-5">
+    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-5">
       <p className="text-xs uppercase tracking-widest text-white/40">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+      <p className="mt-2 text-2xl font-bold text-white sm:text-3xl">{value}</p>
       {sub && <p className="mt-1 text-xs text-white/40">{sub}</p>}
     </div>
   );
@@ -112,15 +112,15 @@ export async function AdminOverview() {
     .slice(0, 10);
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <KpiCard label="Active clients" value={activeClients} />
         <KpiCard label="Pending activations" value={pendingActivations} sub="Invited, not yet activated" />
         <KpiCard label="Unpaid services" value={unpaidServices} sub="Assigned, awaiting payment" />
         <KpiCard label="Disabled accounts" value={disabledClients} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <KpiCard
           label="Booked monthly revenue"
           value={dollars(autopayCents + manualCents)}
@@ -143,8 +143,8 @@ export async function AdminOverview() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-surface p-6">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
           <h2 className="text-lg font-bold text-white">Services by tier</h2>
           <p className="mt-1 text-xs text-white/40">Cancelled services excluded.</p>
           <div className="mt-4 space-y-5">
@@ -166,7 +166,7 @@ export async function AdminOverview() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-surface p-6">
+        <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
           <h2 className="text-lg font-bold text-white">Recent activity</h2>
           {feed.length === 0 ? (
             <p className="mt-4 text-sm text-white/40">Nothing yet. Create the first client from the Clients tab.</p>

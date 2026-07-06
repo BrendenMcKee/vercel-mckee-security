@@ -110,7 +110,7 @@ function ProfileCard({ client }: { client: AdminClientDetailRow }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-6">
+    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-bold text-white">Profile</h2>
@@ -250,9 +250,9 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
       <NoticeBanner notice={notice} />
       <form
         onSubmit={assign}
-        className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-white/15 p-4"
+        className="grid gap-3 rounded-xl border border-dashed border-white/15 p-4 sm:flex sm:flex-wrap sm:items-end"
       >
-        <label className="flex flex-col gap-1.5 text-sm text-white/80">
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
           Add service
           <select
             value={assignType}
@@ -260,7 +260,7 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
               setAssignType(e.target.value as ServiceType | "");
               setAssignTier("");
             }}
-            className={adminSelectClass}
+            className={`${adminSelectClass} max-w-full`}
           >
             <option value="">Choose...</option>
             {unassignedTypes.map((type) => (
@@ -270,13 +270,13 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.5 text-sm text-white/80">
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
           Plan
           <select
             value={assignTier}
             onChange={(e) => setAssignTier(e.target.value)}
             disabled={!assignType}
-            className={`${adminSelectClass} disabled:opacity-50`}
+            className={`${adminSelectClass} max-w-full disabled:opacity-50`}
           >
             <option value="">Choose...</option>
             {assignType &&
@@ -338,7 +338,7 @@ function InvitationCard({ client }: { client: AdminClientDetailRow }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-6">
+    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
       <h2 className="text-lg font-bold text-white">Invitation</h2>
       <div className="mt-4 space-y-3">
         <NoticeBanner notice={notice} />
@@ -403,7 +403,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
   }
 
   return (
-    <div className="rounded-2xl border border-red-500/20 bg-surface p-6">
+    <div className="rounded-2xl border border-red-500/20 bg-surface p-4 sm:p-6">
       <h2 className="text-lg font-bold text-white">Account Controls</h2>
       <div className="mt-4 space-y-3">
         <NoticeBanner notice={notice} />
@@ -466,7 +466,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
                 onChange={(e) => setConfirmName(e.target.value)}
                 placeholder={name}
                 autoComplete="off"
-                className={adminInputClass}
+                className={`${adminInputClass} w-full max-w-md`}
                 aria-label="Type the client's full name to confirm deletion"
               />
               <div className="flex flex-wrap items-center gap-3">
@@ -660,14 +660,14 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
 
       <NoticeBanner notice={notice} />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1.5 text-sm text-white/80">
+      <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
           Plan
           <select
             value={service.tier}
             disabled={pending}
             onChange={(e) => changeTier(e.target.value)}
-            className={adminSelectClass}
+            className={`${adminSelectClass} max-w-full`}
             aria-label={`${serviceLabel} plan`}
           >
             {SERVICE_TIERS[service.service_type].map((tier) => (
@@ -677,35 +677,37 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
             ))}
           </select>
         </label>
-        {service.status === "cancelled" || service.status === "paused" ? (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => changeStatus("active")}
-            className={buttonSecondary}
-          >
-            Restart
-          </button>
-        ) : (
-          <>
+        <div className="flex flex-wrap items-center gap-2 sm:items-end sm:gap-3">
+          {service.status === "cancelled" || service.status === "paused" ? (
             <button
               type="button"
               disabled={pending}
-              onClick={() => changeStatus("paused")}
+              onClick={() => changeStatus("active")}
               className={buttonSecondary}
             >
-              Pause
+              Restart
             </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => changeStatus("cancelled")}
-              className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          </>
-        )}
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => changeStatus("paused")}
+                className={buttonSecondary}
+              >
+                Pause
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => changeStatus("cancelled")}
+                className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
         {service.service_type === "cloud_backup" && (
           <p className="w-full text-xs text-white/40">
             Runs on McKee-managed on-site hardware; footage service ships with Track 2.
@@ -714,13 +716,13 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       </div>
 
       <div className="space-y-3 border-t border-white/10 pt-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+        <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             How they pay
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as "stripe" | "manual")}
-              className={adminSelectClass}
+              className={`${adminSelectClass} max-w-full`}
             >
               <option value="stripe">Automatic card payments</option>
               <option value="manual">e-Transfer / cheque / cash</option>
@@ -728,12 +730,12 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
           </label>
           {method === "manual" && (
             <>
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
                 Billed
                 <select
                   value={cycle}
                   onChange={(e) => setCycle(e.target.value as BillingInterval)}
-                  className={adminSelectClass}
+                  className={`${adminSelectClass} max-w-full`}
                 >
                   {(Object.keys(BILLING_INTERVAL_LABELS) as BillingInterval[]).map((value) => (
                     <option key={value} value={value}>
@@ -742,7 +744,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
                 Monthly rate ($, before tax)
                 <input
                   inputMode="decimal"
@@ -752,7 +754,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                   className={adminInputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
                 Next payment due
                 <input
                   type="date"
@@ -811,12 +813,12 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       {service.billing_method === "manual" && (
         <form
           onSubmit={recordPayment}
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-emerald-500/25 bg-emerald-500/5 p-4"
+          className="grid gap-3 rounded-xl border border-dashed border-emerald-500/25 bg-emerald-500/5 p-4 sm:flex sm:flex-wrap sm:items-end"
         >
           <p className="w-full text-xs font-bold uppercase tracking-widest text-emerald-300">
             Record a received payment
           </p>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Amount ($)
             <input
               inputMode="decimal"
@@ -826,12 +828,12 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
               className={adminInputClass}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Method
             <select
               value={payMethod}
               onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
-              className={adminSelectClass}
+              className={`${adminSelectClass} max-w-full`}
             >
               {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -840,7 +842,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Received on
             <input
               type="date"
@@ -850,7 +852,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
               className={adminInputClass}
             />
           </label>
-          <label className="flex min-w-[12rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[12rem] sm:flex-1">
             Note
             <input
               placeholder="e.g. e-Transfer ref 12345"
@@ -911,7 +913,7 @@ function ServicesBillingCard({
   ].sort((a, b) => b.paidOn.localeCompare(a.paidOn));
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-6">
+    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
       <h2 className="text-lg font-bold text-white">Services &amp; Billing</h2>
       <p className="mt-1 text-xs text-white/40">
         Each service shows what the client has and how they pay for it, in one
@@ -1006,7 +1008,7 @@ function CallerIdCard({
   const [showHistory, setShowHistory] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-6">
+    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-white">Caller ID List</h2>
         <button type="button" onClick={() => setShowHistory((v) => !v)} className={buttonSecondary}>
@@ -1171,8 +1173,8 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
 
       <div className="mt-3 space-y-3">
         <NoticeBanner notice={notice} />
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 text-xs text-white/60">
+        <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs text-white/60 sm:min-w-[10rem] sm:flex-1">
             Device name
             <input
               value={label}
@@ -1181,7 +1183,7 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
               className={adminInputClass}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs text-white/60">
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs text-white/60">
             Installed / last replaced
             <input
               type="date"
@@ -1190,7 +1192,7 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
               className={adminInputClass}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs text-white/60">
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs text-white/60">
             Replace every (years)
             <input
               type="number"
@@ -1198,7 +1200,7 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
               max={50}
               value={years}
               onChange={(e) => setYears(e.target.value)}
-              className={`${adminInputClass} w-24`}
+              className={`${adminInputClass} sm:w-24`}
             />
           </label>
           <button
@@ -1262,7 +1264,7 @@ function DevicesCard({
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-6">
+    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
       <h2 className="text-lg font-bold text-white">Devices</h2>
       <p className="mt-1 text-xs text-white/40">
         Track the equipment on this account and when it should be replaced.
@@ -1286,9 +1288,9 @@ function DevicesCard({
 
         <form
           onSubmit={add}
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-white/15 p-4"
+          className="grid gap-3 rounded-xl border border-dashed border-white/15 p-4 sm:flex sm:flex-wrap sm:items-end"
         >
-          <label className="flex min-w-[12rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[12rem] sm:flex-1">
             Add a device
             <input
               required
@@ -1305,7 +1307,7 @@ function DevicesCard({
               ))}
             </datalist>
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Installed on
             <input
               type="date"
@@ -1315,7 +1317,7 @@ function DevicesCard({
               className={adminInputClass}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Replace every (years)
             <input
               type="number"
@@ -1324,7 +1326,7 @@ function DevicesCard({
               max={50}
               value={years}
               onChange={(e) => setYears(e.target.value)}
-              className={`${adminInputClass} w-24`}
+              className={`${adminInputClass} sm:w-24`}
             />
           </label>
           <button

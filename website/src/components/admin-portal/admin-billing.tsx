@@ -63,7 +63,7 @@ export async function AdminBilling() {
   return (
     <div className="space-y-8">
       {failedEvents.length > 0 && (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6">
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 sm:p-6">
           <h2 className="text-lg font-bold text-red-200">
             Failed card payments (last 30 days)
           </h2>
@@ -93,7 +93,7 @@ export async function AdminBilling() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/10 bg-surface p-6">
+      <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
         <h2 className="text-lg font-bold text-white">
           Pay by e-Transfer, cheque, or cash ({manual.length})
         </h2>
@@ -106,7 +106,68 @@ export async function AdminBilling() {
         {manual.length === 0 ? (
           <p className="mt-4 text-sm text-white/40">Nobody pays this way right now.</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <>
+          {/* Mobile: one card per client, no sideways scrolling. */}
+          <ul className="mt-4 space-y-3 md:hidden">
+            {manual.map((service) => {
+              const days = service.next_due_on ? daysUntil(service.next_due_on) : null;
+              const overdue = days != null && days < 0;
+              const dueSoon = days != null && days >= 0 && days <= 7;
+              return (
+                <li
+                  key={service.id}
+                  className={`rounded-xl border p-4 ${
+                    overdue
+                      ? "border-red-500/30 bg-red-500/10"
+                      : dueSoon
+                        ? "border-amber-500/25 bg-amber-500/5"
+                        : "border-white/10 bg-background"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">{clientCell(service)}</div>
+                    <ServiceStatusBadge status={service.status} />
+                  </div>
+                  <p className="mt-1.5 text-sm text-white/70">
+                    {SERVICE_TYPE_LABELS[service.service_type]} &middot; {tierLabel(service.tier)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="text-white/70">
+                      {service.monthly_amount_cents != null ? (
+                        <>
+                          {formatCents(service.monthly_amount_cents)}/mo
+                          {service.billing_interval === "annual" && (
+                            <span className="text-white/40"> (annual invoice)</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-amber-300">Rate not set</span>
+                      )}
+                    </span>
+                    {service.next_due_on ? (
+                      <span
+                        className={
+                          overdue
+                            ? "font-bold text-red-300"
+                            : dueSoon
+                              ? "font-bold text-amber-300"
+                              : "text-white/70"
+                        }
+                      >
+                        Due {service.next_due_on}
+                        {overdue && ` (${Math.abs(days!)}d overdue)`}
+                        {dueSoon && !overdue && ` (in ${days}d)`}
+                      </span>
+                    ) : (
+                      <span className="text-amber-300">Due date not set</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {/* Desktop: full table. */}
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full min-w-[40rem] text-left text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-xs uppercase tracking-widest text-white/40">
@@ -171,10 +232,11 @@ export async function AdminBilling() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-surface p-6">
+      <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
         <h2 className="text-lg font-bold text-white">
           Automatic card payments ({autopay.length})
         </h2>
@@ -187,7 +249,30 @@ export async function AdminBilling() {
         {autopay.length === 0 ? (
           <p className="mt-4 text-sm text-white/40">No clients on automatic card payments yet.</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <>
+          {/* Mobile: one card per client. */}
+          <ul className="mt-4 space-y-3 md:hidden">
+            {autopay.map((service) => (
+              <li key={service.id} className="rounded-xl border border-white/10 bg-background p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">{clientCell(service)}</div>
+                  <ServiceStatusBadge status={service.status} />
+                </div>
+                <p className="mt-1.5 text-sm text-white/70">
+                  {SERVICE_TYPE_LABELS[service.service_type]} &middot; {tierLabel(service.tier)}
+                </p>
+                <p className="mt-1 text-sm">
+                  {service.stripe_subscription_id ? (
+                    <span className="text-white/60">Card on file</span>
+                  ) : (
+                    <span className="text-amber-300">Card not entered yet</span>
+                  )}
+                </p>
+              </li>
+            ))}
+          </ul>
+          {/* Desktop: full table. */}
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full min-w-[40rem] text-left text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-xs uppercase tracking-widest text-white/40">
@@ -219,6 +304,7 @@ export async function AdminBilling() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

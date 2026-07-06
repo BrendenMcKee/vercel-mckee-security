@@ -54,8 +54,8 @@ export async function AdminAlerts() {
   const resolved = resolvedResult.data ?? [];
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-white/10 bg-surface p-6">
+    <div className="space-y-6 sm:space-y-8">
+      <section className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
         <h2 className="text-lg font-bold text-white">
           Open alerts {open.length > 0 && <span className="text-amber-300">({open.length})</span>}
         </h2>
@@ -95,7 +95,7 @@ export async function AdminAlerts() {
       </section>
 
       {resolved.length > 0 && (
-        <section className="rounded-2xl border border-white/10 bg-surface p-6">
+        <section className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
           <h2 className="text-lg font-bold text-white">Recently resolved</h2>
           <ul className="mt-4 space-y-2">
             {resolved.map((alert) => (

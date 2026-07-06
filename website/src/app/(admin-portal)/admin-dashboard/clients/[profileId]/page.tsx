@@ -96,23 +96,23 @@ export default async function AdminClientDetailPage({
   }
 
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 py-12">
+    <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <Link
             href="/admin-dashboard?tab=clients"
             className="text-sm font-bold uppercase tracking-widest text-primary hover:text-white"
           >
             &larr; All Clients
           </Link>
-          <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
+          <h1 className="mt-2 break-words text-2xl font-bold text-white sm:text-4xl">
             {client.first_name} {client.last_name}
           </h1>
         </div>
         <SignOutButton />
       </div>
 
-      <div className="mt-10">
+      <div className="mt-6 sm:mt-10">
         <AdminClientDetail
           client={client}
           callerIdContacts={contactsResult.data ?? []}

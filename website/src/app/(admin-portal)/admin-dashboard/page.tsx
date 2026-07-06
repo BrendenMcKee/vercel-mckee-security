@@ -44,7 +44,7 @@ export default async function AdminDashboardPage({
     .is("resolved_at", null);
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-12">
+    <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm font-bold uppercase tracking-widest text-primary">
@@ -57,12 +57,15 @@ export default async function AdminDashboardPage({
         <SignOutButton />
       </div>
 
-      <nav className="mt-8 flex gap-2 border-b border-white/10" aria-label="Dashboard sections">
+      <nav
+        className="no-scrollbar -mx-4 mt-6 flex gap-1 overflow-x-auto border-b border-white/10 px-4 sm:mx-0 sm:mt-8 sm:gap-2 sm:px-0"
+        aria-label="Dashboard sections"
+      >
         {TABS.map((t) => (
           <Link
             key={t.id}
             href={t.id === "overview" ? "/admin-dashboard" : `/admin-dashboard?tab=${t.id}`}
-            className={`rounded-t-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-colors ${
+            className={`shrink-0 whitespace-nowrap rounded-t-xl px-3.5 py-2.5 text-[13px] font-bold uppercase tracking-wide transition-colors sm:px-5 sm:text-sm ${
               activeTab === t.id
                 ? "border border-b-0 border-white/10 bg-surface text-white"
                 : "text-white/50 hover:text-white"
@@ -79,7 +82,7 @@ export default async function AdminDashboardPage({
         ))}
       </nav>
 
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         {activeTab === "overview" ? (
           <AdminOverview />
         ) : activeTab === "billing" ? (

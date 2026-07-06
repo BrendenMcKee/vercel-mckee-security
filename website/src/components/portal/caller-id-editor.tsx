@@ -241,8 +241,8 @@ export function CallerIdEditor({
         </ul>
       )}
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-white/15 p-4">
-        <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
+      <div className="grid gap-3 rounded-xl border border-dashed border-white/15 p-4 sm:flex sm:flex-wrap sm:items-end">
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[10rem] sm:flex-1">
           Name / relation
           <input
             placeholder="e.g. Sarah (daughter)"
@@ -252,7 +252,7 @@ export function CallerIdEditor({
             className={inputClass}
           />
         </label>
-        <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[10rem] sm:flex-1">
           Phone number
           <input
             type="tel"
@@ -262,7 +262,7 @@ export function CallerIdEditor({
             className={inputClass}
           />
         </label>
-        <label className="flex min-w-[10rem] flex-1 flex-col gap-1.5 text-sm text-white/80">
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[10rem] sm:flex-1">
           Passcode
           <input
             placeholder="Their verification word"
@@ -334,7 +334,7 @@ export function CallerIdEditor({
         </p>
       )}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-white/40">
           {variant === "client"
             ? "Saving notifies McKee Security, who update the monitoring station."
@@ -345,7 +345,7 @@ export function CallerIdEditor({
           disabled={pending || !dirty}
           onClick={save}
           aria-busy={pending}
-          className="relative cursor-pointer rounded-xl bg-primary px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-60"
+          className="relative w-full cursor-pointer rounded-xl bg-primary px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-60 sm:w-auto"
         >
           <span className={pending ? "invisible" : undefined}>Save List</span>
           {pending && (
