@@ -5,8 +5,8 @@
 > **Requirements source of truth:** [`PRODUCT_HANDOVER.md`](./PRODUCT_HANDOVER.md) defines *what* the portal must do and *why* (business rules, roles, workflows). This document defines *how* it gets built in this repository: exact routes, files, schema, RLS policies, flows, phases, and checkpoints. If the two conflict on a business rule, the handover wins, **unless a dated stakeholder decision in the Decision Register amends the handover** (e.g. R21). If they conflict on implementation detail, this plan wins because it is verified against the actual codebase and live infrastructure.
 
 **Product:** Client and admin portal built natively into the live `mckeesecurity.ca` Next.js site.
-**Scope:** Handover Sections 1 to 22 (core portal, Phases 0 to 7). QuickBooks plumbing (Scope B) and the accounting agent (Scope C) are deferred to Track 3; Track 1's only obligation toward them is clean Stripe event and customer record-keeping (`billing_events`, `stripe_customer_id`, `stripe_subscription_id`: 4.2, 9.1), which is in place. Track 3 design and logistics live in Section 9.5.
-**Build order (decided 2026-07-05):** Track 1 is the core portal: Phases 0 to 5, then Phase 7 hardening and launch. Track 2 is the camera cloud backup service: Phases 6A/6B, started **after** the core portal is live. The camera design (Sections 9.2/9.3) is fully specified and stays in this plan, but nothing in Track 1 depends on it. Track 3 is the QuickBooks Desktop accounting integration (Scope B) and the accounting MCP server (Scope C): specified in 9.5, starts any time after launch, fully independent of Track 2.
+**Scope:** Handover Sections 1 to 22 (core portal, Phases 0 to 7) **plus the QuickBooks accounting rail and accounting MCP server (handover Section 23 Scopes B and C), pulled into Track 1 as Phase 8 by stakeholder decision R37 (2026-07-07)**: automated monitoring billing is only complete when the money also lands in the books without hand-keying. Architecture and logistics in Section 9.5; the implementation checklist is Phase 8 in Section 10.
+**Build order (decided 2026-07-05, amended 2026-07-07):** Track 1 is the core portal **plus accounting automation**: Phases 0 to 5, Phase 7 hardening, then Phase 8 (QuickBooks bridge, task queue, Stripe-to-books posting, accounting MCP server). Phase 8A can start immediately; the Stripe go-live (test mode to live mode) should land together with Phase 8C so every real payment posts to QuickBooks from day one. Track 2 is the camera cloud backup service: Phases 6A/6B, started **after** Track 1 is live. The camera design (Sections 9.2/9.3) is fully specified and stays in this plan, but nothing in Track 1 depends on it.
 
 ---
 
@@ -114,6 +114,7 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | R21 | Cloud backup plan management is **admin-only** | Supersedes handover 6.3 self-service (stakeholder, 2026-07-05). Clients view backup status and request footage; **all plan assignment, tier/resolution changes, and cancellation are admin actions.** Rationale: the service runs on McKee-managed on-site hardware and NVR/sub-stream configuration (R20), so a plan change is an operational event (config-sync, possibly a camera reconfig), not a self-service toggle. The only client-initiated money action anywhere in the portal is Pay Now checkout for an admin-assigned tier |
 | R22 | Dual billing rails: autopay + manual | Every paid service is `billing_method = 'stripe'` (autopay via Checkout/webhooks) or `'manual'` (legacy e-transfer/cheque/cash). Manual services carry `monthly_amount_cents` + `next_due_on`; a daily cron reminds the client before due and when overdue (R14-style `due_alerted_at` guard, once per cycle) and sends the admin a collections digest so no legacy payment is missed. Payments are recorded in an append-only `manual_payments` ledger that advances `next_due_on`. The admin Billing tab (7.2/7.3) is the collections console; failed Stripe payments land on the same board |
 | R23 | Caller ID lists are editable by **both** client and admin | Amends handover 7.5 (admin was view-only; stakeholder, 2026-07-05). Clients self-manage their list from the dashboard; admins can edit any client's list from client detail. **Both paths run the same save action**: transactional replace, diff compute, immutable history row, and the green/red diff email to the admin inbox. The email fires on every change regardless of who made it, with a "changed by" line, so the Lanvac (monitoring station) update queue stays a single inbox and nothing is missed |
+| R37 | QuickBooks accounting is **Track 1 work (Phase 8)**, not a deferred track | Stakeholder 2026-07-07, amending the handover's Scope A/B split (23.0): "part of the whole point of automating the monitoring is that the accounting posts too." Scope B (bridge, queue, Stripe posting) and the Scope C MCP server both build inside Track 1 as Phase 8A-8D (Section 10); the handover's safety rails stay fixed (offline-safe queue, named commands only, approval gates for posting, no destructive operations exposed). Both billing rails post: Stripe payments via webhook enqueue, manual e-transfer/cheque/cash payments via the record-payment action, so the books reflect the whole business, not just autopay |
 | R24 | Admin caller ID changes require recorded authorization + client notification | Caller ID lists drive emergency response, so an unauthorized or missed change is a security exposure. Reconciliation model (stakeholder, 2026-07-05): **(1)** a client-made change is self-authorizing (authenticated session = proof). **(2)** An admin-made change cannot be saved without an **authorization method** (`client_email` preferred and nudged by the UI, `client_verbal`, `client_in_person`, `mckee_initiated` for corrections) and a **required reason note** referencing the request (e.g. "Client emailed 2026-07-05 asking to remove former employee"). **(3)** The client is **always emailed** when an admin changes their list: exact diff, the recorded reason, and "if you did not request this, contact McKee immediately"; the send is stamped on the history row. **(4)** History is **append-only and immutable** (no UPDATE/DELETE policies), so the record of who/when/what/why/how can never be rewritten. Written (email) requests are the preferred evidence; verbal changes are allowed but explicitly flagged, and the client notification acts as the dispute backstop either way |
 
 ### Open (stakeholder or phase-gated)
@@ -130,6 +131,7 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | D9 | Per-site capture tuning | Phase 6A | Default is continuous mainstream H.265 (R18). Per-camera knobs: bitrate cap pushed to the camera (U-code, target 2 to 3 Mbps for 4MP), motion-gated upload for constrained links or budget-sensitive clients. Confirm defaults against pilot bandwidth data |
 | D10 | Legacy AWS decommission | **Done 2026-07-04** | Executed with stakeholder approval: all six legacy EB applications deleted across both regions, orphaned S3 objects removed, stale security groups detached from RDS, Data Drops + RDS untouched and verified healthy (1.4). Remaining human items: rotate the exposed Gmail app password; remove stale DNS records for the deleted load balancer |
 | D11 | Manual payment instructions + reminder cadence | Phase 5 | E-transfer address (or other instructions) for the reminder email, days-before-due for the first reminder (default 7), overdue re-reminder cadence (default: on due date, then the admin digest carries it until recorded). Copy for the client dashboard's manual-payment banner |
+| D12 | QuickBooks host machine + bookkeeper GL mapping | Phase 8A (machine), Phase 8C (mapping) | **[HUMAN]** Confirm the canonical QuickBooks Desktop Canada PC (handover Q20) and its release (SDK 17 needs 2023 R16+ / 2024 R18+); approve the bridge install and whether the PC can stay on more regularly. Before 8C posting: bookkeeper session for the chart-of-accounts mapping (Q18: Stripe Clearing, Stripe Fees, HST/GST Payable, Monitoring Income) and the invoice-first vs sales-receipt posting model |
 
 ---
 
@@ -213,9 +215,20 @@ camera-gateway/                                 # NEW top-level app (Phase 6A), 
 │   ├── config-sync.ts                          # GET /api/gateway/config on version bump (cameras, creds, caps)
 │   └── discovery.ts                            # ONVIF/RTSP camera discovery assist for installs
 └── provision/                                  # office imaging: base OS, agent, SSM hybrid registration
+
+qb-bridge/                                      # NEW top-level app (Phase 8A), Windows service on the QuickBooks PC
+├── README.md                                   # install SOP: QB SDK 17 prerequisite, service registration, first-run QB authorization
+└── src/                                        # C#/.NET worker service (Desktop SDK is native there)
+    ├── Poller.cs                               # outbound HTTPS loop: claim ready tasks from /api/qb/poll (no inbound ports)
+    ├── QbSession.cs                            # Desktop SDK session management (qbXML 17, company file open/close)
+    ├── Commands/                               # NAMED command handlers only (9.5): customer.query|create, receive_payment.create, invoice.create|query
+    ├── MirrorSync.cs                           # interval read-only sync: customers, open invoices, balances -> /api/qb/mirror
+    └── Reporter.cs                             # TxnIDs/ListIDs/EditSequences/errors -> /api/qb/report
 ```
 
 Portal API additions for the gateway control plane (Phase 6A): `src/app/api/gateway/heartbeat/route.ts` and `src/app/api/gateway/config/route.ts` (per-gateway secret auth; heartbeat updates `gateways.last_seen_at` + metrics, config serves the site's camera and capture configuration).
+
+Portal additions for the accounting rail (Phase 8): `src/app/api/qb/{poll,report,mirror}/route.ts` (per-bridge secret auth, service-role writes), `src/app/api/mcp/route.ts` (Phase 8D: streamable-HTTP MCP endpoint, admin-scoped auth), `src/lib/portal/qb/{tasks,enqueue,mirrors}.ts` (task state machine, idempotent enqueue from `billing_events` and `manual_payments`, mirror ingest), and `src/components/admin-portal/admin-accounting.tsx` (Accounting tab: sync status, queue boards, needs-review resolution).
 
 Modified files: `src/lib/email.ts` (add `to`/`cc` override), `next.config.ts` (remove 5 legacy redirects), `src/app/sitemap.ts` (exclude portal routes if pattern requires), `package.json` (`@supabase/ssr`, `stripe`, `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` in Phase 6B).
 
@@ -440,7 +453,47 @@ Duplicate webhook delivery = PK conflict = safe no-op. This table is the future 
 | `recorded_by` | uuid | FK auth.users (the admin), not null |
 | `note` | text | nullable (e.g. e-transfer reference) |
 
-Append-only: no UPDATE or DELETE policies exist; a mistake is corrected by a reversing note and a new row. Recording a payment advances the service's `next_due_on` by one cycle, clears `due_alerted_at`, and sets `status='active'` if it was `'unpaid'`. This ledger plus `billing_events` gives QB Scope B a complete money trail across both rails.
+Append-only: no UPDATE or DELETE policies exist; a mistake is corrected by a reversing note and a new row. Recording a payment advances the service's `next_due_on` by one cycle, clears `due_alerted_at`, and sets `status='active'` if it was `'unpaid'`. This ledger plus `billing_events` gives the Phase 8 accounting rail a complete money trail across both rails, backfillable from day one.
+
+**`qb_bridges`** (Phase 8A; one row per bridge install, realistically one)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | uuid | PK |
+| `label` | text | not null (e.g. "Office QuickBooks PC") |
+| `secret_hash` | text | not null (SHA-256 of the bridge API secret; same model as `gateways.secret_hash`) |
+| `qb_company_file` | text | nullable (path/name reported by the bridge, sanity check against wrong-file posting) |
+| `qb_version` | text | nullable (reported QB Desktop Canada release, verified against SDK 17 support) |
+| `last_seen_at` | timestamptz | nullable (poll heartbeat; Accounting tab shows bridge health) |
+| `last_mirror_at` | timestamptz | nullable (when mirrors were last synced) |
+
+**`qb_tasks`** (Phase 8B; the durable offline-safe queue, handover 23.3)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | uuid | PK |
+| `task_type` | text | not null, CHECK in the named-command list (`customer.create`, `customer.update`, `receive_payment.create`, `invoice.create`); growing this list is a migration, which is the point: no free-form writes ever |
+| `status` | text | not null default `'pending'`, CHECK in (`pending`, `validated`, `ready_for_quickbooks`, `in_progress`, `posted_to_quickbooks`, `failed`, `needs_review`, `cancelled`) |
+| `idempotency_key` | text | not null, **unique** (e.g. `receive_payment:stripe:{payment_intent_id}`, `receive_payment:manual:{manual_payment_id}`); duplicate enqueue = conflict = safe no-op, mirroring `billing_events` |
+| `source_system` | text | not null, CHECK in (`stripe_webhook`, `manual_payment`, `admin_ui`, `mcp_agent`) |
+| `source_event_id` | text | nullable (Stripe event id, `manual_payments.id`, MCP request id) |
+| `profile_id` | uuid | FK profiles, nullable (kept `on delete set null`: accounting history must survive client deletion) |
+| `payload` | jsonb | not null (structured command body, never free-form AI prose) |
+| `qb_customer_list_id` | text | nullable (resolved before/at execution) |
+| `qb_txn_id` | text | nullable (stamped on success) |
+| `requires_approval` | boolean | not null default true for posting task types |
+| `approved_by` | uuid | nullable FK auth.users; `approved_at` timestamptz nullable (approval audit, handover 23.6) |
+| `attempt_count` | integer | not null default 0; `last_error` text nullable |
+| `posted_at` | timestamptz | nullable |
+
+**`qb_customers`** / **`qb_invoices`** (Phase 8A; read-only mirrors so the portal and MCP tools answer questions while the office PC is off, handover 23.10)
+
+| Column | Type |
+|--------|------|
+| `qb_customers`: `list_id` text PK, `profile_id` uuid nullable FK (portal linkage), `name` text, `email` text, `balance_cents` integer, `edit_sequence` text, `synced_at` timestamptz |
+| `qb_invoices`: `txn_id` text PK, `customer_list_id` text, `ref_number` text, `amount_cents` integer, `balance_cents` integer, `due_on` date, `is_paid` boolean, `edit_sequence` text, `synced_at` timestamptz |
+
+Mirrors are working copies, never the system of record: QuickBooks wins on conflict for posted financial data (handover 23.10); drift (file restored from backup, manual edits) flags `needs_review` rather than overwriting.
 
 ### 4.3 RLS policy matrix
 
@@ -472,6 +525,9 @@ grant execute on function private.is_admin() to authenticated;
 | `footage_requests` | none | SELECT own, INSERT own (status forced `'pending'` via column default and policy `with check`; `camera_id` must belong to own site, enforced in policy) | SELECT/UPDATE all |
 | `billing_events` | none | SELECT own `invoice.paid` rows only (client-visible card-payment history, stakeholder 2026-07-06); all other event types admin-only | SELECT all (service role writes) |
 | `manual_payments` | none | SELECT own (payment history on the client dashboard, stakeholder 2026-07-06) | SELECT/INSERT. No UPDATE/DELETE policies: append-only ledger, corrections are reversing entries |
+| `qb_bridges` | none | none | SELECT (bridge health on the Accounting tab). Writes service-role only (bridge API routes) |
+| `qb_tasks` | none | none (accounting data never reaches client sessions) | SELECT all + UPDATE limited to review actions (approve/retry/cancel via server actions). INSERT service-role only (webhook, record-payment action, MCP enqueue); execution stamps (`in_progress`, TxnIDs, errors) service-role via `/api/qb/report` |
+| `qb_customers`, `qb_invoices` | none | none | SELECT (mirror browser + MCP read tools run in admin context). Writes service-role only (`/api/qb/mirror`) |
 | `units`, `rentals` (existing) | none | **none, leave as-is** | none (Starlink admin uses service role) |
 
 Every policy is written with the `(select auth.uid())` wrapping pattern for performance. RLS penetration tests in Phase 1/7 verify this matrix exactly.
@@ -800,9 +856,9 @@ Vercel-side IAM (separate from gateway credentials): list + read (+ restore for 
 
 Fallback for sub-daily jobs on Hobby: `pg_cron` + Supabase Edge Function (R4).
 
-### 9.5 QuickBooks Desktop integration + accounting MCP server (Track 3, handover Section 23)
+### 9.5 QuickBooks Desktop integration + accounting MCP server (Track 1 Phase 8; R37, handover Section 23)
 
-Handover scope split: **Scope B** is the QuickBooks plumbing (task queue, local bridge, Stripe payment posting, admin sync UI). **Scope C** is the accounting MCP server and natural-language agent experience, built **on top of** Scope B. Full research: `QUICKBOOKS_ACCOUNTING_DISCOVERY.md`. Fixed constraints from the handover (23.13): QuickBooks Desktop Canada stays the system of record, no unrestricted AI or website writes to QuickBooks, offline-safe queue, approval gates for posting, full audit trail.
+**Track 1 work per R37 (stakeholder 2026-07-07):** automated monitoring billing is only complete when payments post to the books without hand-keying, so the handover's Scope B (QuickBooks plumbing: task queue, local bridge, Stripe payment posting, admin sync UI) and Scope C's MCP server build inside Track 1 as **Phase 8** (checklist in Section 10). Full research: `QUICKBOOKS_ACCOUNTING_DISCOVERY.md`. Fixed constraints from the handover (23.13) remain non-negotiable: QuickBooks Desktop Canada stays the system of record, no unrestricted AI or website writes to QuickBooks, offline-safe queue, approval gates for posting, full audit trail.
 
 #### 9.5.1 Where each piece lives (the logistics)
 
@@ -840,22 +896,22 @@ Why the bridge must be local: the Intuit Desktop SDK is a Windows COM interface 
 | Admin Accounting tab | Portal admin dashboard | Sync status per payment, task queue with retry/cancel, `needs_review` resolution (handover 7.6) |
 | MCP server (Scope C) | Vercel (`/api/mcp`, streamable HTTP transport) with auth | Tools call the same cloud API; **read tools** hit mirrors (`search_customer`, `get_ar_aging_summary`), **draft tools** create reviewable drafts, **posting tools** enqueue tasks that require admin approval in the portal (permission tiers per handover 23.6). Destructive operations (void/delete, journal entries, chart of accounts) are never exposed |
 
-#### 9.5.3 Build order (after Track 1 launch; independent of Track 2)
+#### 9.5.3 Execution strategy
 
-| Phase | Deliverable | Gate |
-|-------|-------------|------|
-| QB-1 | Read-only bridge POC on the office PC: qbXML customer/invoice/payment queries, mirror sync into Supabase, bridge auth + polling loop | Mirrors visibly correct against QuickBooks; PC-off behavior verified (portal unaffected) |
-| QB-2 | Task queue + state machine + idempotency + admin Accounting tab (queue review, needs_review) | Replayed/duplicate tasks are no-ops; a task queued while the PC is off posts correctly when it returns |
-| QB-3 | Stripe -> QB posting: `invoice.paid` enqueues `receive_payment.create` (+ `customer.create` on first sight); GL mapping confirmed with the bookkeeper (handover 23.8: gross payment, Stripe fees separate, clearing account for payouts) | A live portal payment lands in QuickBooks correctly with the office PC initially off |
-| QB-4+ (Scope C) | MCP server with read tools first, then draft tools, then approval-gated posting tools; batch monitoring invoices, AR views, collection drafts per the discovery doc | Each tool tier signed off by stakeholder before the next is exposed (handover human-checkpoint model) |
+The full task checklist with gates is **Phase 8 in Section 10** (sub-phases 8A bridge foundation, 8B task queue, 8C Stripe-and-manual posting, 8D MCP server). Strategic sequencing:
 
-**[HUMAN] items for Track 3 kickoff:** confirm which machine is the canonical QuickBooks host (handover Q20) and whether it can be left on more regularly; bookkeeper session for the chart-of-accounts mapping (Q18: Stripe Clearing, Stripe Fees, HST Payable, Monitoring Income); QuickBooks Desktop Canada version/release check against SDK 17 requirements (2023 R16+ / 2024 R18+); approve the bridge install on the office PC.
+- **Develop against a sample company file first.** QuickBooks Desktop ships sample companies; the bridge (8A/8B) is built and gated against one, so the real company file is never touched until the bookkeeper-approved mapping exists (D12). The switch to the live file happens at the start of 8C.
+- **8A can start immediately** (it needs only D12's machine confirmation, no portal changes). It runs comfortably in parallel with the Phase 7 human launch items.
+- **Couple the Stripe go-live to 8C.** The remaining launch blocker for Track 1 is swapping Stripe from test to live mode. Doing that switch together with 8C means the very first live card payment posts to QuickBooks automatically, and nothing accrues as manual bookkeeping backlog. If launch pressure demands going live before 8C is ready, `billing_events` + `manual_payments` capture everything for a clean backfill, so nothing is lost either way; the coupling is preferred, not required.
+- **Both rails post.** Stripe payments enqueue from the webhook; manual e-transfer/cheque/cash payments enqueue from the record-payment action (7.3). The books reflect the whole business, and the collections console and QuickBooks never disagree.
+- **The MCP server (8D) ships tool tiers in order** (read, then draft, then approval-gated posting), each tier stakeholder-approved before exposure. Read tools deliver immediate value ("who owes what?", AR aging from mirrors) with near-zero risk while trust in the posting path builds.
+- **Batch invoicing, collections automation, and AR dashboards** (handover QB-4+/discovery Sections 16 to 20) remain post-Track 1 iterations on this foundation; they need no new infrastructure, only new task types and tools.
 
 ---
 
 ## 10. Phase Plan
 
-**Execution order: 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 7 (core portal launch), then 6A -> 6B (camera cloud backup, Track 2, post-launch).** Phase numbers are kept stable because the rest of this document references them; 6A/6B simply run after 7. Each phase ends with a test gate; do not start the next phase with a failing gate. **[HUMAN]** marks stakeholder checkpoints (handover Section 21 model).
+**Execution order: 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 7 -> 8 (Track 1: core portal + accounting automation, R37), then 6A -> 6B (camera cloud backup, Track 2, post-launch).** Phase numbers are kept stable because the rest of this document references them; 6A/6B simply run after Track 1. Phase 8A may start in parallel with the Phase 7 human launch items; the Stripe test-to-live switch is preferably coupled to 8C (9.5.3). Each phase ends with a test gate; do not start the next phase with a failing gate. **[HUMAN]** marks stakeholder checkpoints (handover Section 21 model).
 
 ### Phase 0: Foundation
 
@@ -983,6 +1039,52 @@ Track 1 scope: build the complete billing rails on **both methods** (R22): Strip
 
 **Gate:** handover Section 22 checklist fully satisfied; crons observed firing in preview (including a payment-due run that reminds a test manual payer exactly once per cycle); sign-off recorded in Progress Log.
 
+### Phase 8: QuickBooks Accounting Automation (Track 1 close-out; R37, architecture in 9.5)
+
+Sub-phases gate independently. 8A and 8B build against a QuickBooks **sample company file**; the live company file is first touched at 8C, after the bookkeeper mapping exists. 8A may run in parallel with the Phase 7 human launch items; the Stripe test-to-live switch is preferably coupled to 8C (9.5.3).
+
+**8A: Bridge foundation + read-only mirrors**
+
+- [ ] **[HUMAN]** D12 (machine): confirm the canonical QuickBooks Desktop Canada PC (Q20) and its release (SDK 17 needs 2023 R16+ / 2024 R18+); approve the bridge install; decide how regularly the PC stays on
+- [ ] Migration 8A: `qb_bridges`, `qb_customers`, `qb_invoices` (+ RLS per 4.3: admin SELECT, service-role writes); regenerate `database.types.ts`
+- [ ] `/api/qb/poll`, `/api/qb/report`, `/api/qb/mirror` routes (per-bridge secret, SHA-256 hash server-side, same auth model as gateways and cron)
+- [ ] `qb-bridge/` v0 (C#/.NET Windows service): QB session management via Desktop SDK/qbXML, CustomerQuery/InvoiceQuery/ReceivePaymentQuery against the sample file, mirror push on an interval, service autostart + crash recovery, structured local logging
+- [ ] Admin Accounting tab v0: bridge health (last poll, last mirror, reported company file + QB version sanity check) and mirror browser (customers, balances, open invoices)
+
+**Gate 8A:** mirrors match the sample file exactly; the bridge survives a reboot and a QuickBooks-closed state gracefully; the portal is fully functional with the bridge offline; bridge secret rotation works.
+
+**8B: Task queue + state machine**
+
+- [ ] Migration 8B: `qb_tasks` (4.2: named-command CHECK, state-machine CHECK, unique idempotency key, approval fields, `profile_id on delete set null`)
+- [ ] `lib/portal/qb/tasks.ts`: state transitions, per-command payload validation, idempotent `enqueue` helpers (unique-key conflict = safe no-op)
+- [ ] Bridge executes named commands only: `customer.create`, `customer.update`, `receive_payment.create`, `invoice.create`; persists ListIDs/TxnIDs/EditSequences; maps qbXML errors to `failed` vs `needs_review` (23.9: never guess, flag)
+- [ ] Accounting tab queue boards: pending / needs review / failed / posted; approve, retry, cancel server actions (`requireAdmin()`, RLS UPDATE limited to review fields); task detail view with payload and attempt history
+- [ ] Observability: task failures and bridge staleness (no poll within N hours while tasks are pending) land in `portal_alerts` like every other operational failure
+
+**Gate 8B:** duplicate enqueue is a no-op; a task queued while the bridge is stopped posts exactly once on restart; a posting task cannot execute without approval; a malformed payload lands `needs_review` with no partial write; the full state machine is walkable from the Accounting tab.
+
+**8C: Payments post to the books (the monitoring automation payoff)**
+
+- [ ] **[HUMAN]** D12 (mapping): bookkeeper session for the chart of accounts (Stripe Clearing, Stripe Fees, HST/GST Payable, Monitoring Income) and the invoice-first vs sales-receipt posting model (handover 23.8: gross payment, fees separate, clearing account reconciles the payout); then point the bridge at the live company file
+- [ ] Stripe rail enqueue: the `invoice.paid` webhook handler also enqueues `receive_payment.create` (+ `customer.create` on first sight, stamping `qb_customers.profile_id`) with amounts split per the approved mapping
+- [ ] Manual rail enqueue: `recordManualPayment` (7.3) enqueues the equivalent task, so e-transfer/cheque/cash payments post too
+- [ ] Backfill: one-shot script replays historical `billing_events` (`invoice.paid`) and `manual_payments` through the same idempotent enqueue path
+- [ ] Per-payment QB sync status (posted / pending / needs review) visible on the admin client detail payment history and the Billing tab
+- [ ] **[HUMAN]** Stripe go-live lands here when possible (9.5.3): live-mode prices + webhook, permanent restricted key replacing the CLI session key
+
+**Gate 8C:** a Stripe payment and a recorded manual payment each land in QuickBooks correctly with the office PC initially off; a replayed webhook produces exactly one QB posting; posted amounts reconcile to the bookkeeper's mapping (gross, fees, tax); deleting a client leaves queue history intact.
+
+**8D: Accounting MCP server (staged tool tiers)**
+
+- [ ] `/api/mcp` route: streamable-HTTP MCP endpoint, admin-scoped bearer auth, every call audited (`source_system='mcp_agent'`, request id on the task row)
+- [ ] Tier 1, read tools over mirrors + portal tables: `search_customer`, `get_customer_balance`, `get_open_invoices`, `get_ar_aging_summary`, `get_monthly_revenue_summary`, `get_payment_sync_status`
+- [ ] **[HUMAN]** stakeholder connects Cursor to the MCP server, uses tier 1 in real work, signs off before tier 2 is exposed
+- [ ] Tier 2, draft tools: `draft_collection_email`, `create_invoice_draft` (drafts are queue rows that post nothing without approval)
+- [ ] Tier 3, posting tools: `create_receive_payment_task` and peers; enqueue-only, approval still happens on the Accounting tab
+- [ ] Destructive operations are never exposed in any tier: void/delete, journal entries, chart-of-accounts changes, payroll, closed-period edits (handover 23.6)
+
+**Gate 8D (Track 1 complete):** every MCP call is authenticated, audited, and unable to bypass validation or approval; read tools answer correctly with the office PC off; a posting tool without subsequent admin approval never reaches QuickBooks; end to end, a real payment on each rail flows portal-to-books untouched by hands, and the stakeholder can ask the MCP server "who owes us money?" and get the AR answer from mirrors. Sign-off recorded in the Progress Log.
+
 ---
 
 ## 11. Business Rule Traceability
@@ -1010,7 +1112,9 @@ Track 1 scope: build the complete billing rails on **both methods** (R22): Strip
 | Server-side admin checks beyond RLS (22.1) | `requireAdmin()` fresh DB check in every admin action (6.5) |
 | Portal feels native to mckeesecurity.ca (14) | Live tokens + shared components (R11); site chrome retained (7.1) |
 | Human checkpoints for all new infrastructure (21) | **[HUMAN]** items in every phase; secrets never through chat |
-| QB Scope B compatibility without building it (23.1) | `billing_events` + `stripe_customer_id`/`subscription_id` retention (4.2, 9.1) |
+| Payments post to QuickBooks without hand-keying, offline-safe (23.3, 23.7; R37 pulls into Track 1) | Phase 8 queue + bridge (9.5): enqueue from both rails, `billing_events`/`manual_payments` history backfillable through the same idempotent path |
+| The website must never fail because QuickBooks is off (23.3) | Durable `qb_tasks` queue; bridge polls outbound; reads served from mirrors (4.2, 9.5.1) |
+| Accounting agent acts only through named, approval-gated tools; QB stays system of record (23.5, 23.6, 23.13) | Phase 8D tool tiers with per-tier sign-off; `qb_tasks` named-command CHECK + approval fields; destructive operations never exposed; mirrors never overwrite QB (23.10) |
 
 ---
 
@@ -1029,6 +1133,9 @@ Track 1 scope: build the complete billing rails on **both methods** (R22): Strip
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel + local | 5 — not needed (checkout is a server-created redirect; no client-side Stripe.js) |
 | `FOOTAGE_AWS_ACCESS_KEY_ID`, `FOOTAGE_AWS_SECRET_ACCESS_KEY`, `FOOTAGE_AWS_REGION`, `FOOTAGE_BUCKET` | Vercel only | 6B (read/list/restore-only credential, 9.3) |
 | `CRON_SECRET` | Vercel only | 7 — set 2026-07-06 (production + `.env.local`); Vercel cron sends it automatically as the bearer token |
+| `MCP_SERVER_SECRET` | Vercel only | 8D (bearer auth for `/api/mcp`; per-staff keys if the team grows) |
+
+Phase 8 bridge credentials are **not** Vercel env vars: each bridge holds its own secret locally (hash in `qb_bridges.secret_hash`), same model as the camera gateways.
 
 Phase 0 values (public-safe): `NEXT_PUBLIC_SUPABASE_URL=https://cxmydfhbclfwzboqibmo.supabase.co`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_4YC9QGFgdzv7GVReW5u3iA_EFKLH-LP`.
 
@@ -1110,5 +1217,6 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 | 2026-07-06 | R32 (stakeholder round 3): Account Controls hardened — the card now explains the difference in plain language (disable = temporary lockout, everything kept, card payments keep running, reversible; delete = permanent erasure everywhere, irreversible) and client deletion requires **typing the client's full name**, verified server-side inside `deleteClientAction`, not just in the browser (the clients-table quick delete uses the same type-to-confirm via prompt). Deletion also cancels any live Stripe subscriptions first and aborts if Stripe refuses, so a deleted client can never keep getting charged |
 | 2026-07-06 | R33 (root cause of "next payment: to be confirmed" + empty history after a successful sandbox checkout): the production Stripe webhook endpoint was registered **without `invoice.paid`** in its enabled events, so paid invoices never reached the portal — no `next_due_on`, no payment-history row. Fixed three ways: (1) `invoice.paid` added to the endpoint (one-shot script, missed event + due date backfilled for the affected account); (2) `checkout.session.completed` now stamps `next_due_on` from the subscription's period end itself instead of leaving it null for invoice.paid to fill; (3) `handleInvoicePaid` falls back to the subscription metadata's `service_id` when the invoice event outraces checkout completion (Stripe does not guarantee event order) and stores the subscription id itself. Any one of the three now suffices to keep the dates and history correct |
 | 2026-07-06 | R35 (stakeholder round 4): devices get **categories** — a fixed, CHECK-constrained set (`system_battery`, `device_battery`, `detector` for smoke/CO, `wireless_device`, `other`) alongside the free-text name, so expiring equipment can be filtered by kind instead of scanned by name. A new **Devices tab** on the admin dashboard lists every tracked device across all clients, soonest replacement first, with category chips and due-status filters (overdue now / due within a year) — the "what needs replacing on the next service run?" view. Quick-add presets renamed per stakeholder: the wrong generic "Alarm Backup Battery" became "4Ah / 7Ah Security System Battery" (existing rows relabelled), plus Device Battery (5y), Smoke Detector (10y), CO Detector (7y), Wireless Motion Sensor / Door Contact (10y); picking a preset prefills its category and interval. Clients see the category on their read-only equipment tiles |
+| 2026-07-07 | R37 (stakeholder): **QuickBooks accounting moves into Track 1 as Phase 8**, superseding R36's Track 3 placement one day later. Rationale: automating monitoring billing while leaving every payment to be hand-keyed into the books is half an automation; the accounting posting is part of the product. Phase 8 checklist added to Section 10 (8A bridge + mirrors against a QB sample file, 8B task queue + admin Accounting tab, 8C both-rails posting with bookkeeper-approved GL mapping + historical backfill, 8D MCP server in staged tool tiers with per-tier sign-off). Schema (`qb_bridges`, `qb_tasks`, `qb_customers`, `qb_invoices`) and RLS rows added to 4.2/4.3; `qb-bridge/` app added to the manifest; D12 opened (QB host machine + bookkeeper mapping). Execution strategy (9.5.3): 8A can start now in parallel with Phase 7's human launch items, and the Stripe test-to-live switch preferably lands with 8C so the first live payment posts to the books automatically. The handover's safety rails are unchanged: offline-safe queue, named commands, approval gates, no destructive operations |
 | 2026-07-06 | R36 (stakeholder, Track 1 close-out): QuickBooks integration promoted from a deferred footnote to **Track 3**, specified in 9.5. Architecture settled per handover 23.2 + discovery doc: the **only on-premise component is a small Windows bridge service on the office QuickBooks PC** (Desktop SDK/qbXML is a local COM interface, so qbXML execution is machine-bound); the **MCP server itself is cloud-hosted on Vercel** next to the existing portal API, reading Supabase mirrors and enqueueing approval-gated tasks, so staff can query and draft accounting work even while the office PC is off. Bridge connects outbound-only with a per-device secret (same trust model as camera gateways); build order QB-1 (read-only POC) -> QB-2 (queue + admin tab) -> QB-3 (Stripe payment posting) -> QB-4+ (MCP tools: read, then draft, then posting). Track 1's `billing_events` ledger already satisfies the Scope B forward-compatibility obligation, so no portal rework is needed to start |
 | 2026-07-06 | R34 (stakeholder: "mobile is all whacked"): full mobile overhaul of both portals, verified with a Playwright iPhone-viewport audit that measures the real document width and screenshots every portal page with seeded data (`scripts/mobile-audit.mjs`, reusable). Root cause: on phones any single element wider than the screen (the non-wrapping admin tab bar, table rows escaping their scroller) expands the layout viewport, which breaks *everything else* on the page at once — matching "some too wide, some too narrow". Fixes: `overflow-x: clip` on `html`/`body` as a root guard (clip creates no scroll container, so sticky/fixed still work); admin tabs are a swipeable scroll row; the Clients table and both Billing tables render as stacked cards below `md` (tables remain on desktop); every wrap-jumbled admin form row (`flex-wrap items-end`) becomes a clean single-column grid on phones and returns to inline at `sm`; selects get `max-w-full` so long tier names can't force width; card padding, headings, and KPI tiles scale down a step on small screens (KPIs 2-up); client dashboard, caller ID editor, and client detail got the same pass. Public site re-screenshotted at 390px and 1440px: unaffected |
