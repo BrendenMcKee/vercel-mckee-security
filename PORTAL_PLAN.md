@@ -860,7 +860,9 @@ Fallback for sub-daily jobs on Hobby: `pg_cron` + Supabase Edge Function (R4).
 
 ### 9.5 QuickBooks Desktop integration + accounting MCP server (Track 1 Phase 8; R37, handover Section 23)
 
-**Track 1 work per R37 (stakeholder 2026-07-07):** automated monitoring billing is only complete when payments post to the books without hand-keying, so the handover's Scope B (QuickBooks plumbing: task queue, local bridge, Stripe payment posting, admin sync UI) and Scope C's MCP server build inside Track 1 as **Phase 8** (checklist in Section 10). Full research: `QUICKBOOKS_ACCOUNTING_DISCOVERY.md`. Fixed constraints from the handover (23.13) remain non-negotiable: QuickBooks Desktop Canada stays the system of record, no unrestricted AI or website writes to QuickBooks, offline-safe queue, approval gates for posting, full audit trail.
+**Track 1 work per R37 (stakeholder 2026-07-07):** automated monitoring billing is only complete when payments post to the books without hand-keying, so the handover's Scope B (QuickBooks plumbing: task queue, local bridge, Stripe payment posting, admin sync UI) and Scope C's MCP server build inside Track 1 as **Phase 8** (checklist in Section 10). Full research: `QUICKBOOKS_ACCOUNTING_DISCOVERY.md`. Plain-language explainer for stakeholders/bookkeeper: `ACCOUNTING_PLAN.md` (this section wins on conflict).
+
+**Client-facing billing mail moves entirely to the portal (stakeholder 2026-07-07).** The legacy practice of emailing monitoring invoices from QuickBooks ends at Phase 8: renewal reminders, autopay receipts, payment confirmations, and migration invitations are all portal-sent (9.4, R40). QuickBooks documents (sales receipt vs. invoice + payment, per the D12 bookkeeper choice) become internal accounting artifacts created by the automation, never customer communication. Fixed constraints from the handover (23.13) remain non-negotiable: QuickBooks Desktop Canada stays the system of record, no unrestricted AI or website writes to QuickBooks, offline-safe queue, approval gates for posting, full audit trail.
 
 #### 9.5.1 Where each piece lives (the logistics)
 
