@@ -62,9 +62,16 @@ Today, monitoring bills are created in QuickBooks and emailed to customers from 
 Before customers are invited to anything, the portal is seeded from QuickBooks so both systems agree completely:
 
 1. The bridge mirrors the full customer list and invoice history to the cloud.
-2. An "Import from QuickBooks" screen builds a draft for every active monitoring customer: name and email from QuickBooks, plus a best guess at their monitoring tier, annual amount, and next due date, read from their actual invoice history (the line-item names on their last monitoring invoice tell us the tier).
-3. **A human reviews every row before anything is created.** The guesses only pre-fill the screen; the admin confirms or corrects each customer, then commits.
-4. Committing creates each customer in the portal, already linked to their QuickBooks record, on the legacy payment rail with their true amount and due date. **No emails are sent by the import.** Running the import again is safe; already-imported customers are skipped, so duplicates are impossible.
+2. An "Import from QuickBooks" screen builds a draft for every active monitoring customer: name and email from QuickBooks, plus a best guess at their monitoring tier, annual amount, and next due date, read from their actual invoice history.
+3. **The tier guess works from the price first.** The four monitoring tiers bill at four different annual amounts, so the dollars on a customer's last invoice identify their tier almost perfectly; the invoice line-item names confirm it. A customer whose billed amount matches no current tier price (an old grandfathered rate) is flagged for a closer look, and the import keeps the amount they actually pay. **Nobody's price changes because of the import.** Moving someone from an old rate to current pricing is always a deliberate decision, never a side effect.
+4. **A human reviews every row before anything is created.** The guesses only pre-fill the screen; the admin confirms or corrects each customer, then commits.
+5. Committing creates each customer in the portal, already linked to their QuickBooks record, on the legacy payment rail with their true amount and due date. **No emails are sent by the import.** Running the import again is safe; already-imported customers are skipped, so duplicates are impossible.
+
+**The import also brings in more than billing:**
+
+- **Alarm contact lists (caller ID) come from Lanvac.** The monitoring station holds the real contact lists and passcodes, so we request a full export from Lanvac. If they can give us a usable file, a one-time importer loads each customer's contacts and passcodes into the portal quietly (no emails go out during seeding); if not, contacts are entered by hand per customer. When each customer later activates their account, the invitation asks them to review their alarm contact list, so first login doubles as the check that the imported list is right.
+- **Device and battery records come from the QuickBooks to-do list**, where they are tracked today. The bridge reads the to-do list along with everything else, and the import turns those notes into draft device entries (what it is, which customer, when it was installed or is due) for the same review screen. Since to-do notes are freeform text, the drafts are suggestions to confirm, not automatic truth, and we will calibrate against a few real sample entries first.
+- **A per-customer migration checklist** shows exactly where each imported customer stands: imported, alarm contacts entered, devices entered, invited, activated. Whether something is "done or not" is always visible on their page and filterable on the Billing tab; it never depends on anyone's memory.
 
 The result: the admin Billing tab shows the entire business's real renewal calendar from day one, before a single customer has touched the portal. Reminders, the collections board, and the books all agree from the start.
 
@@ -131,14 +138,16 @@ In rough order of when each is needed:
 **For the bulk import (during 8A):**
 
 4. **The shape of the customer list.** Roughly how many active monitoring customers, whether each client is one QuickBooks customer record (or whether some are split into jobs/sub-customers or duplicated), and any known messes worth flagging up front.
-5. **The monitoring item names.** What the line items on a typical monitoring invoice are called in QuickBooks (for example "Annual Monitoring - Cellular"). These names are how the import guesses each customer's tier, so an accurate list makes the import review mostly pre-correct.
+5. **The monitoring item names.** What the line items on a typical monitoring invoice are called in QuickBooks (for example "Annual Monitoring - Cellular"). The billed amount is the primary tier signal, but these names are the confirmation, so an accurate list makes the import review mostly pre-correct.
+6. **The Lanvac contact-list export.** Ask Lanvac for a bulk export of every account's caller ID list: names, phone numbers, passcodes, and call order. Whatever format they can provide decides whether we import it automatically or enter contacts by hand, so even a "here's what they can give us" answer moves this forward.
+7. **A few sample to-do entries.** Copy the text of three or four typical device/battery entries from the QuickBooks company to-do list (exact wording and dates). The import parses those notes into draft device records, and real samples are how we make the parser match how they were actually written.
 
 **Before 8C (posting to the real books):**
 
-6. **A session with the bookkeeper.** One sitting to agree the account mapping: which income account monitoring lands in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
+8. **A session with the bookkeeper.** One sitting to agree the account mapping: which income account monitoring lands in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
 
 **Nice to have:**
 
-7. **A recent backup copy of the company file.** Development runs against a QuickBooks sample company, but a backup copy lets us rehearse the bulk import and the backfill against realistic data before doing it for real.
+9. **A recent backup copy of the company file.** Development runs against a QuickBooks sample company, but a backup copy lets us rehearse the bulk import and the backfill against realistic data before doing it for real.
 
 Items 1 and 2 are the only things blocking a start on Phase 8A today.
