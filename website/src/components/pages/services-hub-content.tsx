@@ -77,7 +77,6 @@ const services: ServiceCard[] = [
     text: "Professional Starlink Gen 3 satellite internet installation with no roof penetration. We supply all mounting hardware, extended cables, and accessories. You purchase the kit from Starlink, and we handle the rest with expert installation and optional UniFi network integration.",
     image: "/images/services/work/starlink-lakefront-pole.jpg",
     imagePosition: "center 33%",
-    fullWidth: true,
     features: ["Gen 3 Compatible", "No Roof Penetration", "All Equipment Provided", "UniFi Integration"],
   },
   {
@@ -88,7 +87,6 @@ const services: ServiceCard[] = [
     text: "Rent a fully configured Starlink Gen2 kit with Roam Max service, kickstand, and a 150-foot Gen2 cable included. Set the dish on grass, gravel, or campsite ground outside a cottage, trailer, or Airbnb. Pick up and return at our Haliburton office for as little or as long as you need. Contact us for availability and pricing.",
     image: "/images/services/starlink-rental/starlink-rental-trailer-campsite.jpg",
     imagePosition: "center 40%",
-    fullWidth: true,
     features: ["Gen2 Auto-Pointing", "150ft Gen2 Cable", "Roam Max Included", "Pickup in Haliburton"],
   },
 ];

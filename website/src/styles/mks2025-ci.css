@@ -447,8 +447,15 @@ a.mks2025-ci-hero-badge {
 
 .mks2025-ci-service-card.mks2025-ci-full-width {
     grid-column: 1 / -1 !important;
-    max-width: 540px !important;
-    justify-self: center !important;
+}
+
+@media (min-width: 901px) {
+    .mks2025-ci-services-grid > .mks2025-ci-service-card:last-child:nth-child(odd):not(.mks2025-ci-full-width) {
+        grid-column: 1 / -1 !important;
+        width: calc(50% - clamp(10px, 1.5vw, 15px)) !important;
+        max-width: calc((min(100%, 1500px) - 40px - clamp(20px, 3vw, 30px)) / 2) !important;
+        justify-self: center !important;
+    }
 }
 
 .mks2025-ci-card-image {
@@ -932,10 +939,6 @@ a.mks2025-ci-hero-badge {
 @media (max-width: 900px) {
     .mks2025-ci-services-grid {
         grid-template-columns: 1fr !important;
-    }
-
-    .mks2025-ci-service-card.mks2025-ci-full-width {
-        max-width: 100% !important;
     }
 
     .mks2025-ci-values-grid {
