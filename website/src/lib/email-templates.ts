@@ -148,7 +148,6 @@ function renderCtaRow(field: EmailField): string {
 }
 
 export type BrandedEmailMeta = {
-  emoji: string;
   title: string;
   inboxLabel: string;
 };
@@ -199,6 +198,9 @@ export function buildBrandedEmailHtml(
     </style>
   </head>
   <body style="margin:0;padding:0;background:${BG};font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
+      ${escapeHtml(meta.inboxLabel)} | ${escapeHtml(siteConfig.name)}
+    </div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};">
       <tr>
         <td align="center" class="ee-outer" style="padding:32px 12px;">
@@ -263,7 +265,7 @@ export function buildBrandedEmailText(
   footerLines?: string[],
 ): string {
   const lines = [
-    `${meta.emoji} ${siteConfig.name}`,
+    siteConfig.name,
     meta.title,
     meta.inboxLabel,
     "-".repeat(36),

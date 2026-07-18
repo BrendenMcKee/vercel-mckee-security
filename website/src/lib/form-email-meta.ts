@@ -14,8 +14,9 @@ export type ServiceInquirySlug =
   | "general";
 
 type FormMeta = {
+  /** Used by the on-site form UI only; email HTML uses the McKee shield. */
   emoji: string;
-  /** Optional multi-glyph header icon (e.g. careers form). */
+  /** Optional multi-glyph icon used by the on-site careers form. */
   iconEmojis?: string[];
   title: string;
   inboxLabel: string;
@@ -137,10 +138,10 @@ export function buildFormEmailSubject(
   const stamp = subjectTimestamp();
 
   if (clean) {
-    return `${meta.emoji} ${meta.title} | ${clean} | ${stamp}`;
+    return `${meta.title} | ${clean} | ${stamp}`;
   }
 
-  return `${meta.emoji} ${meta.title} | ${stamp}`;
+  return `${meta.title} | ${stamp}`;
 }
 
 export function getServiceDisplayName(serviceSlug?: string | null): string {

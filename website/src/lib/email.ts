@@ -17,6 +17,18 @@ type EmailPayload = {
   cc?: string | string[];
 };
 
+const EMAIL_SUBJECT_BRAND = "McKee Security";
+
+/**
+ * Subjects are plain text, so the company name is the professional,
+ * inbox-safe equivalent of the shield shown inside the HTML email.
+ */
+export function buildBrandedSubject(subject: string): string {
+  const clean = subject.replace(/\s+/g, " ").trim();
+  const prefix = `${EMAIL_SUBJECT_BRAND} |`;
+  return clean.startsWith(prefix) ? clean : `${prefix} ${clean}`;
+}
+
 /**
  * Sends an email via Resend. Returns `true` only when a message was actually
  * dispatched. When `RESEND_API_KEY` is missing it logs and returns `false` so
@@ -26,11 +38,12 @@ type EmailPayload = {
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const to = payload.to ?? process.env.CONTACT_EMAIL ?? "info@mckeesecurity.ca";
   const apiKey = process.env.RESEND_API_KEY;
+  const subject = buildBrandedSubject(payload.subject);
 
   if (!apiKey) {
     console.warn(
       "[email] RESEND_API_KEY is not set; email NOT sent:",
-      payload.subject,
+      subject,
     );
     return false;
   }
@@ -38,7 +51,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const body: Record<string, unknown> = {
     from: process.env.EMAIL_FROM ?? "McKee Security <onboarding@resend.dev>",
     to: Array.isArray(to) ? to : [to],
-    subject: payload.subject,
+    subject,
     text: payload.text,
     // A unique reference id stops Gmail from collapsing same-subject notifications
     // into one thread (and deferring the apparent duplicate), so every submission

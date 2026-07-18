@@ -1,5 +1,5 @@
 import "server-only";
-import { sendEmail } from "@/lib/email";
+import { buildBrandedSubject, sendEmail } from "@/lib/email";
 import {
   buildBrandedEmailHtml,
   buildBrandedEmailText,
@@ -24,7 +24,7 @@ async function dispatchPortalEmail(
     const sent = await sendEmail(payload);
     if (!sent) {
       await recordPortalAlert("email_failure", `${label}: not sent (email service not configured).`, {
-        subject: payload.subject,
+        subject: buildBrandedSubject(payload.subject),
         to: payload.to ?? "admin inbox",
       });
     }
@@ -32,7 +32,7 @@ async function dispatchPortalEmail(
   } catch (error) {
     console.error(`[portal] ${label} failed:`, error);
     await recordPortalAlert("email_failure", `${label}: send failed.`, {
-      subject: payload.subject,
+      subject: buildBrandedSubject(payload.subject),
       to: payload.to ?? "admin inbox",
       error: error instanceof Error ? error.message : String(error),
     });
@@ -81,7 +81,6 @@ export async function sendInvitationEmail({
   expiresAt: string;
 }): Promise<boolean> {
   const meta = {
-    emoji: "✓",
     title: "Your McKee Security Portal Is Ready",
     inboxLabel: "A simpler way to manage your account",
   };
@@ -106,7 +105,7 @@ export async function sendInvitationEmail({
 
   return dispatchPortalEmail("Invitation email", {
     to,
-    subject: "Your McKee Security portal is ready",
+    subject: "Your portal is ready",
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
@@ -181,7 +180,6 @@ export async function sendCallerIdAdminAlert({
   profileId: string;
 }): Promise<boolean> {
   const meta = {
-    emoji: "📞",
     title: "Caller ID List Changed",
     inboxLabel: "Update Lanvac to match the new list",
   };
@@ -245,7 +243,6 @@ export async function sendCallerIdClientNotification({
   changeReason: string;
 }): Promise<boolean> {
   const meta = {
-    emoji: "📞",
     title: "Your Alarm Contact List Was Updated",
     inboxLabel: "Change made by McKee Security on your behalf",
   };
@@ -272,7 +269,7 @@ export async function sendCallerIdClientNotification({
 
   return dispatchPortalEmail("Caller ID client notification", {
     to,
-    subject: "Your McKee Security alarm contact list was updated",
+    subject: "Your alarm contact list was updated",
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
@@ -312,7 +309,6 @@ export async function sendManualPaymentReminder({
 }): Promise<boolean> {
   const service = SERVICE_LABELS[serviceType] ?? serviceType;
   const meta = {
-    emoji: "💳",
     title: overdue ? "Payment Overdue" : "Payment Reminder",
     inboxLabel: `${service} billing`,
   };
@@ -358,7 +354,6 @@ export async function sendManualPaymentRecorded({
 }): Promise<boolean> {
   const service = SERVICE_LABELS[serviceType] ?? serviceType;
   const meta = {
-    emoji: "✅",
     title: "Payment Received",
     inboxLabel: `${service} billing`,
   };
@@ -396,7 +391,6 @@ export async function sendCardPaymentFailedAlert({
   profileId: string | null;
 }): Promise<boolean> {
   const meta = {
-    emoji: "⚠️",
     title: "Card Payment Failed",
     inboxLabel: "Stripe autopay needs follow-up",
   };
@@ -437,7 +431,6 @@ export async function sendPaymentSuccessEmail({
 }): Promise<boolean> {
   const service = SERVICE_LABELS[serviceType] ?? serviceType;
   const meta = {
-    emoji: "✅",
     title: "Payment Successful",
     inboxLabel: `${service} is active`,
   };
@@ -478,7 +471,6 @@ export async function sendDeviceExpiryAdminAlert({
   profileId: string;
 }): Promise<boolean> {
   const meta = {
-    emoji: "🔋",
     title: "Device Past Its Service Life",
     inboxLabel: "Schedule a replacement",
   };
@@ -517,7 +509,6 @@ export async function sendDeviceExpiryClientNotice({
   installedOn: string;
 }): Promise<boolean> {
   const meta = {
-    emoji: "🔋",
     title: "Time to Replace a Device",
     inboxLabel: "McKee Security maintenance notice",
   };
@@ -564,7 +555,6 @@ export async function sendCollectionsDigest(rows: CollectionsDigestRow[]): Promi
     }, due ${r.dueOn}`;
 
   const meta = {
-    emoji: "📋",
     title: "Collections Digest",
     inboxLabel: `${overdueRows.length} overdue, ${dueRows.length} due soon`,
   };
