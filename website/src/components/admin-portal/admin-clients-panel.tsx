@@ -15,6 +15,7 @@ import {
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
+import { tierOptionLabel } from "@/lib/portal/billing";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge } from "@/components/admin-portal/ui";
 
 type InvitationSummary = Pick<
@@ -418,6 +419,9 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 <p className="text-sm font-bold text-white">
                   {SERVICE_TYPE_LABELS.monitoring}
                 </p>
+                <p className="text-xs text-white/40">
+                  Monthly rate, billed annually (one invoice a year).
+                </p>
                 <label className="flex flex-col gap-1.5 text-sm text-white/80">
                   Plan
                   <select
@@ -428,7 +432,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                     <option value="">None</option>
                     {SERVICE_TIERS.monitoring.map((tier) => (
                       <option key={tier} value={tier}>
-                        {tierLabel(tier)}
+                        {tierOptionLabel("monitoring", tier)}
                       </option>
                     ))}
                   </select>
@@ -437,6 +441,9 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
 
               <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
                 <p className="text-sm font-bold text-white">{SERVICE_TYPE_LABELS.voip}</p>
+                <p className="text-xs text-white/40">
+                  Monthly rate per line, always billed monthly.
+                </p>
                 <label className="flex flex-col gap-1.5 text-sm text-white/80">
                   Plan
                   <select
@@ -447,7 +454,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                     <option value="">None</option>
                     {SERVICE_TIERS.voip.map((tier) => (
                       <option key={tier} value={tier}>
-                        {tierLabel(tier)}
+                        {tierOptionLabel("voip", tier)}
                       </option>
                     ))}
                   </select>
@@ -466,8 +473,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                     className={adminInputClass}
                   />
                   <span className="text-xs text-white/40">
-                    All VoIP plans are billed per line. Count every line, including
-                    extras like a fax line.
+                    Count every line, including extras like a fax line.
                   </span>
                 </label>
               </div>
@@ -486,7 +492,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                     <option value="">None</option>
                     {SERVICE_TIERS.cloud_backup.map((tier) => (
                       <option key={tier} value={tier}>
-                        {tierLabel(tier)}
+                        {tierOptionLabel("cloud_backup", tier)}
                       </option>
                     ))}
                   </select>

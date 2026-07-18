@@ -34,6 +34,7 @@ import {
   PAYMENT_METHOD_LABELS,
   formatCents,
   intervalMonths,
+  tierOptionLabel,
   type BillingInterval,
   type PaymentMethod,
 } from "@/lib/portal/billing";
@@ -302,7 +303,7 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
             {assignType &&
               SERVICE_TIERS[assignType].map((tier) => (
                 <option key={tier} value={tier}>
-                  {tierLabel(tier)}
+                  {tierOptionLabel(assignType, tier)}
                 </option>
               ))}
           </select>
@@ -734,7 +735,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
           >
             {SERVICE_TIERS[service.service_type].map((tier) => (
               <option key={tier} value={tier}>
-                {tierLabel(tier)}
+                {tierOptionLabel(service.service_type, tier)}
               </option>
             ))}
           </select>

@@ -1,4 +1,5 @@
 import type { Database } from "@/lib/portal/database.types";
+import { tierLabel } from "@/lib/portal/service-labels";
 
 export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
 export type BillingInterval = Database["public"]["Enums"]["billing_interval"];
@@ -35,6 +36,17 @@ export function planMonthlyCents(serviceType: string, tier: string): number | nu
   if (serviceType === "monitoring") return MONITORING_MONTHLY_CENTS[tier] ?? null;
   if (serviceType === "voip") return VOIP_MONTHLY_CENTS[tier] ?? null;
   return null;
+}
+
+/**
+ * Plan-picker option label (stakeholder 2026-07-18): the monthly rate first,
+ * then a pipe, then the plan name, e.g. "$34.99 | Residential Unlimited
+ * Canada-Wide". Rates are pre-tax (HST is understood); plans without a
+ * confirmed rate yet (cloud backup until Track 2) fall back to the bare name.
+ */
+export function tierOptionLabel(serviceType: string, tier: string): string {
+  const rate = planMonthlyCents(serviceType, tier);
+  return rate == null ? tierLabel(tier) : `${formatCents(rate)} | ${tierLabel(tier)}`;
 }
 
 export const BILLING_INTERVAL_LABELS: Record<BillingInterval, string> = {
