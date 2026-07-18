@@ -454,6 +454,7 @@ export type Database = {
           created_at: string
           due_alerted_at: string | null
           id: string
+          line_count: number
           monthly_amount_cents: number | null
           next_due_on: string | null
           profile_id: string
@@ -469,6 +470,7 @@ export type Database = {
           created_at?: string
           due_alerted_at?: string | null
           id?: string
+          line_count?: number
           monthly_amount_cents?: number | null
           next_due_on?: string | null
           profile_id: string
@@ -484,6 +486,7 @@ export type Database = {
           created_at?: string
           due_alerted_at?: string | null
           id?: string
+          line_count?: number
           monthly_amount_cents?: number | null
           next_due_on?: string | null
           profile_id?: string
@@ -545,6 +548,8 @@ export type Database = {
           p_monitoring_tier: string
           p_target_email: string
           p_token_hash: string
+          p_voip_lines?: number
+          p_voip_tier?: string
         }
         Returns: string
       }
@@ -581,7 +586,7 @@ export type Database = {
       payment_method: "etransfer" | "cheque" | "cash" | "other"
       profile_status: "pending" | "active" | "disabled"
       service_status: "active" | "paused" | "cancelled" | "unpaid"
-      service_type: "monitoring" | "cloud_backup"
+      service_type: "monitoring" | "cloud_backup" | "voip"
       user_role: "client" | "admin" | "technician"
     }
     CompositeTypes: {
@@ -718,7 +723,7 @@ export const Constants = {
       payment_method: ["etransfer", "cheque", "cash", "other"],
       profile_status: ["pending", "active", "disabled"],
       service_status: ["active", "paused", "cancelled", "unpaid"],
-      service_type: ["monitoring", "cloud_backup"],
+      service_type: ["monitoring", "cloud_backup", "voip"],
       user_role: ["client", "admin", "technician"],
     },
   },

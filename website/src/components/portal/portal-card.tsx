@@ -10,6 +10,7 @@ export type PortalIcon =
   | "cloud"
   | "card"
   | "phone"
+  | "voip"
   | "wrench";
 
 const ICON_PATHS: Record<PortalIcon, ReactNode> = {
@@ -39,6 +40,16 @@ const ICON_PATHS: Record<PortalIcon, ReactNode> = {
       strokeLinejoin="round"
       d="M4.5 5.75c0-.83.67-1.5 1.5-1.5h2.1c.65 0 1.22.42 1.42 1.03l.96 2.87c.18.55.02 1.16-.41 1.55l-1.32 1.2a13.9 13.9 0 006.35 6.35l1.2-1.32c.39-.43 1-.59 1.55-.41l2.87.96c.61.2 1.03.77 1.03 1.42V20c0 .83-.67 1.5-1.5 1.5h-.75C10.9 21.5 4.5 15.1 4.5 7.25v-1.5z"
     />
+  ),
+  voip: (
+    <>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4.5 7.75c0-.83.67-1.5 1.5-1.5h2.1c.65 0 1.22.42 1.42 1.03l.86 2.57c.18.55.02 1.16-.41 1.55l-1.12 1.02a12.9 12.9 0 005.73 5.73l1.02-1.12c.39-.43 1-.59 1.55-.41l2.57.86c.61.2 1.03.77 1.03 1.42V20c0 .83-.67 1.5-1.5 1.5h-.65C11.32 21.5 4.5 14.68 4.5 8.4v-.65z"
+      />
+      <path strokeLinecap="round" d="M15.25 6.5a4.25 4.25 0 012.9 2.9M16.4 3.25a7.5 7.5 0 014.35 4.35" />
+    </>
   ),
   wrench: (
     <path

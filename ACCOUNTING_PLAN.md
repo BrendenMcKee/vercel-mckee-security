@@ -1,20 +1,20 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-07-07
+**Last updated:** 2026-07-18 (revised for the VoIP phone service, which is now live in the portal)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
-**Technical companion:** `PORTAL_PLAN.md` Section 9.5 and the Phase 8 checklist in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
+**Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
 ---
 
 ## 1. The one-paragraph version
 
-The customer portal handles everything customers and admins touch day to day: accounts, monitoring tiers, due dates, reminders, card autopay, and recording cash/cheque/e-transfer payments. QuickBooks Desktop stays exactly what it is today, the official books. A small connector program (the "bridge") on the office QuickBooks computer keeps the two in sync automatically: every payment the portal takes gets posted into QuickBooks without anyone typing it in, and any payment the bookkeeper types straight into QuickBooks flows back to the portal so reminders stop and the customer's account stays accurate. Nothing posts to the books without built-in safety checks, and anything ambiguous stops and asks a human instead of guessing.
+The customer portal handles everything customers and admins touch day to day: accounts, monitoring tiers, VoIP phone plans, due dates, reminders, card autopay, and recording cash/cheque/e-transfer payments. QuickBooks Desktop stays exactly what it is today, the official books. A small connector program (the "bridge") on the office QuickBooks computer keeps the two in sync automatically: every payment the portal takes gets posted into QuickBooks without anyone typing it in, and any payment the bookkeeper types straight into QuickBooks flows back to the portal so reminders stop and the customer's account stays accurate. Nothing posts to the books without built-in safety checks, and anything ambiguous stops and asks a human instead of guessing. Everything in this document applies to every billable service the portal offers, monitoring and VoIP alike; where VoIP needs a special word, it gets one explicitly.
 
 ---
 
 ## 2. The pieces, in plain language
 
-**The portal (already built, running on Vercel and Supabase).** Where admins manage clients, tiers, due dates, devices, and payments, and where clients see their account, alarm contact list, and payment history. It sends all the reminder and confirmation emails.
+**The portal (already built, running on Vercel and Supabase).** Where admins manage clients, tiers, due dates, devices, and payments, and where clients see their account, alarm contact list, and payment history. It sends all the reminder and confirmation emails. As of 2026-07-18 it also carries the **VoIP phone service**: a residential plan ($34.99/month plus HST, flat) and a professional plan ($59.99/month plus HST **per line**), both on the same autopay and manual rails as monitoring. VoIP bills monthly (monitoring bills annually), and for the professional plan the portal tracks the number of lines and bills rate times lines automatically, including on the customer's card subscription.
 
 **QuickBooks Desktop (unchanged).** The official financial record. It keeps working exactly as it does now. The bookkeeper can keep doing anything they do today; the automation works around them, not instead of them.
 
@@ -34,6 +34,8 @@ The customer portal handles everything customers and admins touch day to day: ac
 
 ## 3. How a payment flows (the four stories)
 
+These stories read the same whether the payment is for monitoring or for VoIP. The queue, the fingerprints, and the safety checks do not care which service the money is for; the only difference is which income line it lands on in the books (Section 4) and that VoIP renews monthly instead of annually.
+
 **Story 1: Card autopay (Stripe).** The customer's card is charged automatically on their renewal date. Stripe tells the portal, the portal records it in the customer's payment history, advances their next due date, and drops a task in the queue. The bridge posts it into QuickBooks against that customer. Nobody touches anything. QuickBooks never sees a card payment first; these always originate in the portal.
 
 **Story 2: Cheque, cash, or e-transfer recorded in the portal (the preferred way).** A customer pays the legacy way. The admin opens their page and clicks "record payment". Reminders stop, the due date advances, the customer gets a confirmation email, and a task posts the payment into QuickBooks automatically. This is the recommended habit: record it in the portal and the books take care of themselves.
@@ -48,11 +50,11 @@ The customer portal handles everything customers and admins touch day to day: ac
 
 ## 4. Do we still send invoices from QuickBooks? No.
 
-Today, monitoring bills are created in QuickBooks and emailed to customers from there. Once this system is live, that stops entirely:
+Today, monitoring and VoIP bills are created in QuickBooks and emailed to customers from there. Once this system is live, that stops entirely:
 
 - **The portal sends every customer-facing billing email.** Renewal reminders for legacy payers (amount, due date, how to pay) go out automatically on the schedule already built. Customers on autopay get charged automatically and receive receipts. Payment confirmations come from the portal. During the migration, the reminder email doubles as the invitation to activate their portal account.
 - **QuickBooks becomes internal-only.** Whatever documents exist inside QuickBooks (sales receipts or invoices with payments against them) are created by the automation for the bookkeeper and the accountant. No human creates them, and nobody emails them to customers.
-- **The bookkeeper still chooses how revenue is recorded.** Part of the Phase 8C bookkeeper session is choosing between the two standard QuickBooks patterns: a sales receipt per payment (simplest), or an invoice plus a payment against it (keeps accounts-receivable aging inside QuickBooks). Either way the automation does the typing. This choice affects only how the books look internally, never what customers see.
+- **The bookkeeper still chooses how revenue is recorded.** Part of the Phase 8C bookkeeper session is choosing between the two standard QuickBooks patterns: a sales receipt per payment (simplest), or an invoice plus a payment against it (keeps accounts-receivable aging inside QuickBooks). Either way the automation does the typing. This choice affects only how the books look internally, never what customers see. The same session decides where each service's revenue lands: monitoring income and VoIP income are mapped separately, so "what did VoIP bring in?" is always answerable straight from the books (and later from the AI assistant).
 - **Both systems always show received payments.** The portal shows every payment in the customer's history and on the admin Billing tab, with a per-payment sync status showing whether it has landed in QuickBooks yet. QuickBooks shows the same payments as proper accounting entries. That is the whole point of the two-way payment sync.
 
 ---
@@ -72,6 +74,8 @@ Before customers are invited to anything, the portal is seeded from QuickBooks s
 - **Alarm contact lists (caller ID) come from Lanvac.** The monitoring station holds the real contact lists and passcodes, so we request a full export from Lanvac. If they can give us a usable file, a one-time importer loads each customer's contacts and passcodes into the portal quietly (no emails go out during seeding); if not, contacts are entered by hand per customer. When each customer later activates their account, the invitation asks them to review their alarm contact list, so first login doubles as the check that the imported list is right.
 - **Device and battery records come from the QuickBooks to-do list**, where they are tracked today. The bridge reads the to-do list along with everything else, and the import turns those notes into draft device entries (what it is, which customer, when it was installed or is due) for the same review screen. Since to-do notes are freeform text, the drafts are suggestions to confirm, not automatic truth, and we will calibrate against a few real sample entries first.
 - **A per-customer migration checklist** shows exactly where each imported customer stands: imported, alarm contacts entered, devices entered, invited, activated. Whether something is "done or not" is always visible on their page and filterable on the Billing tab; it never depends on anyone's memory.
+
+**VoIP customers are not part of the bulk import.** There are exactly two today (one residential, one commercial on the per-line professional plan), so the import machinery is deliberately not extended to them. You will enter both by hand through the normal create-client form, with their real plan, line count, amount, and next due date, and then link each to their QuickBooks customer record with the same one-click linking screen the monitoring import uses. From that moment their payments flow through every story in Section 3 like anyone else's.
 
 The result: the admin Billing tab shows the entire business's real renewal calendar from day one, before a single customer has touched the portal. Reminders, the collections board, and the books all agree from the start.
 
@@ -105,7 +109,7 @@ Everyone imported starts on the legacy rail (cash, cheque, e-transfer), because 
 
 | Task | Today | After |
 |---|---|---|
-| Billing a monitoring customer | Create invoice in QuickBooks, email it from QuickBooks | Automatic: portal reminds legacy payers, charges autopay customers |
+| Billing a monitoring or VoIP customer | Create invoice in QuickBooks, email it from QuickBooks | Automatic: portal reminds legacy payers, charges autopay customers (VoIP monthly, monitoring annually) |
 | Recording a card payment in the books | Hand-keyed | Automatic |
 | Recording a cheque/e-transfer | Hand-keyed in QuickBooks | One click in the portal (posts to the books itself); typing it into QuickBooks still works and syncs back |
 | Knowing who owes money | Scan QuickBooks | Billing tab collections board, or ask the AI assistant |
@@ -116,9 +120,10 @@ Everyone imported starts on the legacy rail (cash, cheque, e-transfer), because 
 
 ## 9. The build order
 
+- **Already done (2026-07-18): VoIP in the portal.** Before any accounting automation is built, the VoIP service was fully implemented on the website and in Stripe, the same way monitoring was. This was deliberate: the accounting rail below is being designed against the complete service catalog, not retrofitted for VoIP later.
 - **8A: Bridge and mirrors.** Install the bridge, mirror QuickBooks into the cloud (read-only), build the linking and bulk-import screens, run the import. Built and tested against a QuickBooks *sample* company file first; the real books are not touched.
 - **8B: The task queue.** The to-do list, the state machine, the approval screens, the Accounting tab. Still against the sample file.
-- **8C: Payments post to the books.** The bookkeeper mapping session happens, the bridge points at the real company file, both payment rails start posting automatically, history is backfilled, and the reverse sync (QuickBooks to portal) plus the duplicate-entry guard go live. Stripe's switch from test mode to live mode ideally lands here, so the first real card payment posts to the books automatically.
+- **8C: Payments post to the books.** The bookkeeper mapping session happens (monitoring and VoIP income both mapped), the bridge points at the real company file, both payment rails start posting automatically, history is backfilled, and the reverse sync (QuickBooks to portal) plus the duplicate-entry guard go live. Stripe's switch from test mode to live mode ideally lands here, so the first real card payment posts to the books automatically.
 - **8D: The AI assistant.** Read-only questions first, sign-off, then drafting, sign-off, then approval-gated posting.
 
 Each stage has a test gate that must pass before the next begins, and the stakeholder checkpoints are built into the checklist in `PORTAL_PLAN.md` Section 10.
@@ -127,9 +132,9 @@ Each stage has a test gate that must pass before the next begins, and the stakeh
 
 ## 10. What we need from you to build this
 
-In rough order of when each is needed:
+Audited 2026-07-18 against every stakeholder checkpoint in the `PORTAL_PLAN.md` Phase 8 and Phase 9 checklists, so this list is the complete set. In rough order of when each is needed:
 
-**To start 8A (needed first):**
+**To start 8A (needed first; items 1 and 2 are the only blockers today):**
 
 1. **Which computer runs QuickBooks Desktop.** Confirm the office PC that has the company file, that we can install the bridge on it, and how regularly it can stay powered on (always-on is ideal but not required; the queue tolerates downtime). We will also need a way to do the install: remote access or an on-site session.
 2. **The exact QuickBooks Desktop version.** Press F2 inside QuickBooks and read off the product line (Pro/Premier/Enterprise), the year, the release (for example "R16"), and confirm it is the Canadian edition. The connector SDK needs QuickBooks Canada 2023 R16 or newer (or 2024 R18+). If the install is older, a QuickBooks update comes first.
@@ -141,13 +146,22 @@ In rough order of when each is needed:
 5. **The monitoring item names.** What the line items on a typical monitoring invoice are called in QuickBooks (for example "Annual Monitoring - Cellular"). The billed amount is the primary tier signal, but these names are the confirmation, so an accurate list makes the import review mostly pre-correct.
 6. **The Lanvac contact-list export.** Ask Lanvac for a bulk export of every account's caller ID list: names, phone numbers, passcodes, and call order. Whatever format they can provide decides whether we import it automatically or enter contacts by hand, so even a "here's what they can give us" answer moves this forward.
 7. **A few sample to-do entries.** Copy the text of three or four typical device/battery entries from the QuickBooks company to-do list (exact wording and dates). The import parses those notes into draft device records, and real samples are how we make the parser match how they were actually written.
+8. **A review pass on the import itself.** When the import screen is ready, you (or whoever knows the accounts best) spot-check the drafted tiers, amounts, due dates, contacts, and devices before committing. Budget an hour or two; this is the human gate that makes the seeding trustworthy.
+
+**For VoIP (any time before 8C; the portal side is already live):**
+
+9. **The two VoIP customers, entered by hand.** You said you would input these yourself, and the portal is ready for it now: create the residential customer on the $34.99 plan and the commercial customer on the professional plan with their real line count, each with their true next payment date, via the normal create-client form. During 8A they get linked to their QuickBooks customer records like everyone else.
+10. **The VoIP item names in QuickBooks.** What the line items on the two customers' VoIP invoices are called today (the VoIP equivalent of item 5). This is how the automation posts VoIP revenue against the right items instead of monitoring ones.
+11. **Two small Vercel settings.** Add `STRIPE_PRICE_VOIP_RESIDENTIAL` and `STRIPE_PRICE_VOIP_PROFESSIONAL` to Vercel (the values are in `website/.env.local`; I can hand them to you again any time). Until then, VoIP autopay checkout works locally but not on the deployed site; manual-rail VoIP works everywhere already.
+12. **A decision checkpoint on VoIP pricing, only when you are ready.** Current pricing is treated as interim. Nothing is blocked on this; when the tier structure firms up, plans and prices are extended the same way any catalog change is.
 
 **Before 8C (posting to the real books):**
 
-8. **A session with the bookkeeper.** One sitting to agree the account mapping: which income account monitoring lands in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
+13. **A session with the bookkeeper.** One sitting to agree the account mapping: which income accounts monitoring and VoIP each land in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
+14. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode products/prices created (a script re-run, monitoring and VoIP together), the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). Mostly done for you by scripts; your part is approving the switch and updating the Vercel values.
 
 **Nice to have:**
 
-9. **A recent backup copy of the company file.** Development runs against a QuickBooks sample company, but a backup copy lets us rehearse the bulk import and the backfill against realistic data before doing it for real.
+15. **A recent backup copy of the company file.** Development runs against a QuickBooks sample company, but a backup copy lets us rehearse the bulk import and the backfill against realistic data before doing it for real.
 
-Items 1 and 2 are the only things blocking a start on Phase 8A today.
+Everything else in Phase 8 is built and tested on our side without needing anything from you; these fifteen items are the complete list of stakeholder inputs, and only items 1 and 2 block starting Phase 8A today.

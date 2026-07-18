@@ -68,7 +68,7 @@ export default async function UserDashboardPage({
       supabase
         .from("services")
         .select(
-          "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, next_due_on, stripe_subscription_id",
+          "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, line_count, next_due_on, stripe_subscription_id",
         )
         .eq("profile_id", profile.id)
         .order("service_type"),
@@ -108,6 +108,7 @@ export default async function UserDashboardPage({
   const services = servicesResult.data;
   const monitoring = services.find((s) => s.service_type === "monitoring");
   const cloud = services.find((s) => s.service_type === "cloud_backup");
+  const voip = services.find((s) => s.service_type === "voip");
   const unpaidServices = services.filter((s) => s.status === "unpaid");
   const serviceTypeById = new Map(services.map((s) => [s.id, s.service_type]));
 
@@ -266,6 +267,43 @@ export default async function UserDashboardPage({
           </p>
         )}
       </PortalCard>
+
+      {voip && (
+        <PortalCard
+          icon="voip"
+          title={SERVICE_TYPE_LABELS.voip}
+          description="Your phone service plan"
+          action={<ServiceStatusBadge status={voip.status} />}
+        >
+          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {tierLabel(voip.tier)}
+              </p>
+              {voip.monthly_amount_cents != null && (
+                <p className="mt-2 text-[15px] text-white/55">
+                  <span className="font-semibold text-white/80">
+                    {formatCents(voip.monthly_amount_cents)}
+                  </span>
+                  /month plus tax
+                  {voip.line_count > 1 && ` for ${voip.line_count} lines`}
+                </p>
+              )}
+            </div>
+            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
+              Your phone service is managed by McKee Security. To add lines or
+              make changes, call{" "}
+              <a
+                href="tel:+17054572156"
+                className="whitespace-nowrap font-bold text-white hover:text-primary"
+              >
+                (705) 457-2156
+              </a>
+              .
+            </p>
+          </div>
+        </PortalCard>
+      )}
 
       {cloud && (
         <PortalCard

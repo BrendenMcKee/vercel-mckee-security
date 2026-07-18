@@ -14,7 +14,7 @@ import {
   priceIdFor,
 } from "@/lib/portal/stripe";
 import { sendManualPaymentRecorded } from "@/lib/portal/emails";
-import { MONITORING_MONTHLY_CENTS, intervalMonths } from "@/lib/portal/billing";
+import { intervalMonths, planMonthlyCents } from "@/lib/portal/billing";
 import { siteConfig } from "@/lib/site-config";
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,9 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, profile_id, service_type, tier, status, billing_method, stripe_subscription_id, next_due_on")
+    .select(
+      "id, profile_id, service_type, tier, status, billing_method, line_count, stripe_subscription_id, next_due_on",
+    )
     .eq("id", input.serviceId)
     .eq("profile_id", profile.id)
     .maybeSingle();
@@ -109,7 +111,8 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
+      // Per-line plans (VoIP professional) charge rate x lines via quantity.
+      line_items: [{ price: priceId, quantity: service.line_count ?? 1 }],
       success_url: `${origin}/user-dashboard?payment=success`,
       cancel_url: `${origin}/user-dashboard?payment=cancelled`,
       metadata: {
@@ -326,7 +329,7 @@ export async function updateServiceBilling(input: {
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, service_type, tier, billing_method, stripe_subscription_id, next_due_on")
+    .select("id, service_type, tier, billing_method, line_count, stripe_subscription_id, next_due_on")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
@@ -374,11 +377,12 @@ export async function updateServiceBilling(input: {
         service.next_due_on;
 
   // On autopay the charge is the plan's Stripe price, so the stored amount is
-  // re-synced to the plan rate (display/KPIs only); hand-entered rates apply
-  // to the manual rail alone.
+  // re-synced to the plan rate, times lines for per-line plans (display/KPIs
+  // only); hand-entered rates apply to the manual rail alone.
+  const planRate = planMonthlyCents(service.service_type, service.tier);
   const amountCents =
-    billingMethod === "stripe" && service.service_type === "monitoring"
-      ? (MONITORING_MONTHLY_CENTS[service.tier] ?? monthlyAmountCents)
+    billingMethod === "stripe" && planRate != null
+      ? planRate * (service.line_count ?? 1)
       : monthlyAmountCents;
 
   const { error } = await supabase

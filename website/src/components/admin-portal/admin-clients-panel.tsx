@@ -12,6 +12,7 @@ import {
 import {
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
+  isPerLineService,
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
@@ -34,6 +35,8 @@ const EMPTY_FORM: CreateClientInput = {
   address: "",
   monitoringTier: "",
   cloudTier: "",
+  voipTier: "",
+  voipLines: 1,
   billingMethod: "stripe",
 };
 
@@ -58,10 +61,16 @@ function inviteState(client: AdminClientRow): {
   return { label: `Invited · ${days}d left`, tone: "ok", canResend: true };
 }
 
+const SERVICE_CHIP_LABELS: Record<string, string> = {
+  monitoring: "Monitoring",
+  cloud_backup: "Cloud",
+  voip: "VoIP",
+};
+
 function serviceChips(services: Tables<"services">[]): string[] {
   return services.map(
     (s) =>
-      `${s.service_type === "monitoring" ? "Monitoring" : "Cloud"} · ${tierLabel(s.tier)}${s.status !== "active" ? ` (${s.status})` : ""}`,
+      `${SERVICE_CHIP_LABELS[s.service_type] ?? s.service_type} · ${tierLabel(s.tier)}${s.status !== "active" ? ` (${s.status})` : ""}`,
   );
 }
 
@@ -131,7 +140,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
   const tierOptions =
     serviceFilter && serviceFilter !== "none"
       ? SERVICE_TIERS[serviceFilter]
-      : [...SERVICE_TIERS.monitoring, ...SERVICE_TIERS.cloud_backup];
+      : [...SERVICE_TIERS.monitoring, ...SERVICE_TIERS.voip, ...SERVICE_TIERS.cloud_backup];
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -291,6 +300,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
           >
             <option value="">All services</option>
             <option value="monitoring">{SERVICE_TYPE_LABELS.monitoring}</option>
+            <option value="voip">{SERVICE_TYPE_LABELS.voip}</option>
             <option value="cloud_backup">{SERVICE_TYPE_LABELS.cloud_backup}</option>
             <option value="none">No services</option>
           </select>
@@ -404,6 +414,37 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             </select>
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            VoIP phone service
+            <select
+              value={form.voipTier}
+              onChange={(e) => set("voipTier", e.target.value as CreateClientInput["voipTier"])}
+              className={selectClass}
+            >
+              <option value="">None</option>
+              {SERVICE_TIERS.voip.map((tier) => (
+                <option key={tier} value={tier}>
+                  {tierLabel(tier)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {isPerLineService("voip", form.voipTier) && (
+            <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              Phone lines
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={form.voipLines}
+                onChange={(e) => set("voipLines", Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
+                className={adminInputClass}
+              />
+              <span className="text-xs text-white/40">
+                The professional plan is billed per line.
+              </span>
+            </label>
+          )}
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
             Cloud backup
             <select
               value={form.cloudTier}
@@ -418,7 +459,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               ))}
             </select>
           </label>
-          {(form.monitoringTier || form.cloudTier) && (
+          {(form.monitoringTier || form.cloudTier || form.voipTier) && (
             <label className="flex flex-col gap-1.5 text-sm text-white/80">
               How will they pay?
               <select

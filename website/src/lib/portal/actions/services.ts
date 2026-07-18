@@ -4,16 +4,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SESSION_ERROR_MESSAGE, tryRequireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
-import { SERVICE_TIERS } from "@/lib/portal/service-labels";
-import { MONITORING_MONTHLY_CENTS } from "@/lib/portal/billing";
+import { SERVICE_TIERS, isPerLineService } from "@/lib/portal/service-labels";
+import { planMonthlyCents } from "@/lib/portal/billing";
 import { getStripeClient, isStripeConfigured, priceIdFor } from "@/lib/portal/stripe";
 
 export type ServiceActionResult = { ok: true } | { ok: false; error: string };
 
 const assignSchema = z.object({
   profileId: z.uuid(),
-  serviceType: z.enum(["monitoring", "cloud_backup"]),
+  serviceType: z.enum(["monitoring", "cloud_backup", "voip"]),
   tier: z.string().min(1),
+  lineCount: z.number().int().min(1).max(100).optional(),
 });
 
 /**
@@ -24,8 +25,9 @@ const assignSchema = z.object({
  */
 export async function assignServiceAction(input: {
   profileId: string;
-  serviceType: "monitoring" | "cloud_backup";
+  serviceType: "monitoring" | "cloud_backup" | "voip";
   tier: string;
+  lineCount?: number;
 }): Promise<ServiceActionResult> {
   if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
@@ -37,19 +39,19 @@ export async function assignServiceAction(input: {
     return { ok: false, error: "That tier does not exist for this service." };
   }
 
-  // Monitoring is invoiced annually (site terms); the confirmed monthly rate
-  // is prefilled so reminders and revenue KPIs are correct from day one.
+  // The confirmed monthly rate is prefilled so reminders and revenue KPIs are
+  // correct from day one. Monitoring is invoiced annually (site terms); VoIP
+  // bills monthly (R42), professional per line via line_count.
+  const lineCount = isPerLineService(serviceType, tier) ? (parsed.data.lineCount ?? 1) : 1;
+  const planRate = planMonthlyCents(serviceType, tier);
   const supabase = await createPortalServerClient();
   const { error } = await supabase.from("services").insert({
     profile_id: profileId,
     service_type: serviceType,
     tier,
-    ...(serviceType === "monitoring"
-      ? {
-          billing_interval: "annual" as const,
-          monthly_amount_cents: MONITORING_MONTHLY_CENTS[tier] ?? null,
-        }
-      : {}),
+    line_count: lineCount,
+    ...(planRate != null ? { monthly_amount_cents: planRate * lineCount } : {}),
+    ...(serviceType === "monitoring" ? { billing_interval: "annual" as const } : {}),
   });
 
   if (error) {
@@ -82,7 +84,7 @@ export async function updateServiceTierAction(input: {
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, service_type, stripe_subscription_id")
+    .select("id, service_type, line_count, stripe_subscription_id")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
@@ -90,6 +92,9 @@ export async function updateServiceTierAction(input: {
   if (!SERVICE_TIERS[service.service_type].includes(tier)) {
     return { ok: false, error: "That tier does not exist for this service." };
   }
+
+  // Per-line plans keep their line count; flat plans collapse back to 1.
+  const lineCount = isPerLineService(service.service_type, tier) ? service.line_count : 1;
 
   // Phase 5 (9.1): a plan change on an autopay service swaps the Stripe
   // subscription price too, so the next invoice bills the new tier.
@@ -107,7 +112,7 @@ export async function updateServiceTierAction(input: {
       const itemId = subscription.items.data[0]?.id;
       if (!itemId) return { ok: false, error: "The Stripe subscription has no billable item. Fix it in Stripe first." };
       await stripe.subscriptions.update(service.stripe_subscription_id, {
-        items: [{ id: itemId, price: priceId }],
+        items: [{ id: itemId, price: priceId, quantity: lineCount }],
         proration_behavior: "none",
       });
     } catch (error) {
@@ -116,20 +121,88 @@ export async function updateServiceTierAction(input: {
     }
   }
 
-  // A monitoring tier change re-syncs the amount to the confirmed rate; the
-  // admin can still override it afterwards in the Billing card.
+  // A plan change re-syncs the amount to the confirmed rate (times lines for
+  // per-line plans); the admin can still override it afterwards on the manual
+  // rail in the Billing card.
+  const planRate = planMonthlyCents(service.service_type, tier);
   const { error } = await supabase
     .from("services")
     .update({
       tier,
-      ...(service.service_type === "monitoring" && MONITORING_MONTHLY_CENTS[tier]
-        ? { monthly_amount_cents: MONITORING_MONTHLY_CENTS[tier] }
-        : {}),
+      line_count: lineCount,
+      ...(planRate != null ? { monthly_amount_cents: planRate * lineCount } : {}),
     })
     .eq("id", serviceId);
   if (error) {
     console.error("[portal] updateServiceTier failed:", error);
     return { ok: false, error: "Could not change the tier. Please try again." };
+  }
+
+  revalidatePath("/admin-dashboard", "layout");
+  return { ok: true };
+}
+
+const lineCountSchema = z.object({
+  serviceId: z.uuid(),
+  lineCount: z.number().int().min(1).max(100),
+});
+
+/**
+ * Line count change for per-line plans (VoIP professional, R42). On autopay
+ * the Stripe subscription quantity is updated too, so the next invoice bills
+ * the new number of lines; the stored amount re-syncs to rate times lines.
+ */
+export async function updateServiceLineCountAction(input: {
+  serviceId: string;
+  lineCount: number;
+}): Promise<ServiceActionResult> {
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
+
+  const parsed = lineCountSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Enter a line count between 1 and 100." };
+  const { serviceId, lineCount } = parsed.data;
+
+  const supabase = await createPortalServerClient();
+  const { data: service } = await supabase
+    .from("services")
+    .select("id, service_type, tier, billing_method, stripe_subscription_id")
+    .eq("id", serviceId)
+    .maybeSingle();
+  if (!service) return { ok: false, error: "Service not found." };
+  if (!isPerLineService(service.service_type, service.tier)) {
+    return { ok: false, error: "This plan is not billed per line." };
+  }
+
+  if (service.stripe_subscription_id) {
+    if (!isStripeConfigured()) {
+      return { ok: false, error: "This service has a Stripe subscription but Stripe is not configured on the server." };
+    }
+    try {
+      const stripe = getStripeClient();
+      const subscription = await stripe.subscriptions.retrieve(service.stripe_subscription_id);
+      const itemId = subscription.items.data[0]?.id;
+      if (!itemId) return { ok: false, error: "The Stripe subscription has no billable item. Fix it in Stripe first." };
+      await stripe.subscriptions.update(service.stripe_subscription_id, {
+        items: [{ id: itemId, quantity: lineCount }],
+        proration_behavior: "none",
+      });
+    } catch (error) {
+      console.error("[portal] Stripe line count update failed:", error);
+      return { ok: false, error: "Stripe rejected the line change; nothing was modified. Check the Stripe dashboard." };
+    }
+  }
+
+  const planRate = planMonthlyCents(service.service_type, service.tier);
+  const { error } = await supabase
+    .from("services")
+    .update({
+      line_count: lineCount,
+      ...(planRate != null ? { monthly_amount_cents: planRate * lineCount } : {}),
+    })
+    .eq("id", serviceId);
+  if (error) {
+    console.error("[portal] updateServiceLineCount failed:", error);
+    return { ok: false, error: "Could not change the line count. Please try again." };
   }
 
   revalidatePath("/admin-dashboard", "layout");

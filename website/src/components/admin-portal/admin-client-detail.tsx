@@ -11,12 +11,14 @@ import {
 } from "@/lib/portal/actions/clients";
 import {
   assignServiceAction,
+  updateServiceLineCountAction,
   updateServiceStatusAction,
   updateServiceTierAction,
 } from "@/lib/portal/actions/services";
 import {
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
+  isPerLineService,
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
@@ -227,21 +229,30 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   const [pending, startTransition] = useTransition();
   const [assignType, setAssignType] = useState<ServiceType | "">("");
   const [assignTier, setAssignTier] = useState("");
+  const [assignLines, setAssignLines] = useState("1");
 
   const unassignedTypes = (Object.keys(SERVICE_TIERS) as ServiceType[]).filter(
     (type) => !client.services.some((s) => s.service_type === type),
   );
   if (unassignedTypes.length === 0) return null;
 
+  const perLine = assignType !== "" && isPerLineService(assignType, assignTier);
+
   function assign(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!assignType || !assignTier) return;
+    const lineCount = perLine ? Number.parseInt(assignLines, 10) : 1;
+    if (perLine && (!Number.isFinite(lineCount) || lineCount < 1)) {
+      setNotice({ kind: "error", text: "Enter how many phone lines this plan covers." });
+      return;
+    }
     setNotice(null);
     startTransition(async () => {
       const result = await assignServiceAction({
         profileId: client.id,
         serviceType: assignType,
         tier: assignTier,
+        lineCount,
       });
       if (!result.ok) {
         setNotice({ kind: "error", text: result.error });
@@ -249,6 +260,7 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
       }
       setAssignType("");
       setAssignTier("");
+      setAssignLines("1");
       setNotice({ kind: "ok", text: "Service added. Set up its billing below." });
     });
   }
@@ -295,6 +307,19 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
               ))}
           </select>
         </label>
+        {perLine && (
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+            Phone lines
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={assignLines}
+              onChange={(e) => setAssignLines(e.target.value)}
+              className={`${adminInputClass} sm:w-24`}
+            />
+          </label>
+        )}
         <button
           type="submit"
           disabled={pending || !assignType || !assignTier}
@@ -526,6 +551,9 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
     service.monthly_amount_cents != null ? (service.monthly_amount_cents / 100).toFixed(2) : "",
   );
   const [dueOn, setDueOn] = useState(service.next_due_on ?? "");
+  const [lines, setLines] = useState(String(service.line_count));
+
+  const perLine = isPerLineService(service.service_type, service.tier);
 
   // Prefill the received amount with one full invoice (monthly rate x
   // interval, pre-tax); the admin adjusts for tax or partial payments.
@@ -553,6 +581,31 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                 service.stripe_subscription_id
                   ? " Their automatic card payments now charge the new plan's rate; the next invoice reflects it."
                   : " The client dashboard reflects this immediately."
+              }`,
+            }
+          : { kind: "error", text: result.error },
+      );
+    });
+  }
+
+  function saveLines() {
+    const lineCount = Number.parseInt(lines, 10);
+    if (!Number.isFinite(lineCount) || lineCount < 1) {
+      setNotice({ kind: "error", text: "Enter how many phone lines this plan covers." });
+      return;
+    }
+    if (lineCount === service.line_count) return;
+    setNotice(null);
+    startTransition(async () => {
+      const result = await updateServiceLineCountAction({ serviceId: service.id, lineCount });
+      setNotice(
+        result.ok
+          ? {
+              kind: "ok",
+              text: `Now billing for ${lineCount} line${lineCount === 1 ? "" : "s"}.${
+                service.stripe_subscription_id
+                  ? " Their automatic card payments charge the new total from the next invoice."
+                  : ""
               }`,
             }
           : { kind: "error", text: result.error },
@@ -685,6 +738,26 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
             ))}
           </select>
         </label>
+        {perLine && (
+          <>
+            <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+              Phone lines
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={lines}
+                onChange={(e) => setLines(e.target.value)}
+                className={`${adminInputClass} sm:w-24`}
+              />
+            </label>
+            {lines !== String(service.line_count) && (
+              <button type="button" disabled={pending} onClick={saveLines} className={buttonSecondary}>
+                {pending ? "Saving..." : "Save Lines"}
+              </button>
+            )}
+          </>
+        )}
         <div className="flex flex-wrap items-center gap-2 sm:items-end sm:gap-3">
           {service.status === "cancelled" || service.status === "paused" ? (
             <button
@@ -782,7 +855,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
             Number.isFinite(Number.parseFloat(amount)) && (
               <p className="w-full text-xs text-white/40">
                 Yearly invoice: ${(Number.parseFloat(amount) * 12).toFixed(2)} plus tax
-                (monitoring is billed once a year).
+                (billed once a year).
               </p>
             )}
         </div>
@@ -797,6 +870,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                     {formatCents(invoiceCents)} plus tax
                     {service.billing_interval === "annual" ? " per year" : " per month"}
                   </span>
+                  {perLine && ` for ${service.line_count} line${service.line_count === 1 ? "" : "s"}`}
                   {". "}
                 </>
               )}

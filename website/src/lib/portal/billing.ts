@@ -15,6 +15,27 @@ export const MONITORING_MONTHLY_CENTS: Record<string, number> = {
   cellular_tc_home: 4495,
 };
 
+/**
+ * VoIP pricing (stakeholder 2026-07-18, R42): per month, PLUS TAX, billed
+ * MONTHLY. Interim rates while the tier structure settles (D14); professional
+ * is PER LINE, so a service's stored amount is this rate times its line_count.
+ */
+export const VOIP_MONTHLY_CENTS: Record<string, number> = {
+  residential: 3499,
+  professional: 5999,
+};
+
+/**
+ * The confirmed monthly rate for a plan, or null when the plan has no fixed
+ * rate yet (cloud backup ships with Track 2). Per-line plans return the
+ * single-line rate; multiply by the service's line_count for the total.
+ */
+export function planMonthlyCents(serviceType: string, tier: string): number | null {
+  if (serviceType === "monitoring") return MONITORING_MONTHLY_CENTS[tier] ?? null;
+  if (serviceType === "voip") return VOIP_MONTHLY_CENTS[tier] ?? null;
+  return null;
+}
+
 export const BILLING_INTERVAL_LABELS: Record<BillingInterval, string> = {
   monthly: "Monthly",
   annual: "Annual (12 months per invoice)",

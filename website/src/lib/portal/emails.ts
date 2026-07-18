@@ -290,6 +290,7 @@ function dollars(cents: number): string {
 const SERVICE_LABELS: Record<string, string> = {
   monitoring: "Security Monitoring",
   cloud_backup: "Camera Cloud Backup",
+  voip: "VoIP Phone Service",
 };
 
 /** Manual-rail reminder (R22): sent by the daily cron before due and when overdue. */

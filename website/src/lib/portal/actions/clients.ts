@@ -8,7 +8,8 @@ import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
 import { sendInvitationEmail } from "@/lib/portal/emails";
-import { MONITORING_MONTHLY_CENTS } from "@/lib/portal/billing";
+import { planMonthlyCents } from "@/lib/portal/billing";
+import { isPerLineService } from "@/lib/portal/service-labels";
 import { getStripeClient, isStripeConfigured } from "@/lib/portal/stripe";
 import { siteConfig } from "@/lib/site-config";
 
@@ -19,6 +20,9 @@ const createClientSchema = z.object({
   address: z.string().trim().max(300),
   monitoringTier: z.enum(["", "landline", "cellular", "cellular_tc", "cellular_tc_home"]),
   cloudTier: z.enum(["", "7day", "30day", "90day"]),
+  // VoIP phone service (R42): optional plan; professional is per line.
+  voipTier: z.enum(["", "residential", "professional"]),
+  voipLines: z.number().int().min(1).max(100),
   // Stakeholder 2026-07-06: billing is chosen at creation. Autopay is the
   // default; the client is asked for their card as part of activation.
   billingMethod: z.enum(["stripe", "manual"]),
@@ -60,7 +64,8 @@ export async function createClientAction(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { firstName, lastName, email, address, monitoringTier, cloudTier, billingMethod } = parsed.data;
+  const { firstName, lastName, email, address, monitoringTier, cloudTier, voipTier, voipLines, billingMethod } =
+    parsed.data;
 
   const { raw, hash } = generateInvitationToken();
   const supabase = await createPortalServerClient();
@@ -74,6 +79,8 @@ export async function createClientAction(
     p_cloud_tier: cloudTier,
     p_token_hash: hash,
     p_target_email: email || "",
+    p_voip_tier: voipTier,
+    p_voip_lines: isPerLineService("voip", voipTier) ? voipLines : 1,
   });
 
   if (error || !profileId) {
@@ -84,7 +91,7 @@ export async function createClientAction(
   // The RPC created the services on the default (manual) rail; apply the
   // chosen billing method to all of them. Autopay clients are asked for
   // their card right on the dashboard after activation.
-  if (monitoringTier || cloudTier) {
+  if (monitoringTier || cloudTier || voipTier) {
     const { error: railError } = await supabase
       .from("services")
       .update({ billing_method: billingMethod })
@@ -92,15 +99,26 @@ export async function createClientAction(
     if (railError) console.error("[portal] billing method set failed:", railError);
   }
 
-  // The RPC created the monitoring service as annual-invoiced; prefill the
-  // confirmed monthly rate here so pricing has a single source (billing.ts).
-  if (monitoringTier && MONITORING_MONTHLY_CENTS[monitoringTier]) {
+  // Prefill the confirmed monthly rate on each priced service so pricing has
+  // a single source (billing.ts). VoIP professional multiplies by lines.
+  const pricePrefills: { serviceType: "monitoring" | "voip"; tier: string; lines: number }[] = [];
+  if (monitoringTier) pricePrefills.push({ serviceType: "monitoring", tier: monitoringTier, lines: 1 });
+  if (voipTier) {
+    pricePrefills.push({
+      serviceType: "voip",
+      tier: voipTier,
+      lines: isPerLineService("voip", voipTier) ? voipLines : 1,
+    });
+  }
+  for (const prefill of pricePrefills) {
+    const rate = planMonthlyCents(prefill.serviceType, prefill.tier);
+    if (rate == null) continue;
     const { error: priceError } = await supabase
       .from("services")
-      .update({ monthly_amount_cents: MONITORING_MONTHLY_CENTS[monitoringTier] })
+      .update({ monthly_amount_cents: rate * prefill.lines })
       .eq("profile_id", profileId)
-      .eq("service_type", "monitoring");
-    if (priceError) console.error("[portal] monitoring price prefill failed:", priceError);
+      .eq("service_type", prefill.serviceType);
+    if (priceError) console.error(`[portal] ${prefill.serviceType} price prefill failed:`, priceError);
   }
 
   const activateUrl = `${await getOrigin()}/account/activate?token=${raw}`;
