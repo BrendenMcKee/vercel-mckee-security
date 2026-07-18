@@ -82,32 +82,31 @@ export async function sendInvitationEmail({
 }): Promise<boolean> {
   const meta = {
     emoji: "🔐",
-    title: "Your Client Portal Invitation",
-    inboxLabel: "McKee Security account activation",
+    title: "Your McKee Security Portal Is Ready",
+    inboxLabel: "A simpler way to manage your account",
   };
 
   const fields: EmailField[] = [
     {
       label: "Welcome",
-      value: `Hi ${firstName},\n\nMcKee Security has created a client portal account for you. Use it to view your services, manage your alarm contact list, and keep your account details current.`,
+      value: `Hi ${firstName},\n\nWe're making it easier to manage your McKee Security account. Your new secure portal gives you one place to review your services, manage billing, and keep important account information up to date.`,
     },
     {
-      label: "Activate your account",
-      value:
-        "Click the button below to choose how you sign in: continue with Google or set a password.",
+      label: "Get started",
+      value: "Set up your account to choose your preferred sign-in and access your portal. It only takes about a minute.",
       href: activateUrl,
       cta: true,
-      buttonLabel: "Activate My Account",
+      buttonLabel: "Set Up My Account",
     },
     {
-      label: "Link expires",
-      value: `${formatExpiry(expiresAt)} ET. If it expires, contact McKee Security and we will send a fresh one.`,
+      label: "Secure link",
+      value: `This link works until ${formatExpiry(expiresAt)} ET. Need a new one? Contact us and we'll send it.`,
     },
   ];
 
   return dispatchPortalEmail("Invitation email", {
     to,
-    subject: "Activate your McKee Security client portal account",
+    subject: "Your McKee Security portal is ready",
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
