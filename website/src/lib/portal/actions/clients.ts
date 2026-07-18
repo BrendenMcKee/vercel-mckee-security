@@ -9,7 +9,11 @@ import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
 import { sendInvitationEmail } from "@/lib/portal/emails";
 import { planMonthlyCents } from "@/lib/portal/billing";
-import { isPerLineService } from "@/lib/portal/service-labels";
+import {
+  CLOUD_BACKUP_DEVELOPMENT_MESSAGE,
+  isPerLineService,
+  isServiceAvailable,
+} from "@/lib/portal/service-labels";
 import { getStripeClient, isStripeConfigured } from "@/lib/portal/stripe";
 import { siteConfig } from "@/lib/site-config";
 
@@ -66,6 +70,12 @@ export async function createClientAction(
   }
   const { firstName, lastName, email, address, monitoringTier, cloudTier, voipTier, voipLines, billingMethod } =
     parsed.data;
+
+  // Keep the future service visible in the form without allowing a stale UI
+  // or hand-crafted server-action request to assign it before Track 2 ships.
+  if (cloudTier && !isServiceAvailable("cloud_backup")) {
+    return { ok: false, error: CLOUD_BACKUP_DEVELOPMENT_MESSAGE };
+  }
 
   const { raw, hash } = generateInvitationToken();
   const supabase = await createPortalServerClient();

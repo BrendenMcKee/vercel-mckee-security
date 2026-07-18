@@ -19,6 +19,7 @@ import {
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
   isPerLineService,
+  isServiceAvailable,
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
@@ -225,6 +226,52 @@ export type CardPaymentEntry = {
   amountCents: number | null;
 };
 
+const CLOUD_BACKUP_AVAILABLE = isServiceAvailable("cloud_backup");
+
+function CloudBackupDevelopmentCard() {
+  if (CLOUD_BACKUP_AVAILABLE) return null;
+
+  return (
+    <div
+      aria-disabled
+      className="rounded-xl border border-dashed border-white/10 bg-white/2.5 p-4 opacity-75"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-bold text-white">{SERVICE_TYPE_LABELS.cloud_backup}</p>
+          <p className="mt-1 text-xs text-white/45">
+            Secure off-site retention for IP-camera footage
+          </p>
+        </div>
+        <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white/65">
+          In Development
+        </span>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-white/45">
+        Planned retention options:{" "}
+        {SERVICE_TIERS.cloud_backup.map(tierLabel).join(" · ")}. This template
+        will unlock after the camera ingestion and retrieval system is ready.
+      </p>
+      <label className="mt-3 flex max-w-sm flex-col gap-1.5 text-sm text-white/60">
+        Retention plan
+        <select
+          value=""
+          disabled
+          aria-label="Camera Cloud Backup retention plan, in development"
+          className={`${adminSelectClass} cursor-not-allowed text-white/40`}
+        >
+          <option value="">Available after launch</option>
+          {SERVICE_TIERS.cloud_backup.map((tier) => (
+            <option key={tier} value={tier}>
+              {tierOptionLabel("cloud_backup", tier)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
@@ -233,7 +280,9 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   const [assignLines, setAssignLines] = useState("1");
 
   const unassignedTypes = (Object.keys(SERVICE_TIERS) as ServiceType[]).filter(
-    (type) => !client.services.some((s) => s.service_type === type),
+    (type) =>
+      isServiceAvailable(type) &&
+      !client.services.some((s) => s.service_type === type),
   );
   if (unassignedTypes.length === 0) return null;
 
@@ -1045,6 +1094,10 @@ function ServicesBillingCard({
         {client.services.map((service) => (
           <ServiceRow key={service.id} service={service} />
         ))}
+
+        {!client.services.some(
+          (service) => service.service_type === "cloud_backup",
+        ) && <CloudBackupDevelopmentCard />}
 
         <AddServiceForm client={client} />
 

@@ -12,6 +12,7 @@ import {
 import {
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
+  isServiceAvailable,
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
@@ -41,6 +42,7 @@ const EMPTY_FORM: CreateClientInput = {
 };
 
 const PAGE_SIZE = 25;
+const CLOUD_BACKUP_AVAILABLE = isServiceAvailable("cloud_backup");
 
 type SortKey = "name" | "email" | "status" | "created";
 type SortDir = "asc" | "desc";
@@ -140,7 +142,11 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
   const tierOptions =
     serviceFilter && serviceFilter !== "none"
       ? SERVICE_TIERS[serviceFilter]
-      : [...SERVICE_TIERS.monitoring, ...SERVICE_TIERS.voip, ...SERVICE_TIERS.cloud_backup];
+      : [
+          ...SERVICE_TIERS.monitoring,
+          ...SERVICE_TIERS.voip,
+          ...(CLOUD_BACKUP_AVAILABLE ? SERVICE_TIERS.cloud_backup : []),
+        ];
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -301,7 +307,10 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             <option value="">All services</option>
             <option value="monitoring">{SERVICE_TYPE_LABELS.monitoring}</option>
             <option value="voip">{SERVICE_TYPE_LABELS.voip}</option>
-            <option value="cloud_backup">{SERVICE_TYPE_LABELS.cloud_backup}</option>
+            <option value="cloud_backup" disabled={!CLOUD_BACKUP_AVAILABLE}>
+              {SERVICE_TYPE_LABELS.cloud_backup}
+              {!CLOUD_BACKUP_AVAILABLE ? " (In Development)" : ""}
+            </option>
             <option value="none">No services</option>
           </select>
           {serviceFilter !== "none" && (
@@ -478,18 +487,42 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 </label>
               </div>
 
-              <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
-                <p className="text-sm font-bold text-white">
-                  {SERVICE_TYPE_LABELS.cloud_backup}
+              <div
+                aria-disabled={!CLOUD_BACKUP_AVAILABLE}
+                className={`space-y-3 rounded-xl border p-4 ${
+                  CLOUD_BACKUP_AVAILABLE
+                    ? "border-white/10 bg-black/20"
+                    : "border-dashed border-white/10 bg-white/2.5 opacity-75"
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-white">
+                    {SERVICE_TYPE_LABELS.cloud_backup}
+                  </p>
+                  {!CLOUD_BACKUP_AVAILABLE && (
+                    <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white/65">
+                      In Development
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs leading-relaxed text-white/45">
+                  {CLOUD_BACKUP_AVAILABLE
+                    ? "Choose how long camera footage is retained off-site."
+                    : `Planned retention options: ${SERVICE_TIERS.cloud_backup
+                        .map(tierLabel)
+                        .join(" · ")}. Assignment and billing unlock after Track 2 launches.`}
                 </p>
                 <label className="flex flex-col gap-1.5 text-sm text-white/80">
                   Plan
                   <select
                     value={form.cloudTier}
                     onChange={(e) => set("cloudTier", e.target.value as CreateClientInput["cloudTier"])}
-                    className={selectClass}
+                    disabled={!CLOUD_BACKUP_AVAILABLE}
+                    className={`${selectClass} disabled:cursor-not-allowed disabled:text-white/40`}
                   >
-                    <option value="">None</option>
+                    <option value="">
+                      {CLOUD_BACKUP_AVAILABLE ? "None" : "Available after launch"}
+                    </option>
                     {SERVICE_TIERS.cloud_backup.map((tier) => (
                       <option key={tier} value={tier}>
                         {tierOptionLabel("cloud_backup", tier)}

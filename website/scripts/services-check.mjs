@@ -5,7 +5,7 @@
 //  - admin tier change shows on the client dashboard on next load
 //  - client session has no write path to `services` (RLS write attempts fail)
 //  - admin client detail renders; non-existent client 404s
-//  - client dashboard hides the cloud card when no cloud service exists
+//  - cloud backup stays a visible client preview and a disabled admin template
 
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -98,14 +98,17 @@ try {
     if (error) throw error;
   }
 
-  // --- Client dashboard shows the assigned tier, no cloud card -------------
+  // --- Client dashboard shows the assigned tier + future cloud preview -----
   {
     const res = await fetch(`${baseUrl}/user-dashboard`, {
       headers: { cookie: clientSession.cookieHeader() },
     });
     const html = await res.text();
     check("client dashboard shows monitoring tier Telephone Land Line", res.status === 200 && html.includes("Telephone Land Line"), `status=${res.status}`);
-    check("cloud backup card hidden when client has no cloud service", !html.includes("Camera Cloud Backup"));
+    check(
+      "cloud backup preview appears when client has no cloud service",
+      html.includes("Camera Cloud Backup") && html.includes("Notify Me When Available"),
+    );
     check("client dashboard exposes no tier controls", !html.includes("<select"));
   }
 
@@ -152,7 +155,27 @@ try {
     check("tier change appears on client dashboard next load", res.status === 200 && html.includes("Cellular + Total Connect 2.0"), `status=${res.status}`);
   }
 
-  // --- Admin assigns cloud service; card appears ----------------------------
+  // --- Admin sees a disabled cloud-backup planning template ----------------
+  {
+    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}`, {
+      headers: { cookie: adminSession.cookieHeader() },
+    });
+    const html = await res.text();
+    check(
+      "admin cloud backup template is visibly in development",
+      res.status === 200 &&
+        html.includes("Camera Cloud Backup") &&
+        html.includes("In Development") &&
+        html.includes("Available after launch") &&
+        html.includes("7-Day Retention") &&
+        html.includes("30-Day Retention") &&
+        html.includes("90-Day Retention"),
+      `status=${res.status}`,
+    );
+  }
+
+  // --- Direct RLS fixture proves an assigned future service still renders --
+  // The normal portal assignment actions are feature-gated until Track 2.
   {
     const { error } = await adminSession.ssr.from("services").insert({
       profile_id: clientUser.profileId,

@@ -23,6 +23,26 @@ export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   voip: "VoIP Phone Service",
 };
 
+export type ServiceLaunchStatus = "available" | "in_development";
+
+/**
+ * Product-level feature gate. Camera Cloud Backup stays visible as a planning
+ * template, but cannot be assigned until Track 2's ingestion and retrieval
+ * gates have passed. Flip this only as part of that launch.
+ */
+export const SERVICE_LAUNCH_STATUS: Record<ServiceType, ServiceLaunchStatus> = {
+  monitoring: "available",
+  cloud_backup: "in_development",
+  voip: "available",
+};
+
+export const CLOUD_BACKUP_DEVELOPMENT_MESSAGE =
+  "Camera Cloud Backup is still in development and cannot be assigned yet.";
+
+export function isServiceAvailable(serviceType: ServiceType): boolean {
+  return SERVICE_LAUNCH_STATUS[serviceType] === "available";
+}
+
 const TIER_LABELS: Record<string, string> = {
   landline: "Telephone Land Line",
   cellular: "Cellular Communicator",

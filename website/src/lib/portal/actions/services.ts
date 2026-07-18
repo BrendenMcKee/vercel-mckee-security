@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SESSION_ERROR_MESSAGE, tryRequireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
-import { SERVICE_TIERS, isPerLineService } from "@/lib/portal/service-labels";
+import {
+  CLOUD_BACKUP_DEVELOPMENT_MESSAGE,
+  SERVICE_TIERS,
+  isPerLineService,
+  isServiceAvailable,
+} from "@/lib/portal/service-labels";
 import { planMonthlyCents } from "@/lib/portal/billing";
 import { getStripeClient, isStripeConfigured, priceIdFor } from "@/lib/portal/stripe";
 
@@ -34,6 +39,10 @@ export async function assignServiceAction(input: {
   const parsed = assignSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input." };
   const { profileId, serviceType, tier } = parsed.data;
+
+  if (!isServiceAvailable(serviceType)) {
+    return { ok: false, error: CLOUD_BACKUP_DEVELOPMENT_MESSAGE };
+  }
 
   if (!SERVICE_TIERS[serviceType].includes(tier)) {
     return { ok: false, error: "That tier does not exist for this service." };
