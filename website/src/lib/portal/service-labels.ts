@@ -32,12 +32,16 @@ const TIER_LABELS: Record<string, string> = {
   "30day": "30-Day Retention",
   "90day": "90-Day Retention",
   residential: "Residential Unlimited Canada-Wide",
-  professional: "VoIP Professional (per line)",
+  professional: "Business",
 };
 
-/** Service types whose plans are priced per line (Stripe quantity = lines). */
-export function isPerLineService(serviceType: string, tier: string): boolean {
-  return serviceType === "voip" && tier === "professional";
+/**
+ * Service types whose plans are priced per line (Stripe quantity = lines).
+ * Every VoIP plan is per line (stakeholder 2026-07-18): even residential
+ * customers can carry more than one line (a fax line, for example).
+ */
+export function isPerLineService(serviceType: string, _tier?: string): boolean {
+  return serviceType === "voip";
 }
 
 export function tierLabel(tier: string): string {

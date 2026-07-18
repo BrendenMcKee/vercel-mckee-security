@@ -111,7 +111,7 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
-      // Per-line plans (VoIP professional) charge rate x lines via quantity.
+      // Per-line plans (all VoIP plans) charge rate x lines via quantity.
       line_items: [{ price: priceId, quantity: service.line_count ?? 1 }],
       success_url: `${origin}/user-dashboard?payment=success`,
       cancel_url: `${origin}/user-dashboard?payment=cancelled`,

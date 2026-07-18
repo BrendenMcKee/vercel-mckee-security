@@ -20,7 +20,7 @@ const createClientSchema = z.object({
   address: z.string().trim().max(300),
   monitoringTier: z.enum(["", "landline", "cellular", "cellular_tc", "cellular_tc_home"]),
   cloudTier: z.enum(["", "7day", "30day", "90day"]),
-  // VoIP phone service (R42): optional plan; professional is per line.
+  // VoIP phone service (R42): optional plan; every VoIP plan is per line.
   voipTier: z.enum(["", "residential", "professional"]),
   voipLines: z.number().int().min(1).max(100),
   // Stakeholder 2026-07-06: billing is chosen at creation. Autopay is the

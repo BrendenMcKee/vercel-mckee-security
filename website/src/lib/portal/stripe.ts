@@ -10,8 +10,9 @@ import Stripe from "stripe";
  *     (annual-interval prices: 12 x the monthly rate, plus tax via Stripe Tax
  *      or a tax rate; monitoring is invoiced annually per the site terms)
  *   STRIPE_PRICE_VOIP_RESIDENTIAL / _PROFESSIONAL
- *     (monthly-interval prices; professional is per line, charged with the
- *      subscription quantity set to the service's line_count)
+ *     (monthly-interval prices; every VoIP plan is per line, charged with the
+ *      subscription quantity set to the service's line_count. "professional"
+ *      is displayed as "Business" in the portal)
  *   STRIPE_PRICE_CLOUD_7DAY / _30DAY / _90DAY   (Track 2; test mode only)
  *
  * Client code never sees or sends price IDs; checkout reads the admin-assigned

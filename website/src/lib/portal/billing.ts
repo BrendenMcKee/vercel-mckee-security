@@ -17,8 +17,9 @@ export const MONITORING_MONTHLY_CENTS: Record<string, number> = {
 
 /**
  * VoIP pricing (stakeholder 2026-07-18, R42): per month, PLUS TAX, billed
- * MONTHLY. Interim rates while the tier structure settles (D14); professional
- * is PER LINE, so a service's stored amount is this rate times its line_count.
+ * MONTHLY. Interim rates while the tier structure settles (D14). Every VoIP
+ * plan is PER LINE, so a service's stored amount is this rate times its
+ * line_count. `professional` is displayed as "Business".
  */
 export const VOIP_MONTHLY_CENTS: Record<string, number> = {
   residential: 3499,

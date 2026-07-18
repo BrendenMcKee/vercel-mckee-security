@@ -236,7 +236,7 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   );
   if (unassignedTypes.length === 0) return null;
 
-  const perLine = assignType !== "" && isPerLineService(assignType, assignTier);
+  const perLine = assignType !== "" && isPerLineService(assignType);
 
   function assign(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -307,19 +307,20 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
               ))}
           </select>
         </label>
-        {perLine && (
-          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
-            Phone lines
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={assignLines}
-              onChange={(e) => setAssignLines(e.target.value)}
-              className={`${adminInputClass} sm:w-24`}
-            />
-          </label>
-        )}
+        <label
+          className={`flex min-w-0 flex-col gap-1.5 text-sm transition-opacity ${perLine ? "text-white/80" : "pointer-events-none text-white/80 opacity-40"}`}
+        >
+          Phone lines
+          <input
+            type="number"
+            min={1}
+            max={100}
+            disabled={!perLine}
+            value={assignLines}
+            onChange={(e) => setAssignLines(e.target.value)}
+            className={`${adminInputClass} sm:w-24`}
+          />
+        </label>
         <button
           type="submit"
           disabled={pending || !assignType || !assignTier}

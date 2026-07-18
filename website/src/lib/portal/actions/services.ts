@@ -41,7 +41,7 @@ export async function assignServiceAction(input: {
 
   // The confirmed monthly rate is prefilled so reminders and revenue KPIs are
   // correct from day one. Monitoring is invoiced annually (site terms); VoIP
-  // bills monthly (R42), professional per line via line_count.
+  // bills monthly (R42), per line via line_count.
   const lineCount = isPerLineService(serviceType, tier) ? (parsed.data.lineCount ?? 1) : 1;
   const planRate = planMonthlyCents(serviceType, tier);
   const supabase = await createPortalServerClient();
@@ -148,7 +148,7 @@ const lineCountSchema = z.object({
 });
 
 /**
- * Line count change for per-line plans (VoIP professional, R42). On autopay
+ * Line count change for per-line plans (all VoIP plans, R42). On autopay
  * the Stripe subscription quantity is updated too, so the next invoice bills
  * the new number of lines; the stored amount re-syncs to rate times lines.
  */

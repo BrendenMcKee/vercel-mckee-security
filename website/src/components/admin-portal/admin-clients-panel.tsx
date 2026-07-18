@@ -12,7 +12,6 @@ import {
 import {
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
-  isPerLineService,
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
@@ -358,109 +357,149 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       {showForm && (
         <form
           onSubmit={submitCreate}
-          className="grid gap-4 rounded-2xl border border-white/10 bg-surface p-6 sm:grid-cols-2"
+          className="space-y-6 rounded-2xl border border-white/10 bg-surface p-5 sm:p-6"
         >
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            First name *
-            <input
-              required
-              value={form.firstName}
-              onChange={(e) => set("firstName", e.target.value)}
-              className={adminInputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            Last name *
-            <input
-              required
-              value={form.lastName}
-              onChange={(e) => set("lastName", e.target.value)}
-              className={adminInputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            Email
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => set("email", e.target.value)}
-              className={adminInputClass}
-            />
-            <span className="text-xs text-white/40">
-              Invitation is emailed when set; otherwise you get a link to deliver.
-            </span>
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            Address
-            <input
-              value={form.address}
-              onChange={(e) => set("address", e.target.value)}
-              className={adminInputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            Security monitoring
-            <select
-              value={form.monitoringTier}
-              onChange={(e) => set("monitoringTier", e.target.value as CreateClientInput["monitoringTier"])}
-              className={selectClass}
-            >
-              <option value="">None</option>
-              {SERVICE_TIERS.monitoring.map((tier) => (
-                <option key={tier} value={tier}>
-                  {tierLabel(tier)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            VoIP phone service
-            <select
-              value={form.voipTier}
-              onChange={(e) => set("voipTier", e.target.value as CreateClientInput["voipTier"])}
-              className={selectClass}
-            >
-              <option value="">None</option>
-              {SERVICE_TIERS.voip.map((tier) => (
-                <option key={tier} value={tier}>
-                  {tierLabel(tier)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {isPerLineService("voip", form.voipTier) && (
-            <label className="flex flex-col gap-1.5 text-sm text-white/80">
-              Phone lines
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={form.voipLines}
-                onChange={(e) => set("voipLines", Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
-                className={adminInputClass}
-              />
-              <span className="text-xs text-white/40">
-                The professional plan is billed per line.
-              </span>
-            </label>
-          )}
-          <label className="flex flex-col gap-1.5 text-sm text-white/80">
-            Cloud backup
-            <select
-              value={form.cloudTier}
-              onChange={(e) => set("cloudTier", e.target.value as CreateClientInput["cloudTier"])}
-              className={selectClass}
-            >
-              <option value="">None</option>
-              {SERVICE_TIERS.cloud_backup.map((tier) => (
-                <option key={tier} value={tier}>
-                  {tierLabel(tier)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {(form.monitoringTier || form.cloudTier || form.voipTier) && (
-            <label className="flex flex-col gap-1.5 text-sm text-white/80">
+          <fieldset className="space-y-3">
+            <legend className="text-xs font-bold uppercase tracking-widest text-white/40">
+              Client Details
+            </legend>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                First name *
+                <input
+                  required
+                  value={form.firstName}
+                  onChange={(e) => set("firstName", e.target.value)}
+                  className={adminInputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Last name *
+                <input
+                  required
+                  value={form.lastName}
+                  onChange={(e) => set("lastName", e.target.value)}
+                  className={adminInputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Email
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => set("email", e.target.value)}
+                  className={adminInputClass}
+                />
+                <span className="text-xs text-white/40">
+                  Invitation is emailed when set; otherwise you get a link to deliver.
+                </span>
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Address
+                <input
+                  value={form.address}
+                  onChange={(e) => set("address", e.target.value)}
+                  className={adminInputClass}
+                />
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="text-xs font-bold uppercase tracking-widest text-white/40">
+              Services
+            </legend>
+            <p className="text-xs text-white/40">
+              Pick the plans this client is signing up for. Any service can also be added later
+              from their detail page.
+            </p>
+            <div className="grid gap-3 lg:grid-cols-3">
+              <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm font-bold text-white">
+                  {SERVICE_TYPE_LABELS.monitoring}
+                </p>
+                <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                  Plan
+                  <select
+                    value={form.monitoringTier}
+                    onChange={(e) => set("monitoringTier", e.target.value as CreateClientInput["monitoringTier"])}
+                    className={selectClass}
+                  >
+                    <option value="">None</option>
+                    {SERVICE_TIERS.monitoring.map((tier) => (
+                      <option key={tier} value={tier}>
+                        {tierLabel(tier)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm font-bold text-white">{SERVICE_TYPE_LABELS.voip}</p>
+                <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                  Plan
+                  <select
+                    value={form.voipTier}
+                    onChange={(e) => set("voipTier", e.target.value as CreateClientInput["voipTier"])}
+                    className={selectClass}
+                  >
+                    <option value="">None</option>
+                    {SERVICE_TIERS.voip.map((tier) => (
+                      <option key={tier} value={tier}>
+                        {tierLabel(tier)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label
+                  className={`flex flex-col gap-1.5 text-sm transition-opacity ${form.voipTier ? "text-white/80" : "pointer-events-none opacity-40"}`}
+                >
+                  Phone lines
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    disabled={!form.voipTier}
+                    value={form.voipLines}
+                    onChange={(e) => set("voipLines", Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
+                    className={adminInputClass}
+                  />
+                  <span className="text-xs text-white/40">
+                    All VoIP plans are billed per line. Count every line, including
+                    extras like a fax line.
+                  </span>
+                </label>
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm font-bold text-white">
+                  {SERVICE_TYPE_LABELS.cloud_backup}
+                </p>
+                <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                  Plan
+                  <select
+                    value={form.cloudTier}
+                    onChange={(e) => set("cloudTier", e.target.value as CreateClientInput["cloudTier"])}
+                    className={selectClass}
+                  >
+                    <option value="">None</option>
+                    {SERVICE_TIERS.cloud_backup.map((tier) => (
+                      <option key={tier} value={tier}>
+                        {tierLabel(tier)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-3">
+            <legend className="text-xs font-bold uppercase tracking-widest text-white/40">
+              Billing
+            </legend>
+            <label className="flex max-w-md flex-col gap-1.5 text-sm text-white/80">
               How will they pay?
               <select
                 value={form.billingMethod}
@@ -476,8 +515,9 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   : "You will record payments by hand and the system sends the client due-date reminders."}
               </span>
             </label>
-          )}
-          <div className="sm:col-span-2">
+          </fieldset>
+
+          <div>
             <button
               type="submit"
               disabled={pending}

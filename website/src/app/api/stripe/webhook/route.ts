@@ -262,7 +262,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     }
   }
 
-  // Line-count sync for per-line plans (VoIP professional, R42): the Stripe
+  // Line-count sync for per-line plans (all VoIP plans, R42): the Stripe
   // subscription quantity is what actually gets charged, so it drives the
   // stored line_count and the display amount.
   const quantity = subscription.items.data[0]?.quantity;

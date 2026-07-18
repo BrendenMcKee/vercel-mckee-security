@@ -1,12 +1,14 @@
 // One-shot: create the VoIP products + monthly CAD prices in Stripe (R42).
 // Idempotent: products are found again by their metadata marker, so re-runs
-// never duplicate. Prints the env var lines to add.
+// never duplicate (name/description are re-synced on existing products).
+// Prints the env var lines to add.
 //
 //   node --env-file=.env.local scripts/stripe-voip-setup.mjs
 //
-// Pricing (stakeholder 2026-07-18, interim while the tier structure settles):
-//   residential   $34.99/month + tax   flat
-//   professional  $59.99/month + tax   PER LINE (subscription quantity = lines)
+// Pricing (stakeholder 2026-07-18, interim while the tier structure settles).
+// EVERY plan is PER LINE (subscription quantity = the service's line_count):
+//   residential                          $34.99/month + tax per line
+//   professional (displayed "Business")  $59.99/month + tax per line
 import Stripe from "stripe";
 
 const key = process.env.STRIPE_SECRET_KEY;
@@ -23,14 +25,15 @@ const PLANS = [
     marker: "mckee_voip_residential",
     envVar: "STRIPE_PRICE_VOIP_RESIDENTIAL",
     name: "McKee Security VoIP Residential",
-    description: "Residential VoIP phone service. Unlimited Canada-wide calling, all features included.",
+    description:
+      "Residential VoIP phone service, billed per line. Unlimited Canada-wide calling, all features included.",
     unitAmount: 3499,
   },
   {
     marker: "mckee_voip_professional",
     envVar: "STRIPE_PRICE_VOIP_PROFESSIONAL",
-    name: "McKee Security VoIP Professional",
-    description: "Professional VoIP phone service, billed per line.",
+    name: "McKee Security VoIP Business",
+    description: "Business VoIP phone service, billed per line.",
     unitAmount: 5999,
   },
 ];
@@ -43,7 +46,15 @@ for (const plan of PLANS) {
   });
   let product = existing.data[0];
   if (product) {
-    console.log(`Product exists: ${product.name} (${product.id})`);
+    if (product.name !== plan.name || product.description !== plan.description) {
+      product = await stripe.products.update(product.id, {
+        name: plan.name,
+        description: plan.description,
+      });
+      console.log(`Product renamed: ${product.name} (${product.id})`);
+    } else {
+      console.log(`Product exists: ${product.name} (${product.id})`);
+    }
   } else {
     product = await stripe.products.create({
       name: plan.name,
