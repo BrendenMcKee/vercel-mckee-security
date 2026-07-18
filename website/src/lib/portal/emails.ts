@@ -81,7 +81,7 @@ export async function sendInvitationEmail({
   expiresAt: string;
 }): Promise<boolean> {
   const meta = {
-    emoji: "🔐",
+    emoji: "✓",
     title: "Your McKee Security Portal Is Ready",
     inboxLabel: "A simpler way to manage your account",
   };

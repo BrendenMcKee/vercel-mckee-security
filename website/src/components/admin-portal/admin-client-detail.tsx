@@ -963,10 +963,12 @@ function ServicesBillingCard({
   client,
   manualPayments,
   cardPayments,
+  cloudBackupInterest,
 }: {
   client: AdminClientDetailRow;
   manualPayments: Tables<"manual_payments">[];
   cardPayments: CardPaymentEntry[];
+  cloudBackupInterest: Tables<"cloud_backup_interest"> | null;
 }) {
   const serviceLabel = (serviceId: string | null) => {
     const service = serviceId ? client.services.find((s) => s.id === serviceId) : null;
@@ -1006,6 +1008,33 @@ function ServicesBillingCard({
         record it here. Recorded payments can&apos;t be edited afterwards; if
         you make a mistake, record a correcting entry (a negative amount works).
       </p>
+
+      {cloudBackupInterest &&
+        !client.services.some(
+          (service) =>
+            service.service_type === "cloud_backup" &&
+            service.status !== "cancelled",
+        ) && (
+          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
+              Camera Cloud Backup Interest
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-emerald-100/80">
+              This client asked to be contacted when Camera Cloud Backup becomes
+              available. Opted in{" "}
+              {new Date(cloudBackupInterest.consented_at).toLocaleDateString(
+                "en-CA",
+                {
+                  timeZone: "America/Toronto",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                },
+              )}{" "}
+              using {cloudBackupInterest.email}.
+            </p>
+          </div>
+        )}
 
       <div className="mt-4 space-y-4">
         {client.services.length === 0 && (
@@ -1475,6 +1504,7 @@ export function AdminClientDetail({
   devices,
   manualPayments,
   cardPayments,
+  cloudBackupInterest,
 }: {
   client: AdminClientDetailRow;
   callerIdContacts: CallerIdContact[];
@@ -1482,11 +1512,17 @@ export function AdminClientDetail({
   devices: Tables<"devices">[];
   manualPayments: Tables<"manual_payments">[];
   cardPayments: CardPaymentEntry[];
+  cloudBackupInterest: Tables<"cloud_backup_interest"> | null;
 }) {
   return (
     <div className="space-y-6">
       <ProfileCard client={client} />
-      <ServicesBillingCard client={client} manualPayments={manualPayments} cardPayments={cardPayments} />
+      <ServicesBillingCard
+        client={client}
+        manualPayments={manualPayments}
+        cardPayments={cardPayments}
+        cloudBackupInterest={cloudBackupInterest}
+      />
       <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
       <DevicesCard client={client} devices={devices} />
       <InvitationCard client={client} />

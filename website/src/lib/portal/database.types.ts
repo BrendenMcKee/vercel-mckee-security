@@ -141,6 +141,35 @@ export type Database = {
           },
         ]
       }
+      cloud_backup_interest: {
+        Row: {
+          consent_version: string
+          consented_at: string
+          email: string
+          profile_id: string
+        }
+        Insert: {
+          consent_version?: string
+          consented_at?: string
+          email: string
+          profile_id: string
+        }
+        Update: {
+          consent_version?: string
+          consented_at?: string
+          email?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cloud_backup_interest_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devices: {
         Row: {
           category: string

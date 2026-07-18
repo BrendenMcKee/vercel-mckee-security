@@ -19,6 +19,7 @@ const ACTION_GREEN = "#16a34a";
 const ACTION_GREEN_DARK = "#15803d";
 const ACTION_SOFT = "rgba(22, 163, 74, 0.12)";
 const ACTION_BORDER = "rgba(22, 163, 74, 0.34)";
+const BRAND_MARK_URL = `${siteConfig.url}/images/favicon-192.png`;
 
 export type EmailField = {
   label: string;
@@ -136,7 +137,7 @@ function renderCtaRow(field: EmailField): string {
             <tr>
               <td align="center" bgcolor="${ACTION_GREEN}" style="border-radius:10px;background-image:linear-gradient(135deg, ${ACTION_GREEN} 0%, ${ACTION_GREEN_DARK} 100%);">
                 <a href="${href}" target="_blank" rel="noopener" style="display:inline-block;padding:14px 30px;font-size:15px;font-weight:700;line-height:1;color:#ffffff;text-decoration:none;border-radius:10px;">
-                  ${buttonLabel} &rarr;
+                  ${buttonLabel}
                 </a>
               </td>
             </tr>
@@ -190,7 +191,7 @@ export function buildBrandedEmailHtml(
         .ee-pad-body { padding: 4px 14px 6px !important; }
         .ee-pad-foot { padding: 8px 14px 16px !important; }
         .ee-icon-cell { width: 44px !important; padding-right: 10px !important; }
-        .ee-icon { width: 40px !important; height: 40px !important; line-height: 40px !important; font-size: 20px !important; border-radius: 10px !important; }
+        .ee-icon { width: 40px !important; height: 40px !important; }
         .ee-title { font-size: 20px !important; }
         .ee-box { padding: 12px !important; }
         .ee-cta { padding: 14px 12px 16px !important; }
@@ -210,9 +211,14 @@ export function buildBrandedEmailHtml(
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td width="56" valign="top" class="ee-icon-cell" style="padding-right:14px;">
-                      <div class="ee-icon" style="width:52px;height:52px;border-radius:14px;background:${BRAND_RED_SOFT};border:1px solid rgba(201,24,24,0.25);text-align:center;line-height:52px;font-size:26px;">
-                        ${meta.emoji}
-                      </div>
+                      <img
+                        class="ee-icon"
+                        src="${escapeHtml(BRAND_MARK_URL)}"
+                        width="48"
+                        height="48"
+                        alt=""
+                        style="display:block;width:48px;height:48px;object-fit:contain;border:0;"
+                      />
                     </td>
                     <td valign="top">
                       <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:${MUTED};">

@@ -51,8 +51,14 @@ export default async function AdminClientDetailPage({
   }
   if (!client) notFound();
 
-  const [contactsResult, changesResult, devicesResult, paymentsResult, cardPaymentsResult] =
-    await Promise.all([
+  const [
+    contactsResult,
+    changesResult,
+    devicesResult,
+    paymentsResult,
+    cardPaymentsResult,
+    cloudInterestResult,
+  ] = await Promise.all([
       supabase
         .from("caller_id_contacts")
         .select("phone, label, passcode")
@@ -82,6 +88,11 @@ export default async function AdminClientDetailPage({
         .eq("type", "invoice.paid")
         .order("created_at", { ascending: false })
         .limit(24),
+      supabase
+        .from("cloud_backup_interest")
+        .select("*")
+        .eq("profile_id", profileId)
+        .maybeSingle(),
     ]);
 
   const subError =
@@ -89,7 +100,8 @@ export default async function AdminClientDetailPage({
     changesResult.error ??
     devicesResult.error ??
     paymentsResult.error ??
-    cardPaymentsResult.error;
+    cardPaymentsResult.error ??
+    cloudInterestResult.error;
   if (subError) {
     console.error("[portal] Admin client detail sub-queries failed:", subError);
     throw new Error("Client detail failed to load.");
@@ -119,6 +131,7 @@ export default async function AdminClientDetailPage({
           callerIdChanges={changesResult.data ?? []}
           devices={devicesResult.data ?? []}
           manualPayments={paymentsResult.data ?? []}
+          cloudBackupInterest={cloudInterestResult.data}
           cardPayments={(cardPaymentsResult.data ?? []).map((event) => {
             const payload = event.payload as { amount_paid?: number } | null;
             return {

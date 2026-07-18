@@ -18,6 +18,7 @@ import { CallerIdEditor } from "@/components/portal/caller-id-editor";
 import { PayNowButton } from "@/components/portal/pay-now-button";
 import { ManageBillingButton } from "@/components/portal/manage-billing-button";
 import { PortalCard } from "@/components/portal/portal-card";
+import { CloudBackupInterest } from "@/components/portal/cloud-backup-interest";
 
 export const metadata: Metadata = {
   title: "Manage Account",
@@ -63,8 +64,14 @@ export default async function UserDashboardPage({
   const { payment } = await searchParams;
 
   const supabase = await createPortalServerClient();
-  const [servicesResult, contactsResult, devicesResult, manualPaymentsResult, cardPaymentsResult] =
-    await Promise.all([
+  const [
+    servicesResult,
+    contactsResult,
+    devicesResult,
+    manualPaymentsResult,
+    cardPaymentsResult,
+    cloudInterestResult,
+  ] = await Promise.all([
       supabase
         .from("services")
         .select(
@@ -95,12 +102,25 @@ export default async function UserDashboardPage({
         .eq("type", "invoice.paid")
         .order("created_at", { ascending: false })
         .limit(24),
+      supabase
+        .from("cloud_backup_interest")
+        .select("profile_id, email, consented_at")
+        .eq("profile_id", profile.id)
+        .maybeSingle(),
     ]);
 
-  if (servicesResult.error || contactsResult.error || devicesResult.error) {
+  if (
+    servicesResult.error ||
+    contactsResult.error ||
+    devicesResult.error ||
+    cloudInterestResult.error
+  ) {
     console.error(
       "[portal] Client dashboard query failed:",
-      servicesResult.error ?? contactsResult.error ?? devicesResult.error,
+      servicesResult.error ??
+        contactsResult.error ??
+        devicesResult.error ??
+        cloudInterestResult.error,
     );
     throw new Error("Dashboard failed to load.");
   }
@@ -223,13 +243,13 @@ export default async function UserDashboardPage({
         </div>
       ))}
 
-      <PortalCard
-        icon="shield"
-        title={SERVICE_TYPE_LABELS.monitoring}
-        description="Your alarm monitoring plan"
-        action={monitoring ? <ServiceStatusBadge status={monitoring.status} /> : undefined}
-      >
-        {monitoring ? (
+      {monitoring && (
+        <PortalCard
+          icon="shield"
+          title={SERVICE_TYPE_LABELS.monitoring}
+          description="Your alarm monitoring plan"
+          action={<ServiceStatusBadge status={monitoring.status} />}
+        >
           <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
             <div>
               <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
@@ -257,16 +277,8 @@ export default async function UserDashboardPage({
               .
             </p>
           </div>
-        ) : (
-          <p className="border-t border-white/10 pt-5 text-sm leading-relaxed text-white/65">
-            No monitoring service on this account. Interested? Call{" "}
-            <a href="tel:+17054572156" className="font-bold text-white hover:text-primary">
-              (705) 457-2156
-            </a>{" "}
-            to get set up.
-          </p>
-        )}
-      </PortalCard>
+        </PortalCard>
+      )}
 
       {voip && (
         <PortalCard
@@ -477,6 +489,47 @@ export default async function UserDashboardPage({
                 </div>
               );
             })}
+          </div>
+        </PortalCard>
+      )}
+
+      {!monitoring && (
+        <PortalCard
+          icon="shield"
+          title={SERVICE_TYPE_LABELS.monitoring}
+          description="24/7 alarm monitoring from McKee Security"
+        >
+          <p className="border-t border-white/10 pt-5 text-sm leading-relaxed text-white/65">
+            No monitoring service is connected to this account. If you would
+            like to protect your property with professional alarm monitoring,
+            call{" "}
+            <a
+              href="tel:+17054572156"
+              className="whitespace-nowrap font-bold text-white hover:text-primary"
+            >
+              (705) 457-2156
+            </a>
+            .
+          </p>
+        </PortalCard>
+      )}
+
+      {!cloud && (
+        <PortalCard
+          icon="cloud"
+          title={SERVICE_TYPE_LABELS.cloud_backup}
+          description="Future off-site protection for your IP-camera footage"
+        >
+          <div className="space-y-4 border-t border-white/10 pt-5">
+            <p className="max-w-3xl text-sm leading-relaxed text-white/65">
+              Camera Cloud Backup will keep a secure off-site copy of your
+              IP-camera footage, helping protect it if the recorder is damaged,
+              stolen, or fails. The service is still being prepared.
+            </p>
+            <CloudBackupInterest
+              initiallyInterested={cloudInterestResult.data != null}
+              email={profile.email}
+            />
           </div>
         </PortalCard>
       )}
