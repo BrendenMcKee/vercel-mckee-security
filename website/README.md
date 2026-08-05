@@ -31,6 +31,7 @@ npm run dev    # http://localhost:3000
 | `RESEND_API_KEY` | Form notification emails (forms log to console without it) |
 | `CONTACT_EMAIL` | Inbox for form submissions |
 | `EMAIL_FROM` | Resend sender address |
+| `STARLINK_REMINDER_EMAIL` | Optional. Who gets Starlink rental reminders (comma-separated). Defaults to `andi@mckeesecurity.ca`. See [../docs/STARLINK-RENTAL-REMINDERS.md](../docs/STARLINK-RENTAL-REMINDERS.md) |
 | `DATA_DROPS_PASSWORD` | Shared access password for the Data Drops pages |
 | `DATA_DROPS_API_URL` | Optional. Defaults to `https://app-mckeesecurity.ca/api` |
 

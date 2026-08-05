@@ -7,7 +7,7 @@
 //    (due_alerted_at stamped; second run reminds 0), digest counts it
 //  - device-expiry: expired device alerted + stamped once; second run alerts 0
 //  - cleanup: expired 90d+ invitation deleted, fresh invitation kept
-//  - daily dispatcher runs all three jobs and reports per-job results
+//  - daily dispatcher runs every job and reports per-job results
 
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -38,7 +38,7 @@ const createdProfiles = [];
 
 try {
   // ---- Route auth -------------------------------------------------------------
-  for (const path of ["daily", "payment-due", "device-expiry", "cleanup"]) {
+  for (const path of ["daily", "payment-due", "device-expiry", "cleanup", "starlink-reminders"]) {
     const bare = await fetch(`${baseUrl}/api/cron/${path}`);
     check(`/api/cron/${path} rejects missing token`, bare.status === 401 || bare.status === 503, `status=${bare.status}`);
     const wrong = await fetch(`${baseUrl}/api/cron/${path}`, { headers: { authorization: "Bearer wrong" } });
@@ -146,17 +146,18 @@ try {
 
   // ---- daily dispatcher --------------------------------------------------------------
   {
+    const expected = ["payment-due", "device-expiry", "cleanup", "starlink-reminders"];
     const res = await fetch(`${baseUrl}/api/cron/daily`, authed);
     const body = await res.json();
     const jobs = body.results ?? {};
     check(
-      "daily dispatcher runs all three jobs",
-      res.status === 200 && jobs["payment-due"] && jobs["device-expiry"] && jobs["cleanup"],
+      "daily dispatcher runs every job",
+      res.status === 200 && expected.every((name) => jobs[name]),
       JSON.stringify(body),
     );
     check(
       "daily dispatcher jobs all succeed",
-      !jobs["payment-due"]?.error && !jobs["device-expiry"]?.error && !jobs["cleanup"]?.error,
+      expected.every((name) => !jobs[name]?.error),
       JSON.stringify(jobs),
     );
   }

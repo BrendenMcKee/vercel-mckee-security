@@ -876,14 +876,15 @@ Vercel-side IAM (separate from gateway credentials): list + read (+ restore for 
 
 ### 9.4 Scheduled jobs (Phase 7)
 
-`vercel.json` crons, all routes check `Authorization: Bearer ${CRON_SECRET}` (401 wrong, 503 unset). **As built (2026-07-06):** the Vercel plan is Hobby (max 2 cron jobs, daily granularity), so one scheduled route — `/api/cron/daily` at 06:00 UTC — dispatches all three jobs (each isolated: one failing never blocks the others; failures land in the Alerts tab). The individual routes below stay live for targeted manual runs and the `cron-check.mjs` gate. Job logic lives in `lib/portal/cron/{payment-due,device-expiry,cleanup}.ts`.
+`vercel.json` crons, all routes check `Authorization: Bearer ${CRON_SECRET}` (401 wrong, 503 unset). **As built (2026-07-06, Starlink reminders added 2026-08-05):** the Vercel plan is Hobby (max 2 cron jobs, daily granularity), so one scheduled route — `/api/cron/daily` at 06:00 UTC — dispatches every job (each isolated: one failing never blocks the others; failures land in the Alerts tab). The individual routes below stay live for targeted manual runs and the `cron-check.mjs` gate. Job logic lives in `lib/portal/cron/{payment-due,device-expiry,cleanup}.ts` and `lib/starlink/reminders.ts`.
 
 | Route | Schedule | Work |
 |-------|----------|------|
-| `/api/cron/daily` | daily 06:00 UTC (the only `vercel.json` entry) | runs the three jobs below in sequence |
+| `/api/cron/daily` | daily 06:00 UTC (the only `vercel.json` entry) | runs the jobs below in sequence |
 | `/api/cron/device-expiry` | via daily / manual | expired devices where `expiry_alerted_at is null` -> email admin + client, stamp `expiry_alerted_at` (R14) |
 | `/api/cron/cleanup` | via daily / manual | orphan auth users >7d, invitations expired >90d unused, rate-limit counter rows >1d; footage links past TTL joins in Track 2 |
 | `/api/cron/payment-due` | via daily / manual | manual services with `next_due_on` inside the reminder window (D11 default 7 days) or overdue and `due_alerted_at is null` -> remind client (amount for the full invoice cycle, date, instructions per D11), stamp guard; send admin the collections digest when any manual payer is due or overdue (R22, 7.3) |
+| `/api/cron/starlink-reminders` | via daily / manual | internal-only Starlink rental reminders: one-shot pickup-today and payment-before-pickup emails guarded by `rental_reminders`, plus a daily action digest (late kits, deposits to refund, unrecorded payments, unanswered requests) that repeats until the booking is put right. See [docs/STARLINK-RENTAL-REMINDERS.md](./docs/STARLINK-RENTAL-REMINDERS.md) |
 | `/api/cron/gateway-health` | every 30 min (needs Pro plan or the `pg_cron` fallback, decided in Track 2, 6A) | gateways with `last_seen_at` older than 30 min and not already alerted -> email admin; also writes the nightly `site_usage` rollup on its midnight run |
 | `/api/cron/footage-poller` | dormant | only if a Deep Archive tier is ever sold (9.3 step 4) |
 

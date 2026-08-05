@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      rental_reminders: {
+        Row: {
+          id: string
+          kind: string
+          rental_id: string
+          sent_at: string
+          sent_for: string
+        }
+        Insert: {
+          id?: string
+          kind: string
+          rental_id: string
+          sent_at?: string
+          sent_for: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          rental_id?: string
+          sent_at?: string
+          sent_for?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rental_reminders_rental_id_fkey"
+            columns: ["rental_id"]
+            isOneToOne: false
+            referencedRelation: "rentals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rentals: {
         Row: {
           amount_received: number | null

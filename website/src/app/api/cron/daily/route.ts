@@ -3,6 +3,7 @@ import { authorizeCronRequest } from "@/lib/portal/cron/auth";
 import { runPaymentDueJob } from "@/lib/portal/cron/payment-due";
 import { runDeviceExpiryJob } from "@/lib/portal/cron/device-expiry";
 import { runCleanupJob } from "@/lib/portal/cron/cleanup";
+import { runStarlinkReminderJob } from "@/lib/starlink/reminders";
 import { recordPortalAlert } from "@/lib/portal/alerts";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +11,9 @@ export const maxDuration = 300;
 
 /**
  * The single scheduled entry point (PORTAL_PLAN.md 9.4; one cron fits the
- * Vercel Hobby plan's limits). Runs all three daily jobs; a failure in one
- * never blocks the others, and every failure lands in the Alerts tab.
- * Individual /api/cron/* routes exist for targeted manual runs.
+ * Vercel Hobby plan's limits). Runs every daily job; a failure in one never
+ * blocks the others, and every failure lands in the Alerts tab. Individual
+ * /api/cron/* routes exist for targeted manual runs.
  */
 export async function GET(request: Request) {
   const denied = authorizeCronRequest(request);
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     ["payment-due", runPaymentDueJob],
     ["device-expiry", runDeviceExpiryJob],
     ["cleanup", runCleanupJob],
+    ["starlink-reminders", runStarlinkReminderJob],
   ] as const;
 
   for (const [name, run] of jobs) {
