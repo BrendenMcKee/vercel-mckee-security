@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { guardAdminApi, mapDbError } from "@/lib/starlink/admin-guard";
 import { getSupabaseAdmin } from "@/lib/starlink/supabase-admin";
 import { rentalUpdateSchema } from "@/lib/starlink/schemas";
+import { resolveDepositReturnedAmount } from "@/lib/starlink/billing";
 import type { TablesUpdate } from "@/lib/starlink/database.types";
 
 export const runtime = "nodejs";
@@ -36,7 +37,9 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const { data: current, error: currentError } = await supabase
     .from("rentals")
-    .select("updated_at, deposit_received, deposit_received_at, deposit_returned, deposit_returned_at")
+    .select(
+      "updated_at, deposit_amount, deposit_received, deposit_received_at, deposit_returned, deposit_returned_at",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -71,10 +74,8 @@ export async function PATCH(request: Request, { params }: Params) {
     "pickup_date",
     "pickup_time",
     "return_date",
-    "daily_rate",
     "quoted_price",
     "deposit_amount",
-    "deposit_returned_amount",
     "amount_received",
     "comments",
   ] as const;
@@ -86,22 +87,41 @@ export async function PATCH(request: Request, { params }: Params) {
     }
   }
 
-  if (input.deposit_received !== undefined) {
-    patch.deposit_received = input.deposit_received;
-    if (input.deposit_received && !current.deposit_received) {
-      patch.deposit_received_at = nowIso;
-    } else if (!input.deposit_received) {
-      patch.deposit_received_at = null;
-    }
-  }
+  // The deposit is one state, so any change to part of it is resolved against
+  // the whole: nothing can be returned that was never received, the refund is
+  // always the full deposit, and the "when" stamps follow the flags.
+  const touchesDeposit =
+    input.deposit_amount !== undefined ||
+    input.deposit_received !== undefined ||
+    input.deposit_returned !== undefined;
 
-  if (input.deposit_returned !== undefined) {
-    patch.deposit_returned = input.deposit_returned;
-    if (input.deposit_returned && !current.deposit_returned) {
-      patch.deposit_returned_at = nowIso;
-    } else if (!input.deposit_returned) {
-      patch.deposit_returned_at = null;
-    }
+  if (touchesDeposit) {
+    const depositAmount =
+      input.deposit_amount !== undefined
+        ? input.deposit_amount
+        : current.deposit_amount;
+    const depositReceived =
+      input.deposit_received !== undefined
+        ? input.deposit_received
+        : current.deposit_received;
+    const depositReturned =
+      depositReceived &&
+      (input.deposit_returned !== undefined
+        ? input.deposit_returned
+        : current.deposit_returned);
+
+    patch.deposit_received = depositReceived;
+    patch.deposit_received_at = depositReceived
+      ? (current.deposit_received_at ?? nowIso)
+      : null;
+    patch.deposit_returned = depositReturned;
+    patch.deposit_returned_at = depositReturned
+      ? (current.deposit_returned_at ?? nowIso)
+      : null;
+    patch.deposit_returned_amount = resolveDepositReturnedAmount(
+      depositReturned,
+      depositAmount ?? null,
+    );
   }
 
   if (Object.keys(patch).length === 0) {

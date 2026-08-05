@@ -5,7 +5,15 @@ const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
 
-/** Optional money field: accepts a non-negative number or null/omitted. */
+/**
+ * Optional money field: accepts a non-negative number or null/omitted.
+ *
+ * `deposit_returned_amount` is deliberately absent from the rental schemas: a
+ * refund is always the whole deposit, so the API derives it (see
+ * `lib/starlink/billing.ts`) rather than accepting a typed-in figure. The
+ * legacy `daily_rate` column is likewise no longer written; tiered pricing made
+ * a per-day rate meaningless, and existing values stay untouched.
+ */
 const money = z
   .number()
   .nonnegative()
@@ -44,12 +52,10 @@ const rentalBase = {
   pickup_date: isoDate,
   pickup_time: optionalText,
   return_date: isoDate,
-  daily_rate: money,
   quoted_price: money,
   deposit_amount: money,
   deposit_received: z.boolean().optional(),
   deposit_returned: z.boolean().optional(),
-  deposit_returned_amount: money,
   amount_received: money,
   comments: optionalText,
 };

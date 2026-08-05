@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { RentalStatus, RentalWithUnit } from "@/lib/starlink/types";
+import { isPaidInFull } from "@/lib/starlink/billing";
 import { cn } from "@/lib/utils";
 
 const STATUS_ICON: Record<RentalStatus, LucideIcon> = {
@@ -29,15 +30,6 @@ const STATUS_ICON_CLASS: Record<RentalStatus, string> = {
   returned: "text-slate-300",
   cancelled: "text-red-300",
 };
-
-export function isPaidInFull(rental: RentalWithUnit): boolean {
-  return (
-    rental.quoted_price != null &&
-    rental.quoted_price > 0 &&
-    rental.amount_received != null &&
-    rental.amount_received >= rental.quoted_price
-  );
-}
 
 /**
  * Compact at-a-glance icons for a rental: lifecycle status, deposit state, and

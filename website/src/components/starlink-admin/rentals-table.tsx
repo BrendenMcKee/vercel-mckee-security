@@ -8,6 +8,7 @@ import {
   type Unit,
 } from "@/lib/starlink/types";
 import { formatCurrency, formatDateMedium } from "@/lib/starlink/format";
+import { balanceDue, isPaidInFull } from "@/lib/starlink/billing";
 import { StatusBadge } from "./status-badge";
 
 function csvCell(value: unknown): string {
@@ -29,8 +30,8 @@ function exportCsv(rows: RentalWithUnit[]) {
     "Pickup",
     "Pickup time",
     "Return",
-    "Daily rate",
-    "Quoted price",
+    "Rental price",
+    "Paid in full",
     "Amount received",
     "Deposit amount",
     "Deposit received",
@@ -51,8 +52,8 @@ function exportCsv(rows: RentalWithUnit[]) {
       r.pickup_date,
       r.pickup_time,
       r.return_date,
-      r.daily_rate,
       r.quoted_price,
+      isPaidInFull(r) ? "yes" : "no",
       r.amount_received,
       r.deposit_amount,
       r.deposit_received ? "yes" : "no",
@@ -174,8 +175,8 @@ export function RentalsTable({
               <th className="px-3 py-2.5 font-semibold">Unit</th>
               <th className="px-3 py-2.5 font-semibold">Dates</th>
               <th className="px-3 py-2.5 font-semibold">Status</th>
-              <th className="px-3 py-2.5 text-right font-semibold">Quoted</th>
-              <th className="px-3 py-2.5 text-right font-semibold">Received</th>
+              <th className="px-3 py-2.5 text-right font-semibold">Price</th>
+              <th className="px-3 py-2.5 text-center font-semibold">Payment</th>
               <th className="px-3 py-2.5 text-center font-semibold">Deposit</th>
             </tr>
           </thead>
@@ -216,8 +217,18 @@ export function RentalsTable({
                 <td className="px-3 py-2.5 text-right text-white/80">
                   {formatCurrency(r.quoted_price)}
                 </td>
-                <td className="px-3 py-2.5 text-right text-white/80">
-                  {formatCurrency(r.amount_received)}
+                <td className="px-3 py-2.5 text-center">
+                  {r.quoted_price == null || r.quoted_price <= 0 ? (
+                    <span className="text-xs text-white/30">—</span>
+                  ) : isPaidInFull(r) ? (
+                    <span className="text-xs font-semibold text-emerald-300">
+                      Paid
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold text-orange-300">
+                      {formatCurrency(balanceDue(r))} due
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2.5 text-center">
                   {r.deposit_received ? (

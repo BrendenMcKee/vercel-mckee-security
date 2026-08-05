@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { RentalWithUnit } from "@/lib/starlink/types";
 import { formatCurrency } from "@/lib/starlink/format";
+import { balanceDue, depositHeld } from "@/lib/starlink/billing";
 
 function sum(values: Array<number | null | undefined>): number {
   return values.reduce<number>((acc, v) => acc + (v ?? 0), 0);
@@ -37,19 +38,10 @@ export function StarlinkStatsBar({
     const outstanding = sum(
       rentals
         .filter((r) => r.status === "confirmed" || r.status === "active")
-        .map((r) => {
-          const quoted = r.quoted_price ?? 0;
-          const paid = r.amount_received ?? 0;
-          const due = quoted - paid;
-          return due > 0 ? due : 0;
-        }),
+        .map((r) => balanceDue(r) ?? 0),
     );
 
-    const depositsHeld = sum(
-      rentals
-        .filter((r) => r.deposit_received && !r.deposit_returned)
-        .map((r) => r.deposit_amount),
-    );
+    const depositsHeld = sum(rentals.map(depositHeld));
 
     return { outNow, upcoming, requests, revenue, outstanding, depositsHeld };
   }, [rentals, todayIso]);

@@ -7,8 +7,9 @@ import {
   type RentalWithUnit,
 } from "@/lib/starlink/types";
 import { hexToRgba } from "@/lib/starlink/format";
+import { isPaidInFull } from "@/lib/starlink/billing";
 import { cn } from "@/lib/utils";
-import { isPaidInFull, RentalIndicators } from "./rental-indicators";
+import { RentalIndicators } from "./rental-indicators";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 

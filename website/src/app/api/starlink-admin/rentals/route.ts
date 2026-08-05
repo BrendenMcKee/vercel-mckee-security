@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { guardAdminApi, mapDbError } from "@/lib/starlink/admin-guard";
 import { getSupabaseAdmin } from "@/lib/starlink/supabase-admin";
 import { rentalCreateSchema } from "@/lib/starlink/schemas";
+import { resolveDepositReturnedAmount } from "@/lib/starlink/billing";
 import type { TablesInsert } from "@/lib/starlink/database.types";
 
 export const runtime = "nodejs";
@@ -30,6 +31,12 @@ export async function POST(request: Request) {
 
   const input = parsed.data;
   const nowIso = new Date().toISOString();
+
+  const depositAmount = input.deposit_amount ?? null;
+  const depositReceived = input.deposit_received ?? false;
+  // A deposit that was never taken cannot have been given back.
+  const depositReturned = depositReceived && (input.deposit_returned ?? false);
+
   const insert: TablesInsert<"rentals"> = {
     unit_id: input.unit_id ?? null,
     status: input.status ?? "requested",
@@ -42,14 +49,16 @@ export async function POST(request: Request) {
     pickup_date: input.pickup_date,
     pickup_time: input.pickup_time ?? null,
     return_date: input.return_date,
-    daily_rate: input.daily_rate ?? null,
     quoted_price: input.quoted_price ?? null,
-    deposit_amount: input.deposit_amount ?? null,
-    deposit_received: input.deposit_received ?? false,
-    deposit_received_at: input.deposit_received ? nowIso : null,
-    deposit_returned: input.deposit_returned ?? false,
-    deposit_returned_at: input.deposit_returned ? nowIso : null,
-    deposit_returned_amount: input.deposit_returned_amount ?? null,
+    deposit_amount: depositAmount,
+    deposit_received: depositReceived,
+    deposit_received_at: depositReceived ? nowIso : null,
+    deposit_returned: depositReturned,
+    deposit_returned_at: depositReturned ? nowIso : null,
+    deposit_returned_amount: resolveDepositReturnedAmount(
+      depositReturned,
+      depositAmount,
+    ),
     amount_received: input.amount_received ?? null,
     comments: input.comments ?? null,
   };

@@ -16,7 +16,12 @@ import {
   updateRental,
 } from "@/lib/starlink/client-api";
 import { daysBetweenInclusive } from "@/lib/starlink/dates";
-import { formatCurrency, hexToRgba } from "@/lib/starlink/format";
+import {
+  DEFAULT_DEPOSIT_AMOUNT,
+  isPaidInFull,
+  partialPayment,
+} from "@/lib/starlink/billing";
+import { formatCurrency, formatRelative, hexToRgba } from "@/lib/starlink/format";
 import { StatusBadge } from "./status-badge";
 import { cn } from "@/lib/utils";
 
@@ -32,11 +37,9 @@ type FormState = {
   pickup_date: string;
   pickup_time: string;
   return_date: string;
-  daily_rate: string;
   quoted_price: string;
-  amount_received: string;
+  paid: boolean;
   deposit_amount: string;
-  deposit_returned_amount: string;
   deposit_received: boolean;
   deposit_returned: boolean;
   comments: string;
@@ -68,11 +71,12 @@ function initialState(rental: RentalWithUnit | null): FormState {
     pickup_date: s(rental?.pickup_date),
     pickup_time: s(rental?.pickup_time),
     return_date: s(rental?.return_date),
-    daily_rate: n(rental?.daily_rate),
     quoted_price: n(rental?.quoted_price),
-    amount_received: n(rental?.amount_received),
-    deposit_amount: n(rental?.deposit_amount),
-    deposit_returned_amount: n(rental?.deposit_returned_amount),
+    paid: rental ? isPaidInFull(rental) : false,
+    // New bookings start at the standard deposit; it stays editable.
+    deposit_amount: rental
+      ? n(rental.deposit_amount)
+      : String(DEFAULT_DEPOSIT_AMOUNT),
     deposit_received: rental?.deposit_received ?? false,
     deposit_returned: rental?.deposit_returned ?? false,
     comments: s(rental?.comments),
@@ -101,6 +105,52 @@ function Field({
   );
 }
 
+/** Checkbox styled as a button, used for the money facts (paid, deposit). */
+function Toggle({
+  label,
+  checked,
+  onChange,
+  tone,
+  disabled,
+  title,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  tone: "emerald" | "sky" | "slate";
+  disabled?: boolean;
+  title?: string;
+}) {
+  const activeTone = {
+    emerald: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
+    sky: "border-sky-400/40 bg-sky-400/10 text-sky-200",
+    slate: "border-slate-300/40 bg-slate-300/10 text-slate-200",
+  }[tone];
+
+  return (
+    <label
+      title={title}
+      className={cn(
+        "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
+        disabled
+          ? "cursor-not-allowed border-white/10 bg-black/20 text-white/30"
+          : checked
+            ? `cursor-pointer ${activeTone}`
+            : "cursor-pointer border-white/15 bg-black/20 text-white/70 hover:bg-white/5",
+      )}
+    >
+      <input
+        type="checkbox"
+        className="h-4 w-4 accent-[var(--primary)] disabled:cursor-not-allowed"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      {label}
+    </label>
+  );
+}
+
 export function RentalModal({
   rental,
   units,
@@ -119,6 +169,11 @@ export function RentalModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+  // A part-payment from an older booking. Kept as-is through unrelated saves so
+  // a real figure is never wiped by a form that no longer asks for one.
+  const [partOnRecord, setPartOnRecord] = useState<number | null>(() =>
+    rental ? partialPayment(rental) : null,
+  );
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -141,18 +196,12 @@ export function RentalModal({
     return daysBetweenInclusive(form.pickup_date, form.return_date);
   }, [form.pickup_date, form.return_date]);
 
-  const suggestedTotal = useMemo(() => {
-    const rate = parseMoney(form.daily_rate);
-    if (rate === null || days === 0) return null;
-    return rate * days;
-  }, [form.daily_rate, days]);
-
-  const balanceDue = useMemo(() => {
-    const quoted = parseMoney(form.quoted_price);
-    const paid = parseMoney(form.amount_received) ?? 0;
-    if (quoted === null) return null;
-    return quoted - paid;
-  }, [form.quoted_price, form.amount_received]);
+  const price = useMemo(() => parseMoney(form.quoted_price), [form.quoted_price]);
+  const deposit = useMemo(() => parseMoney(form.deposit_amount), [form.deposit_amount]);
+  // Paid means "received the price", so there has to be a price to receive.
+  const canMarkPaid = price !== null && price > 0;
+  const paid = canMarkPaid && form.paid;
+  const depositReturned = form.deposit_received && form.deposit_returned;
 
   const statusKey: RentalStatus = RENTAL_STATUSES.includes(
     form.status as RentalStatus,
@@ -186,13 +235,13 @@ export function RentalModal({
       pickup_date: form.pickup_date,
       pickup_time: form.pickup_time.trim() || null,
       return_date: form.return_date,
-      daily_rate: parseMoney(form.daily_rate),
-      quoted_price: parseMoney(form.quoted_price),
-      amount_received: parseMoney(form.amount_received),
-      deposit_amount: parseMoney(form.deposit_amount),
-      deposit_returned_amount: parseMoney(form.deposit_returned_amount),
+      quoted_price: price,
+      // Paying means the full price came in; the deposit refund is derived
+      // server-side from the deposit on the booking.
+      amount_received: paid ? price : partOnRecord,
+      deposit_amount: deposit,
       deposit_received: form.deposit_received,
-      deposit_returned: form.deposit_returned,
+      deposit_returned: depositReturned,
       comments: form.comments.trim() || null,
     };
 
@@ -425,10 +474,7 @@ export function RentalModal({
             </div>
             {days > 0 ? (
               <p className="text-xs text-white/45">
-                {days} day{days === 1 ? "" : "s"}
-                {suggestedTotal !== null
-                  ? ` · suggested total ${formatCurrency(suggestedTotal)} at this daily rate`
-                  : ""}
+                {days} day{days === 1 ? "" : "s"} out
               </p>
             ) : null}
             {statusKey === "confirmed" || statusKey === "active" ? (
@@ -451,17 +497,8 @@ export function RentalModal({
             <h3 className="text-xs font-bold uppercase tracking-wide text-white/40">
               Billing
             </h3>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Field label="Daily rate">
-                <input
-                  className={inputClass}
-                  inputMode="decimal"
-                  value={form.daily_rate}
-                  onChange={(e) => set("daily_rate", e.target.value)}
-                  placeholder="0.00"
-                />
-              </Field>
-              <Field label="Quoted price">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Rental price">
                 <input
                   className={inputClass}
                   inputMode="decimal"
@@ -470,24 +507,43 @@ export function RentalModal({
                   placeholder="0.00"
                 />
               </Field>
-              <Field label="Amount received">
-                <input
-                  className={inputClass}
-                  inputMode="decimal"
-                  value={form.amount_received}
-                  onChange={(e) => set("amount_received", e.target.value)}
-                  placeholder="0.00"
+              <div className="flex items-end">
+                <Toggle
+                  label={
+                    canMarkPaid
+                      ? `Paid in full (${formatCurrency(price)})`
+                      : "Paid in full"
+                  }
+                  checked={paid}
+                  onChange={(checked) => set("paid", checked)}
+                  tone="emerald"
+                  disabled={!canMarkPaid}
+                  title={
+                    canMarkPaid
+                      ? undefined
+                      : "Enter the rental price before marking it paid."
+                  }
                 />
-              </Field>
+              </div>
             </div>
-            {balanceDue !== null ? (
-              <p
-                className={cn(
-                  "text-xs font-semibold",
-                  balanceDue > 0 ? "text-orange-300" : "text-emerald-300",
-                )}
-              >
-                Balance due: {formatCurrency(balanceDue)}
+            <p className="text-xs text-white/45">
+              {!canMarkPaid
+                ? "What the customer is charged for the whole rental. Tick it off once the payment lands."
+                : paid
+                  ? `${formatCurrency(price)} received in full. Nothing outstanding.`
+                  : `Customer owes ${formatCurrency(price)}.`}
+            </p>
+            {partOnRecord !== null ? (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-orange-400/25 bg-orange-400/10 px-3 py-2 text-xs text-orange-200">
+                Part payment of {formatCurrency(partOnRecord)} is on the books.
+                Tick Paid in full once the rest arrives.
+                <button
+                  type="button"
+                  onClick={() => setPartOnRecord(null)}
+                  className="font-semibold underline decoration-orange-300/50 hover:text-orange-100"
+                >
+                  Clear it
+                </button>
               </p>
             ) : null}
           </section>
@@ -497,7 +553,7 @@ export function RentalModal({
             <h3 className="text-xs font-bold uppercase tracking-wide text-white/40">
               Deposit
             </h3>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Deposit amount">
                 <input
                   className={inputClass}
@@ -507,50 +563,47 @@ export function RentalModal({
                   placeholder="0.00"
                 />
               </Field>
-              <Field label="Returned amount">
-                <input
-                  className={inputClass}
-                  inputMode="decimal"
-                  value={form.deposit_returned_amount}
-                  onChange={(e) => set("deposit_returned_amount", e.target.value)}
-                  placeholder="0.00"
-                />
-              </Field>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <label
-                className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
-                  form.deposit_received
-                    ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
-                    : "border-white/15 bg-black/20 text-white/70 hover:bg-white/5",
-                )}
-              >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
+              <div className="flex flex-wrap items-end gap-2">
+                <Toggle
+                  label="Deposit received"
                   checked={form.deposit_received}
-                  onChange={(e) => set("deposit_received", e.target.checked)}
+                  onChange={(checked) =>
+                    // A deposit we never took cannot have gone back.
+                    setForm((f) => ({
+                      ...f,
+                      deposit_received: checked,
+                      deposit_returned: checked ? f.deposit_returned : false,
+                    }))
+                  }
+                  tone="sky"
                 />
-                Deposit received
-              </label>
-              <label
-                className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
-                  form.deposit_returned
-                    ? "border-slate-300/40 bg-slate-300/10 text-slate-200"
-                    : "border-white/15 bg-black/20 text-white/70 hover:bg-white/5",
-                )}
-              >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 cursor-pointer accent-[var(--primary)]"
-                  checked={form.deposit_returned}
-                  onChange={(e) => set("deposit_returned", e.target.checked)}
+                <Toggle
+                  label="Deposit returned"
+                  checked={depositReturned}
+                  onChange={(checked) => set("deposit_returned", checked)}
+                  tone="slate"
+                  disabled={!form.deposit_received}
+                  title={
+                    form.deposit_received
+                      ? undefined
+                      : "Mark the deposit as received first."
+                  }
                 />
-                Deposit returned
-              </label>
+              </div>
             </div>
+            <p className="text-xs text-white/45">
+              {deposit === null || deposit === 0
+                ? "No deposit on this booking. Enter an amount if you are taking one."
+                : !form.deposit_received
+                  ? `Collect ${formatCurrency(deposit)} at pickup, then tick Deposit received.`
+                  : depositReturned
+                    ? `${formatCurrency(deposit)} sent back to the customer${
+                        rental?.deposit_returned_at
+                          ? ` ${formatRelative(rental.deposit_returned_at)}`
+                          : ""
+                      }.`
+                    : `Holding ${formatCurrency(deposit)}. The full amount goes back when you tick Deposit returned.`}
+            </p>
           </section>
 
           {/* Comments */}
