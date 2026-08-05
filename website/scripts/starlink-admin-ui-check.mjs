@@ -124,6 +124,29 @@ console.log(`\n=== iPhone 13 (390x844) ${baseUrl}/starlink-admin`);
       check(!sched.overflow, "no horizontal overflow on the schedule tab", `doc ${sched.docW} vs vw ${sched.vw}`);
       for (const leaf of sched.leaves) console.log(`       spill ${leaf}`);
       await page.screenshot({ path: `${outDir}/mobile-schedule.png`, fullPage: true });
+
+      // The calendar grid is hidden on a phone, so the month arrows have to
+      // drive the agenda list instead of only relabelling the heading.
+      const agendaHeading = () =>
+        page.locator(".sl-admin h3").filter({ hasText: /Current & upcoming|20\d\d/ }).first();
+      const before = (await agendaHeading().textContent())?.trim();
+      const monthLabel = () => page.locator(".sl-admin nav ~ div h2, .sl-admin h2").first();
+      const monthBefore = (await monthLabel().textContent())?.trim();
+      await page.getByRole("button", { name: "Next month" }).click();
+      await page.waitForTimeout(600);
+      const after = (await agendaHeading().textContent())?.trim();
+      const monthAfter = (await monthLabel().textContent())?.trim();
+      check(
+        monthBefore !== monthAfter && before !== after,
+        "the month arrows re-point the mobile agenda, not just the heading",
+        `${before} -> ${after} (month ${monthBefore} -> ${monthAfter})`,
+      );
+      await page.getByRole("button", { name: "Today" }).click();
+      await page.waitForTimeout(500);
+      check(
+        (await agendaHeading().textContent())?.trim() === before,
+        "Today returns the agenda to the current view",
+      );
     }
 
     // Fleet tab.

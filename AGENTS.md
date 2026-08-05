@@ -15,12 +15,23 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
 - Lint: `cd website && npm run lint`. The command works but the checked-in code currently has
   pre-existing lint errors/warnings; a clean exit is not expected on an unmodified tree.
 - There is no automated test suite. `data-drops-aws-backend` has a placeholder `test` script, and
-  `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner. Two of them drive a
-  real browser against a running dev server and are worth re-running after any UI change:
-  `mobile-audit.mjs` (both portals, needs seeded Supabase users) and `starlink-admin-ui-check.mjs`
-  (Starlink admin; needs `STARLINK_ADMIN_PASSWORD` set for both the server and the script). They
-  measure document width, tap-target and focused-font sizes, and the booking modal's sticky bars,
-  and write screenshots to gitignored directories.
+  `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner. Three are worth
+  re-running after UI or email changes:
+  - `mobile-audit.mjs` — both portals in a real browser at an iPhone viewport (needs seeded Supabase
+    users). Flags horizontal overflow and screenshots every page.
+  - `starlink-admin-ui-check.mjs` — the Starlink admin at 390/740x360/768/1024/1920 against a running
+    dev server. Needs `STARLINK_ADMIN_PASSWORD` set for both the server and the script. Measures
+    document width, tap-target and focused-font sizes, the booking modal's sticky bars, and the kit
+    availability path including the double-booking confirm dialog.
+  - `email-render-check.mjs` — renders the Starlink reminder emails through the real send path with
+    `fetch` stubbed (nothing is sent) and asserts the things that break silently in mail clients:
+    rgba() text colours, block elements orphaned out of a `<p>`, unwrappable long values, escaping,
+    absolute deep links, and Gmail's clipping threshold. Run it with the alias loader:
+    `node --import ./scripts/register-ts-alias.mjs scripts/email-render-check.mjs`. That loader
+    (`ts-alias-loader.mjs`) is what lets a plain Node script import the app's own `@/`-aliased
+    TypeScript; it also stubs `server-only`.
+
+  Both browser scripts write screenshots to gitignored directories.
 - Data Drops backend (`data-drops-aws-backend`, Express + MySQL): rarely run locally. The website's
   `/api/dd/*` proxy defaults to the live AWS API (`DATA_DROPS_API_URL`), so you do not need it for
   portal/marketing work. To run it you must supply a MySQL and `RDS_*` env vars; see its `README.md`.
