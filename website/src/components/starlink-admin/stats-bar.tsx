@@ -35,9 +35,16 @@ export function StarlinkStatsBar({
 
     const revenue = sum(notCancelled.map((r) => r.amount_received));
 
+    // Finished rentals count too: money owed on a kit that already came back is
+    // still money owed, and it is what the reminder digest chases.
     const outstanding = sum(
       rentals
-        .filter((r) => r.status === "confirmed" || r.status === "active")
+        .filter(
+          (r) =>
+            r.status === "confirmed" ||
+            r.status === "active" ||
+            r.status === "returned",
+        )
         .map((r) => balanceDue(r) ?? 0),
     );
 

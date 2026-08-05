@@ -5,6 +5,7 @@ export type CleanupSummary = {
   orphanUsersDeleted: number;
   invitationsDeleted: number;
   rateLimitRowsDeleted: number;
+  rentalRemindersDeleted: number;
 };
 
 /**
@@ -12,7 +13,9 @@ export type CleanupSummary = {
  *  - auth users older than 7 days with no linked profile (orphans from
  *    abandoned Google sign-ins) are deleted;
  *  - expired unused invitations are kept 90 days for audit, then deleted;
- *  - rate-limit counter rows older than a day are purged.
+ *  - rate-limit counter rows older than a day are purged;
+ *  - spent Starlink reminder guard rows are purged once the date they guard is
+ *    far enough back that no reminder could look at it again.
  */
 export async function runCleanupJob(): Promise<CleanupSummary> {
   const admin = getPortalAdminClient();
@@ -62,9 +65,24 @@ export async function runCleanupJob(): Promise<CleanupSummary> {
   );
   if (rateLimitError) throw new Error(`cleanup rate limits failed: ${rateLimitError.message}`);
 
+  // The reminder job only ever reads guard rows for today onwards, so anything
+  // older is dead weight. A wide margin keeps them around for spot-checking.
+  const reminderCutoff = new Date(Date.now() - 90 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const { data: deletedReminders, error: remindersError } = await admin
+    .from("rental_reminders")
+    .delete()
+    .lt("sent_for", reminderCutoff)
+    .select("id");
+  if (remindersError) {
+    throw new Error(`cleanup rental reminders failed: ${remindersError.message}`);
+  }
+
   return {
     orphanUsersDeleted,
     invitationsDeleted: (deletedInvites ?? []).length,
     rateLimitRowsDeleted: rateLimitRowsDeleted ?? 0,
+    rentalRemindersDeleted: (deletedReminders ?? []).length,
   };
 }

@@ -160,6 +160,14 @@ try {
       expected.every((name) => !jobs[name]?.error),
       JSON.stringify(jobs),
     );
+    // A job that reports success while quietly telling nobody anything is the
+    // failure this gate exists to catch.
+    check(
+      "starlink reminders complete without partial failures",
+      !jobs["starlink-reminders"]?.notes &&
+        jobs["starlink-reminders"]?.digestStatus !== "failed",
+      JSON.stringify(jobs["starlink-reminders"]),
+    );
   }
 } finally {
   for (const id of createdProfiles) {

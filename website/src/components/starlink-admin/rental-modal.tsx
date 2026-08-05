@@ -17,9 +17,10 @@ import {
 } from "@/lib/starlink/client-api";
 import { daysBetweenInclusive } from "@/lib/starlink/dates";
 import {
+  balanceDue,
   DEFAULT_DEPOSIT_AMOUNT,
   isPaidInFull,
-  partialPayment,
+  parseMoneyInput,
 } from "@/lib/starlink/billing";
 import { formatCurrency, formatRelative, hexToRgba } from "@/lib/starlink/format";
 import { StatusBadge } from "./status-badge";
@@ -51,12 +52,6 @@ function s(value: string | null | undefined): string {
 function n(value: number | null | undefined): string {
   return value === null || value === undefined ? "" : String(value);
 }
-function parseMoney(value: string): number | null {
-  const t = value.trim();
-  if (!t) return null;
-  const num = Number(t);
-  return Number.isFinite(num) && num >= 0 ? num : null;
-}
 
 function initialState(rental: RentalWithUnit | null): FormState {
   return {
@@ -73,10 +68,13 @@ function initialState(rental: RentalWithUnit | null): FormState {
     return_date: s(rental?.return_date),
     quoted_price: n(rental?.quoted_price),
     paid: rental ? isPaidInFull(rental) : false,
-    // New bookings start at the standard deposit; it stays editable.
-    deposit_amount: rental
-      ? n(rental.deposit_amount)
-      : String(DEFAULT_DEPOSIT_AMOUNT),
+    // Suggest the standard deposit until someone decides otherwise. Website
+    // requests arrive with no deposit at all, so this covers those too; an
+    // explicit 0 is a decision and is left alone.
+    deposit_amount:
+      rental && (rental.deposit_amount !== null || rental.deposit_received)
+        ? n(rental.deposit_amount)
+        : String(DEFAULT_DEPOSIT_AMOUNT),
     deposit_received: rental?.deposit_received ?? false,
     deposit_returned: rental?.deposit_returned ?? false,
     comments: s(rental?.comments),
@@ -169,11 +167,11 @@ export function RentalModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
-  // A part-payment from an older booking. Kept as-is through unrelated saves so
-  // a real figure is never wiped by a form that no longer asks for one.
-  const [partOnRecord, setPartOnRecord] = useState<number | null>(() =>
-    rental ? partialPayment(rental) : null,
-  );
+  // Money already banked against this booking. The form no longer asks for a
+  // figure, so it is carried through unrelated saves rather than wiped, and can
+  // be discarded deliberately.
+  const receivedOnRecord = rental?.amount_received ?? null;
+  const [partCleared, setPartCleared] = useState(false);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -196,11 +194,30 @@ export function RentalModal({
     return daysBetweenInclusive(form.pickup_date, form.return_date);
   }, [form.pickup_date, form.return_date]);
 
-  const price = useMemo(() => parseMoney(form.quoted_price), [form.quoted_price]);
-  const deposit = useMemo(() => parseMoney(form.deposit_amount), [form.deposit_amount]);
+  const priceInput = useMemo(
+    () => parseMoneyInput(form.quoted_price),
+    [form.quoted_price],
+  );
+  const depositInput = useMemo(
+    () => parseMoneyInput(form.deposit_amount),
+    [form.deposit_amount],
+  );
+  const price = priceInput.ok ? priceInput.value : null;
+  const deposit = depositInput.ok ? depositInput.value : null;
+
   // Paid means "received the price", so there has to be a price to receive.
   const canMarkPaid = price !== null && price > 0;
   const paid = canMarkPaid && form.paid;
+
+  // Anything banked that does not add up to the current price is a part
+  // payment. Recomputed as the price is edited, so the two never disagree.
+  const partOnRecord = useMemo(() => {
+    if (partCleared || receivedOnRecord === null || receivedOnRecord <= 0) return null;
+    if (price !== null && receivedOnRecord >= price) return null;
+    return receivedOnRecord;
+  }, [partCleared, receivedOnRecord, price]);
+
+  const hasDeposit = deposit !== null && deposit > 0;
   const depositReturned = form.deposit_received && form.deposit_returned;
 
   const statusKey: RentalStatus = RENTAL_STATUSES.includes(
@@ -221,6 +238,19 @@ export function RentalModal({
     if (!form.return_date) return setError("Return date is required.");
     if (form.return_date < form.pickup_date) {
       return setError("Return date must be on or after pickup date.");
+    }
+    // Stop here rather than treating an unreadable amount as a cleared field,
+    // which would quietly drop the price and the payment along with it.
+    if (!priceInput.ok) {
+      return setError("Rental price must be an amount, for example 254.25.");
+    }
+    if (!depositInput.ok) {
+      return setError("Deposit amount must be an amount, for example 300.");
+    }
+    if (form.deposit_received && !hasDeposit) {
+      return setError(
+        "Enter the deposit amount you took, or untick Deposit received.",
+      );
     }
 
     const body: Record<string, unknown> = {
@@ -527,19 +557,26 @@ export function RentalModal({
               </div>
             </div>
             <p className="text-xs text-white/45">
-              {!canMarkPaid
-                ? "What the customer is charged for the whole rental. Tick it off once the payment lands."
-                : paid
-                  ? `${formatCurrency(price)} received in full. Nothing outstanding.`
-                  : `Customer owes ${formatCurrency(price)}.`}
+              {price === 0
+                ? "No charge for this rental."
+                : !canMarkPaid
+                  ? "What the customer is charged for the whole rental. Tick it off once the payment lands."
+                  : paid
+                    ? `${formatCurrency(price)} received in full. Nothing outstanding.`
+                    : `Customer owes ${formatCurrency(
+                        balanceDue({
+                          quoted_price: price,
+                          amount_received: partOnRecord,
+                        }),
+                      )}.`}
             </p>
             {partOnRecord !== null ? (
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-orange-400/25 bg-orange-400/10 px-3 py-2 text-xs text-orange-200">
-                Part payment of {formatCurrency(partOnRecord)} is on the books.
-                Tick Paid in full once the rest arrives.
+                {formatCurrency(partOnRecord)} is already banked against this
+                booking. Tick Paid in full once the rest arrives.
                 <button
                   type="button"
-                  onClick={() => setPartOnRecord(null)}
+                  onClick={() => setPartCleared(true)}
                   className="font-semibold underline decoration-orange-300/50 hover:text-orange-100"
                 >
                   Clear it
@@ -576,6 +613,14 @@ export function RentalModal({
                     }))
                   }
                   tone="sky"
+                  // Received-but-no-amount would count as $0 held everywhere
+                  // else, so an amount comes first. Untick stays available.
+                  disabled={!hasDeposit && !form.deposit_received}
+                  title={
+                    hasDeposit || form.deposit_received
+                      ? undefined
+                      : "Enter the deposit amount first."
+                  }
                 />
                 <Toggle
                   label="Deposit returned"
@@ -592,17 +637,19 @@ export function RentalModal({
               </div>
             </div>
             <p className="text-xs text-white/45">
-              {deposit === null || deposit === 0
-                ? "No deposit on this booking. Enter an amount if you are taking one."
-                : !form.deposit_received
-                  ? `Collect ${formatCurrency(deposit)} at pickup, then tick Deposit received.`
-                  : depositReturned
-                    ? `${formatCurrency(deposit)} sent back to the customer${
-                        rental?.deposit_returned_at
-                          ? ` ${formatRelative(rental.deposit_returned_at)}`
-                          : ""
-                      }.`
-                    : `Holding ${formatCurrency(deposit)}. The full amount goes back when you tick Deposit returned.`}
+              {form.deposit_received && !hasDeposit
+                ? "Marked received but no amount is recorded. Enter what you took."
+                : !hasDeposit
+                  ? "No deposit on this booking. Enter an amount if you are taking one."
+                  : !form.deposit_received
+                    ? `Collect ${formatCurrency(deposit)} at pickup, then tick Deposit received.`
+                    : depositReturned
+                      ? `${formatCurrency(deposit)} sent back to the customer${
+                          rental?.deposit_returned_at
+                            ? ` ${formatRelative(rental.deposit_returned_at)}`
+                            : ""
+                        }.`
+                      : `Holding ${formatCurrency(deposit)}. The full amount goes back when you tick Deposit returned.`}
             </p>
           </section>
 

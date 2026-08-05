@@ -13,8 +13,11 @@ import { StatusBadge } from "./status-badge";
 
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+  // Comments and locations come from a public form, so a leading =, +, - or @
+  // would be run as a formula when the export is opened in a spreadsheet.
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  if (/["\r\n,]/.test(safe)) return `"${safe.replace(/"/g, '""')}"`;
+  return safe;
 }
 
 function exportCsv(rows: RentalWithUnit[]) {

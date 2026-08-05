@@ -33,8 +33,11 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://mckeesecurity.ca/api/cron/s
 ### Sent once, on the day it matters
 
 Recorded in `rental_reminders` (`rental_id` + `kind` + `sent_for`) after the
-email actually goes out, so a failed send retries tomorrow instead of vanishing.
-Moving a booking's pickup date earns a fresh reminder for the new date.
+email actually goes out, never before, so a failure is retried rather than
+swallowed. Moving a booking's pickup date earns a fresh reminder for the new
+date. A pickup reminder has no tomorrow to retry into, so if that send fails the
+booking is carried in the same morning's digest instead and the failure is
+written to the Alerts tab.
 
 | Reminder | Fires when |
 |----------|-----------|
@@ -51,12 +54,29 @@ sent on a day when there is nothing to act on.
 |-------|-----------|
 | **Kit is late back** | Confirmed or Out and the return date has passed |
 | **Deposit still to go back** | Returned or Cancelled, deposit received, not yet returned |
-| **Payment never recorded** | Out or Returned with a price set and not paid in full |
+| **Payment never recorded** | a price is set and not paid in full, once the kit is out (Out, Returned, or still Confirmed on/after pickup day) |
+| **No price on the booking** | no rental price at all, once pickup is within 2 days or has passed. Nothing can show as owed until this is filled in |
+| **No unit assigned** | Confirmed or Out with no unit. The dates are not reserved against a kit, so they can still be double-booked |
 | **Not marked as picked up** | still Confirmed although pickup day has passed |
 | **Request waiting on a reply** | a website request older than a day that has not been quoted |
 
-Bookings whose return date is more than 120 days old (`LOOKBACK_DAYS`) drop out
-of the digest. A row that nags forever just teaches people to ignore the email.
+Each group lists at most 25 bookings and then says how many more are waiting, so
+a burst of website requests cannot make the digest undeliverable. The subject
+counts bookings, not rows: one booking needing two things is one item.
+
+Finished bookings whose return date is more than 120 days old (`LOOKBACK_DAYS`)
+drop out — a row that nags forever just teaches people to ignore the email.
+Anything still open (Requested, Confirmed, Out) stays in scope however old it
+is, because a kit that went out months ago and was never marked back is exactly
+what this job is for.
+
+## When something goes wrong
+
+A reminder job that reports success while telling nobody anything is the worst
+outcome, so every partial failure — the guard table being unreachable, a digest
+Resend rejects, a pickup email that would not send — is written to
+`portal_alerts` and shows up in the admin portal's **Alerts** tab, and is
+returned in the job's `notes` for `npm run cron:check`.
 
 ## Where the code lives
 
@@ -67,6 +87,7 @@ of the digest. A row that nags forever just teaches people to ignore the email.
 | `website/src/app/api/cron/starlink-reminders/route.ts` | manual-run route (`CRON_SECRET` bearer) |
 | `website/src/app/api/cron/daily/route.ts` | daily dispatcher that includes the job |
 | `supabase/migrations/20260805200000_starlink_rental_reminders.sql` | `rental_reminders` guard table |
+| `website/src/lib/portal/cron/cleanup.ts` | prunes guard rows older than 90 days |
 
 Thresholds are single constants at the top of `reminders.ts`
 (`PAYMENT_LEAD_DAYS`, `REQUEST_REPLY_GRACE_DAYS`, `LOOKBACK_DAYS`).

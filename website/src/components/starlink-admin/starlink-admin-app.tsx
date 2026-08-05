@@ -217,6 +217,9 @@ export function StarlinkAdminApp() {
 
       {modalOpen ? (
         <RentalModal
+          // Form state is seeded from the booking on mount, so a different
+          // booking has to be a different instance.
+          key={modalRental?.id ?? "new"}
           rental={modalRental}
           units={units}
           onClose={closeModal}

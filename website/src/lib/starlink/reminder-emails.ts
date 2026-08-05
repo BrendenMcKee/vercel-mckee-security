@@ -45,12 +45,17 @@ const FOOTER_TEXT = [
   `Automatic reminder from the Starlink rental system | ${ADMIN_URL}`,
 ];
 
+/**
+ * The body is built inside the boundary as well as sent inside it: a reminder
+ * that cannot be rendered must not take down the job that is trying to warn
+ * someone about a booking.
+ */
 async function send(
   label: string,
-  payload: Parameters<typeof sendEmail>[0],
+  build: () => Parameters<typeof sendEmail>[0],
 ): Promise<boolean> {
   try {
-    const sent = await sendEmail({ to: reminderRecipients(), ...payload });
+    const sent = await sendEmail({ to: reminderRecipients(), ...build() });
     if (!sent) {
       console.warn(`[starlink] ${label} not sent (email service not configured).`);
     }
@@ -93,9 +98,10 @@ function paymentLine(rental: RentalWithUnit): string {
 }
 
 function depositLine(rental: RentalWithUnit): string {
-  const amount = formatCurrency(rental.deposit_amount);
+  const known = rental.deposit_amount != null && rental.deposit_amount > 0;
+  const amount = known ? formatCurrency(rental.deposit_amount) : "an unrecorded amount";
   if (!rental.deposit_received) {
-    return rental.deposit_amount
+    return known
       ? `${amount} deposit not collected yet. Take it at pickup.`
       : "No deposit recorded on this booking.";
   }
@@ -151,13 +157,13 @@ export async function sendPickupTodayReminder(
     },
   ];
 
-  return send("pickup-today reminder", {
+  return send("pickup-today reminder", () => ({
     subject: rental.pickup_time
       ? `Pickup today: ${rental.customer_name} at ${rental.pickup_time}`
       : `Pickup today: ${rental.customer_name}`,
     text: buildBrandedEmailText(meta, fields, FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, FOOTER_HTML),
-  });
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -177,12 +183,20 @@ export async function sendPaymentBeforePickupReminder(
     inboxLabel: `${rental.customer_name} picks up ${when}`,
   };
 
+  const noPrice = rental.quoted_price == null || rental.quoted_price <= 0;
+  const partPaid = !noPrice && (rental.amount_received ?? 0) > 0;
+  const problem = noPrice
+    ? "there is still no price on the booking, so there is nothing to invoice"
+    : partPaid
+      ? "only part of the money is in"
+      : "no payment is recorded against this booking";
+
   const fields: EmailField[] = [
     {
-      label: "Chase the payment",
-      value: `${rental.customer_name} picks up ${when} and no payment is recorded against this booking. ${paymentLine(
-        rental,
-      )}`,
+      label: noPrice ? "Price this booking" : "Chase the payment",
+      value: `${rental.customer_name} picks up ${when} and ${problem}.${
+        noPrice ? "" : ` ${paymentLine(rental)}`
+      }`,
       highlight: true,
     },
     { label: "Rental", value: scheduleLine(rental) },
@@ -199,11 +213,13 @@ export async function sendPaymentBeforePickupReminder(
     },
   ];
 
-  return send("payment-before-pickup reminder", {
-    subject: `Payment due before pickup: ${rental.customer_name} (${when})`,
+  return send("payment-before-pickup reminder", () => ({
+    subject: noPrice
+      ? `No price set, pickup ${when}: ${rental.customer_name}`
+      : `Payment due before pickup: ${rental.customer_name} (${when})`,
     text: buildBrandedEmailText(meta, fields, FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, FOOTER_HTML),
-  });
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -223,11 +239,29 @@ export type RentalActionGroup = {
 };
 
 /**
+ * A digest that grows without limit is one Resend rejection away from losing
+ * every reminder in it, and unreadable well before that. Requests come in from
+ * an unauthenticated public form, so the volume is not ours to control.
+ */
+const MAX_ITEMS_PER_GROUP = 25;
+
+function shownItems(group: RentalActionGroup): {
+  items: RentalActionItem[];
+  hidden: number;
+} {
+  return {
+    items: group.items.slice(0, MAX_ITEMS_PER_GROUP),
+    hidden: Math.max(0, group.items.length - MAX_ITEMS_PER_GROUP),
+  };
+}
+
+/**
  * Trusted HTML: every piece of booking data is escaped here, and the only
  * unescaped markup is this function's own layout.
  */
 function groupHtml(group: RentalActionGroup): string {
-  const items = group.items
+  const { items: visible, hidden } = shownItems(group);
+  const items = visible
     .map(
       (item) => `
       <div style="margin:10px 0 0;padding:10px 0 0;border-top:1px solid rgba(255,255,255,0.1);">
@@ -240,16 +274,21 @@ function groupHtml(group: RentalActionGroup): string {
       </div>`,
     )
     .join("");
-  return `<span>${escapeHtml(group.instruction)}</span>${items}`;
+  const more = hidden
+    ? `<div style="margin:10px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">and ${hidden} more in the admin portal</div>`
+    : "";
+  return `<span>${escapeHtml(group.instruction)}</span>${items}${more}`;
 }
 
 function groupText(group: RentalActionGroup): string {
+  const { items, hidden } = shownItems(group);
   return [
     group.instruction,
-    ...group.items.map(
+    ...items.map(
       (item) =>
         `- ${item.customerName}: ${item.detail}\n  ${rentalAdminUrl(item.rentalId)}`,
     ),
+    ...(hidden ? [`- and ${hidden} more in the admin portal`] : []),
   ].join("\n");
 }
 
@@ -261,7 +300,11 @@ function groupText(group: RentalActionGroup): string {
 export async function sendRentalActionDigest(
   groups: RentalActionGroup[],
 ): Promise<boolean> {
-  const total = groups.reduce((count, group) => count + group.items.length, 0);
+  // One booking can need two different things done to it, so the headline
+  // counts bookings rather than rows.
+  const total = new Set(
+    groups.flatMap((group) => group.items.map((item) => item.rentalId)),
+  ).size;
   if (total === 0) return false;
 
   const meta = {
@@ -269,26 +312,28 @@ export async function sendRentalActionDigest(
     inboxLabel: `${total} booking${total === 1 ? "" : "s"} waiting on you`,
   };
 
-  // Deliberately not highlighted: with several groups, marking every one urgent
-  // would flatten the difference. The red section labels do the signposting.
-  const fields: EmailField[] = groups.map((group) => ({
-    label: `${group.label} (${group.items.length})`,
-    value: groupText(group),
-    htmlValue: groupHtml(group),
-  }));
+  return send("rental action digest", () => {
+    // Deliberately not highlighted: with several groups, marking every one
+    // urgent would flatten the difference. The red labels do the signposting.
+    const fields: EmailField[] = groups.map((group) => ({
+      label: `${group.label} (${group.items.length})`,
+      value: groupText(group),
+      htmlValue: groupHtml(group),
+    }));
 
-  fields.push({
-    label: "Everything at once",
-    value:
-      "The schedule and the full rental list are in the admin portal if you would rather work through them there.",
-    href: ADMIN_URL,
-    cta: true,
-    buttonLabel: "Open Starlink admin",
-  });
+    fields.push({
+      label: "Everything at once",
+      value:
+        "The schedule and the full rental list are in the admin portal if you would rather work through them there.",
+      href: ADMIN_URL,
+      cta: true,
+      buttonLabel: "Open Starlink admin",
+    });
 
-  return send("rental action digest", {
-    subject: `Rentals need attention: ${total} item${total === 1 ? "" : "s"}`,
-    text: buildBrandedEmailText(meta, fields, FOOTER_TEXT),
-    html: buildBrandedEmailHtml(meta, fields, FOOTER_HTML),
+    return {
+      subject: `Rentals need attention: ${total} booking${total === 1 ? "" : "s"}`,
+      text: buildBrandedEmailText(meta, fields, FOOTER_TEXT),
+      html: buildBrandedEmailHtml(meta, fields, FOOTER_HTML),
+    };
   });
 }

@@ -26,19 +26,22 @@ const rentalTimeSchema = z.enum(RENTAL_PICKUP_TIME_SLOTS);
 
 const inquirySchema = z
   .object({
-    firstName: z.string().min(1),
-    lastName: z.string().min(1),
-    email: z.string().email(),
-    phone: z.string().min(7),
-    address: z.string().min(5),
-    services: z.string().optional(),
-    comments: z.string().optional(),
-    serviceLabel: z.string().optional(),
-    serviceSlug: z.string().optional(),
-    pickupDate: z.string().optional(),
+    // Upper bounds are deliberately generous: this endpoint is public, and the
+    // values land in a database row, a notification email and the internal
+    // rental digest, none of which should be sizeable by a stranger.
+    firstName: z.string().min(1).max(120),
+    lastName: z.string().min(1).max(120),
+    email: z.string().email().max(320),
+    phone: z.string().min(7).max(50),
+    address: z.string().min(5).max(500),
+    services: z.string().max(2000).optional(),
+    comments: z.string().max(5000).optional(),
+    serviceLabel: z.string().max(200).optional(),
+    serviceSlug: z.string().max(200).optional(),
+    pickupDate: z.string().max(40).optional(),
     pickupTime: rentalTimeSchema.optional(),
-    returnDate: z.string().optional(),
-    usageLocation: z.string().optional(),
+    returnDate: z.string().max(40).optional(),
+    usageLocation: z.string().max(1000).optional(),
     // Honeypot: real users never see/fill this. Bots often do. Named neutrally
     // (not "company"/"organization") so browser autofill never populates it and
     // wrongly flags a genuine submission as spam.
