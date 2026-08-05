@@ -1,3 +1,11 @@
+import {
+  Ban,
+  CalendarCheck,
+  Clock,
+  PackageCheck,
+  Truck,
+  type LucideIcon,
+} from "lucide-react";
 import { STATUS_META, type RentalStatus, type StatusTone } from "@/lib/starlink/types";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +15,19 @@ const TONE_CLASS: Record<StatusTone, string> = {
   green: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
   slate: "bg-slate-500/15 text-slate-300 ring-1 ring-inset ring-slate-500/30",
   red: "bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/30",
+};
+
+/**
+ * One glyph per stage of a rental, so the status reads at a glance without
+ * having to parse the word: waiting on us, booked in, gone out, come back,
+ * called off.
+ */
+export const STATUS_ICON: Record<RentalStatus, LucideIcon> = {
+  requested: Clock,
+  confirmed: CalendarCheck,
+  active: Truck,
+  returned: PackageCheck,
+  cancelled: Ban,
 };
 
 export function StatusBadge({
@@ -30,14 +51,16 @@ export function StatusBadge({
       </span>
     );
   }
+  const Icon = STATUS_ICON[status as RentalStatus];
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold",
         TONE_CLASS[meta.tone],
         className,
       )}
     >
+      <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
       {meta.label}
     </span>
   );

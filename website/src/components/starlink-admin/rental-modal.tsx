@@ -1,7 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Trash2, X } from "lucide-react";
+import {
+  CalendarDays,
+  CircleAlert,
+  CircleCheck,
+  CircleDashed,
+  CircleSlash,
+  HandCoins,
+  Info,
+  Loader2,
+  MessageSquare,
+  Receipt,
+  ShieldCheck,
+  Trash2,
+  TriangleAlert,
+  User,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import {
   RENTAL_STATUSES,
   STATUS_META,
@@ -15,6 +32,11 @@ import {
   deleteRental,
   updateRental,
 } from "@/lib/starlink/client-api";
+import {
+  findUnitConflicts,
+  isBlockingStatus,
+  type ConflictCandidate,
+} from "@/lib/starlink/availability";
 import { daysBetweenInclusive } from "@/lib/starlink/dates";
 import {
   balanceDue,
@@ -22,8 +44,14 @@ import {
   isPaidInFull,
   parseMoneyInput,
 } from "@/lib/starlink/billing";
-import { formatCurrency, formatRelative, hexToRgba } from "@/lib/starlink/format";
-import { StatusBadge } from "./status-badge";
+import {
+  formatCurrency,
+  formatDateShort,
+  formatRelative,
+  hexToRgba,
+} from "@/lib/starlink/format";
+import { OptionSelect, type SelectOption } from "./option-select";
+import { STATUS_ICON, StatusBadge } from "./status-badge";
 import { cn } from "@/lib/utils";
 
 type FormState = {
@@ -83,8 +111,10 @@ function initialState(rental: RentalWithUnit | null): FormState {
 
 const inputClass =
   "w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-primary";
+// Deliberately quieter and smaller than a section heading: a field label is a
+// caption for one box, not a division of the form.
 const labelClass =
-  "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50";
+  "mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-white/40";
 
 function Field({
   label,
@@ -101,6 +131,73 @@ function Field({
       {children}
     </div>
   );
+}
+
+/**
+ * A titled division of the form. Sized, weighted and ruled off so it outranks
+ * the field labels underneath it, which previously looked near-identical.
+ */
+function Section({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+        <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+        <h3 className="text-sm font-bold text-white">{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+type NoteTone = "neutral" | "amber" | "sky" | "emerald" | "red";
+
+const NOTE_TONE: Record<NoteTone, string> = {
+  neutral: "border-white/10 bg-white/[0.02] text-white/50",
+  amber: "border-amber-400/25 bg-amber-400/10 text-amber-200",
+  sky: "border-sky-400/25 bg-sky-400/10 text-sky-200",
+  emerald: "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
+  red: "border-red-400/30 bg-red-400/10 text-red-200",
+};
+
+/** Where a booking stands on one thing, coloured by what it is waiting on. */
+function StateNote({
+  tone,
+  icon: Icon,
+  children,
+}: {
+  tone: NoteTone;
+  icon: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <p
+      className={cn(
+        "flex items-start gap-2 rounded-lg border px-3 py-2 text-xs leading-relaxed",
+        NOTE_TONE[tone],
+      )}
+    >
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span className="min-w-0">{children}</span>
+    </p>
+  );
+}
+
+/** "Michael Peake, Jul 27 – Aug 8" plus a count when more than one collides. */
+function describeConflicts(conflicts: ConflictCandidate[]): string {
+  const [first, ...rest] = conflicts;
+  const range = `${formatDateShort(first.pickup_date)} – ${formatDateShort(
+    first.return_date,
+  )}`;
+  const more = rest.length > 0 ? ` and ${rest.length} other booking${rest.length === 1 ? "" : "s"}` : "";
+  return `${first.customer_name}, ${range}${more}`;
 }
 
 /** Checkbox styled as a button, used for the money facts (paid, deposit). */
@@ -152,12 +249,15 @@ function Toggle({
 export function RentalModal({
   rental,
   units,
+  rentals,
   onClose,
   onSaved,
   onError,
 }: {
   rental: RentalWithUnit | null;
   units: Unit[];
+  /** Every booking, so the unit list can say what is free on these dates. */
+  rentals: RentalWithUnit[];
   onClose: () => void;
   onSaved: (message: string) => void;
   onError: (message: string) => void;
@@ -227,8 +327,97 @@ export function RentalModal({
     : "requested";
   const statusMeta = STATUS_META[statusKey];
   const statusHex = STATUS_TONE_HEX[statusMeta.tone];
+  const StatusIcon = STATUS_ICON[statusKey];
   const selectedUnit = units.find((u) => u.id === form.unit_id) ?? null;
   const unitColor = selectedUnit?.color ?? null;
+
+  const datesReady =
+    Boolean(form.pickup_date && form.return_date) &&
+    form.return_date >= form.pickup_date;
+
+  // Which kits are already spoken for across these dates. Recomputed as the
+  // dates are edited, so the list is never stale against what is on screen.
+  const conflictsByUnit = useMemo(
+    () =>
+      datesReady
+        ? findUnitConflicts({
+            rentals,
+            pickupIso: form.pickup_date,
+            returnIso: form.return_date,
+            excludeRentalId: rental?.id ?? null,
+          })
+        : new Map<string, ConflictCandidate[]>(),
+    [datesReady, rentals, form.pickup_date, form.return_date, rental?.id],
+  );
+
+  const unitOptions = useMemo<SelectOption[]>(() => {
+    const options: SelectOption[] = [
+      {
+        value: "",
+        label: "Unassigned",
+        tone: "slate",
+        icon: CircleDashed,
+        hint: "No kit held, so these dates stay open to anyone else",
+      },
+    ];
+    for (const unit of units) {
+      const conflicts = conflictsByUnit.get(unit.id) ?? [];
+      const booked = conflicts.length > 0;
+      options.push({
+        value: unit.id,
+        label: unit.active ? unit.name : `${unit.name} (inactive)`,
+        dotColor: unit.color,
+        tone: !datesReady ? "neutral" : booked ? "red" : unit.active ? "green" : "slate",
+        hint: !datesReady
+          ? "Set both dates to check this"
+          : booked
+            ? `Booked · ${describeConflicts(conflicts)}`
+            : unit.active
+              ? "Free for these dates"
+              : "Free, but retired from the fleet",
+      });
+    }
+    return options;
+  }, [units, conflictsByUnit, datesReady]);
+
+  const statusOptions = useMemo<SelectOption[]>(
+    () =>
+      RENTAL_STATUSES.map((status) => ({
+        value: status,
+        label: STATUS_META[status].label,
+        hint: STATUS_META[status].description,
+        tone: STATUS_META[status].tone,
+        icon: STATUS_ICON[status],
+      })),
+    [],
+  );
+
+  const selectedUnitConflicts = form.unit_id
+    ? conflictsByUnit.get(form.unit_id) ?? []
+    : [];
+
+  /**
+   * Assigning a kit that is already out is sometimes deliberate (swapping which
+   * booking gets it), so it is a question rather than a block. Returning false
+   * leaves the dropdown on its previous choice.
+   */
+  function handleUnitChange(unitId: string): boolean {
+    const conflicts = unitId ? conflictsByUnit.get(unitId) ?? [] : [];
+    if (conflicts.length > 0) {
+      const unit = units.find((u) => u.id === unitId);
+      const consequence = isBlockingStatus(form.status)
+        ? "Two Confirmed or Out bookings cannot share a kit, so saving this will be rejected."
+        : "This booking does not hold the kit at its current status, so it will save, but it cannot be confirmed while the clash stands.";
+      const proceed = window.confirm(
+        `${unit?.name ?? "That kit"} is already booked for ${describeConflicts(
+          conflicts,
+        )}, which overlaps these dates.\n\n${consequence}\n\nAssign it anyway?`,
+      );
+      if (!proceed) return false;
+    }
+    set("unit_id", unitId);
+    return true;
+  }
 
   async function handleSave() {
     setError("");
@@ -336,6 +525,16 @@ export function RentalModal({
           style={{ borderBottomColor: hexToRgba(statusHex, 0.3) }}
         >
           <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+              style={{
+                backgroundColor: hexToRgba(statusHex, 0.15),
+                color: statusHex,
+              }}
+              aria-hidden="true"
+            >
+              <StatusIcon className="h-4 w-4" />
+            </span>
             <h2 className="text-base font-bold text-white">
               {isEdit ? "Rental details" : "New rental"}
             </h2>
@@ -370,10 +569,7 @@ export function RentalModal({
 
         <div className="space-y-5 px-5 py-5">
           {/* Customer */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-white/40">
-              Customer
-            </h3>
+          <Section icon={User} title="Customer">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Name *">
                 <input
@@ -415,30 +611,17 @@ export function RentalModal({
                 />
               </Field>
             </div>
-          </section>
+          </Section>
 
           {/* Booking */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-white/40">
-              Booking
-            </h3>
+          <Section icon={CalendarDays} title="Booking">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field
-                label={
-                  <span className="flex items-center gap-1.5">
-                    Unit
-                    {unitColor ? (
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: unitColor }}
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                  </span>
-                }
-              >
-                <select
-                  className={cn(inputClass, "select-chevron cursor-pointer")}
+              <Field label="Unit">
+                <OptionSelect
+                  label="Unit"
+                  value={form.unit_id}
+                  options={unitOptions}
+                  onChange={handleUnitChange}
                   style={
                     unitColor
                       ? {
@@ -447,35 +630,21 @@ export function RentalModal({
                         }
                       : undefined
                   }
-                  value={form.unit_id}
-                  onChange={(e) => set("unit_id", e.target.value)}
-                >
-                  <option value="">Unassigned</option>
-                  {units.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                      {!u.active ? " (inactive)" : ""}
-                    </option>
-                  ))}
-                </select>
+                />
               </Field>
               <Field label="Status">
-                <select
-                  className={cn(inputClass, "select-chevron cursor-pointer font-semibold")}
+                <OptionSelect
+                  label="Status"
+                  value={form.status}
+                  options={statusOptions}
+                  onChange={(next) => set("status", next)}
+                  className="font-semibold"
                   style={{
                     borderLeft: `4px solid ${statusHex}`,
                     backgroundColor: hexToRgba(statusHex, 0.12),
                     color: statusHex,
                   }}
-                  value={form.status}
-                  onChange={(e) => set("status", e.target.value)}
-                >
-                  {RENTAL_STATUSES.map((st) => (
-                    <option key={st} value={st}>
-                      {STATUS_META[st].label}
-                    </option>
-                  ))}
-                </select>
+                />
               </Field>
               <Field label="Pickup date *">
                 <input
@@ -507,26 +676,31 @@ export function RentalModal({
                 {days} day{days === 1 ? "" : "s"} out
               </p>
             ) : null}
-            {statusKey === "confirmed" || statusKey === "active" ? (
-              <p
-                className="rounded-lg border px-3 py-2 text-xs"
-                style={{
-                  borderColor: hexToRgba(statusHex, 0.3),
-                  backgroundColor: hexToRgba(statusHex, 0.1),
-                  color: statusHex,
-                }}
-              >
-                {statusKey === "active" ? "Active" : "Confirmed"} rentals reserve the
-                unit. Overlapping dates on the same unit will be rejected.
-              </p>
+            {selectedUnitConflicts.length > 0 ? (
+              <StateNote tone="red" icon={TriangleAlert}>
+                {selectedUnit?.name ?? "This kit"} is already booked for{" "}
+                {describeConflicts(selectedUnitConflicts)}, which overlaps these
+                dates.{" "}
+                {isBlockingStatus(form.status)
+                  ? "Saving will be rejected until one of them moves."
+                  : "It cannot be confirmed while the clash stands."}
+              </StateNote>
+            ) : !form.unit_id && statusKey !== "returned" && statusKey !== "cancelled" ? (
+              <StateNote tone="amber" icon={CircleDashed}>
+                No kit assigned, so nothing is held for these dates and someone
+                else can still be booked into them.
+              </StateNote>
+            ) : statusKey === "confirmed" || statusKey === "active" ? (
+              <StateNote tone="emerald" icon={ShieldCheck}>
+                {selectedUnit?.name ?? "This kit"} is held for these dates.{" "}
+                {statusKey === "active" ? "Out" : "Confirmed"} bookings reserve
+                the unit, so nobody else can be booked onto it.
+              </StateNote>
             ) : null}
-          </section>
+          </Section>
 
           {/* Money */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-white/40">
-              Billing
-            </h3>
+          <Section icon={Receipt} title="Billing">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Rental price">
                 <input
@@ -556,20 +730,31 @@ export function RentalModal({
                 />
               </div>
             </div>
-            <p className="text-xs text-white/45">
-              {price === 0
-                ? "No charge for this rental."
-                : !canMarkPaid
-                  ? "What the customer is charged for the whole rental. Tick it off once the payment lands."
-                  : paid
-                    ? `${formatCurrency(price)} received in full. Nothing outstanding.`
-                    : `Customer owes ${formatCurrency(
-                        balanceDue({
-                          quoted_price: price,
-                          amount_received: partOnRecord,
-                        }),
-                      )}.`}
-            </p>
+            {price === 0 ? (
+              <StateNote tone="neutral" icon={CircleSlash}>
+                No charge for this rental.
+              </StateNote>
+            ) : !canMarkPaid ? (
+              <StateNote tone="neutral" icon={Info}>
+                What the customer is charged for the whole rental. Tick it off
+                once the payment lands.
+              </StateNote>
+            ) : paid ? (
+              <StateNote tone="emerald" icon={CircleCheck}>
+                {formatCurrency(price)} received in full. Nothing outstanding.
+              </StateNote>
+            ) : (
+              <StateNote tone="amber" icon={CircleAlert}>
+                Customer owes{" "}
+                {formatCurrency(
+                  balanceDue({
+                    quoted_price: price,
+                    amount_received: partOnRecord,
+                  }),
+                )}
+                .
+              </StateNote>
+            )}
             {partOnRecord !== null ? (
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-orange-400/25 bg-orange-400/10 px-3 py-2 text-xs text-orange-200">
                 {formatCurrency(partOnRecord)} is already banked against this
@@ -583,13 +768,10 @@ export function RentalModal({
                 </button>
               </p>
             ) : null}
-          </section>
+          </Section>
 
           {/* Deposit */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-white/40">
-              Deposit
-            </h3>
+          <Section icon={ShieldCheck} title="Deposit">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Deposit amount">
                 <input
@@ -626,7 +808,7 @@ export function RentalModal({
                   label="Deposit returned"
                   checked={depositReturned}
                   onChange={(checked) => set("deposit_returned", checked)}
-                  tone="slate"
+                  tone="emerald"
                   disabled={!form.deposit_received}
                   title={
                     form.deposit_received
@@ -636,33 +818,49 @@ export function RentalModal({
                 />
               </div>
             </div>
-            <p className="text-xs text-white/45">
-              {form.deposit_received && !hasDeposit
-                ? "Marked received but no amount is recorded. Enter what you took."
-                : !hasDeposit
-                  ? "No deposit on this booking. Enter an amount if you are taking one."
-                  : !form.deposit_received
-                    ? `Collect ${formatCurrency(deposit)} at pickup, then tick Deposit received.`
-                    : depositReturned
-                      ? `${formatCurrency(deposit)} sent back to the customer${
-                          rental?.deposit_returned_at
-                            ? ` ${formatRelative(rental.deposit_returned_at)}`
-                            : ""
-                        }.`
-                      : `Holding ${formatCurrency(deposit)}. The full amount goes back when you tick Deposit returned.`}
-            </p>
-          </section>
+            {/* Colour tracks the money: amber still to collect, blue sitting
+                with us, green settled up. */}
+            {form.deposit_received && !hasDeposit ? (
+              <StateNote tone="red" icon={TriangleAlert}>
+                Marked received but no amount is recorded. Enter what you took.
+              </StateNote>
+            ) : !hasDeposit ? (
+              <StateNote tone="neutral" icon={Info}>
+                No deposit on this booking. Enter an amount if you are taking
+                one.
+              </StateNote>
+            ) : !form.deposit_received ? (
+              <StateNote tone="amber" icon={HandCoins}>
+                Collect {formatCurrency(deposit)} at pickup, then tick Deposit
+                received.
+              </StateNote>
+            ) : depositReturned ? (
+              <StateNote tone="emerald" icon={CircleCheck}>
+                {formatCurrency(deposit)} sent back to the customer
+                {rental?.deposit_returned_at
+                  ? ` ${formatRelative(rental.deposit_returned_at)}`
+                  : ""}
+                .
+              </StateNote>
+            ) : (
+              <StateNote tone="sky" icon={ShieldCheck}>
+                Holding {formatCurrency(deposit)}. The full amount goes back
+                when you tick Deposit returned.
+              </StateNote>
+            )}
+          </Section>
 
           {/* Comments */}
-          <Field label="Internal comments">
+          <Section icon={MessageSquare} title="Internal notes">
             <textarea
+              aria-label="Internal notes"
               className={cn(inputClass, "min-h-68 resize-y leading-relaxed")}
               rows={12}
               value={form.comments}
               onChange={(e) => set("comments", e.target.value)}
               placeholder="Notes for the team..."
             />
-          </Field>
+          </Section>
 
           {error ? (
             <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">

@@ -222,6 +222,7 @@ export function StarlinkAdminApp() {
           key={modalRental?.id ?? "new"}
           rental={modalRental}
           units={units}
+          rentals={rentals}
           onClose={closeModal}
           onSaved={handleSaved}
           onError={handleError}
