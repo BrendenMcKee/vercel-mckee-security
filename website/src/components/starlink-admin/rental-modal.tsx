@@ -6,6 +6,8 @@ import {
   CircleAlert,
   CircleCheck,
   CircleDashed,
+  CircleDollarSign,
+  CircleHelp,
   CircleSlash,
   HandCoins,
   Info,
@@ -50,6 +52,7 @@ import {
   formatRelative,
   hexToRgba,
 } from "@/lib/starlink/format";
+import { Field, inputClass, Section } from "./form-ui";
 import { OptionSelect, type SelectOption } from "./option-select";
 import { STATUS_ICON, StatusBadge } from "./status-badge";
 import { cn } from "@/lib/utils";
@@ -109,59 +112,12 @@ function initialState(rental: RentalWithUnit | null): FormState {
   };
 }
 
-const inputClass =
-  "w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-primary";
-// Deliberately quieter and smaller than a section heading: a field label is a
-// caption for one box, not a division of the form.
-const labelClass =
-  "mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-white/40";
-
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <label className={labelClass}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
-/**
- * A titled division of the form. Sized, weighted and ruled off so it outranks
- * the field labels underneath it, which previously looked near-identical.
- */
-function Section({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: LucideIcon;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-        <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-        <h3 className="text-sm font-bold text-white">{title}</h3>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-type NoteTone = "neutral" | "amber" | "sky" | "emerald" | "red";
+type NoteTone = "neutral" | "amber" | "orange" | "sky" | "emerald" | "red";
 
 const NOTE_TONE: Record<NoteTone, string> = {
-  neutral: "border-white/10 bg-white/[0.02] text-white/50",
+  neutral: "border-white/10 bg-white/[0.02] text-white/60",
   amber: "border-amber-400/25 bg-amber-400/10 text-amber-200",
+  orange: "border-orange-400/25 bg-orange-400/10 text-orange-200",
   sky: "border-sky-400/25 bg-sky-400/10 text-sky-200",
   emerald: "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
   red: "border-red-400/30 bg-red-400/10 text-red-200",
@@ -192,7 +148,11 @@ function StateNote({
 
 /** "Michael Peake, Jul 27 – Aug 8" plus a count when more than one collides. */
 function describeConflicts(conflicts: ConflictCandidate[]): string {
-  const [first, ...rest] = conflicts;
+  // Soonest first, so the one named is the one about to bite.
+  const [first, ...rest] = [...conflicts].sort((a, b) =>
+    a.pickup_date.localeCompare(b.pickup_date),
+  );
+  if (!first) return "another booking";
   const range = `${formatDateShort(first.pickup_date)} – ${formatDateShort(
     first.return_date,
   )}`;
@@ -275,15 +235,25 @@ export function RentalModal({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // A dropdown inside the form calls preventDefault on Escape to claim it;
+      // the first press should close that, not throw away the whole form.
+      if (e.defaultPrevented) return;
       if (e.key === "Escape") onClose();
     }
     document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Locking scroll is tied to being mounted, not to the identity of onClose,
+  // which the parent recreates on every render. Restoring the previous value
+  // rather than "" leaves any lock the page header already had intact.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previous;
     };
-  }, [onClose]);
+  }, []);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -334,6 +304,16 @@ export function RentalModal({
   const datesReady =
     Boolean(form.pickup_date && form.return_date) &&
     form.return_date >= form.pickup_date;
+  // Worth telling apart from "not filled in yet", or the dropdown says the
+  // dates are missing while both are plainly on screen.
+  const datesReversed =
+    Boolean(form.pickup_date && form.return_date) &&
+    form.return_date < form.pickup_date;
+
+  // An overlap only matters while this booking holds the kit or still could. A
+  // returned or cancelled booking is finished, so a clash is a fact about the
+  // fleet rather than a problem to solve, and the database will accept it.
+  const clashMatters = statusKey !== "returned" && statusKey !== "cancelled";
 
   // Which kits are already spoken for across these dates. Recomputed as the
   // dates are edited, so the list is never stale against what is on screen.
@@ -367,18 +347,39 @@ export function RentalModal({
         value: unit.id,
         label: unit.active ? unit.name : `${unit.name} (inactive)`,
         dotColor: unit.color,
-        tone: !datesReady ? "neutral" : booked ? "red" : unit.active ? "green" : "slate",
-        hint: !datesReady
-          ? "Set both dates to check this"
+        // Availability gets its own glyph because the dot is the kit's calendar
+        // colour: without this, a unit that happens to be red looks booked.
+        icon: !datesReady
+          ? CircleHelp
           : booked
-            ? `Booked · ${describeConflicts(conflicts)}`
+            ? clashMatters
+              ? TriangleAlert
+              : Info
+            : unit.active
+              ? CircleCheck
+              : CircleSlash,
+        tone: !datesReady
+          ? "neutral"
+          : booked
+            ? clashMatters
+              ? "red"
+              : "slate"
+            : unit.active
+              ? "green"
+              : "slate",
+        hint: !datesReady
+          ? datesReversed
+            ? "Return date is before pickup"
+            : "Set both dates to check this"
+          : booked
+            ? `${clashMatters ? "Booked" : "Also booked"} · ${describeConflicts(conflicts)}`
             : unit.active
               ? "Free for these dates"
               : "Free, but retired from the fleet",
       });
     }
     return options;
-  }, [units, conflictsByUnit, datesReady]);
+  }, [units, conflictsByUnit, datesReady, datesReversed, clashMatters]);
 
   const statusOptions = useMemo<SelectOption[]>(
     () =>
@@ -403,7 +404,9 @@ export function RentalModal({
    */
   function handleUnitChange(unitId: string): boolean {
     const conflicts = unitId ? conflictsByUnit.get(unitId) ?? [] : [];
-    if (conflicts.length > 0) {
+    // No dialog on a finished booking: recording which kit actually went out on
+    // a returned rental is routine, and nothing is at stake.
+    if (conflicts.length > 0 && clashMatters) {
       const unit = units.find((u) => u.id === unitId);
       const consequence = isBlockingStatus(form.status)
         ? "Two Confirmed or Out bookings cannot share a kit, so saving this will be rejected."
@@ -501,13 +504,21 @@ export function RentalModal({
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/70 p-3 sm:p-6"
-      onMouseDown={(e) => {
+      className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/70 p-3 sm:p-6"
+      onPointerDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="my-auto w-full max-w-2xl overflow-hidden rounded-2xl border bg-surface shadow-2xl shadow-black/50 transition-colors"
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? "Rental details" : "New rental"}
+        // `clip` rather than `hidden`: both round off the gradient bar, but
+        // `hidden` makes this a scroll container, and a sticky child sticks to
+        // its nearest scrolling ancestor. This card never scrolls (the overlay
+        // does), so `hidden` silently disabled the sticky header and footer,
+        // leaving Save about three screens down on a phone.
+        className="my-auto w-full max-w-2xl overflow-clip rounded-2xl border bg-surface shadow-2xl shadow-black/50 transition-colors"
         style={{
           borderColor: hexToRgba(statusHex, 0.55),
           boxShadow: `0 0 0 1px ${hexToRgba(statusHex, 0.18)}, 0 25px 50px -12px rgba(0,0,0,0.6)`,
@@ -677,24 +688,35 @@ export function RentalModal({
               </p>
             ) : null}
             {selectedUnitConflicts.length > 0 ? (
-              <StateNote tone="red" icon={TriangleAlert}>
-                {selectedUnit?.name ?? "This kit"} is already booked for{" "}
-                {describeConflicts(selectedUnitConflicts)}, which overlaps these
-                dates.{" "}
-                {isBlockingStatus(form.status)
-                  ? "Saving will be rejected until one of them moves."
-                  : "It cannot be confirmed while the clash stands."}
-              </StateNote>
-            ) : !form.unit_id && statusKey !== "returned" && statusKey !== "cancelled" ? (
+              clashMatters ? (
+                <StateNote tone="red" icon={TriangleAlert}>
+                  {selectedUnit?.name ?? "This kit"} is already booked for{" "}
+                  {describeConflicts(selectedUnitConflicts)}, which overlaps
+                  these dates.{" "}
+                  {isBlockingStatus(form.status)
+                    ? "Saving will be rejected until one of them moves."
+                    : "It cannot be confirmed while the clash stands."}
+                </StateNote>
+              ) : (
+                <StateNote tone="neutral" icon={Info}>
+                  {selectedUnit?.name ?? "This kit"} is also booked for{" "}
+                  {describeConflicts(selectedUnitConflicts)}. This booking is{" "}
+                  {statusMeta.label.toLowerCase()}, so it no longer holds the
+                  kit and the overlap is fine to record.
+                </StateNote>
+              )
+            ) : !form.unit_id && clashMatters ? (
               <StateNote tone="amber" icon={CircleDashed}>
                 No kit assigned, so nothing is held for these dates and someone
                 else can still be booked into them.
               </StateNote>
-            ) : statusKey === "confirmed" || statusKey === "active" ? (
+            ) : datesReady && (statusKey === "confirmed" || statusKey === "active") ? (
               <StateNote tone="emerald" icon={ShieldCheck}>
-                {selectedUnit?.name ?? "This kit"} is held for these dates.{" "}
-                {statusKey === "active" ? "Out" : "Confirmed"} bookings reserve
-                the unit, so nobody else can be booked onto it.
+                {selectedUnit?.name ?? "This kit"} is held from{" "}
+                {formatDateShort(form.pickup_date)} to{" "}
+                {formatDateShort(form.return_date)}. No other{" "}
+                {statusKey === "active" ? "Out" : "Confirmed"} booking can take
+                it across those dates.
               </StateNote>
             ) : null}
           </Section>
@@ -756,9 +778,9 @@ export function RentalModal({
               </StateNote>
             )}
             {partOnRecord !== null ? (
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-orange-400/25 bg-orange-400/10 px-3 py-2 text-xs text-orange-200">
+              <StateNote tone="orange" icon={CircleDollarSign}>
                 {formatCurrency(partOnRecord)} is already banked against this
-                booking. Tick Paid in full once the rest arrives.
+                booking. Tick Paid in full once the rest arrives.{" "}
                 <button
                   type="button"
                   onClick={() => setPartCleared(true)}
@@ -766,14 +788,14 @@ export function RentalModal({
                 >
                   Clear it
                 </button>
-              </p>
+              </StateNote>
             ) : null}
           </Section>
 
           {/* Deposit */}
           <Section icon={ShieldCheck} title="Deposit">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Deposit amount">
+            <div className="space-y-3">
+              <Field label="Deposit amount" className="sm:max-w-[calc(50%-0.375rem)]">
                 <input
                   className={inputClass}
                   inputMode="decimal"
@@ -782,7 +804,9 @@ export function RentalModal({
                   placeholder="0.00"
                 />
               </Field>
-              <div className="flex flex-wrap items-end gap-2">
+              {/* Their own row: side by side these two need more than half the
+                  modal, so sharing a column made them wrap at every width. */}
+              <div className="flex flex-wrap gap-2">
                 <Toggle
                   label="Deposit received"
                   checked={form.deposit_received}
@@ -869,7 +893,7 @@ export function RentalModal({
           ) : null}
         </div>
 
-        <div className="sticky bottom-0 flex items-center justify-between gap-3 rounded-b-2xl border-t border-white/10 bg-surface px-5 py-4">
+        <div className="sticky bottom-0 flex items-center justify-between gap-3 rounded-b-2xl border-t border-white/10 bg-surface px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {isEdit ? (
             <button
               type="button"

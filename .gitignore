@@ -15,6 +15,10 @@ dist/
 .env
 .env*.local
 
+# Screenshots from the ad-hoc UI check scripts
+website/.mobile-audit/
+website/.starlink-ui-check/
+
 # Debug
 npm-debug.log*
 yarn-debug.log*

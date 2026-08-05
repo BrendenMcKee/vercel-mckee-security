@@ -116,14 +116,14 @@ export function StarlinkAdminApp() {
             <h1 className="text-lg font-bold leading-tight text-white">
               Starlink Rentals
             </h1>
-            <p className="text-xs text-white/45">McKee Security internal portal</p>
+            <p className="text-xs text-white/55">McKee Security internal portal</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={openNew}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--primary-hover)]"
+            className="flex min-h-11 items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--primary-hover)] sm:min-h-0"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">New rental</span>
@@ -132,7 +132,7 @@ export function StarlinkAdminApp() {
           <button
             type="button"
             onClick={logout}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/5"
+            className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/5 sm:min-h-0 sm:min-w-0"
             aria-label="Log out"
           >
             <LogOut className="h-4 w-4" />
@@ -176,11 +176,12 @@ export function StarlinkAdminApp() {
                   type="button"
                   onClick={() => setView(tab.id)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                    "flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors sm:min-h-0",
                     active
                       ? "bg-primary text-white"
-                      : "text-white/60 hover:bg-white/5 hover:text-white",
+                      : "text-white/65 hover:bg-white/5 hover:text-white",
                   )}
+                  aria-current={active ? "page" : undefined}
                 >
                   <Icon className="h-4 w-4" />
                   {tab.label}

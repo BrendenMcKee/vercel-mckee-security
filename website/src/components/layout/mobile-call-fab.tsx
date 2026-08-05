@@ -7,8 +7,14 @@ import { siteConfig } from "@/lib/site-config";
 export function MobileCallFab() {
   const pathname = usePathname();
 
-  // Hide the floating call button on the internal Data Drops tool.
-  if (pathname?.startsWith("/data-drops-")) return null;
+  // Hide the floating call button on the internal tools. Staff using them do
+  // not need to phone us, and it sits over the controls on a phone.
+  if (
+    pathname?.startsWith("/data-drops-") ||
+    pathname?.startsWith("/starlink-admin")
+  ) {
+    return null;
+  }
 
   return (
     <a

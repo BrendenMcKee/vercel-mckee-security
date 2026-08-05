@@ -25,7 +25,10 @@ export function Toast({
     <div
       role="status"
       className={cn(
-        "fixed bottom-5 left-1/2 z-[120] flex -translate-x-1/2 items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold shadow-2xl ring-1 ring-inset",
+        // Full width less a gutter on a phone, centred and capped on desktop.
+        // With only `left-1/2` set, shrink-to-fit width is the viewport minus
+        // that offset, so a real error message rendered as a half-screen ribbon.
+        "fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-4 right-4 z-[120] flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold shadow-2xl ring-1 ring-inset sm:left-1/2 sm:right-auto sm:max-w-md sm:-translate-x-1/2",
         toast.tone === "success"
           ? "bg-emerald-950/90 text-emerald-200 ring-emerald-500/40"
           : "bg-red-950/90 text-red-200 ring-red-500/40",
@@ -36,11 +39,11 @@ export function Toast({
       ) : (
         <XCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
       )}
-      <span>{toast.message}</span>
+      <span className="min-w-0 flex-1">{toast.message}</span>
       <button
         type="button"
         onClick={onDismiss}
-        className="ml-1 rounded-md p-0.5 text-white/50 transition-colors hover:text-white"
+        className="-mr-1.5 shrink-0 rounded-md p-2 text-white/60 transition-colors hover:text-white"
         aria-label="Dismiss"
       >
         <X className="h-4 w-4" aria-hidden="true" />

@@ -15,7 +15,12 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
 - Lint: `cd website && npm run lint`. The command works but the checked-in code currently has
   pre-existing lint errors/warnings; a clean exit is not expected on an unmodified tree.
 - There is no automated test suite. `data-drops-aws-backend` has a placeholder `test` script, and
-  `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner.
+  `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner. Two of them drive a
+  real browser against a running dev server and are worth re-running after any UI change:
+  `mobile-audit.mjs` (both portals, needs seeded Supabase users) and `starlink-admin-ui-check.mjs`
+  (Starlink admin; needs `STARLINK_ADMIN_PASSWORD` set for both the server and the script). They
+  measure document width, tap-target and focused-font sizes, and the booking modal's sticky bars,
+  and write screenshots to gitignored directories.
 - Data Drops backend (`data-drops-aws-backend`, Express + MySQL): rarely run locally. The website's
   `/api/dd/*` proxy defaults to the live AWS API (`DATA_DROPS_API_URL`), so you do not need it for
   portal/marketing work. To run it you must supply a MySQL and `RDS_*` env vars; see its `README.md`.

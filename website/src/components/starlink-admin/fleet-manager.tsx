@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Satellite, Trash2 } from "lucide-react";
 import { UNIT_COLOR_PALETTE, type Unit } from "@/lib/starlink/types";
 import { createUnit, deleteUnit, updateUnit } from "@/lib/starlink/client-api";
+import { Field, inputClass, Section } from "./form-ui";
 import { cn } from "@/lib/utils";
 
 function ColorPicker({
@@ -14,20 +15,23 @@ function ColorPicker({
   onChange: (color: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    // Bigger on touch: a swatch applies immediately with no confirmation, so a
+    // 24px target next to the delete button was asking for a misfire.
+    <div className="flex flex-wrap gap-2 sm:gap-1.5">
       {UNIT_COLOR_PALETTE.map((c) => (
         <button
           key={c}
           type="button"
           onClick={() => onChange(c)}
           className={cn(
-            "h-6 w-6 rounded-md ring-2 ring-offset-2 ring-offset-surface transition-transform hover:scale-110",
+            "h-10 w-10 rounded-md ring-2 ring-offset-2 ring-offset-surface transition-transform hover:scale-110 sm:h-6 sm:w-6",
             value.toLowerCase() === c.toLowerCase()
               ? "ring-white"
               : "ring-transparent",
           )}
           style={{ backgroundColor: c }}
           aria-label={`Use color ${c}`}
+          aria-pressed={value.toLowerCase() === c.toLowerCase()}
         />
       ))}
     </div>
@@ -94,18 +98,22 @@ function UnitRow({
               setName(unit.name);
             }
           }}
-          className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-semibold text-white outline-none hover:border-white/10 focus:border-primary"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-base font-semibold text-white outline-none hover:border-white/10 focus:border-primary sm:min-h-0 sm:text-sm"
+          aria-label={`Name for ${unit.name}`}
         />
         <button
           type="button"
           disabled={busy}
           onClick={() => patch({ active: !unit.active }, unit.active ? "Marked inactive." : "Marked active.")}
           className={cn(
-            "rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset transition-colors disabled:opacity-50",
+            "flex min-h-11 shrink-0 items-center rounded-full px-3 py-2 text-xs font-semibold ring-1 ring-inset transition-colors disabled:opacity-50 sm:min-h-0 sm:py-1",
             unit.active
               ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
               : "bg-slate-500/15 text-slate-300 ring-slate-500/30",
           )}
+          aria-label={
+            unit.active ? "Active. Mark inactive" : "Inactive. Mark active"
+          }
         >
           {unit.active ? "Active" : "Inactive"}
         </button>
@@ -113,8 +121,8 @@ function UnitRow({
           type="button"
           disabled={busy}
           onClick={remove}
-          className="rounded-lg p-1.5 text-white/40 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
-          aria-label="Delete unit"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50 sm:h-8 sm:w-8"
+          aria-label={`Delete ${unit.name}`}
         >
           {busy ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -169,13 +177,13 @@ export function FleetManager({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-white/10 bg-surface/60 p-4">
-        <h3 className="mb-3 text-sm font-bold text-white">Add a Starlink kit</h3>
+      <Section
+        icon={Satellite}
+        title="Add a Starlink kit"
+        className="rounded-xl border border-white/10 bg-surface/60 p-4"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">
-              Name
-            </label>
+          <Field label="Name" className="flex-1">
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -183,20 +191,17 @@ export function FleetManager({
                 if (e.key === "Enter") add();
               }}
               placeholder="e.g. Starlink 3"
-              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-primary"
+              className={inputClass}
             />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">
-              Color
-            </label>
+          </Field>
+          <Field label="Color">
             <ColorPicker value={newColor} onChange={setNewColor} />
-          </div>
+          </Field>
           <button
             type="button"
             onClick={add}
             disabled={adding || newName.trim().length === 0}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
           >
             {adding ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -206,7 +211,7 @@ export function FleetManager({
             Add
           </button>
         </div>
-      </div>
+      </Section>
 
       {units.length === 0 ? (
         <p className="rounded-xl border border-white/10 bg-surface/40 p-4 text-sm text-white/50">

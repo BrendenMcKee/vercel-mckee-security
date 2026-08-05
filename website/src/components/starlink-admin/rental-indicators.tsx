@@ -1,35 +1,20 @@
 "use client";
 
 import {
-  CircleCheck,
   CircleDollarSign,
-  Clock3,
   Coins,
-  PackageCheck,
   RotateCcw,
-  XCircle,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
-import type { RentalStatus, RentalWithUnit } from "@/lib/starlink/types";
+import {
+  RENTAL_STATUSES,
+  STATUS_META,
+  type RentalStatus,
+  type RentalWithUnit,
+} from "@/lib/starlink/types";
 import { isPaidInFull } from "@/lib/starlink/billing";
 import { cn } from "@/lib/utils";
-
-const STATUS_ICON: Record<RentalStatus, LucideIcon> = {
-  requested: Clock3,
-  confirmed: CircleCheck,
-  active: Zap,
-  returned: PackageCheck,
-  cancelled: XCircle,
-};
-
-const STATUS_ICON_CLASS: Record<RentalStatus, string> = {
-  requested: "text-amber-300",
-  confirmed: "text-blue-300",
-  active: "text-emerald-300",
-  returned: "text-slate-300",
-  cancelled: "text-red-300",
-};
+import { STATUS_ICON, TONE_TEXT_CLASS } from "./status-badge";
 
 /**
  * Compact at-a-glance icons for a rental: lifecycle status, deposit state, and
@@ -45,7 +30,8 @@ export function RentalIndicators({
   className?: string;
 }) {
   const status = rental.status as RentalStatus;
-  const StatusIcon = STATUS_ICON[status] ?? Clock3;
+  const meta = STATUS_META[status];
+  const StatusIcon = STATUS_ICON[status] ?? STATUS_ICON.requested;
 
   const paid = isPaidInFull(rental);
 
@@ -54,8 +40,8 @@ export function RentalIndicators({
       <StatusIcon
         size={size}
         strokeWidth={2.25}
-        className={STATUS_ICON_CLASS[status] ?? "text-slate-300"}
-        aria-label={`Status: ${status}`}
+        className={meta ? TONE_TEXT_CLASS[meta.tone] : "text-slate-300"}
+        aria-label={`Status: ${meta?.label ?? status}`}
       />
       {rental.deposit_returned ? (
         <RotateCcw
@@ -85,11 +71,14 @@ export function RentalIndicators({
 }
 
 export function RentalIndicatorLegend({ className }: { className?: string }) {
+  // Built from the same map the badges use, so the legend cannot drift out of
+  // step with the glyphs it is explaining.
   const items: { icon: LucideIcon; label: string; cls: string }[] = [
-    { icon: Clock3, label: "Requested", cls: "text-amber-300" },
-    { icon: CircleCheck, label: "Confirmed", cls: "text-blue-300" },
-    { icon: Zap, label: "Out (active)", cls: "text-emerald-300" },
-    { icon: PackageCheck, label: "Returned", cls: "text-slate-300" },
+    ...RENTAL_STATUSES.filter((s) => s !== "cancelled").map((status) => ({
+      icon: STATUS_ICON[status],
+      label: STATUS_META[status].label,
+      cls: TONE_TEXT_CLASS[STATUS_META[status].tone],
+    })),
     { icon: Coins, label: "Deposit held", cls: "text-sky-300" },
     { icon: RotateCcw, label: "Deposit back", cls: "text-slate-300" },
     { icon: CircleDollarSign, label: "Paid in full", cls: "text-emerald-300" },

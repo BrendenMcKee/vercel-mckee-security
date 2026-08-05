@@ -261,23 +261,26 @@ function shownItems(group: RentalActionGroup): {
  */
 function groupHtml(group: RentalActionGroup): string {
   const { items: visible, hidden } = shownItems(group);
+  // Colours here are opaque hex rather than rgba, which Outlook on Windows
+  // drops outright, and the name link is padded so it is a comfortable tap on a
+  // phone: it is the primary action in this email.
   const items = visible
     .map(
       (item) => `
-      <div style="margin:10px 0 0;padding:10px 0 0;border-top:1px solid rgba(255,255,255,0.1);">
-        <a href="${escapeHtml(rentalAdminUrl(item.rentalId))}" target="_blank" rel="noopener" style="font-size:15px;font-weight:700;color:#ffffff;text-decoration:underline;text-decoration-color:rgba(201,24,24,0.85);">
+      <div style="margin:10px 0 0;padding:10px 0 0;border-top:1px solid #262626;">
+        <a href="${escapeHtml(rentalAdminUrl(item.rentalId))}" target="_blank" rel="noopener" style="display:inline-block;padding:4px 0;font-size:15px;font-weight:700;color:#ffffff;text-decoration:underline;text-decoration-color:rgba(201,24,24,0.85);word-break:break-word;">
           ${escapeHtml(item.customerName)}
         </a>
-        <div style="margin:3px 0 0;font-size:13px;line-height:1.55;color:rgba(255,255,255,0.6);">
+        <div style="margin:3px 0 0;font-size:13px;line-height:1.55;color:#9a9a9a;">
           ${escapeHtml(item.detail)}
         </div>
       </div>`,
     )
     .join("");
   const more = hidden
-    ? `<div style="margin:10px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">and ${hidden} more in the admin portal</div>`
+    ? `<div style="margin:10px 0 0;font-size:13px;color:#9a9a9a;">and ${hidden} more in the admin portal</div>`
     : "";
-  return `<span>${escapeHtml(group.instruction)}</span>${items}${more}`;
+  return `<div>${escapeHtml(group.instruction)}</div>${items}${more}`;
 }
 
 function groupText(group: RentalActionGroup): string {

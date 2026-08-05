@@ -20,7 +20,9 @@ const TONE_CLASS: Record<StatusTone, string> = {
 /**
  * One glyph per stage of a rental, so the status reads at a glance without
  * having to parse the word: waiting on us, booked in, gone out, come back,
- * called off.
+ * called off. The single source for the whole admin — badges, calendar chips
+ * and the booking form all read from here, or the same rental ends up wearing
+ * two different glyphs on one card.
  */
 export const STATUS_ICON: Record<RentalStatus, LucideIcon> = {
   requested: Clock,
@@ -28,6 +30,15 @@ export const STATUS_ICON: Record<RentalStatus, LucideIcon> = {
   active: Truck,
   returned: PackageCheck,
   cancelled: Ban,
+};
+
+/** The badge tones as plain text colours, for icons drawn without a pill. */
+export const TONE_TEXT_CLASS: Record<StatusTone, string> = {
+  amber: "text-amber-300",
+  blue: "text-blue-300",
+  green: "text-emerald-300",
+  slate: "text-slate-300",
+  red: "text-red-300",
 };
 
 export function StatusBadge({

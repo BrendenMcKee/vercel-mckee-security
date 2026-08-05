@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { RentalWithUnit, Unit } from "@/lib/starlink/types";
+import { rangesOverlapInclusive } from "@/lib/starlink/dates";
 import { formatDateMedium } from "@/lib/starlink/format";
 import { CalendarMonth } from "./calendar-month";
 import { StatusBadge } from "./status-badge";
@@ -13,6 +14,13 @@ const MONTH_LABEL = new Intl.DateTimeFormat("en-CA", {
   month: "long",
   year: "numeric",
 });
+
+/** `YYYY-MM-DD` for a Date read in local time, matching the calendar grid. */
+function isoFromLocalDate(date: Date): string {
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  return `${date.getFullYear()}-${m}-${d}`;
+}
 
 export function ScheduleView({
   rentals,
@@ -39,12 +47,31 @@ export function ScheduleView({
     setMonthDate(new Date(now.getFullYear(), now.getMonth(), 1));
   };
 
+  // The month arrows have to mean something on a phone, where the grid is
+  // hidden: browsing to another month re-points this list at that month instead
+  // of leaving it stuck on "from today onwards".
+  const monthStartIso = isoFromLocalDate(monthDate);
+  const monthEndIso = isoFromLocalDate(
+    new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0),
+  );
+  const viewingThisMonth = todayIso >= monthStartIso && todayIso <= monthEndIso;
+
   const agenda = useMemo(
     () =>
       rentals
-        .filter((r) => r.status !== "cancelled" && r.return_date >= todayIso)
+        .filter((r) => {
+          if (r.status === "cancelled") return false;
+          return viewingThisMonth
+            ? r.return_date >= todayIso
+            : rangesOverlapInclusive(
+                r.pickup_date,
+                r.return_date,
+                monthStartIso,
+                monthEndIso,
+              );
+        })
         .sort((a, b) => a.pickup_date.localeCompare(b.pickup_date)),
-    [rentals, todayIso],
+    [rentals, todayIso, viewingThisMonth, monthStartIso, monthEndIso],
   );
 
   return (
@@ -54,7 +81,7 @@ export function ScheduleView({
           <button
             type="button"
             onClick={goPrev}
-            className="rounded-lg border border-white/10 bg-surface/60 p-2 text-white/70 transition-colors hover:bg-white/5"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-surface/60 text-white/70 transition-colors hover:bg-white/5 sm:h-9 sm:w-9"
             aria-label="Previous month"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -65,7 +92,7 @@ export function ScheduleView({
           <button
             type="button"
             onClick={goNext}
-            className="rounded-lg border border-white/10 bg-surface/60 p-2 text-white/70 transition-colors hover:bg-white/5"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-surface/60 text-white/70 transition-colors hover:bg-white/5 sm:h-9 sm:w-9"
             aria-label="Next month"
           >
             <ChevronRight className="h-4 w-4" />
@@ -74,7 +101,7 @@ export function ScheduleView({
         <button
           type="button"
           onClick={goToday}
-          className="rounded-lg border border-white/10 bg-surface/60 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/5"
+          className="rounded-lg border border-white/10 bg-surface/60 px-4 py-2.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/5 sm:py-1.5"
         >
           Today
         </button>
@@ -90,7 +117,7 @@ export function ScheduleView({
                 aria-hidden="true"
               />
               {u.name}
-              {!u.active ? <span className="text-white/30">(inactive)</span> : null}
+              {!u.active ? <span className="text-white/45">(inactive)</span> : null}
             </span>
           ))}
           <span className="flex items-center gap-1.5 text-xs text-white/60">
@@ -105,8 +132,9 @@ export function ScheduleView({
 
       <RentalIndicatorLegend className="rounded-lg border border-white/10 bg-surface/30 px-3 py-2" />
 
-      {/* Calendar grid on tablet and up */}
-      <div className="hidden sm:block">
+      {/* Grid only where a day cell is wide enough to read a name in. Below
+          this the seven columns leave a few characters per chip. */}
+      <div className="hidden lg:block">
         <CalendarMonth
           monthDate={monthDate}
           rentals={rentals}
@@ -115,14 +143,18 @@ export function ScheduleView({
         />
       </div>
 
-      {/* Agenda list on mobile */}
-      <div className="space-y-2 sm:hidden">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-white/40">
-          Current &amp; upcoming
+      {/* Agenda list on phones and tablets */}
+      <div className="space-y-2 lg:hidden">
+        <h3 className="text-sm font-bold text-white">
+          {viewingThisMonth
+            ? "Current & upcoming"
+            : MONTH_LABEL.format(monthDate)}
         </h3>
         {agenda.length === 0 ? (
           <p className="rounded-xl border border-white/10 bg-surface/40 p-4 text-sm text-white/50">
-            No current or upcoming rentals.
+            {viewingThisMonth
+              ? "No current or upcoming rentals."
+              : `Nothing booked in ${MONTH_LABEL.format(monthDate)}.`}
           </p>
         ) : (
           agenda.map((r) => {
@@ -153,7 +185,7 @@ export function ScheduleView({
                     {formatDateMedium(r.pickup_date)} → {formatDateMedium(r.return_date)}
                   </span>
                   <span className="mt-1 flex items-center justify-between gap-2">
-                    <span className="truncate text-xs text-white/40">
+                    <span className="truncate text-xs text-white/55">
                       {r.unit?.name ?? "Unassigned"}
                     </span>
                     <RentalIndicators rental={r} size={14} className="shrink-0" />

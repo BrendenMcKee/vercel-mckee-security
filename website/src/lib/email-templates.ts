@@ -10,8 +10,13 @@ const BG = "#070707";
 const CARD = "#111111";
 const FIELD = "#181818";
 const TEXT = "#f5f5f5";
-const MUTED = "rgba(255, 255, 255, 0.55)";
-const BORDER = "rgba(255, 255, 255, 0.1)";
+// Opaque, not rgba(): the Word rendering engine behind Outlook on Windows drops
+// any declaration using rgba(), which left this text at its default black on a
+// near-black card — i.e. invisible. Backgrounds and borders below can stay rgba
+// because losing a tint degrades gracefully; losing a text colour does not.
+const MUTED = "#8f8f8f";
+const LABEL_RED = "#ef4444";
+const BORDER = "#262626";
 
 // Green action accent: deliberately different from the red brand/customer-info
 // styling so the admin call-to-action is unmistakable.
@@ -89,7 +94,7 @@ function renderFieldValue(field: EmailField): string {
   if (field.htmlValue) return field.htmlValue;
   const safe = escapeHtml(field.value).replace(/\n/g, "<br />");
   if (field.href) {
-    return `<a href="${escapeHtml(field.href)}" style="color:${TEXT};text-decoration:underline;text-decoration-color:rgba(255,255,255,0.35);">${safe}</a>`;
+    return `<a href="${escapeHtml(field.href)}" style="color:${TEXT};text-decoration:underline;text-decoration-color:rgba(255,255,255,0.35);word-break:break-word;overflow-wrap:anywhere;">${safe}</a>`;
   }
   return safe;
 }
@@ -101,16 +106,20 @@ function renderFieldRow(field: EmailField): string {
     ? `background:${BRAND_RED_SOFT};border:1px solid rgba(201,24,24,0.22);border-left:4px solid ${BRAND_RED};padding:16px 18px;border-radius:12px;`
     : `background:${FIELD};padding:14px 16px;border-radius:12px;border:1px solid ${BORDER};`;
 
+  // The value is wrapped in a div rather than a p because some values (the
+  // reminder digest) are themselves block content, and a parser closes a p at
+  // its first block child, orphaning it from these styles. word-break stops one
+  // long email address widening the card, which makes Gmail shrink the message.
   return `
     <tr>
       <td style="padding:0 0 12px;">
         <div class="ee-box" style="${highlightStyle}">
-          <p style="margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND_RED};">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${LABEL_RED};">
             ${escapeHtml(field.label)}
           </p>
-          <p style="margin:0;font-size:15px;line-height:1.65;color:${TEXT};">
+          <div style="margin:0;font-size:15px;line-height:1.65;color:${TEXT};word-break:break-word;overflow-wrap:anywhere;">
             ${renderFieldValue(field)}
-          </p>
+          </div>
         </div>
       </td>
     </tr>`;
@@ -127,7 +136,7 @@ function renderCtaRow(field: EmailField): string {
     <tr>
       <td style="padding:0 0 18px;">
         <div class="ee-cta" style="background:${ACTION_SOFT};border:1px solid ${ACTION_BORDER};border-radius:14px;padding:18px 18px 20px;">
-          <p style="margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${ACTION_GREEN};">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${ACTION_GREEN};">
             ${escapeHtml(field.label)}
           </p>
           <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:${TEXT};">

@@ -11,6 +11,23 @@ import { formatCurrency, formatDateMedium } from "@/lib/starlink/format";
 import { balanceDue, isPaidInFull } from "@/lib/starlink/billing";
 import { StatusBadge } from "./status-badge";
 
+/** Where a booking stands on money, worded the same on desktop and mobile. */
+function PaymentState({ rental }: { rental: RentalWithUnit }) {
+  if (rental.quoted_price == null || rental.quoted_price <= 0) {
+    return <span className="shrink-0 text-xs text-white/45">—</span>;
+  }
+  if (isPaidInFull(rental)) {
+    return (
+      <span className="shrink-0 text-xs font-semibold text-emerald-300">Paid</span>
+    );
+  }
+  return (
+    <span className="shrink-0 text-xs font-semibold text-orange-300">
+      {formatCurrency(balanceDue(rental))} due
+    </span>
+  );
+}
+
 function csvCell(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
   // Comments and locations come from a public form, so a leading =, +, - or @
@@ -111,8 +128,9 @@ export function RentalsTable({
       .sort((a, b) => b.pickup_date.localeCompare(a.pickup_date));
   }, [rentals, statusFilter, unitFilter, search]);
 
+  // 16px on touch so iOS does not zoom the page when a filter is focused.
   const selectClass =
-    "select-chevron cursor-pointer rounded-lg border border-white/10 bg-surface/60 px-3 py-2 text-sm text-white outline-none focus:border-primary";
+    "cursor-pointer rounded-lg border border-white/10 bg-surface/60 px-3 py-2.5 text-base text-white outline-none focus:border-primary sm:py-2 sm:text-sm";
 
   return (
     <div className="space-y-4">
@@ -124,7 +142,7 @@ export function RentalsTable({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, email, phone..."
-            className="w-full rounded-lg border border-white/10 bg-surface/60 py-2 pl-9 pr-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-primary"
+            className="w-full rounded-lg border border-white/10 bg-surface/60 py-2.5 pl-9 pr-3 text-base text-white outline-none placeholder:text-white/30 focus:border-primary sm:py-2 sm:text-sm"
           />
         </div>
         <select
@@ -158,14 +176,14 @@ export function RentalsTable({
           type="button"
           onClick={() => exportCsv(filtered)}
           disabled={filtered.length === 0}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-surface/60 px-3 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/5 disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-surface/60 px-3 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/5 disabled:opacity-40 sm:py-2"
         >
           <Download className="h-4 w-4" />
           CSV
         </button>
       </div>
 
-      <p className="text-xs text-white/40">
+      <p className="text-xs text-white/55">
         {filtered.length} rental{filtered.length === 1 ? "" : "s"}
       </p>
 
@@ -190,9 +208,15 @@ export function RentalsTable({
                 onClick={() => onSelectRental(r)}
                 className="cursor-pointer border-b border-white/5 transition-colors last:border-0 hover:bg-white/5"
               >
-                <td className="px-3 py-2.5">
-                  <div className="font-semibold text-white">{r.customer_name}</div>
-                  <div className="text-xs text-white/45">{r.customer_email}</div>
+                <td className="max-w-[16rem] px-3 py-2.5">
+                  <div className="truncate font-semibold text-white">
+                    {r.customer_name}
+                  </div>
+                  {/* Truncated, or one long address widens the whole table and
+                      forces a horizontal scroll that is otherwise unnecessary. */}
+                  <div className="truncate text-xs text-white/55">
+                    {r.customer_email}
+                  </div>
                 </td>
                 <td className="px-3 py-2.5">
                   {r.unit ? (
@@ -205,12 +229,12 @@ export function RentalsTable({
                       {r.unit.name}
                     </span>
                   ) : (
-                    <span className="text-white/35">Unassigned</span>
+                    <span className="text-white/50">Unassigned</span>
                   )}
                 </td>
                 <td className="px-3 py-2.5 text-white/70">
                   <div>{formatDateMedium(r.pickup_date)}</div>
-                  <div className="text-xs text-white/45">
+                  <div className="text-xs text-white/55">
                     → {formatDateMedium(r.return_date)}
                   </div>
                 </td>
@@ -221,27 +245,17 @@ export function RentalsTable({
                   {formatCurrency(r.quoted_price)}
                 </td>
                 <td className="px-3 py-2.5 text-center">
-                  {r.quoted_price == null || r.quoted_price <= 0 ? (
-                    <span className="text-xs text-white/30">—</span>
-                  ) : isPaidInFull(r) ? (
-                    <span className="text-xs font-semibold text-emerald-300">
-                      Paid
-                    </span>
-                  ) : (
-                    <span className="text-xs font-semibold text-orange-300">
-                      {formatCurrency(balanceDue(r))} due
-                    </span>
-                  )}
+                  <PaymentState rental={r} />
                 </td>
                 <td className="px-3 py-2.5 text-center">
                   {r.deposit_received ? (
                     r.deposit_returned ? (
-                      <span className="text-xs text-white/45">Returned</span>
+                      <span className="text-xs text-white/55">Returned</span>
                     ) : (
                       <span className="text-xs font-semibold text-sky-300">Held</span>
                     )
                   ) : (
-                    <span className="text-xs text-white/30">—</span>
+                    <span className="text-xs text-white/45">—</span>
                   )}
                 </td>
               </tr>
@@ -286,8 +300,12 @@ export function RentalsTable({
                 <span className="mt-0.5 block truncate text-xs text-white/55">
                   {formatDateMedium(r.pickup_date)} → {formatDateMedium(r.return_date)}
                 </span>
-                <span className="mt-0.5 block truncate text-xs text-white/40">
-                  {r.unit?.name ?? "Unassigned"} · {formatCurrency(r.quoted_price)}
+                <span className="mt-0.5 flex items-center justify-between gap-2">
+                  <span className="truncate text-xs text-white/55">
+                    {r.unit?.name ?? "Unassigned"} ·{" "}
+                    {formatCurrency(r.quoted_price)}
+                  </span>
+                  <PaymentState rental={r} />
                 </span>
               </span>
             </button>
