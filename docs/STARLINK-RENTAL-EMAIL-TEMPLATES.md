@@ -16,7 +16,7 @@ Gen2 kit + Roam Max, all-in. Use the rental length between **pickup** and **retu
 • **3 weeks** — $275
 • **4 weeks** — $350
 
-**Deposit (always):** $450 refundable
+**Deposit (always):** $300 refundable
 
 *Example: pickup July 26, return Aug 8 = 14 days → use **2 weeks → $190***
 
@@ -55,7 +55,7 @@ We can hold a kit for that period.
 
 For [Start date] through [End date], the pricing is [PRICE] (Gen2 kit + Roam Max service, all-in).
 
-A $450 refundable deposit is also due when you book. It is returned when the kit comes back in good shape.
+A $300 refundable deposit is also due when you book. It is returned when the kit comes back in good shape.
 
 Pickup is Monday to Friday at our Haliburton office (4702 County Road 21). Return can be anytime, including weekends. You can leave the kit in the garage or on the front porch if no one is home.
 
@@ -88,7 +88,7 @@ We can hold a kit for that period.
 
 For July 26 through August 8, 2026, the pricing is $190 (Gen2 kit + Roam Max service, all-in).
 
-A $450 refundable deposit is also due when you book. It is returned when the kit comes back in good shape.
+A $300 refundable deposit is also due when you book. It is returned when the kit comes back in good shape.
 
 Pickup is Monday to Friday at our Haliburton office (4702 County Road 21). Return can be anytime, including weekends. You can leave the kit in the garage or on the front porch if no one is home.
 
@@ -110,5 +110,5 @@ McKee Security & Audio Systems
 
 **Starlink Rental · Gen2 + Roam Max**
 • 1–3 days: $50/day · 1 wk: $100 · 2 wk: $190 · 3 wk: $275 · 4 wk: $350
-• Deposit: $450 refundable
+• Deposit: $300 refundable
 • Pickup: Mon–Fri, Haliburton office · Return: anytime (porch/garage OK)
