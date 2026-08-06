@@ -62,9 +62,9 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
    | `RESEND_API_KEY` | Form email delivery | ✅ Set (Sensitive) |
    | `CONTACT_EMAIL` | Inbox for form submissions | ✅ Set |
    | `EMAIL_FROM` | From address (e.g. `McKee Security <noreply@mckeesecurity.ca>`) | ✅ Set |
-   | `GOOGLE_PLACES_API_KEY` | Google reviews | ✅ Set (Sensitive) |
-   | `GOOGLE_PLACE_ID` | Google reviews | ✅ Set |
-   | `GOOGLE_REVIEW_URL` | Write-review link | ✅ Set |
+   | `GOOGLE_PLACES_API_KEY` | Google reviews (now unused — see note below) | ✅ Set (Sensitive) |
+   | `GOOGLE_PLACE_ID` | Google reviews (now unused — see note below) | ✅ Set |
+   | `GOOGLE_REVIEW_URL` | Write-review link (now unused — see note below) | ✅ Set |
    | `DATA_DROPS_PASSWORD` | Password gate for the Data Drops tool | ✅ Set |
    | `DATA_DROPS_AUTH_SECRET` | Salt for the Data Drops login cookie | ✅ Set (generated random hex) |
    | `GOOGLE_REVIEWS_URL` | Read-reviews link override | ✅ Set |
@@ -78,6 +78,12 @@ You can host DNS at Vercel and skip Cloudflare entirely. Trade-offs:
    | `DATA_DROPS_API_URL` | The code already defaults to `https://app-mckeesecurity.ca/api`, which is correct. Only set it if that backend ever moves (use the new base URL, no trailing slash). |
 
    > `GOOGLE_REVIEW_URL` (singular, the **write-a-review** link) is also already set.
+
+   > **The four `GOOGLE_*` review vars are no longer read by the deployed site** (as of
+   > 2026-08-06). Homepage and `/gallery` reviews come from the paid Elfsight widget, and
+   > the Places API code that used these vars is archived in
+   > `website/src/legacy/custom-google-reviews/`. Leave them set — reverting to the custom
+   > carousel needs them, and they cost nothing idle.
 
 8. Expect both domains to show **Invalid Configuration / Pending Nameservers** until the nameservers are changed in Phase 4. That is normal.
 

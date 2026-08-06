@@ -18,6 +18,7 @@ dist/
 # Screenshots from the ad-hoc UI check scripts
 website/.mobile-audit/
 website/.starlink-ui-check/
+website/.elfsight-reviews-check/
 
 # Debug
 npm-debug.log*

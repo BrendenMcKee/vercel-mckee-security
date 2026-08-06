@@ -1,15 +1,25 @@
 "use client";
 
+/*
+ * ARCHIVED — NOT RENDERED ANYWHERE. See ./README.md before changing or deleting.
+ *
+ * This is the hand-built Google reviews carousel that ran on the homepage and the
+ * gallery page until the Elfsight widget replaced it. Nothing imports this file, so
+ * it is never bundled or deployed; it is kept only so the custom system can be put
+ * back. Live reviews now come from
+ * src/components/sections/elfsight-google-reviews.tsx.
+ */
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
-import type { GoogleReview } from "@/lib/reviews";
+import type { GoogleReview } from "./reviews";
 import {
   fallbackReviews,
   filterFiveStarReviews,
   getGoogleReadReviewsUrl,
   getGoogleWriteReviewUrl,
   googleBusiness,
-} from "@/lib/reviews";
+} from "./reviews";
 import { BrandedStatsBackground } from "@/components/sections/branded-stats-background";
 import { cn } from "@/lib/utils";
 

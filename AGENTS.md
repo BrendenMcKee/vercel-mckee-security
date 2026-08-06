@@ -15,7 +15,7 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
 - Lint: `cd website && npm run lint`. The command works but the checked-in code currently has
   pre-existing lint errors/warnings; a clean exit is not expected on an unmodified tree.
 - There is no automated test suite. `data-drops-aws-backend` has a placeholder `test` script, and
-  `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner. Three are worth
+  `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner. Four are worth
   re-running after UI or email changes:
   - `mobile-audit.mjs` — both portals in a real browser at an iPhone viewport (needs seeded Supabase
     users). Flags horizontal overflow and screenshots every page.
@@ -30,8 +30,17 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
     `node --import ./scripts/register-ts-alias.mjs scripts/email-render-check.mjs`. That loader
     (`ts-alias-loader.mjs`) is what lets a plain Node script import the app's own `@/`-aliased
     TypeScript; it also stubs `server-only`.
+  - `elfsight-reviews-check.mjs` — the Google reviews widget on the homepage and `/gallery`, at a
+    phone and a desktop viewport, against a running dev server. Needs internet access
+    (`elfsightcdn.com`). Reviews come from a paid Elfsight embed whose failure mode is silent, so
+    this asserts that the right one of the two configured widgets mounts, that it fills with real
+    review text rather than Elfsight's loading skeleton, that it still renders after an in-app
+    navigation and a resize across the breakpoint (their `platform.js` only scans the DOM for
+    containers once), that the widget's rendered height still matches the space the component
+    reserves for it, that the band collapses when Elfsight is blocked, and that the retired
+    `/api/reviews` route is gone.
 
-  Both browser scripts write screenshots to gitignored directories.
+  The three browser scripts write screenshots to gitignored directories.
 - Data Drops backend (`data-drops-aws-backend`, Express + MySQL): rarely run locally. The website's
   `/api/dd/*` proxy defaults to the live AWS API (`DATA_DROPS_API_URL`), so you do not need it for
   portal/marketing work. To run it you must supply a MySQL and `RDS_*` env vars; see its `README.md`.

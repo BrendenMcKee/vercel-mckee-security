@@ -1,3 +1,12 @@
+/*
+ * ARCHIVED — NOT IMPORTED BY ANY LIVE CODE. See ./README.md before changing or deleting.
+ *
+ * This used to be src/lib/reviews.ts: the business constants, Google link builders,
+ * Place ID lookup, and hardcoded fallback reviews that fed the custom carousel. The
+ * GOOGLE_PLACES_API_KEY / GOOGLE_PLACE_ID / GOOGLE_REVIEW(S)_URL env vars it reads are
+ * still set in Vercel but no longer used by anything that ships.
+ */
+
 export type GoogleReview = {
   id: string;
   author: string;

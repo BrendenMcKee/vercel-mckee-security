@@ -1,3 +1,12 @@
+/*
+ * ARCHIVED — NOT A LIVE ROUTE. See ./README.md before changing or deleting.
+ *
+ * This used to be src/app/api/reviews/route.ts, the Google Places API (New) reader
+ * behind the custom reviews carousel. It sits outside src/app on purpose: Next only
+ * turns files under src/app into routes, so /api/reviews no longer exists in the
+ * deployment. Copy it back to src/app/api/reviews/route.ts to restore it.
+ */
+
 import { NextResponse } from "next/server";
 import {
   fallbackReviews,
@@ -8,7 +17,7 @@ import {
   normalizeGooglePhotoUri,
   resolveGooglePlaceId,
   type GoogleReview,
-} from "@/lib/reviews";
+} from "./reviews";
 
 export const revalidate = 86400;
 
