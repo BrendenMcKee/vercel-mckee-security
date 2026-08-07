@@ -5,8 +5,11 @@ import sharp from "sharp";
 
 const OUT = path.resolve("public/images/services/voip");
 
-// Official Yealink renders, transparent PNG as published.
+// Official Yealink renders, transparent PNG as published, plus the one
+// lifestyle shot we use (a DECT handset on a warehouse floor).
 const SOURCE = {
+  workplace:
+    "https://www.yealink.com/website-service/attachment/product/image/20220616/20220616062455837d6232de64f81b5a9447601d72fc1.png",
   w73p: "https://www.yealink.com/website-service/attachment/product/image/20220413/202204130233056319b1117cd4f1ba3d8f84d984c6290.png",
   w78h: "https://www.yealink.com/website-service/attachment/product/image/20241126/202411260259214250a51.png",
   t88wPro: "https://www.yealink.com/website-service/attachment/product/image/20251103/20251103080852515bd56.png",
@@ -278,6 +281,31 @@ async function studioPlate(buf, { width, height, scaleW, scaleH, cx = 0.5, cy = 
     .toBuffer();
 }
 
+// A photograph cropped to the `.service-visual` ratio and graded down on one
+// side, so it sits with the studio plates and gives the centred overlay icon
+// somewhere dark to land.
+async function photoPlate(buf, { width, height, extract, shadeFrom = 0.12, shadeTo = 0.55 }) {
+  const base = await sharp(buf)
+    .extract(extract)
+    .resize({ width, height, fit: "cover", kernel: "lanczos3" })
+    .toBuffer();
+
+  const shade = Buffer.from(`<svg width="${width}" height="${height}">
+    <defs>
+      <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#05070a" stop-opacity="${shadeFrom}"/>
+        <stop offset="100%" stop-color="#05070a" stop-opacity="${shadeTo}"/>
+      </linearGradient>
+    </defs>
+    <rect width="${width}" height="${height}" fill="url(#shade)"/>
+  </svg>`);
+
+  return sharp(base)
+    .composite([{ input: shade }])
+    .jpeg({ quality: 84, mozjpeg: true })
+    .toBuffer();
+}
+
 async function photo(buf, { maxWidth = 1200, quality = 84 } = {}) {
   return sharp(buf)
     .rotate()
@@ -316,6 +344,14 @@ const outputs = {
     cx: 0.74,
   }),
   "w78h-handset.jpg": await photo(sources.w78h),
+
+  // Commercial DECT row. The widest crop of the 1920x961 original that still
+  // hits the row's ratio, which is also the one that puts the overlay icon on
+  // the subject's dark sleeve rather than across his face and handset.
+  "dect-workplace.jpg": await photoPlate(sources.workplace, {
+    ...PLATE,
+    extract: { left: 0, top: 0, width: 1401, height: 961 },
+  }),
 
   // Four-tier commercial desk phone cards
   "t73-desk.webp": await centreOnCanvas(cutouts.t73, CARD),
