@@ -3,8 +3,9 @@ import https from "node:https";
 const pages = [
   "dect-phone-w70b",
   "dect-phone-w78h",
-  "ip-phone-t53w",
-  "ip-phone-t57w",
+  "ip-phone-t73u",
+  "ip-phone-t74u",
+  "ip-phone-t85w",
   "ip-phone-t88",
 ];
 

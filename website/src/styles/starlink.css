@@ -577,7 +577,11 @@
     max-height: 220px;
     object-fit: contain;
     border-radius: 8px;
-    margin-bottom: 20px;
+    /* The card is a column flexbox, so text-align does not centre the photo;
+       auto side margins and align-self both have to be set. */
+    display: block;
+    margin: 0 auto 20px;
+    align-self: center;
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.12), 0 0 30px rgba(255, 255, 255, 0.06);
 }
 
