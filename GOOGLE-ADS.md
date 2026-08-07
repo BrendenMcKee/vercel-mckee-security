@@ -93,7 +93,46 @@ Lindsay, Fenelon Falls, Bobcaygeon, Bancroft, Maynooth, Apsley, Kinmount, Carnar
 
 **Exclude unless intentional:** Toronto GTA (travel cost usually makes leads unprofitable)
 
-**Starting radius:** ~60–75 km from Haliburton, refine from Search Terms report.
+**Service area: three radii on every campaign (1–8).** Locations box should read **Locations (3)**.
+
+| Radius | Covers | Why |
+|--------|--------|-----|
+| **85 km around Haliburton, ON** (`Haliburton, Dysart and Others`) | Minden, Dorset, Wilberforce, Gooderham, Huntsville, Bracebridge, Gravenhurst, Bancroft, Lindsay, Fenelon Falls, Bobcaygeon, Algonquin Highlands | Core service area. Covers Tier 1 and most of Tier 2. Empty Crown land inside the ring costs nothing — no searches, no spend |
+| **40 km around Muskoka, ON** (`Muskoka Lakes`) | Port Carling, Bala, Rosseau, Windermere, MacTier, Torrance, and west to Parry Sound / Seguin | The Lake Muskoka / Rosseau / Joseph "Golden Triangle" — the highest-value cottage real estate in Ontario, and a strong match for security, surveillance, Starlink, networking and Sonos/home theatre work. Planned expansion area |
+| **20 km around Peterborough, ON** | Peterborough and immediate surrounds (~85k people) | Real market, ~1 hr away, genuinely serviceable. A tight ring gets the city without the low-value gap between there and Haliburton |
+
+Surgical circles beat one wide one: a single radius large enough to reach Peterborough would also drag in Orillia, Barrie's fringe, and a lot of empty in-between.
+
+**Overlap is harmless.** Roughly the eastern half of the Muskoka ring already sits inside the Haliburton ring (Huntsville, Bracebridge, Gravenhurst). Overlapping radii do not double-charge or double-serve — Google targets the union. It just means Muskoka's *incremental* coverage is the western half, not the whole circle.
+
+#### Watch items on the Muskoka circle (added 2026-08-07)
+
+| Item | Detail |
+|------|--------|
+| **Western edge** | The 40 km ring reaches Parry Sound (~180 km / ~2.5 hr from Haliburton) — the farthest point in the whole footprint. Port Carling and the Golden Triangle are ~110 km / ~1h45m and clearly worth it. **Trim to 30 km** if a crew would not drive to Parry Sound |
+| **Most expensive geography** | Affluent *and* contested by established high-end AV/security integrators. Expect the highest CPCs in the account. Judge it on **cost per conversion**, not cost per click — job values here should run well above the $1,400 account assumption |
+| **Seasonal** | Volume spikes May–Sept and goes quiet in winter, like Starlink Rental. Do not judge it on a February number |
+| **Review** | Segment the **Locations report by targeted location** (the view that exposed the Canada leak) at 3–4 weeks. Earning its share = evidence for the planned expansion. Absorbing budget without converting = trim the radius before dropping it |
+
+Approximate distances from Haliburton: Minden ~25 km · Bancroft ~70 km · Bracebridge ~75 km · Huntsville ~75 km · Lindsay ~85 km · Peterborough ~100 km · Orillia ~110 km · Barrie ~140 km · Toronto ~200 km.
+
+**Note:** Google radius targeting uses **straight-line** distance, not drive time, so each ring reaches further than road distances suggest (Peterborough is ~75 km as the crow flies). Watch the Locations report for edge-of-ring leads that are a longer drive than the radius implies.
+
+**Every campaign is a truck roll.** Security, cameras, Starlink install, networking, audio/video, **and VoIP** all involve a tech on site — VoIP includes full handset installation and integration, so it gets the same treatment as everything else, not province-wide. Starlink Rental is pickup-only at the Haliburton office (Mon–Fri), but the renter is a cottager travelling here anyway, so the same radii apply.
+
+#### Rejected: a "midway to Toronto" circle
+
+Tried and removed on 2026-08-07: a **40 km radius around Georgina, ON**, intended to catch Toronto and Barrie residents who own cottages in Haliburton.
+
+**Why it does not work: you cannot target a corridor, because nobody lives in it.** Cottage owners live at the *Toronto* end — North York, Markham, Richmond Hill, Vaughan. They only drive through the middle. A ring on Georgina does not reach Toronto (~80–90 km further south); what it actually captures is Barrie, Newmarket, Innisfil, and Bradford — commuter-belt residents who want service at their own address, 2+ hours from Haliburton.
+
+It also **repeats the Canada mistake at regional scale.** That circle holds ~400k people, comparable to the other two combined, in markets where established competitors bid CPCs well above rural Haliburton. High volume × high CPC means it captures the daily budget before local searches get a look in.
+
+**Geography cannot express "cottage owner" — only keywords can.** No circle distinguishes a Markham resident with a place on Kashagawigamog from the neighbour who has never been north of Barrie. `home security system` carries no location intent; `cottage security system haliburton` does.
+
+**Partly solved already:** location option is **Presence: people in or regularly in**, and Google counts regular visitors, not just residents. A Toronto family up most weekends can qualify as "regularly in" the Haliburton radius from location history.
+
+**If revisited,** it is a **separate campaign** targeting Toronto/GTA directly, gated to cottage-qualified keywords only (`cottage security system haliburton`, `starlink rental haliburton cottage`, `cottage camera installation haliburton`), on its own budget so it cannot cannibalise local spend. Needs roughly **$10–15/day** to function — GTA security keywords run several dollars a click against ADT and the national players, so $2.50/day buys well under one click and never learns. Revisit once local campaigns convert reliably and lead value is known.
 
 ## Creating campaigns (Google Ads admin panel)
 
@@ -187,18 +226,71 @@ Leave only **Google Search** enabled. Partners and Display spend budget outside 
 | Field | Default | **Change to** |
 |-------|---------|---------------|
 | **Location radio** | **Canada** (whole country) | **Custom locations** |
-| **Custom target** | - | **Haliburton, Ontario, Canada** · **65 km radius** (~40 mi) |
+| **Custom target** | - | **Haliburton** · **85 km** (~53 mi) **+** **Muskoka Lakes** · **40 km** (~25 mi) **+** **Peterborough** · **20 km** (~12 mi) |
 
 **How to set custom radius:**
 
 1. Select **Custom locations**.
 2. Search **Haliburton, Ontario, Canada** and add it.
-3. When prompted for area, choose **Radius** → **65 km** (or **40 mi** if the UI shows miles).
-4. Confirm **Target** (not Exclude).
+3. When prompted for area, choose **Radius** → **85 km** (or **53 mi** if the UI shows miles). Google resolves this as **Haliburton, Dysart and Others, ON**.
+4. Repeat for **Muskoka, Ontario** at **40 km** (~25 mi). Google resolves this as **Muskoka, Muskoka Lakes, ON**.
+5. Repeat for **Peterborough, Ontario** at **20 km** (~12 mi).
+6. Confirm all three are set to **Target** (not Exclude). The Locations box should read **Locations (3)**.
+7. **Delete any "Canada" row from the targeted list.** Adding a radius does **not** replace the country target — the two sit side by side and Canada keeps serving. If the box reads **Locations (4)**, that fourth entry is almost certainly Canada. See the warning below.
+
+#### Delete the "Canada" target (root cause of out-of-province spend)
+
+**Canada is Google's wizard default and it survives adding a radius.** This is not a targeting subtlety, it is the single biggest budget leak in the account.
+
+Measured on one campaign over roughly six weeks (2026-08-07):
+
+| Targeted location | Impr. | Clicks | Cost | Conv. | Cost/conv. |
+|-------------------|-------|--------|------|-------|------------|
+| **Canada** | 817 | 106 | CA$92.01 | 4 | CA$23.00 |
+| 65 km around Haliburton, ON | 193 | 19 | CA$19.92 | 1 | CA$19.92 |
+
+**82% of spend ran through the country-wide target**, which is what produced the inbound calls from Saskatchewan. The radius shows a higher conversion rate (5.26% vs 3.77%), but that is 1 conversion against 4 — directionally sensible, not yet evidence. The real finding is that 65 km filled only ~15% of available budget, which is why the service area widened.
+
+**Check every campaign (1–8): Settings → Locations → targeted list must contain the radius and nothing else.**
 
 **Tier 1 towns** (alternative to one radius): Haliburton, Minden, Dorset, Wilberforce, Gooderham, Tory Hill, West Guilford, Eagle Lake, Kashagawigamog Lake area, or add individually if you prefer towns over radius.
 
 **Tier 2** (add after 2–3 weeks if budget allows): Lindsay, Fenelon Falls, Bobcaygeon, Bancroft, Maynooth, Apsley, Kinmount, Carnarvon, Huntsville fringe, Bracebridge fringe.
+
+#### Province and territory exclusions (Ontario only)
+
+Apply to **every** campaign (1–8). Exclusions always beat targets in Google Ads, so this is a hard stop on out-of-province impressions even if a campaign still has **Canada** sitting in its targeted list.
+
+**Where:** Campaign → **Settings** → **Locations** → **Enter another location** → **Advanced search** → **Bulk locations** (also labelled "Add multiple locations") → paste the block below → **Exclude**.
+
+```
+Alberta, Canada
+British Columbia, Canada
+Manitoba, Canada
+New Brunswick, Canada
+Newfoundland and Labrador, Canada
+Northwest Territories, Canada
+Nova Scotia, Canada
+Nunavut, Canada
+Prince Edward Island, Canada
+Quebec, Canada
+Saskatchewan, Canada
+Yukon, Canada
+```
+
+That is all 12 non-Ontario provinces and territories. **Do not** add Ontario to this list.
+
+| Check after pasting | Expected |
+|---------------------|----------|
+| Locations resolved | 12 of 12, each shown as **Province** or **Territory** (not a city) |
+| Toggle chosen | **Exclude**, not Target |
+| Targeted list | **Locations (3)**: 85 km Haliburton + 40 km Muskoka + 20 km Peterborough, and nothing else. If it reads **(4)**, **remove "Canada"** |
+
+**These exclusions are a backstop, not the fix.** Deleting the **Canada** target is the fix; see the section above. The radius sits entirely inside Ontario, so on paper the exclusions are redundant. Keep them anyway — they cost nothing and they cap the damage from a re-added country target, a future Tier 2 town, or Performance Max's broader signals (Campaign 1 is PMax and is the loosest about geography).
+
+**Note on "Quebec":** Google lists the province as **Quebec, Canada** and the city as **Quebec City, Quebec, Canada**. Confirm the resolved entry is the province, or the city stays eligible.
+
+**Toronto GTA:** already inside Ontario, so these exclusions do not cover it. Keep the account-level negative keywords (`toronto`, `gta`, `mississauga`) doing that job, or add city-level exclusions separately if GTA impressions appear in the Locations report.
 
 #### Location options (expand below Locations)
 
@@ -291,7 +383,7 @@ Use the **campaign-specific Step 10 blurbs below**, not this paragraph, for Sear
 | Google Analytics | **Skip for now** (optional GA4 later) |
 | **Bidding focus** | **Conversions** (see Bidding screen above) |
 | Network | **Google Search only** (turn off Search Partners and Display |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
@@ -555,7 +647,7 @@ Steps **3b, 6–9** use the **same settings every time**; documented once under 
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
 | **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | Performance Max (Search, Display, YouTube, etc.); cannot limit to Search only |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Signals** (PMax, not audience segments) | Search themes: brand keywords; see **Asset group** section |
@@ -565,7 +657,7 @@ Steps **3b, 6–9** use the **same settings every time**; documented once under 
 | **Location asset** | 4702 County Road 21, Haliburton, ON |
 | **Brand guidelines** | Main `#c91818` · Accent `#000000` · Font **Playfair Display** |
 
-**If Brand campaign still targets all of Canada with “Presence or interest”:** update **Settings → Locations** to match rows above.
+**If Brand campaign still targets all of Canada with “Presence or interest”:** update **Settings → Locations** to match rows above. As of 2026-08-07 this was still the case account-wide — adding the radius had left **Canada** in place alongside it rather than replacing it. Brand is Performance Max and the loosest about geography, so verify it first.
 
 #### Asset group (Performance Max only)
 
@@ -666,7 +758,7 @@ mckee security, mckee security haliburton, mckee security and audio, mckeesecuri
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
 | **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
@@ -798,7 +890,7 @@ Do not add a sitelink to `/security` (same as this campaign’s landing page). D
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
 | **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
@@ -921,7 +1013,7 @@ Do not add a sitelink to `/camera-surveillance` (same as this campaign’s landi
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
 | **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
@@ -1044,7 +1136,7 @@ Do not add a sitelink to `/starlink` (same as this campaign’s landing page). D
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
 | **Budget** | **$2.50/day · ~$75/mo** (pause Nov–Apr) |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
@@ -1161,7 +1253,7 @@ Do not add a sitelink to `/starlink-rental` (same as this campaign’s landing p
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
 | **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
@@ -1278,7 +1370,7 @@ Do not add a sitelink to `/networking-cellular-expansion` (same as this campaign
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
 | **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
@@ -1397,7 +1489,7 @@ Do not add a sitelink to `/voip-phone-service` (same as this campaign’s landin
 | **Conversion goals** | Account default (auto at Step 2; do not change) |
 | **Budget** | **$2.50/day · ~$75/mo** |
 | **Network** | **Google Search only** (turn off Search Partners and Display |
-| **Locations** | **Custom**: Haliburton, ON + ~65 km radius (or Tier 1 towns; see geo section) |
+| **Locations** | **Custom**, **Locations (3)**: **85 km around Haliburton** + **40 km around Muskoka Lakes** + **20 km around Peterborough** — and **no "Canada" entry** in the targeted list (see geo section) |
 | **Location options (Presence)** | **Presence: People in or regularly in** (change from default “Presence or interest” |
 | **Languages** | **English** only (skip French) |
 | **Audience segments** | **None** · **Observation** (default) |
@@ -1682,6 +1774,12 @@ Always send ads to the **most specific** relevant page, not the homepage (except
 | 2026-06-23 | RSA structure: **15 headlines** + **4 descriptions** per campaign (Search 2–8 and Brand reference) |
 | 2026-06-23 | All 7 campaigns live at ~$12.16/day (~$365/mo) |
 | 2026-06-23 | Unified all campaigns to **$2.50/day**; added **Campaign 8: Home Audio & Video** (Search) |
+| 2026-08-07 | Out-of-province impressions found wasting budget: added **12 province/territory exclusions** (all of Canada except Ontario) to apply across campaigns 1–8 as a backstop |
+| 2026-08-07 | **Root cause found:** the wizard-default **Canada** target was never removed when the radius was added — the two ran side by side and Canada took **82% of spend** (CA$92.01 of CA$111.93, 817 of 1,010 impr), producing out-of-province calls. **Delete the Canada target on all campaigns.** |
+| 2026-08-07 | Added **40 km around Muskoka (Muskoka Lakes)** as a third radius — the Lake Muskoka/Rosseau/Joseph Golden Triangle, a planned expansion area and a strong fit for the service mix. Unlike the rejected Georgina circle, the property is genuinely there, so geography expresses real intent. Watch the Parry Sound edge (~2.5 hr), expect the account's highest CPCs, and review the Locations report at 3–4 weeks |
+| 2026-08-07 | Service area **65 km → two radii**: **85 km around Haliburton + 20 km around Peterborough** on all campaigns. 65 km alone filled only ~15% of available budget (19 clicks vs a ~20/week allowance). 85 km reaches Lindsay, Fenelon Falls and Bobcaygeon, covering Tier 1 + most of Tier 2 without listing towns individually. Two surgical circles beat one wide one — a single radius reaching Peterborough would also drag in Orillia and Barrie's fringe |
+| 2026-08-07 | **Rejected** a 40 km "midway to Toronto" circle around Georgina: corridors are not targetable (cottage owners live at the Toronto end, not the middle), it misses Toronto entirely, and its ~400k commuter-belt population would capture the budget the same way Canada did. Cottage-owner intent lives in **keywords**, not geography — documented as a future separate GTA campaign at $10–15/day |
+| 2026-08-07 | Confirmed **VoIP is a truck roll** (full handset install + integration), so it keeps the standard radius rather than going province-wide. Rejected Ontario-wide targeting for all campaigns: unserviceable leads are unserviceable in-province too (Thunder Bay, Windsor, Ottawa) |
 
 ---
 
