@@ -6,15 +6,27 @@
 const TORONTO_TZ = "America/Toronto";
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// en-CA formats as YYYY-MM-DD.
+const torontoDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TORONTO_TZ,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 /** Today's calendar date in America/Toronto as `YYYY-MM-DD`. */
 export function todayIsoToronto(): string {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: TORONTO_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  return torontoDate.format(new Date());
+}
+
+/**
+ * The Toronto calendar date a timestamp falls on. Slicing the ISO string would
+ * give the UTC date instead, which is a day ahead all evening here.
+ */
+export function isoDateInToronto(timestamp: string): string | null {
+  const ms = Date.parse(timestamp);
+  if (Number.isNaN(ms)) return null;
+  return torontoDate.format(new Date(ms));
 }
 
 export function isValidIsoDate(iso: string | undefined | null): iso is string {

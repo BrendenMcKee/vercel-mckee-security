@@ -31,6 +31,12 @@ export type EmailField = {
   value: string;
   href?: string;
   highlight?: boolean;
+  /**
+   * Overrides the red label colour. Used by the reminder digest, where the
+   * label carries a priority ("do today" vs "when you get a chance") and every
+   * one of them being red would defeat the point. Must be an opaque hex.
+   */
+  labelColor?: string;
   /** Render as a prominent action button instead of a standard field row. */
   cta?: boolean;
   /** Text shown inside the CTA button (defaults to "Open admin portal"). */
@@ -114,7 +120,7 @@ function renderFieldRow(field: EmailField): string {
     <tr>
       <td style="padding:0 0 12px;">
         <div class="ee-box" style="${highlightStyle}">
-          <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${LABEL_RED};">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${field.labelColor ?? LABEL_RED};">
             ${escapeHtml(field.label)}
           </p>
           <div style="margin:0;font-size:15px;line-height:1.65;color:${TEXT};word-break:break-word;overflow-wrap:anywhere;">

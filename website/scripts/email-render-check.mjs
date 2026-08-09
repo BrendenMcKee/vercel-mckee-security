@@ -23,6 +23,7 @@ globalThis.fetch = async (_url, init) => {
 const {
   sendPickupTodayReminder,
   sendPaymentBeforePickupReminder,
+  sendDepositOverdueReminder,
   sendRentalActionDigest,
 } = await import("@/lib/starlink/reminder-emails.ts");
 
@@ -52,44 +53,249 @@ const rental = {
   unit: { name: "Starlink 2" },
 };
 
+// ---------------------------------------------------------------------------
+// Which section a booking lands in
+// ---------------------------------------------------------------------------
+
+const { buildDigestGroups } = await import("@/lib/starlink/reminders.ts");
+
+const TODAY = "2026-08-09";
+const day = (offset) =>
+  new Date(Date.parse(`${TODAY}T12:00:00Z`) + offset * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
+let bookingSeq = 1;
+
+/** A booking with everything settled, so each case below changes only one thing. */
+function booking(overrides) {
+  const rental = {
+    id: `00000000-0000-4000-8000-${String(bookingSeq++).padStart(12, "0")}`,
+    customer_name: "Test Booking",
+    customer_email: "test@example.ca",
+    customer_phone: null,
+    status: "returned",
+    unit_id: "unit-1",
+    unit: { name: "Starlink 1" },
+    pickup_date: day(-20),
+    pickup_time: null,
+    return_date: day(-10),
+    quoted_price: 200,
+    amount_received: 200,
+    deposit_amount: 300,
+    deposit_received: true,
+    deposit_returned: true,
+    created_at: `${day(-30)}T12:00:00.000Z`,
+    ...overrides,
+  };
+  // A finished booking was last written when it was finished, so unless a case
+  // is specifically about an early cancellation, updated_at follows the return
+  // date. Leaving it fixed would make the row claim it was wrapped up days
+  // before the rental ended.
+  return {
+    updated_at: `${rental.return_date}T12:00:00.000Z`,
+    ...rental,
+  };
+}
+
+const cases = [
+  {
+    what: "a deposit owed since today is a job for today, not an overdue one",
+    rental: booking({ return_date: TODAY, deposit_returned: false }),
+    section: "Send 1 deposit back",
+    priority: "today",
+    flag: "due today",
+  },
+  {
+    what: "a deposit owed since yesterday has crossed into overdue",
+    rental: booking({ return_date: day(-1), deposit_returned: false }),
+    section: "Send 1 deposit back — overdue",
+    priority: "urgent",
+    flag: "1 day overdue",
+  },
+  {
+    what: "a booking cancelled 5 days ago counts from the cancellation, not its future return date",
+    rental: booking({
+      status: "cancelled",
+      pickup_date: day(3),
+      return_date: day(12),
+      deposit_returned: false,
+      updated_at: `${day(-5)}T12:00:00.000Z`,
+    }),
+    section: "Send 1 deposit back — overdue",
+    priority: "urgent",
+    flag: "5 days overdue",
+  },
+  {
+    what: "a kit two days past its return date is chased with the day count",
+    rental: booking({ status: "active", return_date: day(-2) }),
+    section: "Chase 1 kit that is late back",
+    priority: "urgent",
+    flag: "2 days late",
+  },
+  {
+    what: "an unreserved booking picking up tomorrow outranks everything else",
+    rental: booking({
+      status: "confirmed",
+      unit_id: null,
+      unit: null,
+      pickup_date: day(1),
+      return_date: day(8),
+    }),
+    section: "Assign a kit to 1 booking",
+    priority: "urgent",
+    flag: "picks up in 1 day",
+  },
+  {
+    what: "an unreserved booking a fortnight out is only a job for today",
+    rental: booking({
+      status: "confirmed",
+      unit_id: null,
+      unit: null,
+      pickup_date: day(14),
+      return_date: day(21),
+    }),
+    section: "Assign a kit to 1 booking",
+    priority: "today",
+    flag: "picks up in 14 days",
+  },
+  {
+    what: "an unanswered request is chased with how long it has waited",
+    rental: booking({
+      status: "requested",
+      unit_id: null,
+      unit: null,
+      pickup_date: day(20),
+      return_date: day(27),
+      quoted_price: null,
+      amount_received: null,
+      deposit_amount: null,
+      deposit_received: false,
+      deposit_returned: false,
+      created_at: `${day(-4)}T12:00:00.000Z`,
+    }),
+    section: "Reply to 1 website request",
+    priority: "today",
+    flag: "waiting 4 days",
+  },
+];
+
+console.log("\n=== which section a booking lands in");
+for (const { what, rental, section, priority, flag } of cases) {
+  const groups = buildDigestGroups([rental], TODAY);
+  const found = groups.find((g) => g.action === section);
+  const item = found?.items.find((i) => i.rentalId === rental.id);
+  const ok =
+    Boolean(found) && found.priority === priority && item?.flag === flag;
+  check(
+    ok,
+    what,
+    ok
+      ? `${found.icon} ${section} · ${priority} · "${flag}"`
+      : `got ${
+          groups.map((g) => `${g.action} (${g.priority}, "${g.items[0]?.flag}")`).join(" | ") ||
+          "no sections"
+        }`,
+  );
+}
+
 console.log("\n=== rendering the reminder emails");
 await sendPickupTodayReminder(rental);
 // Second argument is the lead time the job computes; PAYMENT_LEAD_DAYS is 2.
 await sendPaymentBeforePickupReminder(rental, 2);
-// Two groups, one of them long enough to exercise the 25-item cap.
+await sendDepositOverdueReminder(rental, 3);
+
+// Deliberately handed over out of priority order, and with a group long enough
+// to exercise the 25-item cap, so the sort and the cap are both exercised.
 await sendRentalActionDigest([
   {
-    label: "Overdue returns",
-    instruction: "These were due back and are still marked out.",
+    icon: "📤",
+    priority: "soon",
+    action: "Mark 1 booking as Out",
+    summary: "1 booking to mark Out",
+    instruction: "Pickup day has passed but this still says Confirmed.",
     items: [
       {
-        rentalId: rental.id,
-        customerName: rental.customer_name,
-        detail: "Due back Aug 16. Still marked Out.",
+        rentalId: "cccccccc-dddd-eeee-ffff-000000000001",
+        customerName: "Rosanne Mark",
+        detail: "Pickup was Fri, Jul 31, 2026 · Starlink 2",
       },
     ],
   },
   {
-    label: "No payment recorded",
-    instruction: "Money is outstanding on these bookings.",
+    icon: "💵",
+    priority: "urgent",
+    action: "Send 1 deposit back — overdue",
+    summary: "1 deposit overdue",
+    instruction:
+      "This is the customer's own money and the rental is already over. Send it back today, then tick Deposit returned on the booking.",
+    items: [
+      {
+        rentalId: rental.id,
+        customerName: rental.customer_name,
+        detail: "$300.00 held · owed since Sun, Aug 16, 2026",
+        flag: "3 days overdue",
+      },
+    ],
+  },
+  {
+    icon: "💳",
+    priority: "today",
+    action: "Check 30 payments",
+    summary: "30 payments to check",
+    instruction: "The kit has gone out but the booking is not marked paid.",
     items: Array.from({ length: 30 }, (_, i) => ({
       rentalId: `aaaaaaaa-bbbb-cccc-dddd-00000000${String(i).padStart(4, "0")}`,
       customerName: `Customer Number ${i + 1}`,
-      detail: `$1,254.25 outstanding. Pickup was Aug ${(i % 28) + 1}.`,
+      detail: `$1,254.25 of $1,254.25 still owed · picked up Aug ${(i % 28) + 1}`,
     })),
   },
 ]);
 
-check(sent.length === 3, "all three reminders rendered and dispatched", `${sent.length} of 3`);
+check(sent.length === 4, "all four reminders rendered and dispatched", `${sent.length} of 4`);
 
 const { chromium } = await import("playwright");
+const { mkdir, writeFile } = await import("node:fs/promises");
 const browser = await chromium.launch();
 const page = await browser.newPage();
 
+// The rendered HTML and a screenshot of each, so copy changes can be eyeballed
+// rather than only asserted on. Gitignored.
+const outDir = ".email-check";
+await mkdir(outDir, { recursive: true });
+const shot = await browser.newPage();
+
 for (const payload of sent) {
-  const name = payload.subject.replace(/^McKee Security \| /, "");
-  console.log(`\n=== ${name}`);
+  // sendEmail brands every subject, so the reminder's own wording is what is
+  // left after the prefix, while the length budget is the whole thing.
+  const subject = payload.subject.replace(/^McKee Security \| /, "");
+  console.log(`\n=== ${subject}`);
   const html = payload.html;
+
+  const slug = subject
+    .replace(/[^\p{L}\p{N} ]/gu, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .toLowerCase()
+    .slice(0, 60);
+  await writeFile(`${outDir}/${slug}.html`, html, "utf8");
+  for (const width of [390, 700]) {
+    await shot.setViewportSize({ width, height: 900 });
+    await shot.setContent(html, { waitUntil: "load" });
+    await shot.screenshot({ path: `${outDir}/${slug}-${width}.png`, fullPage: true });
+  }
+
+  // The subject is what gets triaged in the inbox list, so it has to name the
+  // job and survive the width clients truncate at.
+  check(
+    payload.subject.length <= 95,
+    "subject fits the inbox column",
+    `${payload.subject.length} chars`,
+  );
+  check(
+    /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(payload.subject),
+    "subject carries a glyph for scanning",
+  );
 
   // Colour declarations must be opaque so Outlook keeps them.
   const rgbaColours = [...html.matchAll(/(?<!-)\bcolor:\s*rgba\([^)]*\)/g)].map((m) => m[0]);
@@ -146,12 +352,50 @@ for (const payload of sent) {
   // No formatCurrency(null) em dashes stranded mid-sentence.
   check(!/\s—\s?\./.test(dom.text), "no stray em dash where an amount belongs");
 
-  if (/Need Attention/i.test(payload.subject)) {
+  // The digest is the one that has to be triaged rather than read.
+  if (/Overdue:|Today:|To sort:/.test(payload.subject)) {
     check(/and 5 more in the admin portal/.test(dom.text), "long group is capped with an overflow line");
     check(
       (payload.text ?? "").includes("and 5 more in the admin portal"),
       "plaintext fallback is capped too",
     );
+    check(
+      subject.startsWith("💵 Overdue: 1 deposit overdue"),
+      "subject leads with the most urgent job",
+      subject,
+    );
+    // Sections must be ordered by urgency regardless of the order the job
+    // happened to assemble them in.
+    const order = ["Overdue · do this first", "Do today", "When you get a chance"]
+      .map((band) => html.indexOf(band))
+      .filter((at) => at >= 0);
+    check(
+      order.length === 3 && order.every((at, i) => i === 0 || at > order[i - 1]),
+      "urgency bands run urgent then today then soon",
+      order.join(" < "),
+    );
+    check(
+      html.includes("Send 1 deposit back") &&
+        html.includes("Check 30 payments") &&
+        html.includes("Mark 1 booking as Out"),
+      "each section is headed by what to do, not what is wrong",
+    );
+    check(
+      dom.text.includes("3 days overdue"),
+      "a booking's own urgency shows next to their name",
+    );
+    for (const glyph of ["💵", "💳", "📤"]) {
+      check(dom.text.includes(glyph), `section glyph ${glyph} survives`);
+    }
+  }
+
+  if (/Deposit overdue/.test(payload.subject)) {
+    check(
+      /send \$300\.00 back to/.test(payload.subject),
+      "escalation names the amount and the person in the subject",
+      payload.subject,
+    );
+    check(dom.text.includes("Tick Deposit returned"), "escalation says how to clear it");
   }
   check(
     typeof payload.text === "string" && payload.text.length > 80,
@@ -162,7 +406,8 @@ for (const payload of sent) {
 
 await browser.close();
 
-console.log("\n----------------------------------------");
+console.log(`\nRendered HTML and screenshots in ${outDir}/`);
+console.log("----------------------------------------");
 if (failures.length) {
   console.log(`${failures.length} FAILED:`);
   for (const f of failures) console.log(`  - ${f}`);

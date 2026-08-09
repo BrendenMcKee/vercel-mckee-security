@@ -29,7 +29,8 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
     absolute deep links, and Gmail's clipping threshold. Run it with the alias loader:
     `node --import ./scripts/register-ts-alias.mjs scripts/email-render-check.mjs`. That loader
     (`ts-alias-loader.mjs`) is what lets a plain Node script import the app's own `@/`-aliased
-    TypeScript; it also stubs `server-only`.
+    TypeScript; it also stubs `server-only`. It writes the rendered HTML plus a phone and desktop
+    screenshot of each email, which is the quickest way to check a copy or layout change.
   - `elfsight-reviews-check.mjs` — the Google reviews widget on the homepage and `/gallery`, at a
     phone and a desktop viewport, against a running dev server. Needs internet access
     (`elfsightcdn.com`). Reviews come from a paid Elfsight embed whose failure mode is silent, so
@@ -40,7 +41,7 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
     reserves for it, that the band collapses when Elfsight is blocked, and that the retired
     `/api/reviews` route is gone.
 
-  The three browser scripts write screenshots to gitignored directories.
+  All four write screenshots to gitignored directories.
 - Data Drops backend (`data-drops-aws-backend`, Express + MySQL): rarely run locally. The website's
   `/api/dd/*` proxy defaults to the live AWS API (`DATA_DROPS_API_URL`), so you do not need it for
   portal/marketing work. To run it you must supply a MySQL and `RDS_*` env vars; see its `README.md`.

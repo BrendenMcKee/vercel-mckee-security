@@ -4,11 +4,13 @@ import { balanceDue, isPaidInFull } from "@/lib/starlink/billing";
 import {
   addDaysIso,
   daysBetweenInclusive,
+  isoDateInToronto,
   todayIsoToronto,
 } from "@/lib/starlink/dates";
 import {
   formatCurrency,
   formatDateMedium,
+  formatDateShort,
   formatRelative,
 } from "@/lib/starlink/format";
 import {
@@ -17,9 +19,11 @@ import {
 } from "@/lib/starlink/supabase-admin";
 import type { RentalWithUnit } from "@/lib/starlink/types";
 import {
+  sendDepositOverdueReminder,
   sendPaymentBeforePickupReminder,
   sendPickupTodayReminder,
   sendRentalActionDigest,
+  type ActionPriority,
   type RentalActionGroup,
   type RentalActionItem,
 } from "./reminder-emails";
@@ -51,11 +55,16 @@ const LOOKBACK_DAYS = 120;
 
 const RENTAL_SELECT = "*, unit:units(id,name,color,active)";
 
-type ReminderKind = "pickup_today" | "payment_before_pickup";
+type ReminderKind =
+  | "pickup_today"
+  | "payment_before_pickup"
+  | "deposit_overdue";
 
 export type StarlinkReminderSummary = {
   pickupToday: number;
   paymentBeforePickup: number;
+  /** Standalone escalations for deposits we are still sitting on. */
+  depositOverdue: number;
   digestItems: number;
   /** Distinguishes "nothing needed doing" from "we could not tell anyone". */
   digestStatus: "sent" | "nothing-to-send" | "failed";
@@ -63,30 +72,109 @@ export type StarlinkReminderSummary = {
   notes?: string[];
 };
 
-function itemsOf(rentals: RentalWithUnit[], detail: (r: RentalWithUnit) => string) {
-  return rentals.map<RentalActionItem>((rental) => ({
-    rentalId: rental.id,
-    customerName: rental.customer_name,
-    detail: detail(rental),
-  }));
+/** "1 day" / "3 days", so no reminder ever says "1 days" or "day(s)". */
+function plural(count: number, one: string, many = `${one}s`): string {
+  return `${count} ${count === 1 ? one : many}`;
 }
 
+/** Whole days elapsed from `iso` up to `today`, floored at zero. */
+function daysSince(iso: string, today: string): number {
+  return Math.max(0, daysBetweenInclusive(iso, today) - 1);
+}
+
+/**
+ * The day a deposit became the customer's to get back. Normally the return
+ * date. For a booking cancelled before it ever started that date is in the
+ * future, so the cancellation itself starts the clock, which `updated_at`
+ * approximates well enough. Never later than today.
+ */
+function depositOwedSince(rental: RentalWithUnit, today: string): string {
+  const changed = isoDateInToronto(rental.updated_at);
+  const earliest =
+    changed && changed < rental.return_date ? changed : rental.return_date;
+  return earliest > today ? today : earliest;
+}
+
+/** How long a finished rental's deposit can sit before the tone changes. */
+const DEPOSIT_OVERDUE_AFTER_DAYS = 1;
+
+/** How close a pickup has to be before an unreserved booking becomes urgent. */
+const UNIT_URGENT_WITHIN_DAYS = 2;
+
+/** Where a booking's pickup sits relative to today, for an at-a-glance chip. */
+function pickupProximity(pickupIso: string, today: string): string {
+  if (pickupIso === today) return "picks up today";
+  if (pickupIso < today) {
+    return `pickup was ${plural(daysSince(pickupIso, today), "day")} ago`;
+  }
+  return `picks up in ${plural(daysSince(today, pickupIso), "day")}`;
+}
+
+type GroupSpec = {
+  /** One glyph, so the section can be found in the email without reading it. */
+  icon: string;
+  priority: ActionPriority;
+  /** Imperative, and counted: "Send 2 deposits back". */
+  action: (count: number) => string;
+  /** Subject-line fragment: "2 deposits to send back". */
+  summary: (count: number) => string;
+  /** What doing it involves, including which box to tick afterwards. */
+  instruction: string;
+};
+
 function group(
-  label: string,
-  instruction: string,
+  spec: GroupSpec,
   rentals: RentalWithUnit[],
   detail: (r: RentalWithUnit) => string,
+  flag?: (r: RentalWithUnit) => string | undefined,
 ): RentalActionGroup | null {
   if (rentals.length === 0) return null;
-  return { label, instruction, items: itemsOf(rentals, detail) };
+  const items = rentals.map<RentalActionItem>((rental) => {
+    const mark = flag?.(rental);
+    return {
+      rentalId: rental.id,
+      customerName: rental.customer_name,
+      detail: detail(rental),
+      ...(mark ? { flag: mark } : {}),
+    };
+  });
+  return {
+    icon: spec.icon,
+    priority: spec.priority,
+    action: spec.action(rentals.length),
+    summary: spec.summary(rentals.length),
+    instruction: spec.instruction,
+    items,
+  };
 }
 
 function unitSuffix(rental: RentalWithUnit): string {
   return rental.unit ? rental.unit.name : "no unit assigned";
 }
 
-/** Bookings that still need something done to them, most urgent first. */
-function buildDigestGroups(
+/** Finished bookings where we took a deposit and still have it. */
+function depositsAwaitingReturn(rentals: RentalWithUnit[]): RentalWithUnit[] {
+  return rentals.filter(
+    (r) =>
+      r.deposit_received &&
+      !r.deposit_returned &&
+      (r.status === "returned" || r.status === "cancelled"),
+  );
+}
+
+function depositAmountLine(rental: RentalWithUnit): string {
+  return rental.deposit_amount === null
+    ? "Amount not recorded"
+    : `${formatCurrency(rental.deposit_amount)} held`;
+}
+
+/**
+ * Bookings that still need something done to them, most urgent first. Exported
+ * for `scripts/email-render-check.mjs`, which drives it with bookings contrived
+ * to sit either side of each threshold — the part of this job most likely to be
+ * got wrong is which section a booking lands in, not how it renders.
+ */
+export function buildDigestGroups(
   rentals: RentalWithUnit[],
   today: string,
   failedPickupsToday: RentalWithUnit[] = [],
@@ -103,11 +191,15 @@ function buildDigestGroups(
       r.return_date < today,
   );
 
-  const depositsToRefund = rentals.filter(
-    (r) =>
-      r.deposit_received &&
-      !r.deposit_returned &&
-      (r.status === "returned" || r.status === "cancelled"),
+  // Split by how long we have sat on it. Day one is a job for today; after
+  // that it is the customer's money going missing and the tone changes, both
+  // here and in the standalone escalation email.
+  const depositsOwed = depositsAwaitingReturn(rentals);
+  const depositsOverdue = depositsOwed.filter(
+    (r) => daysSince(depositOwedSince(r, today), today) >= DEPOSIT_OVERDUE_AFTER_DAYS,
+  );
+  const depositsDueNow = depositsOwed.filter(
+    (r) => daysSince(depositOwedSince(r, today), today) < DEPOSIT_OVERDUE_AFTER_DAYS,
   );
 
   // Includes bookings still sitting at Confirmed on or after their pickup day:
@@ -152,75 +244,151 @@ function buildDigestGroups(
     (r) => r.status === "requested" && Date.parse(r.created_at) <= requestCutoff,
   );
 
+  // An unreserved booking is always a problem, but it only outranks everything
+  // else once the customer is nearly at the counter.
+  const noUnitIsUrgent = noUnit.some(
+    (r) => r.pickup_date <= addDaysIso(today, UNIT_URGENT_WITHIN_DAYS),
+  );
+
+  // Every heading below is an instruction, not a diagnosis: "Send 2 deposits
+  // back" rather than "Deposit still to go back", because the person reading
+  // this at 8am should not have to work out what is being asked of them.
   return [
     group(
-      "Pickup today, reminder failed to send",
-      "The dedicated pickup reminder could not be delivered for these, so they are listed here instead.",
+      {
+        icon: "⚠️",
+        priority: "urgent",
+        action: (n) => `Get ${plural(n, "kit")} ready for pickup today`,
+        summary: (n) => `${plural(n, "pickup")} today`,
+        instruction:
+          "The pickup reminder for these could not be delivered, so they are here instead. Check the kit over and set it aside before the customer arrives.",
+      },
       failedPickupsToday,
       (r) =>
         `Collecting today${r.pickup_time ? ` at ${r.pickup_time}` : ""} · ${unitSuffix(r)}`,
+      () => "today",
     ),
     group(
-      "Kit is late back",
-      "The return date has passed and these are still booked out. Mark them Returned once the kit is in, or push the return date if the customer is keeping it longer.",
+      {
+        icon: "⏰",
+        priority: "urgent",
+        action: (n) =>
+          `Chase ${plural(n, "kit")} that ${n === 1 ? "is" : "are"} late back`,
+        summary: (n) => `${plural(n, "kit")} late back`,
+        instruction:
+          "The return date has passed and these are still booked out. Ring the customer to arrange the drop-off, then set the booking to Returned once the kit is in. If they are keeping it longer, push the return date out instead so the calendar is honest.",
+      },
       overdueReturns,
-      (r) =>
-        `Due back ${formatDateMedium(r.return_date)}, ${
-          daysBetweenInclusive(r.return_date, today) - 1
-        } day(s) ago · ${unitSuffix(r)}`,
+      (r) => `Was due back ${formatDateMedium(r.return_date)} · ${unitSuffix(r)}`,
+      (r) => `${plural(daysSince(r.return_date, today), "day")} late`,
     ),
     group(
-      "Deposit still to go back",
-      "The rental is finished but we are still holding the deposit. Send it back, then tick Deposit returned on the booking.",
-      depositsToRefund,
+      {
+        icon: "💵",
+        priority: "urgent",
+        action: (n) => `Send ${plural(n, "deposit")} back — overdue`,
+        summary: (n) => `${plural(n, "deposit")} overdue`,
+        instruction:
+          "This is the customer's own money and the rental is already over. Send it back today, then tick Deposit returned on the booking. Each of these also gets its own email until it is done.",
+      },
+      depositsOverdue,
       (r) =>
-        `${
-          r.deposit_amount === null
-            ? "Amount not recorded"
-            : `${formatCurrency(r.deposit_amount)} held`
-        } · rental ended ${formatDateMedium(r.return_date)}`,
+        `${depositAmountLine(r)} · owed since ${formatDateMedium(
+          depositOwedSince(r, today),
+        )}`,
+      (r) =>
+        `${plural(daysSince(depositOwedSince(r, today), today), "day")} overdue`,
     ),
     group(
-      "Payment never recorded",
-      "The kit went out but the booking is not marked paid. Check whether the money came in, then tick Paid in full.",
+      {
+        icon: "💵",
+        priority: "today",
+        action: (n) => `Send ${plural(n, "deposit")} back`,
+        summary: (n) => `${plural(n, "deposit")} to send back`,
+        instruction:
+          "The rental has just finished, so the deposit is due back. Send it, then tick Deposit returned on the booking — otherwise this starts chasing you tomorrow.",
+      },
+      depositsDueNow,
+      (r) => `${depositAmountLine(r)} · rental ended ${formatDateMedium(r.return_date)}`,
+      () => "due today",
+    ),
+    group(
+      {
+        icon: "🛰️",
+        priority: noUnitIsUrgent ? "urgent" : "today",
+        action: (n) => `Assign a kit to ${plural(n, "booking")}`,
+        summary: (n) => `${plural(n, "booking")} with no kit`,
+        instruction:
+          "Without a unit these dates are not actually reserved, so the same days can still be sold to someone else. Pick a kit on the booking.",
+      },
+      noUnit,
+      (r) =>
+        `${formatDateShort(r.pickup_date)} to ${formatDateShort(
+          r.return_date,
+        )} · marked ${r.status}`,
+      (r) => pickupProximity(r.pickup_date, today),
+    ),
+    group(
+      {
+        icon: "💳",
+        priority: "today",
+        action: (n) => `Check ${plural(n, "payment")}`,
+        summary: (n) => `${plural(n, "payment")} to check`,
+        instruction:
+          "The kit has gone out but the booking is not marked paid. Confirm whether the money arrived, then tick Paid in full.",
+      },
       unpaid,
       (r) =>
         `${formatCurrency(balanceDue(r))} of ${formatCurrency(
           r.quoted_price,
-        )} outstanding · picked up ${formatDateMedium(r.pickup_date)}`,
+        )} still owed · picked up ${formatDateMedium(r.pickup_date)}`,
     ),
     group(
-      "No price on the booking",
-      "These have no rental price recorded, so nothing will ever show as owed. Add the price you quoted.",
+      {
+        icon: "✉️",
+        priority: "today",
+        action: (n) => `Reply to ${plural(n, "website request")}`,
+        summary: (n) => `${plural(n, "request")} to answer`,
+        instruction:
+          "These came in through the website and have not been quoted yet. Send them pricing, then confirm or cancel the request.",
+      },
+      staleRequests,
+      (r) =>
+        `Wants ${formatDateShort(r.pickup_date)} to ${formatDateShort(
+          r.return_date,
+        )} · asked ${formatRelative(r.created_at)}`,
+      (r) =>
+        `waiting ${plural(
+          daysSince(isoDateInToronto(r.created_at) ?? today, today),
+          "day",
+        )}`,
+    ),
+    group(
+      {
+        icon: "🏷️",
+        priority: "today",
+        action: (n) => `Put a price on ${plural(n, "booking")}`,
+        summary: (n) => `${plural(n, "booking")} to price`,
+        instruction:
+          "No rental price is recorded on these, so nothing will ever show as owed and there is nothing to invoice against. Add the price you quoted.",
+      },
       noPrice,
       (r) =>
-        `${formatDateMedium(r.pickup_date)} to ${formatDateMedium(
+        `${formatDateShort(r.pickup_date)} to ${formatDateShort(
           r.return_date,
         )} · ${unitSuffix(r)}`,
     ),
     group(
-      "No unit assigned",
-      "These dates are not reserved against a kit yet, so they can still be double-booked. Assign a unit.",
-      noUnit,
-      (r) =>
-        `${formatDateMedium(r.pickup_date)} to ${formatDateMedium(
-          r.return_date,
-        )} · marked ${r.status}`,
-    ),
-    group(
-      "Not marked as picked up",
-      "Pickup day has passed but these are still only Confirmed. Set them to Out if the customer has the kit.",
+      {
+        icon: "📤",
+        priority: "soon",
+        action: (n) => `Mark ${plural(n, "booking")} as Out`,
+        summary: (n) => `${plural(n, "booking")} to mark Out`,
+        instruction:
+          "Pickup day has passed but these still say Confirmed. If the customer has the kit, set the status to Out so the calendar and the kit availability are right.",
+      },
       notMarkedOut,
       (r) => `Pickup was ${formatDateMedium(r.pickup_date)} · ${unitSuffix(r)}`,
-    ),
-    group(
-      "Request waiting on a reply",
-      "These came in from the website and have not been quoted yet. Send pricing, then confirm or cancel the request.",
-      staleRequests,
-      (r) =>
-        `Wants ${formatDateMedium(r.pickup_date)} to ${formatDateMedium(
-          r.return_date,
-        )} · asked ${formatRelative(r.created_at)}`,
     ),
   ].filter((entry): entry is RentalActionGroup => entry !== null);
 }
@@ -238,6 +406,7 @@ async function runOneShotReminders(
 ): Promise<{
   pickupToday: number;
   paymentBeforePickup: number;
+  depositOverdue: number;
   failedPickupsToday: RentalWithUnit[];
 }> {
   const paymentWindowEnd = addDaysIso(today, PAYMENT_LEAD_DAYS);
@@ -311,7 +480,26 @@ async function runOneShotReminders(
     if (outcome === "sent") paymentBeforePickup += 1;
   }
 
-  return { pickupToday, paymentBeforePickup, failedPickupsToday };
+  // Deposits are the one case where the money is the customer's, so a line in
+  // the digest is not enough once it has gone past a day. `sent_for` is today's
+  // date rather than a fixed one, so this repeats daily — each with the day
+  // count in the subject — until someone ticks Deposit returned.
+  let depositOverdue = 0;
+  for (const rental of depositsAwaitingReturn(rentals)) {
+    const days = daysSince(depositOwedSince(rental, today), today);
+    if (days < DEPOSIT_OVERDUE_AFTER_DAYS) continue;
+    const outcome = await deliver(rental, "deposit_overdue", today, () =>
+      sendDepositOverdueReminder(rental, days),
+    );
+    if (outcome === "sent") depositOverdue += 1;
+  }
+
+  return {
+    pickupToday,
+    paymentBeforePickup,
+    depositOverdue,
+    failedPickupsToday,
+  };
 }
 
 export async function runStarlinkReminderJob(): Promise<StarlinkReminderSummary> {
@@ -319,6 +507,7 @@ export async function runStarlinkReminderJob(): Promise<StarlinkReminderSummary>
     return {
       pickupToday: 0,
       paymentBeforePickup: 0,
+      depositOverdue: 0,
       digestItems: 0,
       digestStatus: "nothing-to-send",
       notes: ["Supabase is not configured; nothing to check."],
@@ -349,6 +538,7 @@ export async function runStarlinkReminderJob(): Promise<StarlinkReminderSummary>
   let oneShots = {
     pickupToday: 0,
     paymentBeforePickup: 0,
+    depositOverdue: 0,
     failedPickupsToday: [] as RentalWithUnit[],
   };
   try {
@@ -389,6 +579,7 @@ export async function runStarlinkReminderJob(): Promise<StarlinkReminderSummary>
   return {
     pickupToday: oneShots.pickupToday,
     paymentBeforePickup: oneShots.paymentBeforePickup,
+    depositOverdue: oneShots.depositOverdue,
     digestItems,
     digestStatus,
     ...(notes.length > 0 ? { notes } : {}),
