@@ -573,6 +573,15 @@
     margin-top: 0 !important;
 }
 
+/* The overview cards are this page's own signposting, so their link wants to
+   read as an action and be worth aiming at with a thumb, not trail the copy.
+   `margin-top: auto` also lines the two up when the cards describe unequally. */
+.mckee-starlink-block .card .card-jump {
+    display: block;
+    margin-top: auto;
+    padding-top: 18px;
+}
+
 .mckee-starlink-block .card-image {
     width: 100%;
     max-width: 280px;
@@ -885,6 +894,16 @@
         margin: 0 auto;
         justify-self: center;
     }
+
+    /* Stacked, the visual goes full width but keeps its fixed height, and
+       `cover` pays for that by slicing the middle out of the image - at tablet
+       widths it takes 60% off the top and bottom. These plates are authored at
+       the row's own ratio, so hold the ratio and cap the width instead. */
+    .mckee-starlink-block .service-visual.product-visual {
+        min-height: 0;
+        max-width: 460px;
+        aspect-ratio: 35 / 24;
+    }
     
     .mckee-starlink-block .service-row.reverse .service-visual {
         order: 0;
@@ -900,8 +919,12 @@
         text-align: center;
     }
     
+    /* Centred, a heading that wraps to two lines fills the row and strands the
+       icon against the left edge. Stacked, the pair stays a unit at any length. */
     .mckee-starlink-block .service-content h3 {
+        flex-direction: column;
         justify-content: center;
+        gap: 12px;
     }
     
     .mckee-starlink-block .service-features {
