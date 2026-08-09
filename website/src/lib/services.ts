@@ -111,7 +111,7 @@ export const services: Service[] = [
       "Commercial & Residential",
       "Local McKee Support",
     ],
-    image: "/images/services/voip/voip-hero.jpg",
+    image: "/images/services/voip/t88v-hero.jpg",
   },
   {
     slug: "starlink",

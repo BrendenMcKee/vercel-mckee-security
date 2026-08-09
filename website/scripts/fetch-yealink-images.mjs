@@ -35,7 +35,8 @@ const CARD = { width: 1000, height: 880, padX: 30, padY: 34 };
 // `.service-visual` is a 350x240 CSS box painted with `background-size: cover`,
 // so these have to be filled plates at that exact ratio rather than transparent
 // cutouts - a transparent PNG would be cropped by `cover` and would show the
-// section background through the row's dark scrim.
+// section background through the row's dark scrim. The rows carry no overlay
+// glyph, so every plate is composed on its own centre.
 const PLATE = { width: 1050, height: 720 };
 
 function fetchBuffer(url) {
@@ -281,27 +282,43 @@ async function studioPlate(buf, { width, height, scaleW, scaleH, cx = 0.5, cy = 
     .toBuffer();
 }
 
-// A photograph cropped to the `.service-visual` ratio and graded down on one
-// side, so it sits with the studio plates and gives the centred overlay icon
-// somewhere dark to land.
-async function photoPlate(buf, { width, height, extract, shadeFrom = 0.12, shadeTo = 0.55 }) {
+// A photograph cropped to the `.service-visual` ratio, then dimmed evenly and
+// vignetted so it sits at the same brightness as the studio plates in the rows
+// around it instead of glaring out of the dark page.
+async function photoPlate(buf, { width, height, focusX = 0.5, focusY = 0.5, zoom = 1, dim = 0.2 }) {
+  const meta = await sharp(buf).metadata();
+  const ratio = width / height;
+
+  // Biggest window of the source that already matches the plate's aspect ratio,
+  // tightened by `zoom` and slid so `focus` ends up in the middle of the frame.
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const cropW = clamp(Math.round(Math.min(meta.width, meta.height * ratio) / zoom), 1, meta.width);
+  const cropH = clamp(Math.round(cropW / ratio), 1, meta.height);
+  const extract = {
+    left: clamp(Math.round(meta.width * focusX - cropW / 2), 0, meta.width - cropW),
+    top: clamp(Math.round(meta.height * focusY - cropH / 2), 0, meta.height - cropH),
+    width: cropW,
+    height: cropH,
+  };
+
   const base = await sharp(buf)
     .extract(extract)
     .resize({ width, height, fit: "cover", kernel: "lanczos3" })
     .toBuffer();
 
-  const shade = Buffer.from(`<svg width="${width}" height="${height}">
+  const grade = Buffer.from(`<svg width="${width}" height="${height}">
     <defs>
-      <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="#05070a" stop-opacity="${shadeFrom}"/>
-        <stop offset="100%" stop-color="#05070a" stop-opacity="${shadeTo}"/>
-      </linearGradient>
+      <radialGradient id="vignette" cx="50%" cy="46%" r="75%">
+        <stop offset="40%" stop-color="#05070a" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#05070a" stop-opacity="0.6"/>
+      </radialGradient>
     </defs>
-    <rect width="${width}" height="${height}" fill="url(#shade)"/>
+    <rect width="${width}" height="${height}" fill="#05070a" fill-opacity="${dim}"/>
+    <rect width="${width}" height="${height}" fill="url(#vignette)"/>
   </svg>`);
 
   return sharp(base)
-    .composite([{ input: shade }])
+    .composite([{ input: grade }])
     .jpeg({ quality: 84, mozjpeg: true })
     .toBuffer();
 }
@@ -331,27 +348,33 @@ const cutouts = Object.fromEntries(
 );
 
 const outputs = {
-  // Residential DECT. The W73P plate is the W70B base with a W73H handset in its
-  // cradle, which is the kit we actually install in homes - the previous photo
-  // here was a lifestyle shot of a warehouse, which read as commercial.
-  // Composed like the W78H photo in the row above it: product in the right
-  // third, so the overlay icon that `.service-visual-icon` pins dead centre
-  // lands on empty backdrop rather than on the hardware.
+  // Residential DECT row. The W73P plate is the W70B base with a W73H handset in
+  // its cradle, which is the kit we actually install in homes - the warehouse
+  // lifestyle shot that used to sit here reads as commercial and now runs in the
+  // commercial DECT row instead.
   "w73p-dect.jpg": await studioPlate(sources.w73p, {
     ...PLATE,
-    scaleW: 0.42,
-    scaleH: 0.66,
-    cx: 0.74,
+    scaleW: 0.6,
+    scaleH: 0.6,
+    cy: 0.52,
+  }),
+
+  // Residential home phone row. Yealink ship this one as a lit studio photo
+  // rather than a cutout, so it is framed rather than re-composited. The handset
+  // sits in the right third of the 1920x964 original and the crop cannot reach
+  // past its edge, so this is as centred as the source allows - which leaves the
+  // product leaning towards the copy beside it.
+  "w78h-plate.jpg": await photoPlate(sources.w78h, {
+    ...PLATE,
+    focusX: 0.75,
+    focusY: 0.56,
+    zoom: 1.22,
   }),
   "w78h-handset.jpg": await photo(sources.w78h),
 
   // Commercial DECT row. The widest crop of the 1920x961 original that still
-  // hits the row's ratio, which is also the one that puts the overlay icon on
-  // the subject's dark sleeve rather than across his face and handset.
-  "dect-workplace.jpg": await photoPlate(sources.workplace, {
-    ...PLATE,
-    extract: { left: 0, top: 0, width: 1401, height: 961 },
-  }),
+  // hits the row's ratio, framed on the handset at the subject's ear.
+  "dect-workplace.jpg": await photoPlate(sources.workplace, { ...PLATE, focusX: 0.4 }),
 
   // Four-tier commercial desk phone cards
   "t73-desk.webp": await centreOnCanvas(cutouts.t73, CARD),
@@ -362,9 +385,9 @@ const outputs = {
   // Business service row
   "t85w-plate.jpg": await studioPlate(cutouts.t85w, {
     ...PLATE,
-    scaleW: 0.44,
-    scaleH: 0.62,
-    cx: 0.73,
+    scaleW: 0.62,
+    scaleH: 0.6,
+    cy: 0.52,
   }),
 
   // Commercial pricing card. `.card-image` sits on the card's own background, so
@@ -376,8 +399,8 @@ const outputs = {
     padY: 24,
   }),
 
-  // Page hero, and the card photo the services hub uses for this page. Both stay
-  // JPEG: they are the ones that end up in preload hints and share previews.
+  // Page hero, and the card the services hub uses for this page. Stays JPEG at
+  // 1200x630: it is the one that ends up in preload hints and share previews.
   "t88v-hero.jpg": await studioPlate(sources.t88vPro, {
     width: 1200,
     height: 630,
@@ -385,7 +408,6 @@ const outputs = {
     scaleH: 0.8,
     cy: 0.53,
   }),
-  "voip-hero.jpg": await photo(sources.w78h, { quality: 82 }),
 };
 
 for (const [file, buf] of Object.entries(outputs)) {

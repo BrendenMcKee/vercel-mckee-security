@@ -280,6 +280,8 @@
     border: 1px solid var(--border-color);
     position: relative;
     z-index: 1;
+    /* Clears the sticky site header when a section is reached by anchor link. */
+    scroll-margin-top: 160px;
 }
 
 .mckee-starlink-block .section-header h2 {
@@ -291,6 +293,33 @@
     max-width: 650px;
     margin: 0 auto;
     color: var(--text-secondary);
+}
+
+/* Market divider. Where one page covers two audiences, the switch has to be
+   visible at a glance rather than inferred from the first line of the copy. */
+.mckee-starlink-block .section-header .section-header-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6em;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.08);
+}
+
+.mckee-starlink-block .section-header .section-eyebrow {
+    display: block;
+    margin-bottom: 14px;
+    font-size: 0.8em;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 /* Service Cards with Images */
@@ -334,6 +363,13 @@
     inset: 0;
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.4) 100%);
     z-index: 1;
+}
+
+/* Rows whose image is the product itself carry no overlay glyph, so the scrim
+   that exists to keep one legible does nothing but mute the hardware. Keep a
+   trace of it for depth against the page. */
+.mckee-starlink-block .service-visual.product-visual::before {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.04) 50%, rgba(0, 0, 0, 0.18) 100%);
 }
 
 .mckee-starlink-block .service-visual::after {
