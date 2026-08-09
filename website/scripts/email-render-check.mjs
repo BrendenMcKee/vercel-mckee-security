@@ -364,6 +364,13 @@ for (const payload of sent) {
       "subject leads with the most urgent job",
       subject,
     );
+    // Trimming has to cut from the least urgent end, never leave a gap in the
+    // middle, or a shorter low-priority job displaces the one dropped.
+    check(
+      subject === "💵 Overdue: 1 deposit overdue, 30 payments to check, +1 more",
+      "trimming drops the least urgent job, not an arbitrary one",
+      subject,
+    );
     // Sections must be ordered by urgency regardless of the order the job
     // happened to assemble them in.
     const order = ["Overdue · do this first", "Do today", "When you get a chance"]

@@ -114,8 +114,8 @@ returned in the job's `notes` for `npm run cron:check`.
 | `website/src/lib/starlink/reminder-emails.ts` | recipients, deep links, subject lines, the four email bodies |
 | `website/src/app/api/cron/starlink-reminders/route.ts` | manual-run route (`CRON_SECRET` bearer) |
 | `website/src/app/api/cron/daily/route.ts` | daily dispatcher that includes the job |
-| `supabase/migrations/20260805200000_starlink_rental_reminders.sql` | `rental_reminders` guard table |
-| `supabase/migrations/20260809180000_starlink_deposit_overdue_reminder.sql` | adds the `deposit_overdue` guard kind |
+| `supabase/migrations/20260805203558_starlink_rental_reminders.sql` | `rental_reminders` guard table |
+| `supabase/migrations/20260809193009_starlink_deposit_overdue_reminder.sql` | adds the `deposit_overdue` guard kind |
 | `website/src/lib/portal/cron/cleanup.ts` | prunes guard rows older than 90 days |
 | `website/scripts/email-render-check.mjs` | renders all four through the real send path with `fetch` stubbed, and screenshots them |
 

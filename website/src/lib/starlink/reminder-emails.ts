@@ -472,11 +472,14 @@ function digestSubject(groups: RentalActionGroup[]): string {
   let dropped = 0;
   for (const group of groups) {
     const candidate = [...parts, group.summary].join(", ");
+    // Stop at the first one that will not fit rather than skipping it and
+    // trying the next. Groups arrive most urgent first, so carrying on would
+    // let a shorter, less important job displace the one just dropped.
     if (parts.length > 0 && prefix.length + candidate.length > MAX_LENGTH) {
-      dropped += 1;
-    } else {
-      parts.push(group.summary);
+      dropped = groups.length - parts.length;
+      break;
     }
+    parts.push(group.summary);
   }
 
   return `${prefix}${parts.join(", ")}${dropped ? `, +${dropped} more` : ""}`;
