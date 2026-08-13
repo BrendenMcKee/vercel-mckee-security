@@ -962,7 +962,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               <span className="text-xs text-white/40">
                 {form.billingMethod === "stripe"
                   ? "The client is asked for their card when they activate their account."
-                  : "You will record payments by hand and the system sends the client due-date reminders."}
+                  : "You will record payments by hand. The first invoice is due today (change it on their page if they are already paid ahead). Security is billed once a year; VoIP is billed every month."}
               </span>
             </label>
           </fieldset>

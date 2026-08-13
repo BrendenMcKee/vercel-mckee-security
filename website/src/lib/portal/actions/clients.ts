@@ -8,7 +8,7 @@ import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
 import { sendInvitationEmail } from "@/lib/portal/emails";
-import { serviceMonthlyCents } from "@/lib/portal/billing";
+import { serviceMonthlyCents, todayIsoDate } from "@/lib/portal/billing";
 import {
   CLOUD_BACKUP_DEVELOPMENT_MESSAGE,
   isServiceAvailable,
@@ -187,7 +187,10 @@ export async function createClientAction(
   if (monitoringTier || cloudTier || voipTier) {
     const { error: railError } = await supabase
       .from("services")
-      .update({ billing_method: billingMethod })
+      .update({
+        billing_method: billingMethod,
+        ...(billingMethod === "manual" ? { next_due_on: todayIsoDate() } : {}),
+      })
       .eq("profile_id", profileId);
     if (railError) console.error("[portal] billing method set failed:", railError);
   }

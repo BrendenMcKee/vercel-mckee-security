@@ -165,6 +165,30 @@ export function intervalMonths(interval: BillingInterval): number {
   return interval === "annual" ? 12 : 1;
 }
 
+/** Monitoring is always annual; VoIP is always monthly. Other types stay free. */
+export function lockedBillingInterval(serviceType: string): BillingInterval | null {
+  if (serviceType === "monitoring") return "annual";
+  if (serviceType === "voip") return "monthly";
+  return null;
+}
+
+export function todayIsoDate(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Calendar add that keeps the anniversary day, clamping 31 Jan + 1 month to 28/29 Feb. */
+export function addMonths(isoDate: string, months: number): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1 + months, d));
+  if (date.getUTCMonth() !== (((m - 1 + months) % 12) + 12) % 12) date.setUTCDate(0);
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * D11 default copy (pending stakeholder confirmation): how legacy-rail
  * clients pay. Used verbatim in the dashboard banner and reminder emails.
@@ -184,10 +208,9 @@ export function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-/** Days from today (Toronto-naive date compare) until an ISO date; negative = overdue. */
+/** Days from today (Toronto) until an ISO date; negative = overdue. */
 export function daysUntil(isoDate: string): number {
-  const today = new Date();
-  const target = new Date(`${isoDate}T00:00:00`);
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((target.getTime() - startOfToday.getTime()) / 86_400_000);
+  const today = Date.parse(`${todayIsoDate()}T00:00:00Z`);
+  const target = Date.parse(`${isoDate}T00:00:00Z`);
+  return Math.round((target - today) / 86_400_000);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Tables } from "@/lib/portal/database.types";
 import {
@@ -36,8 +36,12 @@ import { formatPhone } from "@/lib/portal/phone";
 import {
   BILLING_INTERVAL_LABELS,
   PAYMENT_METHOD_LABELS,
+  addMonths,
+  daysUntil,
   formatCents,
   intervalMonths,
+  lockedBillingInterval,
+  todayIsoDate,
   tierOptionLabel,
   voipCoverageLabel,
   voipInternalCostCents,
@@ -669,11 +673,15 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<"stripe" | "manual">(service.billing_method);
-  const [cycle, setCycle] = useState<BillingInterval>(service.billing_interval);
+  const lockedCycle = lockedBillingInterval(service.service_type);
+  const [cycle, setCycle] = useState<BillingInterval>(lockedCycle ?? service.billing_interval);
   const [amount, setAmount] = useState(
     service.monthly_amount_cents != null ? (service.monthly_amount_cents / 100).toFixed(2) : "",
   );
-  const [dueOn, setDueOn] = useState(service.next_due_on ?? "");
+  const [dueOn, setDueOn] = useState(
+    service.next_due_on ?? (service.billing_method === "manual" ? todayIsoDate() : ""),
+  );
+  const [dueOnTouched, setDueOnTouched] = useState(Boolean(service.next_due_on));
   const [numbers, setNumbers] = useState(String(service.number_count));
   const [seats, setSeats] = useState(String(service.seat_count));
   const [ports, setPorts] = useState(String(service.port_count));
@@ -687,11 +695,11 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
   // interval, pre-tax); the admin adjusts for tax or partial payments.
   const [payAmount, setPayAmount] = useState(
     service.monthly_amount_cents != null
-      ? ((service.monthly_amount_cents * intervalMonths(service.billing_interval)) / 100).toFixed(2)
+      ? ((service.monthly_amount_cents * intervalMonths(lockedCycle ?? service.billing_interval)) / 100).toFixed(2)
       : "",
   );
   const [payMethod, setPayMethod] = useState<PaymentMethod>("etransfer");
-  const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [payDate, setPayDate] = useState(todayIsoDate);
   const [payNote, setPayNote] = useState("");
 
   const serviceLabel = SERVICE_TYPE_LABELS[service.service_type];
@@ -848,7 +856,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       const result = await updateServiceBilling({
         serviceId: service.id,
         billingMethod: method,
-        billingInterval: method === "stripe" ? service.billing_interval : cycle,
+        billingInterval: method === "stripe" ? service.billing_interval : (lockedCycle ?? cycle),
         monthlyAmountCents: cents,
         nextDueOn: method === "stripe" ? "" : dueOn,
       });
@@ -860,7 +868,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
     });
   }
 
-  function recordPayment(event: React.FormEvent<HTMLFormElement>) {
+  function recordPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
     const cents = Math.round(Number.parseFloat(payAmount) * 100);
@@ -894,6 +902,11 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
     service.monthly_amount_cents != null
       ? service.monthly_amount_cents * intervalMonths(service.billing_interval)
       : null;
+  const billingCycle = lockedCycle ?? service.billing_interval;
+  const invoiceIsDue = !service.next_due_on || daysUntil(service.next_due_on) <= 0;
+  const afterThisPayment = service.next_due_on
+    ? addMonths(service.next_due_on, intervalMonths(billingCycle))
+    : null;
 
   return (
     <div className={`space-y-4 rounded-xl border bg-background p-4 sm:p-5 ${SERVICE_THEME[service.service_type].card}`}>
@@ -1037,7 +1050,13 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
             How they pay
             <select
               value={method}
-              onChange={(e) => setMethod(e.target.value as "stripe" | "manual")}
+              onChange={(e) => {
+                const next = e.target.value as "stripe" | "manual";
+                setMethod(next);
+                if (next === "manual" && !dueOnTouched) {
+                  setDueOn(service.next_due_on || todayIsoDate());
+                }
+              }}
               className={`${adminSelectClass} max-w-full`}
             >
               <option value="stripe">Automatic card payments</option>
@@ -1046,12 +1065,22 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
           </label>
           {method === "manual" && (
             <>
-              {!voip && (
+              {lockedCycle ? (
+                <p className="text-sm text-white/60 sm:self-end sm:pb-2">
+                  {lockedCycle === "annual"
+                    ? "Billed once a year"
+                    : "Billed every month"}
+                </p>
+              ) : (
                 <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
                   Billed
                   <select
                     value={cycle}
-                    onChange={(e) => setCycle(e.target.value as BillingInterval)}
+                    onChange={(e) => {
+                      const next = e.target.value as BillingInterval;
+                      setCycle(next);
+                      if (!dueOnTouched) setDueOn(todayIsoDate());
+                    }}
                     className={`${adminSelectClass} max-w-full`}
                   >
                     {(Object.keys(BILLING_INTERVAL_LABELS) as BillingInterval[]).map((value) => (
@@ -1076,7 +1105,10 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                 Next payment due
                 <DatePickerInput
                   value={dueOn}
-                  onChange={setDueOn}
+                  onChange={(value) => {
+                    setDueOnTouched(true);
+                    setDueOn(value);
+                  }}
                   className={adminInputClass}
                 />
               </label>
@@ -1085,15 +1117,19 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
           <button type="button" disabled={pending} onClick={saveBilling} className={buttonSecondary}>
             {pending ? "Saving..." : "Save Billing"}
           </button>
-          {method === "manual" &&
-            cycle === "annual" &&
-            amount.trim() &&
-            Number.isFinite(Number.parseFloat(amount)) && (
-              <p className="w-full text-xs text-white/40">
-                Yearly invoice: ${(Number.parseFloat(amount) * 12).toFixed(2)} plus tax
-                (billed once a year).
-              </p>
-            )}
+          {method === "manual" && (
+            <p className="w-full text-xs leading-relaxed text-white/40">
+              {(lockedCycle ?? cycle) === "annual" &&
+              amount.trim() &&
+              Number.isFinite(Number.parseFloat(amount))
+                ? `Yearly invoice: $${(Number.parseFloat(amount) * 12).toFixed(2)} plus tax. `
+                : null}
+              Save Billing only stores how they pay and when the next invoice
+              is due. It does not record money. Leave the date as today if they
+              owe this invoice now; set a later date if they are already paid
+              ahead.
+            </p>
+          )}
         </div>
 
         {method === "stripe" && (
@@ -1187,66 +1223,149 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       </div>
 
       {service.billing_method === "manual" && (
-        <form
+        <ManualPaymentFields
+          invoiceIsDue={invoiceIsDue}
+          dueOn={service.next_due_on}
+          afterThisPayment={afterThisPayment}
+          billingCycle={billingCycle}
+          pending={pending}
+          payAmount={payAmount}
+          setPayAmount={setPayAmount}
+          payMethod={payMethod}
+          setPayMethod={setPayMethod}
+          payDate={payDate}
+          setPayDate={setPayDate}
+          payNote={payNote}
+          setPayNote={setPayNote}
           onSubmit={recordPayment}
-          className="grid gap-3 rounded-xl border border-dashed border-emerald-500/25 bg-emerald-500/5 p-4 sm:flex sm:flex-wrap sm:items-end"
-        >
-          <p className="w-full text-xs font-bold uppercase tracking-widest text-emerald-300">
-            Record a received payment
-          </p>
-          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
-            Amount ($)
-            <input
-              inputMode="decimal"
-              required
-              value={payAmount}
-              onChange={(e) => setPayAmount(e.target.value)}
-              className={adminInputClass}
-            />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
-            Method
-            <select
-              value={payMethod}
-              onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
-              className={`${adminSelectClass} max-w-full`}
-            >
-              {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
-            Received on
-            <DatePickerInput
-              required
-              value={payDate}
-              onChange={setPayDate}
-              className={adminInputClass}
-            />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[12rem] sm:flex-1">
-            Note
-            <input
-              placeholder="e.g. e-Transfer ref 12345"
-              maxLength={300}
-              value={payNote}
-              onChange={(e) => setPayNote(e.target.value)}
-              className={adminInputClass}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={pending}
-            className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
-          >
-            {pending ? "Recording..." : "Record Payment"}
-          </button>
-        </form>
+        />
       )}
     </div>
+  );
+}
+
+function ManualPaymentFields({
+  invoiceIsDue,
+  dueOn,
+  afterThisPayment,
+  billingCycle,
+  pending,
+  payAmount,
+  setPayAmount,
+  payMethod,
+  setPayMethod,
+  payDate,
+  setPayDate,
+  payNote,
+  setPayNote,
+  onSubmit,
+}: {
+  invoiceIsDue: boolean;
+  dueOn: string | null;
+  afterThisPayment: string | null;
+  billingCycle: BillingInterval;
+  pending: boolean;
+  payAmount: string;
+  setPayAmount: (value: string) => void;
+  payMethod: PaymentMethod;
+  setPayMethod: (value: PaymentMethod) => void;
+  payDate: string;
+  setPayDate: (value: string) => void;
+  payNote: string;
+  setPayNote: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const fields = (
+    <>
+      <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+        Amount ($)
+        <input
+          inputMode="decimal"
+          required
+          value={payAmount}
+          onChange={(e) => setPayAmount(e.target.value)}
+          className={adminInputClass}
+        />
+      </label>
+      <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+        Method
+        <select
+          value={payMethod}
+          onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
+          className={`${adminSelectClass} max-w-full`}
+        >
+          {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+        Received on
+        <DatePickerInput required value={payDate} onChange={setPayDate} className={adminInputClass} />
+      </label>
+      <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[12rem] sm:flex-1">
+        Note
+        <input
+          placeholder="e.g. e-Transfer ref 12345"
+          maxLength={300}
+          value={payNote}
+          onChange={(e) => setPayNote(e.target.value)}
+          className={adminInputClass}
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={pending}
+        className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+      >
+        {pending ? "Recording..." : "Record Payment"}
+      </button>
+    </>
+  );
+
+  if (invoiceIsDue) {
+    return (
+      <form
+        onSubmit={onSubmit}
+        className="grid gap-3 rounded-xl border border-dashed border-emerald-500/25 bg-emerald-500/5 p-4 sm:flex sm:flex-wrap sm:items-end"
+      >
+        <div className="w-full space-y-1">
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-300">
+            When the payment arrives
+          </p>
+          <p className="text-xs leading-relaxed text-white/50">
+            This invoice is due {dueOn ?? "today"}. Saving billing does not
+            record money. Use this after the e-transfer, cheque, or cash
+            arrives
+            {afterThisPayment
+              ? `. That moves the next due date to ${afterThisPayment}`
+              : billingCycle === "annual"
+                ? ". That moves the next due date forward one year"
+                : ". That moves the next due date forward one month"}
+            .
+          </p>
+        </div>
+        {fields}
+      </form>
+    );
+  }
+
+  return (
+    <details className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+      <summary className="cursor-pointer text-xs font-bold uppercase tracking-widest text-white/45">
+        Record a later payment (next invoice {dueOn})
+      </summary>
+      <form onSubmit={onSubmit} className="mt-3 grid gap-3 sm:flex sm:flex-wrap sm:items-end">
+        <p className="w-full text-xs leading-relaxed text-white/45">
+          They are paid through {dueOn}. Only open this when a new payment
+          arrives. Recording one now will move the next due date to{" "}
+          {afterThisPayment}.
+        </p>
+        {fields}
+      </form>
+    </details>
   );
 }
 

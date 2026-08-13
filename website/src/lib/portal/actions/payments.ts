@@ -20,8 +20,11 @@ import {
 import { activateRemainingAutopay, chargePortFeeOffSession } from "@/lib/portal/activate-autopay";
 import { sendManualPaymentRecorded } from "@/lib/portal/emails";
 import {
+  addMonths,
   intervalMonths,
+  lockedBillingInterval,
   serviceMonthlyCents,
+  todayIsoDate,
   voipInvoiceDescription,
   voipPortFeeCents,
   voipUnchargedPorts,
@@ -321,14 +324,6 @@ export type RecordPaymentResult =
   | { ok: true; nextDueOn: string | null; emailSent: boolean | null }
   | { ok: false; error: string };
 
-function addMonths(isoDate: string, months: number): string {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1 + months, d));
-  // Clamp overflow (e.g. Jan 31 + 1 month) to the last day of the month.
-  if (date.getUTCMonth() !== (((m - 1 + months) % 12) + 12) % 12) date.setUTCDate(0);
-  return date.toISOString().slice(0, 10);
-}
-
 export async function recordManualPayment(input: {
   serviceId: string;
   amountCents: number;
@@ -498,15 +493,16 @@ export async function updateServiceBilling(input: {
 
   const nextDue =
     billingMethod === "manual"
-      ? nextDueOn || paidThrough || service.next_due_on
+      ? cancelledSubscription && paidThrough && (!nextDueOn || nextDueOn === todayIsoDate())
+        ? paidThrough
+        : nextDueOn || paidThrough || service.next_due_on || todayIsoDate()
       : // Keep the anniversary: checkout uses it to start billing at the
         // right date, and the webhook maintains it afterwards.
         service.next_due_on;
 
   // On autopay the charge is the derived plan total (VoIP: one figure from
   // the rate card). Hand-entered rates apply to the manual rail alone.
-  // VoIP is always monthly (R50): an annual interval would make reminders
-  // quote 12x while Stripe still charges the monthly price.
+  // Interval is locked per service: monitoring annual, VoIP monthly.
   const planRate = serviceMonthlyCents({
     serviceType: service.service_type,
     tier: service.tier,
@@ -515,7 +511,7 @@ export async function updateServiceBilling(input: {
   });
   const amountCents =
     billingMethod === "stripe" && planRate != null ? planRate : monthlyAmountCents;
-  const interval = isVoipService(service.service_type) ? "monthly" : billingInterval;
+  const interval = lockedBillingInterval(service.service_type) ?? billingInterval;
 
   const { error } = await supabase
     .from("services")
@@ -536,6 +532,15 @@ export async function updateServiceBilling(input: {
 
   revalidatePath("/admin-dashboard", "layout");
   revalidatePath("/user-dashboard");
+
+  if (billingMethod === "manual" && !message && nextDue) {
+    const afterPay = addMonths(nextDue, intervalMonths(interval));
+    message =
+      nextDue > todayIsoDate()
+        ? `Billing saved. Next invoice is ${nextDue}. They are paid through that date. Do not record a payment unless new money has arrived.`
+        : `Billing saved. The invoice is due ${nextDue}. Record a payment only after the e-transfer, cheque, or cash arrives. That will move the next due date to ${afterPay}.`;
+  }
+
   return { ok: true, message };
 }
 
