@@ -7,6 +7,7 @@ import {
   invoiceSendCents,
   type BillingInterval,
 } from "@/lib/portal/billing";
+import { CopyableEmail } from "@/components/portal/copyable-email";
 
 function formatDate(isoDate: string): string {
   return new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-CA", {
@@ -28,14 +29,8 @@ export function ManualPaymentInstructions() {
           Interac e-Transfer
         </p>
         <p className="mt-1.5">
-          Send the exact amount to{" "}
-          <a
-            href={`mailto:${ETRANSFER_EMAIL}`}
-            className="inline-block rounded-md bg-amber-400/20 px-1.5 py-0.5 font-semibold text-amber-50 ring-1 ring-amber-300/40"
-          >
-            {ETRANSFER_EMAIL}
-          </a>
-          . Put your name in the message.
+          Send the exact amount to <CopyableEmail email={ETRANSFER_EMAIL} />. Put
+          your name in the message.
         </p>
       </div>
       <div>
@@ -79,35 +74,33 @@ export function ManualPaymentBanner({
     <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6">
       <h2 className="text-lg font-bold text-amber-100">Payment needed: {serviceLabel}</h2>
       {sendCents != null && preTaxCents != null && monthlyCents != null ? (
-        <dl className="mt-4 space-y-3 text-sm">
+        <div className="mt-4 space-y-3 text-sm">
           <div>
-            <dt className="text-amber-200/70">Amount to send</dt>
-            <dd className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-amber-50">
+            <p className="text-amber-200/70">Amount to send</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-amber-50">
               {formatCents(sendCents)}
-            </dd>
-            <dd className="mt-0.5 text-xs text-amber-200/65">includes 13% HST</dd>
+            </p>
+            <p className="mt-0.5 text-xs text-amber-200/65">includes 13% HST</p>
           </div>
-          {dueOn ? (
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-amber-200/70">Due</dt>
-              <dd className="font-semibold text-amber-50">{formatDate(dueOn)}</dd>
-            </div>
-          ) : null}
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-amber-200/70">Before tax</dt>
-            <dd className="tabular-nums text-amber-100/90">
-              {formatCents(preTaxCents)}
-              {interval === "annual" ? " per year" : " per month"}
-            </dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-amber-200/70">Rate</dt>
-            <dd className="text-right text-amber-100/90">
-              {formatCents(monthlyCents)}/month
+          <div className="space-y-1.5 text-amber-100/90">
+            {dueOn ? (
+              <p>
+                Due: <span className="font-semibold text-amber-50">{formatDate(dueOn)}</span>
+              </p>
+            ) : null}
+            <p>
+              Before tax:{" "}
+              <span className="tabular-nums">
+                {formatCents(preTaxCents)}
+                {interval === "annual" ? " per year" : " per month"}
+              </span>
+            </p>
+            <p>
+              Rate: {formatCents(monthlyCents)}/month
               {interval === "annual" ? ", billed annually" : ""}
-            </dd>
+            </p>
           </div>
-        </dl>
+        </div>
       ) : (
         <p className="mt-3 text-sm leading-relaxed text-amber-200/90">
           A payment is due on this service.
