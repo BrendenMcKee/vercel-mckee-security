@@ -76,9 +76,14 @@ function marginLabel(revenue: number, profit: number): string {
 }
 
 function occupancyLabel(occupied: number, periodDays: number): string {
-  return `${occupied} of ${periodDays} day${periodDays === 1 ? "" : "s"} rented`;
+  return `rented ${occupied} of ${periodDays} day${periodDays === 1 ? "" : "s"}`;
 }
 
+function bookingLabel(count: number): string {
+  return `${count} booking${count === 1 ? "" : "s"}`;
+}
+
+/** Label on the left, amount on the right — for the narrow kit cards. */
 function MoneyRow({
   label,
   value,
@@ -90,12 +95,30 @@ function MoneyRow({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="text-xs font-semibold uppercase tracking-wider text-white/50">
-        {label}
-      </span>
-      <span className={cn("text-sm font-semibold tabular-nums text-white", tone)}>
+      <span className="text-sm text-white/70">{label}</span>
+      <span className={cn("text-base font-semibold tabular-nums text-white", tone)}>
         {formatCurrency(value)}
       </span>
+    </div>
+  );
+}
+
+/** Label stacked on the amount so a wide card cannot pull them apart. */
+function MoneyStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-sm text-white/70">{label}</p>
+      <p className={cn("mt-1 text-xl font-bold tabular-nums sm:text-2xl", tone)}>
+        {formatCurrency(value)}
+      </p>
     </div>
   );
 }
@@ -134,13 +157,11 @@ function FleetCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/55">
-            Whole fleet
-          </p>
+          <p className="text-sm font-semibold text-white/70">Whole fleet</p>
           <p className={cn("mt-1 text-3xl font-bold tabular-nums sm:text-4xl", profitTone(profit))}>
             {formatCurrency(profit)}
           </p>
-          <p className="mt-1 text-sm text-white/60">{marginLabel(revenue, profit)}</p>
+          <p className="mt-1 text-sm text-white/65">{marginLabel(revenue, profit)}</p>
         </div>
         <span
           className={cn(
@@ -156,18 +177,17 @@ function FleetCard({
           <Icon className="h-5 w-5" />
         </span>
       </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <MoneyRow label="Rental income" value={revenue} tone="text-emerald-200" />
-        <MoneyRow label="Starlink cost" value={cost} tone="text-orange-200" />
-        <MoneyRow label="Profit" value={profit} tone={profitTone(profit)} />
+      <div className="mt-5 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 sm:grid-cols-3 sm:gap-6">
+        <MoneyStat label="Rental income" value={revenue} tone="text-emerald-200" />
+        <MoneyStat label="Starlink cost" value={cost} tone="text-orange-200" />
+        <MoneyStat label="Profit" value={profit} tone={profitTone(profit)} />
       </div>
-      <p className="mt-3 text-xs text-white/50">
-        {rentals} booking{rentals === 1 ? "" : "s"} ·{" "}
-        {Math.round(occupancy * 100)}% of kit-days occupied. Deposits are not
-        included.
+      <p className="mt-4 text-sm text-white/60">
+        {bookingLabel(rentals)} · kits were rented {Math.round(occupancy * 100)}% of
+        the time. Customer deposits are not included.
       </p>
       {unassignedRevenue > 0 ? (
-        <p className="mt-2 text-xs text-amber-200/90">
+        <p className="mt-2 text-sm text-amber-200/90">
           {formatCurrency(unassignedRevenue)} from {unassignedRentals} unassigned
           booking{unassignedRentals === 1 ? "" : "s"} is in the fleet total, not
           on a kit.
@@ -178,7 +198,6 @@ function FleetCard({
 }
 
 function UnitCard({ row }: { row: UnitProfit }) {
-  const inTheBlack = row.profit > 0.005;
   return (
     <article className="rounded-xl border border-white/10 bg-surface/60 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -191,18 +210,16 @@ function UnitCard({ row }: { row: UnitProfit }) {
             />
             <h3 className="truncate text-sm font-bold text-white">{row.name}</h3>
             {row.active ? null : (
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
-                Inactive
-              </span>
+              <span className="text-xs font-semibold text-white/50">Inactive</span>
             )}
           </div>
-          <p className="mt-1 text-xs text-white/50">
+          <p className="mt-1 text-sm text-white/60">
             {row.currentCost
               ? `${row.currentCost.plan_name ?? "Plan"} · ${formatCurrency(row.currentCost.monthly_cost)}/mo`
               : "No monthly rate set"}
           </p>
           {row.upcomingCost ? (
-            <p className="mt-0.5 text-xs text-amber-200/90">
+            <p className="mt-0.5 text-sm text-amber-200/90">
               Changes to {formatCurrency(row.upcomingCost.monthly_cost)}/mo on{" "}
               {formatDateShort(row.upcomingCost.effective_from)}
             </p>
@@ -216,10 +233,8 @@ function UnitCard({ row }: { row: UnitProfit }) {
         <MoneyRow label="Rental income" value={row.revenue} />
         <MoneyRow label="Starlink cost" value={row.cost} />
       </div>
-      <p className="mt-3 text-xs text-white/50">
-        {row.rentals} booking{row.rentals === 1 ? "" : "s"} ·{" "}
-        {occupancyLabel(row.occupiedDays, row.periodDays)}
-        {inTheBlack ? " · in the black" : row.profit < -0.005 ? " · in the red" : ""}
+      <p className="mt-3 text-sm text-white/60">
+        {bookingLabel(row.rentals)} · {occupancyLabel(row.occupiedDays, row.periodDays)}
       </p>
     </article>
   );
@@ -283,7 +298,7 @@ function CostEditor({
         <h3 className="text-sm font-bold text-white">{unit.name}</h3>
       </div>
       {current ? (
-        <p className="mb-3 text-xs text-white/50">
+        <p className="mb-3 text-sm text-white/60">
           Current: {current.plan_name ?? "Plan"} ·{" "}
           {formatCurrency(current.monthly_cost)}/mo since{" "}
           {formatDateShort(current.effective_from)}
@@ -292,7 +307,7 @@ function CostEditor({
             : ""}
         </p>
       ) : (
-        <p className="mb-3 text-xs text-amber-200/90">
+        <p className="mb-3 text-sm text-amber-200/90">
           No rate yet — this kit will show as $0 cost until you save one.
         </p>
       )}
@@ -305,7 +320,7 @@ function CostEditor({
               setPlanName(preset.plan_name);
               setCostText(String(preset.monthly_cost));
             }}
-            className="min-h-11 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/5 sm:min-h-0 sm:py-1.5"
+            className="min-h-11 rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-white/70 hover:bg-white/5 sm:min-h-0 sm:py-1.5"
           >
             {preset.plan_name} · {formatCurrency(preset.monthly_cost)}
           </button>
@@ -480,7 +495,7 @@ export function ProfitView({
       <Section icon={TrendingUp} title="Month by month">
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="w-full min-w-[28rem] text-left text-sm">
-            <thead className="bg-white/[0.03] text-xs font-semibold uppercase tracking-wider text-white/50">
+            <thead className="bg-white/[0.03] text-sm font-semibold text-white/60">
               <tr>
                 <th className="px-3 py-2.5">Month</th>
                 <th className="px-3 py-2.5 text-right">Income</th>
