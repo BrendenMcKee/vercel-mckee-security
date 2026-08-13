@@ -98,10 +98,12 @@ export async function updateMyAccountAction(input: {
 }
 
 /**
- * Signed-in client changes their password from Settings. Does not redirect
+ * Signed-in client changes their password from Settings. Requires the current
+ * password so a stolen session cannot take over the account. Does not redirect
  * (unlike first-access / reset, which send them to the dashboard).
  */
 export async function updateMyPasswordAction(input: {
+  currentPassword: string;
   password: string;
   confirmPassword: string;
 }): Promise<UpdateMyPasswordResult> {
@@ -112,6 +114,9 @@ export async function updateMyPasswordAction(input: {
     return { ok: false, error: "Account settings are for client profiles." };
   }
 
+  if (!input.currentPassword) {
+    return { ok: false, error: "Enter your current password." };
+  }
   const parsed = passwordSchema.safeParse(input.password);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid password." };
@@ -119,8 +124,28 @@ export async function updateMyPasswordAction(input: {
   if (input.password !== input.confirmPassword) {
     return { ok: false, error: "The two passwords do not match." };
   }
+  if (input.currentPassword === input.password) {
+    return { ok: false, error: "The new password must be different from your current password." };
+  }
+
+  const email = user.email ?? profile.email;
+  if (!email) {
+    return { ok: false, error: "Your account has no sign-in email, so the password cannot be changed here." };
+  }
 
   const supabase = await createPortalServerClient();
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email,
+    password: input.currentPassword,
+  });
+  if (verifyError) {
+    if (verifyError.code === "invalid_credentials" || verifyError.status === 400) {
+      return { ok: false, error: "Current password is incorrect." };
+    }
+    console.error("[portal] updateMyPassword verify failed:", verifyError);
+    return { ok: false, error: "Could not verify your current password. Please try again." };
+  }
+
   const { error } = await supabase.auth.updateUser({ password: parsed.data });
   if (error) {
     if (error.code === "weak_password") {

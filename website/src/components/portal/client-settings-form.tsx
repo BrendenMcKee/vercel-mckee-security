@@ -26,7 +26,11 @@ export function ClientSettingsForm({
     phone: phone ? formatPhone(phone) : "",
     address: address ?? "",
   });
-  const [passwords, setPasswords] = useState({ password: "", confirmPassword: "" });
+  const [passwords, setPasswords] = useState({
+    currentPassword: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [accountNotice, setAccountNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [passwordNotice, setPasswordNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [accountPending, startAccount] = useTransition();
@@ -54,7 +58,7 @@ export function ClientSettingsForm({
         setPasswordNotice({ kind: "error", text: result.error });
         return;
       }
-      setPasswords({ password: "", confirmPassword: "" });
+      setPasswords({ currentPassword: "", password: "", confirmPassword: "" });
       setPasswordNotice({ kind: "ok", text: "Password updated." });
     });
   }
@@ -120,7 +124,7 @@ export function ClientSettingsForm({
         icon="settings"
         tone="billing"
         title="Password"
-        description="Change the password you use with email sign-in. You are already signed in, so the current password is not required."
+        description="Enter your current password, then choose a new one. A stolen session is not enough to take over the account."
       >
         <form onSubmit={savePassword} className="space-y-4 border-t border-white/10 pt-5">
           {passwordNotice && (
@@ -135,6 +139,22 @@ export function ClientSettingsForm({
               {passwordNotice.text}
             </p>
           )}
+          <label className="flex flex-col gap-1.5 text-sm text-white/80">
+            Current password
+            <input
+              type="password"
+              autoComplete="current-password"
+              required
+              value={passwords.currentPassword}
+              onChange={(event) =>
+                setPasswords((current) => ({ ...current, currentPassword: event.target.value }))
+              }
+              className={fieldClass}
+            />
+            <span className="text-xs text-white/40">
+              Forgot it? Sign out and use Forgot password on the sign-in page.
+            </span>
+          </label>
           <label className="flex flex-col gap-1.5 text-sm text-white/80">
             New password
             <input
