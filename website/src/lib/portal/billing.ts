@@ -86,10 +86,22 @@ export function voipPortFeeCents(portCount: number): number {
   return VOIP_NUMBER_PORT_FEE_CENTS * Math.max(0, Math.trunc(portCount) || 0);
 }
 
+/** Ports still waiting for the one-time fee. Never charge this twice. */
+export function voipUnchargedPorts(portCount: number, chargedCount: number): number {
+  const ports = Math.max(0, Math.trunc(portCount) || 0);
+  const charged = Math.max(0, Math.trunc(chargedCount) || 0);
+  return Math.max(0, ports - charged);
+}
+
+export function normalizeVoipPorts(numberCount: number, portCount: number): number {
+  const numbers = Math.min(100, Math.max(1, Math.trunc(numberCount) || 1));
+  return Math.min(numbers, Math.max(0, Math.trunc(portCount) || 0));
+}
+
 /** Seat cost only until BrightPBX confirms DID pricing. */
 export function voipInternalCostCents(input: VoipConfig): number {
-  const { seatCount } = normalizeVoipConfig(input);
-  return VOIP_SEAT_COST_CENTS * seatCount + VOIP_DID_COST_CENTS * input.numberCount;
+  const { seatCount, numberCount } = normalizeVoipConfig(input);
+  return VOIP_SEAT_COST_CENTS * seatCount + VOIP_DID_COST_CENTS * numberCount;
 }
 
 export function voipCoverageLabel(input: VoipConfig): string {

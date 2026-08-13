@@ -16,7 +16,13 @@ import {
   voipNumberPortPriceId,
 } from "@/lib/portal/stripe";
 import { sendManualPaymentRecorded } from "@/lib/portal/emails";
-import { intervalMonths, serviceMonthlyCents, voipInvoiceDescription, voipPortFeeCents } from "@/lib/portal/billing";
+import {
+  intervalMonths,
+  serviceMonthlyCents,
+  voipInvoiceDescription,
+  voipPortFeeCents,
+  voipUnchargedPorts,
+} from "@/lib/portal/billing";
 import { isVoipService } from "@/lib/portal/service-labels";
 import { siteConfig } from "@/lib/site-config";
 
@@ -414,6 +420,8 @@ export async function updateServiceBilling(input: {
 
   // On autopay the charge is the derived plan total (VoIP: one figure from
   // the rate card). Hand-entered rates apply to the manual rail alone.
+  // VoIP is always monthly (R50): an annual interval would make reminders
+  // quote 12x while Stripe still charges the monthly price.
   const planRate = serviceMonthlyCents({
     serviceType: service.service_type,
     tier: service.tier,
@@ -422,12 +430,13 @@ export async function updateServiceBilling(input: {
   });
   const amountCents =
     billingMethod === "stripe" && planRate != null ? planRate : monthlyAmountCents;
+  const interval = isVoipService(service.service_type) ? "monthly" : billingInterval;
 
   const { error } = await supabase
     .from("services")
     .update({
       billing_method: billingMethod,
-      billing_interval: billingInterval,
+      billing_interval: interval,
       monthly_amount_cents: amountCents,
       next_due_on: nextDue,
       due_alerted_at: null,
@@ -467,7 +476,7 @@ export async function chargeVoipPortFee(input: {
   const { data: service } = await supabase
     .from("services")
     .select(
-      "id, profile_id, service_type, port_count, billing_method, profiles(first_name, email, stripe_customer_id)",
+      "id, profile_id, service_type, port_count, port_fee_charged_count, billing_method, profiles(first_name, email, stripe_customer_id)",
     )
     .eq("id", input.serviceId)
     .maybeSingle();
@@ -475,19 +484,42 @@ export async function chargeVoipPortFee(input: {
   if (!isVoipService(service.service_type)) {
     return { ok: false, error: "Port fees apply to VoIP only." };
   }
-  if (service.port_count < 1) {
-    return { ok: false, error: "This service has no numbers marked for porting." };
+  const uncharged = voipUnchargedPorts(service.port_count, service.port_fee_charged_count);
+  if (uncharged < 1) {
+    return {
+      ok: false,
+      error:
+        service.port_count < 1
+          ? "This service has no numbers marked for porting."
+          : "The port fee for those numbers is already recorded. Raise the port count if more numbers are being ported.",
+    };
   }
 
-  const amountCents = voipPortFeeCents(service.port_count);
+  const amountCents = voipPortFeeCents(uncharged);
   const paidOn = input.paidOn ?? new Date().toISOString().slice(0, 10);
-  const note = `Number port fee: ${service.port_count} number${service.port_count === 1 ? "" : "s"}`;
+  const note = `Number port fee: ${uncharged} number${uncharged === 1 ? "" : "s"}`;
+  const nextChargedCount = service.port_fee_charged_count + uncharged;
+
+  // Reserve the count first so a double click cannot open two invoices.
+  const reserved = await markPortFeeCharged(
+    supabase,
+    service.id,
+    service.port_fee_charged_count,
+    nextChargedCount,
+  );
+  if (!reserved) {
+    return {
+      ok: false,
+      error: "The port fee for those numbers is already recorded. Refresh if you just charged it.",
+    };
+  }
 
   if (service.billing_method === "stripe" && isStripeConfigured()) {
     const client = service.profiles;
     const customerId = client?.stripe_customer_id;
     const portPrice = voipNumberPortPriceId();
     if (!customerId || !portPrice) {
+      await markPortFeeCharged(supabase, service.id, nextChargedCount, service.port_fee_charged_count);
       return {
         ok: false,
         error: "Port fee needs a Stripe customer and STRIPE_PRICE_VOIP_NUMBER_PORT. Record it on the manual rail, or finish card setup first.",
@@ -498,8 +530,12 @@ export async function chargeVoipPortFee(input: {
       const invoice = await stripe.invoices.create({
         customer: customerId,
         collection_method: "charge_automatically",
-        auto_advance: true,
-        metadata: { service_id: service.id, kind: "voip_port_fee" },
+        auto_advance: false,
+        metadata: {
+          service_id: service.id,
+          profile_id: service.profile_id,
+          kind: "voip_port_fee",
+        },
         ...(process.env.STRIPE_TAX_RATE_ID
           ? { default_tax_rates: [process.env.STRIPE_TAX_RATE_ID] }
           : {}),
@@ -508,17 +544,29 @@ export async function chargeVoipPortFee(input: {
         customer: customerId,
         invoice: invoice.id,
         pricing: { price: portPrice },
-        quantity: service.port_count,
+        quantity: uncharged,
         description: note,
       });
       const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
-      if (finalized.status === "open") {
-        await stripe.invoices.pay(finalized.id).catch((error) => {
-          console.error("[portal] port-fee invoice pay deferred:", error);
+      const paid =
+        finalized.status === "paid"
+          ? finalized
+          : finalized.status === "open"
+            ? await stripe.invoices.pay(finalized.id)
+            : finalized;
+      if (paid.status !== "paid") {
+        await markPortFeeCharged(supabase, service.id, nextChargedCount, service.port_fee_charged_count);
+        await stripe.invoices.voidInvoice(invoice.id).catch((error) => {
+          console.error("[portal] port-fee invoice void failed:", error);
         });
+        return {
+          ok: false,
+          error: "The card was not charged. Finish card setup or record the port fee on the manual rail.",
+        };
       }
     } catch (error) {
       console.error("[portal] chargeVoipPortFee Stripe failed:", error);
+      await markPortFeeCharged(supabase, service.id, nextChargedCount, service.port_fee_charged_count);
       return { ok: false, error: "Stripe could not charge the port fee. Try again or record it as a received payment." };
     }
     revalidatePath("/admin-dashboard", "layout");
@@ -538,10 +586,31 @@ export async function chargeVoipPortFee(input: {
   });
   if (ledgerError) {
     console.error("[portal] port-fee ledger insert failed:", ledgerError);
+    await markPortFeeCharged(supabase, service.id, nextChargedCount, service.port_fee_charged_count);
     return { ok: false, error: "Could not record the port fee. Please try again." };
   }
 
   revalidatePath("/admin-dashboard", "layout");
   revalidatePath("/user-dashboard");
   return { ok: true, nextDueOn: null, emailSent: null };
+}
+
+async function markPortFeeCharged(
+  supabase: Awaited<ReturnType<typeof createPortalServerClient>>,
+  serviceId: string,
+  expectedCharged: number,
+  nextCharged: number,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("services")
+    .update({ port_fee_charged_count: nextCharged })
+    .eq("id", serviceId)
+    .eq("port_fee_charged_count", expectedCharged)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[portal] port_fee_charged_count update failed:", error);
+    return false;
+  }
+  return Boolean(data);
 }

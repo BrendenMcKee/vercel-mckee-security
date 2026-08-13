@@ -644,7 +644,11 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                     max={100}
                     disabled={!form.voipTier}
                     value={form.voipNumbers}
-                    onChange={(e) => set("voipNumbers", Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
+                    onChange={(e) => {
+                      const next = Math.max(1, Number.parseInt(e.target.value, 10) || 1);
+                      set("voipNumbers", next);
+                      if (form.voipPorts > next) set("voipPorts", next);
+                    }}
                     className={adminInputClass}
                   />
                   <span className="text-xs text-white/40">
@@ -679,10 +683,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   <input
                     type="number"
                     min={0}
-                    max={100}
+                    max={form.voipNumbers}
                     disabled={!form.voipTier}
                     value={form.voipPorts}
-                    onChange={(e) => set("voipPorts", Math.max(0, Number.parseInt(e.target.value, 10) || 0))}
+                    onChange={(e) =>
+                      set("voipPorts", Math.min(form.voipNumbers, Math.max(0, Number.parseInt(e.target.value, 10) || 0)))
+                    }
                     className={adminInputClass}
                   />
                   <span className="text-xs text-white/40">

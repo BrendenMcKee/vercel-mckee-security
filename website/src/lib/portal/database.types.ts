@@ -557,6 +557,7 @@ export type Database = {
           next_due_on: string | null
           number_count: number
           port_count: number
+          port_fee_charged_count: number
           profile_id: string
           seat_count: number
           service_type: Database["public"]["Enums"]["service_type"]
@@ -575,6 +576,7 @@ export type Database = {
           next_due_on?: string | null
           number_count?: number
           port_count?: number
+          port_fee_charged_count?: number
           profile_id: string
           seat_count?: number
           service_type: Database["public"]["Enums"]["service_type"]
@@ -593,6 +595,7 @@ export type Database = {
           next_due_on?: string | null
           number_count?: number
           port_count?: number
+          port_fee_charged_count?: number
           profile_id?: string
           seat_count?: number
           service_type?: Database["public"]["Enums"]["service_type"]

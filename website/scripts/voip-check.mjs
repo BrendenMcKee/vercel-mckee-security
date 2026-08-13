@@ -8,6 +8,7 @@ import Stripe from "stripe";
 import {
   voipMonthlyCents,
   voipPortFeeCents,
+  voipUnchargedPorts,
   withHstCents,
 } from "@/lib/portal/billing.ts";
 
@@ -49,6 +50,8 @@ check("Residential seats are ignored", voipMonthlyCents({
   seatCount: 4,
 }) === 3499);
 check("Port fee 2 numbers", voipPortFeeCents(2) === 9998);
+check("Uncharged ports after a partial charge", voipUnchargedPorts(3, 1) === 2);
+check("Uncharged ports after a full charge", voipUnchargedPorts(2, 2) === 0);
 
 const { data: profileId, error: rpcError } = await admin.rpc("admin_create_client", {
   p_first_name: "VoIP",
@@ -69,7 +72,7 @@ check("admin_create_client accepts VoIP args", !rpcError && Boolean(profileId), 
 if (profileId) {
   const { data: service } = await admin
     .from("services")
-    .select("id, service_type, tier, number_count, seat_count, port_count, billing_interval, monthly_amount_cents")
+    .select("id, service_type, tier, number_count, seat_count, port_count, port_fee_charged_count, billing_interval, monthly_amount_cents")
     .eq("profile_id", profileId)
     .eq("service_type", "voip")
     .maybeSingle();
@@ -78,6 +81,7 @@ if (profileId) {
   check("number_count stored (2)", service?.number_count === 2);
   check("seat_count stored (3)", service?.seat_count === 3);
   check("port_count stored (1)", service?.port_count === 1);
+  check("port fee not yet charged", service?.port_fee_charged_count === 0);
   check("VoIP bills monthly", service?.billing_interval === "monthly");
 
   if (service) {
@@ -109,6 +113,18 @@ if (profileId) {
       .update({ tier: "residential", seat_count: 2, number_count: 1 })
       .eq("id", service.id);
     check("residential seat_count > 1 rejected", Boolean(seatError), seatError?.code);
+
+    const { error: portsError } = await admin
+      .from("services")
+      .update({ port_count: 5, number_count: 2, seat_count: 3, tier: "professional" })
+      .eq("id", service.id);
+    check("port_count > number_count rejected", Boolean(portsError), portsError?.code);
+
+    const { error: annualError } = await admin
+      .from("services")
+      .update({ billing_interval: "annual" })
+      .eq("id", service.id);
+    check("VoIP annual interval rejected", Boolean(annualError), annualError?.code);
   }
 
   const { error: cleanupError } = await admin.from("profiles").delete().eq("id", profileId);

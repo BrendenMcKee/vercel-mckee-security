@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-13 (VoIP 3.12 rate card in the portal: one monthly figure per system, not per line; port fee one-time; recurring never in an installation invoice)
+**Last updated:** 2026-08-13 (VoIP 3.12 rate card, plus audit hardening: port fee charged once, VoIP always monthly, ports cannot exceed numbers)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -60,7 +60,7 @@ Residential has no seat add-on at all. The additional-number rate is the same on
 - One subscription, one line item, quantity 1. The line names the service and states the coverage (number count, seat count) and carries the total. Base and add-ons are never separate lines on a client invoice.
 - Charged once per system. Never per phone, never per number, never per handset.
 - Recurring is fully separate from installation. Monthly service bills on its own invoice on its own cycle. It never appears inside a one-time installation invoice.
-- The port fee is a separate one-time charge (card invoice or a recorded payment). It does not move the next monthly due date and is never mixed into the subscription.
+- The port fee is a separate one-time charge (card invoice or a recorded payment). It does not move the next monthly due date and is never mixed into the subscription. The portal records how many ports have already been charged, so clicking Charge twice does not bill twice. If the card is declined, nothing is marked charged and you can retry or record it by hand.
 - Internal cost (BrightPBX, never shown to a client): $5.95 per user seat per month. Number (DID) cost is unconfirmed and treated as $0.00 until BrightPBX answers. There is no per-client floor.
 
 In the portal, Commercial is the display name for the `professional` plan. Stripe catalog prices are the two bases; a system above the base uses one matching monthly price on the same product. The Number Port Fee is its own one-time Stripe price.

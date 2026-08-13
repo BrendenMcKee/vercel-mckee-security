@@ -175,6 +175,10 @@ function subscriptionPeriodEnd(subscription: Stripe.Subscription): string | null
  * billing_events row doubles as the client-visible payment history.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  // One-time port-fee invoices are not a renewal. They must not move
+  // next_due_on. They still land in billing_events via metadata.
+  if (invoice.metadata?.kind === "voip_port_fee") return;
+
   const subscriptionRef = invoice.parent?.subscription_details?.subscription;
   const subscriptionId = typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id;
   if (!subscriptionId) return;
@@ -222,7 +226,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   const { data: service } = await admin
     .from("services")
-    .select("id, status, tier, service_type, number_count, seat_count, next_due_on")
+    .select("id, status, tier, service_type, number_count, seat_count, next_due_on, monthly_amount_cents")
     .eq("stripe_subscription_id", subscription.id)
     .maybeSingle();
   if (!service) return;
@@ -268,8 +272,13 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     seatCount: service.seat_count,
   });
   const billed = subscription.items.data[0]?.price?.unit_amount;
-  if (expected != null && typeof billed === "number" && billed !== expected) {
+  if (expected != null && expected !== service.monthly_amount_cents) {
     updates.monthly_amount_cents = expected;
+  }
+  if (expected != null && typeof billed === "number" && billed !== expected) {
+    console.warn(
+      `[portal] VoIP Stripe price ${billed} does not match rate card ${expected} for service ${service.id}. Portal keeps the rate-card total.`,
+    );
   }
 
   if (Object.keys(updates).length > 0) {

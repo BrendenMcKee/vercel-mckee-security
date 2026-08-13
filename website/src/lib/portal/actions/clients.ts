@@ -108,6 +108,9 @@ export async function createClientAction(
   if (cloudTier && !isServiceAvailable("cloud_backup")) {
     return { ok: false, error: CLOUD_BACKUP_DEVELOPMENT_MESSAGE };
   }
+  if (voipTier && voipPorts > voipNumbers) {
+    return { ok: false, error: "Numbers being ported cannot exceed the numbers on the system." };
+  }
 
   const seedContacts: { phone: string; label: string; passcode: string }[] = [];
   const seedDevices: z.infer<typeof createDeviceDraftSchema>[] = [];

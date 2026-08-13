@@ -43,6 +43,7 @@ import {
   voipInternalCostCents,
   voipMonthlyCents,
   voipPortFeeCents,
+  voipUnchargedPorts,
   VOIP_DID_COST_CONFIRMED,
   type BillingInterval,
   type PaymentMethod,
@@ -328,6 +329,10 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
       setNotice({ kind: "error", text: "Enter how many user seats this system includes." });
       return;
     }
+    if (voip && Number.isFinite(portCount) && portCount > numberCount) {
+      setNotice({ kind: "error", text: "Numbers being ported cannot exceed the numbers on the system." });
+      return;
+    }
     setNotice(null);
     startTransition(async () => {
       const result = await assignServiceAction({
@@ -430,7 +435,7 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
           <input
             type="number"
             min={0}
-            max={100}
+            max={Number.parseInt(assignNumbers, 10) || 1}
             disabled={!voip}
             value={assignPorts}
             onChange={(e) => setAssignPorts(e.target.value)}
@@ -673,6 +678,9 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
   const [ports, setPorts] = useState(String(service.port_count));
 
   const voip = isVoipService(service.service_type);
+  const unchargedPorts = voip
+    ? voipUnchargedPorts(service.port_count, service.port_fee_charged_count)
+    : 0;
 
   // Prefill the received amount with one full invoice (monthly rate x
   // interval, pre-tax); the admin adjusts for tax or partial payments.
@@ -723,6 +731,10 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       setNotice({ kind: "error", text: "Enter how many numbers are being ported, or 0." });
       return;
     }
+    if (portCount > numberCount) {
+      setNotice({ kind: "error", text: "Numbers being ported cannot exceed the numbers on the system." });
+      return;
+    }
     if (
       numberCount === service.number_count &&
       seatCount === service.seat_count &&
@@ -754,13 +766,21 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
   }
 
   function chargePortFee() {
-    const portCount = Number.parseInt(ports, 10) || service.port_count;
-    if (portCount < 1) {
-      setNotice({ kind: "error", text: "Set how many numbers are being ported first." });
+    if (
+      numbers !== String(service.number_count) ||
+      seats !== String(service.seat_count) ||
+      ports !== String(service.port_count)
+    ) {
+      setNotice({ kind: "error", text: "Save the VoIP numbers, seats, and ports before charging the port fee." });
+      return;
+    }
+    const uncharged = unchargedPorts;
+    if (uncharged < 1) {
+      setNotice({ kind: "error", text: "The port fee for those numbers is already recorded." });
       return;
     }
     const confirmed = window.confirm(
-      `Charge the one-time number port fee of ${formatCents(voipPortFeeCents(portCount))} plus tax for ${portCount} number${portCount === 1 ? "" : "s"}? This is not part of the monthly subscription.`,
+      `Charge the one-time number port fee of ${formatCents(voipPortFeeCents(uncharged))} plus tax for ${uncharged} number${uncharged === 1 ? "" : "s"}? This is not part of the monthly subscription.`,
     );
     if (!confirmed) return;
     setNotice(null);
@@ -930,7 +950,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
               <input
                 type="number"
                 min={0}
-                max={100}
+                max={Number.parseInt(numbers, 10) || service.number_count}
                 value={ports}
                 onChange={(e) => setPorts(e.target.value)}
                 className={`${adminInputClass} sm:w-24`}
@@ -998,20 +1018,22 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
           </label>
           {method === "manual" && (
             <>
-              <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
-                Billed
-                <select
-                  value={cycle}
-                  onChange={(e) => setCycle(e.target.value as BillingInterval)}
-                  className={`${adminSelectClass} max-w-full`}
-                >
-                  {(Object.keys(BILLING_INTERVAL_LABELS) as BillingInterval[]).map((value) => (
-                    <option key={value} value={value}>
-                      {BILLING_INTERVAL_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {!voip && (
+                <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+                  Billed
+                  <select
+                    value={cycle}
+                    onChange={(e) => setCycle(e.target.value as BillingInterval)}
+                    className={`${adminSelectClass} max-w-full`}
+                  >
+                    {(Object.keys(BILLING_INTERVAL_LABELS) as BillingInterval[]).map((value) => (
+                      <option key={value} value={value}>
+                        {BILLING_INTERVAL_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
                 Monthly rate ($, before tax)
                 <input
@@ -1108,13 +1130,23 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
             </p>
             {service.port_count > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <p>
-                  Port fee due: {formatCents(voipPortFeeCents(service.port_count))} plus tax
-                  for {service.port_count} number{service.port_count === 1 ? "" : "s"}, one time.
-                </p>
-                <button type="button" disabled={pending} onClick={chargePortFee} className={buttonSecondary}>
-                  {pending ? "Charging..." : "Charge port fee"}
-                </button>
+                {unchargedPorts > 0 ? (
+                  <>
+                    <p>
+                      Port fee due: {formatCents(voipPortFeeCents(unchargedPorts))} plus tax for{" "}
+                      {unchargedPorts} number{unchargedPorts === 1 ? "" : "s"}, one time.
+                    </p>
+                    <button type="button" disabled={pending} onClick={chargePortFee} className={buttonSecondary}>
+                      {pending ? "Charging..." : "Charge port fee"}
+                    </button>
+                  </>
+                ) : (
+                  <p>
+                    Port fee already recorded for {service.port_fee_charged_count} number
+                    {service.port_fee_charged_count === 1 ? "" : "s"}. Raise the port count if more
+                    numbers are being ported.
+                  </p>
+                )}
               </div>
             )}
           </div>

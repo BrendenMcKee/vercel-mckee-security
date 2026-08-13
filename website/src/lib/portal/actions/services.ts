@@ -10,7 +10,12 @@ import {
   isServiceAvailable,
   isVoipService,
 } from "@/lib/portal/service-labels";
-import { normalizeVoipConfig, serviceMonthlyCents } from "@/lib/portal/billing";
+import {
+  normalizeVoipConfig,
+  normalizeVoipPorts,
+  serviceMonthlyCents,
+  voipInvoiceDescription,
+} from "@/lib/portal/billing";
 import { getStripeClient, isStripeConfigured, priceForVoipAmount, priceIdFor } from "@/lib/portal/stripe";
 
 export type ServiceActionResult = { ok: true } | { ok: false; error: string };
@@ -47,6 +52,11 @@ async function syncVoipStripePrice(input: {
     });
     await stripe.subscriptions.update(input.subscriptionId, {
       items: [{ id: itemId, price: priceId, quantity: 1 }],
+      description: voipInvoiceDescription({
+        tier: input.tier,
+        numberCount: input.numberCount,
+        seatCount: input.seatCount,
+      }),
       proration_behavior: "none",
     });
     return null;
@@ -107,7 +117,7 @@ export async function assignServiceAction(input: {
       ? {
           number_count: voip.numberCount,
           seat_count: voip.seatCount,
-          port_count: Math.max(0, parsed.data.portCount ?? 0),
+          port_count: normalizeVoipPorts(voip.numberCount, parsed.data.portCount ?? 0),
         }
       : {}),
     ...(monthly != null ? { monthly_amount_cents: monthly } : {}),
@@ -277,7 +287,7 @@ export async function updateVoipConfigAction(input: {
     .update({
       number_count: voip.numberCount,
       seat_count: voip.seatCount,
-      port_count: parsed.data.portCount,
+      port_count: normalizeVoipPorts(voip.numberCount, parsed.data.portCount),
       monthly_amount_cents: monthly,
     })
     .eq("id", serviceId);
