@@ -802,9 +802,11 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       const confirmed = window.confirm(`Cancel ${serviceLabel} for this client?${cardNote}`);
       if (!confirmed) return;
     }
-    if (status === "paused" && service.stripe_subscription_id) {
+    if (status === "paused") {
       const confirmed = window.confirm(
-        `Pause ${serviceLabel}? Stripe will not charge the card until you restart. The subscription stays in Stripe.`,
+        service.stripe_subscription_id
+          ? `Hold billing for ${serviceLabel}?\n\nThis is not Cancel. Stripe keeps their subscription and stops charging. Restart later and they do not have to enter their card again. Use Cancel if this service is ending.`
+          : `Hold billing for ${serviceLabel}?\n\nThis is not Cancel. Reminders stop until you Restart. Use Cancel if this service is ending.`,
       );
       if (!confirmed) return;
     }
@@ -975,36 +977,51 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
             )}
           </>
         )}
-        <div className="flex flex-wrap items-center gap-2 sm:items-end sm:gap-3">
-          {service.status === "cancelled" || service.status === "paused" ? (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => changeStatus("active")}
-              className={buttonSecondary}
-            >
-              Restart
-            </button>
-          ) : (
-            <>
+        <div className="w-full space-y-2">
+          <div className="flex flex-wrap items-center gap-2 sm:items-end sm:gap-3">
+            {service.status === "cancelled" || service.status === "paused" ? (
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => changeStatus("paused")}
+                onClick={() => changeStatus("active")}
                 className={buttonSecondary}
               >
-                Pause
+                Restart
               </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => changeStatus("cancelled")}
-                className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </>
-          )}
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => changeStatus("paused")}
+                  className={buttonSecondary}
+                >
+                  Hold billing
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => changeStatus("cancelled")}
+                  className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+          <p className="text-xs leading-relaxed text-white/45">
+            {service.status === "paused"
+              ? service.stripe_subscription_id
+                ? "On hold: Stripe is not charging, but their card subscription is still there. Restart resumes the same card. They do not enter card details again."
+                : "On hold: reminders are stopped. Restart starts reminders again. This is not Cancel."
+              : service.status === "cancelled"
+                ? service.stripe_subscription_id
+                  ? "Cancelled: they stay paid through the current period, then Stripe ends the subscription. Restart before that date keeps the same card. After that date they set up automatic payments again."
+                  : "Cancelled: this service is ended. Restart turns it back on. If they pay by card, they will need to set up automatic payments again."
+                : service.stripe_subscription_id
+                  ? "Hold billing stops charges but keeps their Stripe subscription, so Restart does not make them enter a card again. Cancel ends the service: they stay paid through the current period, then Stripe stops. Use Hold for a temporary stop; use Cancel if this service is ending."
+                  : "Hold billing stops reminders until you Restart. Cancel ends the service. Use Hold for a temporary stop; use Cancel if this service is ending."}
+          </p>
         </div>
         {service.service_type === "cloud_backup" && (
           <p className="w-full text-xs text-white/40">
@@ -1146,7 +1163,12 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                       Port fee due: {formatCents(voipPortFeeCents(unchargedPorts))} plus tax for{" "}
                       {unchargedPorts} number{unchargedPorts === 1 ? "" : "s"}, one time.
                     </p>
-                    <button type="button" disabled={pending} onClick={chargePortFee} className={buttonSecondary}>
+                    <button
+                      type="button"
+                      disabled={pending || service.status === "paused"}
+                      onClick={chargePortFee}
+                      className={buttonSecondary}
+                    >
                       {pending ? "Charging..." : "Charge port fee"}
                     </button>
                   </>

@@ -2,15 +2,14 @@
 // and the one-time Number Port Fee price in Stripe (R50 / company knowledge 3.12).
 // Idempotent: products are found again by their metadata marker, so re-runs
 // never duplicate (name/description are re-synced on existing products).
-// Prints the env var lines to add.
 //
-//   node --env-file=.env.local scripts/stripe-voip-setup.mjs
+// The portal finds these prices by the same marker at runtime. You do not
+// need to paste price IDs into Vercel. Optional STRIPE_PRICE_VOIP_* env
+// vars still override if you set them.
 //
-// Catalog prices are the base system only (1 number + 1 seat). Configurations
-// above the base reuse the same product with a matching monthly CAD price at
-// the derived total (quantity is always 1). The port fee is never on the
-// subscription.
+//   node --env-file=.env.local --import ./scripts/register-ts-alias.mjs scripts/stripe-voip-setup.mjs
 import Stripe from "stripe";
+import { VOIP_STRIPE_CATALOG } from "@/lib/portal/voip-stripe-catalog.ts";
 
 const key = process.env.STRIPE_SECRET_KEY;
 if (!key) {
@@ -21,39 +20,7 @@ const stripe = new Stripe(key);
 const mode = key.startsWith("sk_live") ? "LIVE" : "test";
 console.log(`Stripe mode: ${mode}`);
 
-const PLANS = [
-  {
-    marker: "mckee_voip_residential",
-    envVar: "STRIPE_PRICE_VOIP_RESIDENTIAL",
-    name: "McKee Security VoIP Residential",
-    description:
-      "Residential VoIP Service, base system per month. Includes 1 number and 1 user seat. Additional numbers are $4.99 each. Charged once per system, never per phone. Recurring is separate from installation.",
-    unitAmount: 3499,
-    recurring: true,
-  },
-  {
-    marker: "mckee_voip_professional",
-    envVar: "STRIPE_PRICE_VOIP_PROFESSIONAL",
-    name: "McKee Security VoIP Commercial",
-    description:
-      "Commercial VoIP Service, base system per month. Includes 1 number and 1 user seat. Additional numbers $4.99. Additional seats $24.99. Charged once per system, never per phone. Recurring is separate from installation.",
-    unitAmount: 5999,
-    recurring: true,
-  },
-  {
-    marker: "mckee_voip_number_port",
-    envVar: "STRIPE_PRICE_VOIP_NUMBER_PORT",
-    name: "McKee Security VoIP Number Port Fee",
-    description:
-      "One-time fee per number ported onto a McKee VoIP system. Not recurring. Never part of the monthly subscription or an installation invoice total.",
-    unitAmount: 4999,
-    recurring: false,
-  },
-];
-
-const envLines = [];
-
-for (const plan of PLANS) {
+for (const plan of Object.values(VOIP_STRIPE_CATALOG)) {
   const existing = await stripe.products.search({
     query: `metadata['marker']:'${plan.marker}' AND active:'true'`,
   });
@@ -100,9 +67,10 @@ for (const plan of PLANS) {
     const cadence = plan.recurring ? "/month CAD" : " one-time CAD";
     console.log(`Price created: ${price.id} ($${(plan.unitAmount / 100).toFixed(2)}${cadence})`);
   }
-
-  envLines.push(`${plan.envVar}=${price.id}`);
 }
 
-console.log("\nAdd to website/.env.local AND the Vercel project env:\n");
-for (const line of envLines) console.log(line);
+console.log("\nCatalog is live. The portal finds these prices by metadata marker.");
+console.log("No Vercel env vars needed. Optional overrides if you ever want them:");
+for (const plan of Object.values(VOIP_STRIPE_CATALOG)) {
+  console.log(`  ${plan.envVar}`);
+}

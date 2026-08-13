@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-13 (VoIP 3.12 rate card, plus two audits: port fee charged once / VoIP always monthly, then Stripe cancel-and-change sync so Cancel/Pause cannot flip back to Active)
+**Last updated:** 2026-08-13 (VoIP catalog prices resolve in Stripe by marker, no Vercel price-ID paste; Hold billing kept as a real pause, distinct from Cancel)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -60,7 +60,7 @@ Residential has no seat add-on at all. The additional-number rate is the same on
 - One subscription, one line item, quantity 1. The line names the service and states the coverage (number count, seat count) and carries the total. Base and add-ons are never separate lines on a client invoice.
 - Charged once per system. Never per phone, never per number, never per handset.
 - Recurring is fully separate from installation. Monthly service bills on its own invoice on its own cycle. It never appears inside a one-time installation invoice.
-- The port fee is a separate one-time charge (card invoice or a recorded payment). It does not move the next monthly due date and is never mixed into the subscription. The portal records how many ports have already been charged, so clicking Charge twice does not bill twice. If the card is declined, nothing is marked charged and you can retry or record it by hand.
+- The port fee is a separate one-time charge. It does not move the next monthly due date and is never mixed into the subscription. On first setup the client adds a card once; that card starts every approved autopay service and charges any outstanding ports. A later extra port shows as its own payment on their dashboard and charges the saved card (only the new ports). Admins can still Charge from the client page. The portal records how many ports have already been charged, so nobody is billed twice. If the card is declined, nothing is marked charged.
 - Internal cost (BrightPBX, never shown to a client): $5.95 per user seat per month. Number (DID) cost is unconfirmed and treated as $0.00 until BrightPBX answers. There is no per-client floor.
 
 In the portal, Commercial is the display name for the `professional` plan. Stripe catalog prices are the two bases; a system above the base uses one matching monthly price on the same product. The Number Port Fee is its own one-time Stripe price.
@@ -73,9 +73,9 @@ Yes. For every billable service (monitoring and VoIP), an admin change on a cust
 |---|---|
 | Change the plan (monitoring tier, or VoIP Residential / Commercial) | The subscription price is swapped. The new rate is on the **next** invoice. Nobody is charged a mid-cycle difference. |
 | Change VoIP numbers or seats | Same price swap at the new monthly total. Ports do not change the subscription; they only affect the one-time port fee. |
-| **Cancel** the service | Stripe is told to stop at the **end of the current period**. They stay paid through that date. The portal shows Cancelled immediately. This is not an immediate cut-off. |
-| Pause | Stripe stops charging the card until you Restart. The subscription stays in Stripe. |
-| Restart | Stripe starts charging again (and cancels any pending end-of-period stop). |
+| **Cancel** the service | Stripe is told to stop at the **end of the current period**. They stay paid through that date. After that the Stripe subscription is gone, so starting again means they enter a card. Use this when the service is ending. |
+| **Hold billing** (Pause) | Stripe **keeps** the subscription and stops charging. Restart later and they do not enter their card again. Use this for a temporary hold (seasonal, "sort payment, then resume"). Not the same as Cancel. On e-transfer / cheque / cash, Hold just stops reminders. |
+| Restart | If they were on Hold, Stripe starts charging the same card again. If they were Cancelled and the period has already ended, they set up card payments again. |
 | Switch them from card to e-transfer / cheque / cash | Stripe is **cancelled immediately**. They are paid through the current period; after that you collect by hand. Different from Cancel service. |
 | Delete the client | Every live Stripe subscription is cancelled immediately, then the portal row is erased. |
 
@@ -206,12 +206,12 @@ Audited 2026-08-13 against every stakeholder checkpoint in the `PORTAL_PLAN.md` 
 
 9. **The two VoIP customers, entered by hand.** You chose to do this yourself **when Stripe goes live** (with 8C): create the residential customer and the commercial customer via the normal create-client form, each with their real number count, seat count (commercial only), any numbers being ported, and true next payment date. During 8A they get linked to their QuickBooks customer records like everyone else.
 10. **The VoIP item names in QuickBooks.** What the line items on the two customers' VoIP invoices are called today (the VoIP equivalent of item 5). This is how the automation posts VoIP revenue against the right items instead of monitoring ones. Confirm whether the port fee uses a separate QuickBooks item.
-11. **BrightPBX DID (number) cost, when they confirm it.** Seat cost is already $5.95 per user per month. DID cost is treated as $0.00 and flagged unconfirmed. This is internal margin only and never appears on a client document. Nothing is blocked on it. Also add `STRIPE_PRICE_VOIP_NUMBER_PORT` to Vercel (test mode now; live IDs at go-live).
+11. **BrightPBX DID (number) cost, when they confirm it.** Seat cost is already $5.95 per user per month. DID cost is treated as $0.00 and flagged unconfirmed. This is internal margin only and never appears on a client document. Nothing is blocked on it. VoIP Stripe prices (including the port fee) are found by marker; you do not paste those IDs into Vercel.
 
 **Before 8C (posting to the real books):**
 
 12. **A session with the bookkeeper.** One sitting to agree the account mapping: which income accounts monitoring and VoIP each land in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
-13. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode products/prices created (a script re-run, monitoring and VoIP together, including the VoIP Number Port Fee), the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). Mostly done for you by scripts; your part is approving the switch and updating the Vercel values. This is also the moment you enter the two VoIP customers (item 9).
+13. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode monitoring prices in Vercel, the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). VoIP live prices are found or created by marker when the live key is in place (re-run `stripe-voip-setup.mjs` if you want them created ahead of the first checkout). Your part is approving the switch and updating the Vercel secret/webhook/monitoring prices. This is also the moment you enter the two VoIP customers (item 9).
 
 **Nice to have:**
 

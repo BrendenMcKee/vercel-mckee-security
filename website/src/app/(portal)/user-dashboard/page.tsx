@@ -13,13 +13,14 @@ import {
   formatCents,
   intervalMonths,
   voipCoverageLabel,
+  voipUnchargedPorts,
   type PaymentMethod,
 } from "@/lib/portal/billing";
 import { deviceCategoryLabel, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
 import { ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor } from "@/components/portal/caller-id-editor";
-import { PayNowButton } from "@/components/portal/pay-now-button";
 import { ManageBillingButton } from "@/components/portal/manage-billing-button";
+import { PaymentSetupBanner } from "@/components/portal/payment-setup-banner";
 import { PortalCard } from "@/components/portal/portal-card";
 import { CloudBackupInterest } from "@/components/portal/cloud-backup-interest";
 import { ClientSettingsForm } from "@/components/portal/client-settings-form";
@@ -88,7 +89,7 @@ export default async function UserDashboardPage({
       supabase
         .from("services")
         .select(
-          "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, number_count, seat_count, next_due_on, stripe_subscription_id",
+          "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, number_count, seat_count, port_count, port_fee_charged_count, next_due_on, stripe_subscription_id",
         )
         .eq("profile_id", profile.id)
         .order("service_type"),
@@ -153,6 +154,19 @@ export default async function UserDashboardPage({
   const cardSetupNeeded = services.filter(
     (s) => s.billing_method === "stripe" && !s.stripe_subscription_id && s.status === "active",
   );
+  const stripePayables = [
+    ...unpaidServices.filter((s) => s.billing_method === "stripe"),
+    ...cardSetupNeeded.filter((s) => !unpaidServices.some((u) => u.id === s.id)),
+  ];
+  const unchargedPorts =
+    voip &&
+    voip.billing_method === "stripe" &&
+    voip.status !== "cancelled" &&
+    voip.status !== "paused"
+      ? voipUnchargedPorts(voip.port_count, voip.port_fee_charged_count)
+      : 0;
+  const outstandingPortFee =
+    voip && unchargedPorts > 0 ? { serviceId: voip.id, uncharged: unchargedPorts } : null;
 
   // Unified payment history: manual ledger + successful card payments.
   const history: PaymentHistoryEntry[] = [
@@ -182,11 +196,14 @@ export default async function UserDashboardPage({
   const expiredDevices = devicesResult.data.filter((device) =>
     isDeviceExpired(device.installed_on, device.lifetime_years),
   );
+  const manualUnpaid = unpaidServices.filter((s) => s.billing_method === "manual").length;
+  const cardPaymentAlerts = hasCardOnFile
+    ? stripePayables.length + (outstandingPortFee ? 1 : 0)
+    : stripePayables.length > 0 || outstandingPortFee
+      ? 1
+      : 0;
   const alertCount =
-    unpaidServices.length +
-    (missingCallerId ? 1 : 0) +
-    cardSetupNeeded.length +
-    expiredDevices.length;
+    manualUnpaid + cardPaymentAlerts + (missingCallerId ? 1 : 0) + expiredDevices.length;
 
   return (
     <div className="space-y-6">
@@ -231,6 +248,9 @@ export default async function UserDashboardPage({
           unpaidServices={unpaidServices}
           missingCallerId={missingCallerId}
           cardSetupNeeded={cardSetupNeeded}
+          stripePayables={stripePayables}
+          outstandingPortFee={outstandingPortFee}
+          hasCardOnFile={hasCardOnFile}
           expiredDevices={expiredDevices}
         />
       ) : (
@@ -240,9 +260,10 @@ export default async function UserDashboardPage({
           role="status"
           className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-sm leading-relaxed text-emerald-200"
         >
-          Payment set up successfully. Thank you! A confirmation email is on
-          its way. If anything below still looks out of date, refresh in a few
-          seconds.
+          Your card is saved. Approved services and any port fee are starting on
+          that card. Payments from here are automatic. If anything below still
+          looks unpaid, refresh in a few seconds or use Finish starting your
+          services.
         </p>
       )}
       {payment === "cancelled" && (
@@ -250,12 +271,14 @@ export default async function UserDashboardPage({
           role="status"
           className="rounded-2xl border border-white/15 bg-surface p-5 text-sm leading-relaxed text-white/70"
         >
-          Checkout was cancelled and no charge was made. You can set up payment
-          any time from the Billing &amp; Payments section below.
+          No card was saved and nothing was charged. Use Set up your card to
+          start your services when you are ready.
         </p>
       )}
 
-      {unpaidServices.map((service) => (
+      {unpaidServices
+        .filter((service) => service.billing_method === "manual")
+        .map((service) => (
         <div
           key={service.id}
           className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6"
@@ -263,17 +286,6 @@ export default async function UserDashboardPage({
           <h2 className="text-lg font-bold text-amber-100">
             Payment needed: {SERVICE_TYPE_LABELS[service.service_type]}
           </h2>
-          {service.billing_method === "stripe" ? (
-            <div className="mt-3 space-y-4">
-              <p className="text-sm leading-relaxed text-amber-200/90">
-                Your {SERVICE_TYPE_LABELS[service.service_type].toLowerCase()} plan
-                ({tierLabel(service.tier)}) is waiting on a payment. Enter your
-                card below. After that, payments happen automatically each
-                billing period.
-              </p>
-              <PayNowButton serviceId={service.id} />
-            </div>
-          ) : (
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-amber-200/90">
               <p>
                 {service.monthly_amount_cents
@@ -286,9 +298,14 @@ export default async function UserDashboardPage({
               </p>
               <p>{PAYMENT_INSTRUCTIONS}</p>
             </div>
-          )}
         </div>
       ))}
+
+      <PaymentSetupBanner
+        services={stripePayables}
+        portFee={outstandingPortFee}
+        hasCardOnFile={hasCardOnFile}
+      />
 
       {missingCallerId && (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6">
@@ -308,28 +325,6 @@ export default async function UserDashboardPage({
           </a>
         </div>
       )}
-
-      {cardSetupNeeded.map((service) => (
-        <div
-          key={service.id}
-          className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-4 sm:p-6"
-        >
-          <h2 className="text-lg font-bold text-sky-100">
-            Set up automatic payments: {SERVICE_TYPE_LABELS[service.service_type]}
-          </h2>
-          <div className="mt-3 space-y-4">
-            <p className="text-sm leading-relaxed text-sky-200/90">
-              Your account is set up for automatic card payments, but no card is
-              on file yet. Add your card below. You will not be charged today
-              {service.next_due_on
-                ? `; your first automatic payment happens on your regular billing date, ${formatDate(service.next_due_on)}`
-                : ""}
-              .
-            </p>
-            <PayNowButton serviceId={service.id} label="Set Up Automatic Payments" />
-          </div>
-        </div>
-      ))}
 
       {monitoring && (
         <PortalCard
@@ -497,8 +492,11 @@ export default async function UserDashboardPage({
           </div>
 
           {hasCardOnFile && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-2">
               <ManageBillingButton />
+              <p className="text-xs leading-relaxed text-white/40">
+                Change your card here. Automatic payments keep going on the new card.
+              </p>
             </div>
           )}
 
@@ -690,6 +688,9 @@ function ClientAlertsPanel({
   unpaidServices,
   missingCallerId,
   cardSetupNeeded,
+  stripePayables,
+  outstandingPortFee,
+  hasCardOnFile,
   expiredDevices,
 }: {
   unpaidServices: Array<{
@@ -707,6 +708,15 @@ function ClientAlertsPanel({
     service_type: "monitoring" | "cloud_backup" | "voip";
     next_due_on: string | null;
   }>;
+  stripePayables: Array<{
+    id: string;
+    service_type: "monitoring" | "cloud_backup" | "voip";
+    tier: string;
+    status: string;
+    next_due_on: string | null;
+  }>;
+  outstandingPortFee: { serviceId: string; uncharged: number } | null;
+  hasCardOnFile: boolean;
   expiredDevices: Array<{
     id: string;
     label: string;
@@ -718,6 +728,7 @@ function ClientAlertsPanel({
     unpaidServices.length === 0 &&
     !missingCallerId &&
     cardSetupNeeded.length === 0 &&
+    !outstandingPortFee &&
     expiredDevices.length === 0;
 
   if (clear) {
@@ -737,7 +748,9 @@ function ClientAlertsPanel({
         Everything that needs attention on this account. Payment items also stay at the top of
         your Dashboard.
       </p>
-      {unpaidServices.map((service) => (
+      {unpaidServices
+        .filter((service) => service.billing_method === "manual")
+        .map((service) => (
         <div
           key={service.id}
           className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6"
@@ -745,15 +758,6 @@ function ClientAlertsPanel({
           <h2 className="text-lg font-bold text-amber-100">
             Payment needed: {SERVICE_TYPE_LABELS[service.service_type]}
           </h2>
-          {service.billing_method === "stripe" ? (
-            <div className="mt-3 space-y-4">
-              <p className="text-sm leading-relaxed text-amber-200/90">
-                Your {SERVICE_TYPE_LABELS[service.service_type].toLowerCase()} plan (
-                {tierLabel(service.tier)}) is waiting on a payment.
-              </p>
-              <PayNowButton serviceId={service.id} />
-            </div>
-          ) : (
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-amber-200/90">
               <p>
                 {service.monthly_amount_cents
@@ -764,9 +768,13 @@ function ClientAlertsPanel({
               </p>
               <p>{PAYMENT_INSTRUCTIONS}</p>
             </div>
-          )}
         </div>
       ))}
+      <PaymentSetupBanner
+        services={stripePayables}
+        portFee={outstandingPortFee}
+        hasCardOnFile={hasCardOnFile}
+      />
       {missingCallerId && (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6">
           <h2 className="text-lg font-bold text-amber-100">Alarm contact list needed</h2>
@@ -782,23 +790,6 @@ function ClientAlertsPanel({
           </a>
         </div>
       )}
-      {cardSetupNeeded.map((service) => (
-        <div
-          key={service.id}
-          className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-4 sm:p-6"
-        >
-          <h2 className="text-lg font-bold text-sky-100">
-            Set up automatic payments: {SERVICE_TYPE_LABELS[service.service_type]}
-          </h2>
-          <div className="mt-3 space-y-4">
-            <p className="text-sm leading-relaxed text-sky-200/90">
-              Add a card so automatic payments can start
-              {service.next_due_on ? ` on ${formatDate(service.next_due_on)}` : ""}.
-            </p>
-            <PayNowButton serviceId={service.id} label="Set Up Automatic Payments" />
-          </div>
-        </div>
-      ))}
       {expiredDevices.map((device) => {
         const expiry = deviceExpiryDate(device.installed_on, device.lifetime_years);
         return (

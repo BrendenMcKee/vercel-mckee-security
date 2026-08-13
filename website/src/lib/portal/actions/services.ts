@@ -363,6 +363,7 @@ export async function updateServiceStatusAction(input: {
         }
         await stripe.subscriptions.update(service.stripe_subscription_id, {
           pause_collection: { behavior: "void" },
+          cancel_at_period_end: false,
         });
       } else if (subscription.status === "canceled") {
         // Period already ended; Stripe will not accept updates. Drop the

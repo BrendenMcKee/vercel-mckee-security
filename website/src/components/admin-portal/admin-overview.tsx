@@ -129,9 +129,9 @@ export async function AdminOverview() {
   const disabledClients = profiles.filter((p) => p.status === "disabled").length;
   const unpaidServices = services.filter((s) => s.status === "unpaid").length;
 
-  // Billing KPIs (Phase 5). Booked revenue = monthly amounts on non-cancelled
-  // services, split by rail.
-  const billable = services.filter((s) => s.status !== "cancelled");
+  // Billing KPIs (Phase 5). Booked revenue = monthly amounts on services we
+  // are actually billing. Paused is a hold: Stripe is not charging.
+  const billable = services.filter((s) => s.status !== "cancelled" && s.status !== "paused");
   const autopayCents = billable
     .filter((s) => s.billing_method === "stripe")
     .reduce((sum, s) => sum + (s.monthly_amount_cents ?? 0), 0);

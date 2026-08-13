@@ -4,6 +4,10 @@ import { getStripeClient, isStripeConfigured, tierForPriceId } from "@/lib/porta
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { sendCardPaymentFailedAlert, sendPaymentSuccessEmail } from "@/lib/portal/emails";
 import { serviceMonthlyCents } from "@/lib/portal/billing";
+import {
+  activateRemainingAutopay,
+  paymentMethodIdFromSubscription,
+} from "@/lib/portal/activate-autopay";
 
 /**
  * Stripe webhook (PORTAL_PLAN.md 9.1). Signature-verified with the raw body;
@@ -119,10 +123,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // for invoice.paid: Stripe does not guarantee event order, and the first
   // invoice.paid may arrive before this handler stores the subscription id.
   let nextDueOn: string | null = null;
+  let paymentMethodId: string | null = null;
   if (subscriptionId) {
     try {
-      const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
+      const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId, {
+        expand: ["default_payment_method"],
+      });
       nextDueOn = subscriptionPeriodEnd(subscription);
+      paymentMethodId = paymentMethodIdFromSubscription(subscription);
     } catch (error) {
       console.error("[portal] checkout.session.completed subscription lookup failed:", error);
     }
@@ -159,6 +167,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     })
     .eq("id", serviceId);
   if (error) throw error;
+
+  if (profileId) {
+    try {
+      await activateRemainingAutopay({
+        profileId,
+        skipServiceId: serviceId,
+        paymentMethodId,
+      });
+    } catch (activateError) {
+      console.error("[portal] activateRemainingAutopay failed:", activateError);
+    }
+  }
 
   if (profileId) {
     const { data: profile } = await admin
@@ -287,9 +307,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   // Tier sync when the plan was changed in Stripe (admin plan changes flow
   // through here too, keeping the DB consistent no matter where the change
   // originated).
-  const priceId = subscription.items.data[0]?.price?.id;
-  if (priceId) {
-    const mapped = tierForPriceId(priceId);
+  const price = subscription.items.data[0]?.price;
+  if (price?.id) {
+    const mapped = tierForPriceId(price.id, price.metadata);
     if (mapped && mapped.serviceType === service.service_type && mapped.tier !== service.tier) {
       updates.tier = mapped.tier;
     }

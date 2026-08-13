@@ -20,7 +20,7 @@ export async function AdminBilling() {
       .select(
         "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, next_due_on, stripe_subscription_id, profiles(id, first_name, last_name, email, stripe_customer_id)",
       )
-      .neq("status", "cancelled"),
+      .not("status", "in", "(cancelled,paused)"),
     supabase
       .from("billing_events")
       .select("id, type, profile_id, created_at")

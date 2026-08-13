@@ -11,6 +11,7 @@ import {
   voipUnchargedPorts,
   withHstCents,
 } from "@/lib/portal/billing.ts";
+import { VOIP_STRIPE_CATALOG } from "@/lib/portal/voip-stripe-catalog.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -132,36 +133,34 @@ if (profileId) {
 }
 
 const stripeKey = process.env.STRIPE_SECRET_KEY;
-const priceIds = {
-  STRIPE_PRICE_VOIP_RESIDENTIAL: { cents: 3499, recurring: "month" },
-  STRIPE_PRICE_VOIP_PROFESSIONAL: { cents: 5999, recurring: "month" },
-  STRIPE_PRICE_VOIP_NUMBER_PORT: { cents: 4999, recurring: null },
-};
 if (!stripeKey) {
   check("Stripe configured", false, "STRIPE_SECRET_KEY missing");
 } else {
   const stripe = new Stripe(stripeKey);
-  for (const [envVar, expect] of Object.entries(priceIds)) {
-    const id = process.env[envVar];
-    if (!id) {
-      check(`${envVar} set`, false);
-      continue;
-    }
+  for (const [kind, spec] of Object.entries(VOIP_STRIPE_CATALOG)) {
+    const label = spec.recurring
+      ? `$${(spec.unitAmount / 100).toFixed(2)}/month CAD`
+      : `$${(spec.unitAmount / 100).toFixed(2)} one-time CAD`;
     try {
-      const price = await stripe.prices.retrieve(id);
-      const recurringOk = expect.recurring
-        ? price.recurring?.interval === expect.recurring
-        : !price.recurring;
-      const label = expect.recurring
-        ? `$${(expect.cents / 100).toFixed(2)}/month CAD`
-        : `$${(expect.cents / 100).toFixed(2)} one-time CAD`;
-      check(
-        `${envVar} is ${label}`,
-        price.currency === "cad" && price.unit_amount === expect.cents && recurringOk,
-        `${price.currency} ${price.unit_amount} /${price.recurring?.interval ?? "one-time"}`,
-      );
+      const products = await stripe.products.search({
+        query: `metadata['marker']:'${spec.marker}' AND active:'true'`,
+      });
+      const product = products.data[0];
+      if (!product) {
+        check(`Stripe ${kind} product (${label})`, false, "no product with that marker");
+        continue;
+      }
+      const prices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
+      const price = prices.data.find((p) => {
+        if (p.currency !== "cad" || p.unit_amount !== spec.unitAmount) return false;
+        if (spec.recurring) {
+          return p.recurring?.interval === "month" && p.recurring.interval_count === 1;
+        }
+        return !p.recurring;
+      });
+      check(`Stripe ${kind} is ${label}`, Boolean(price), price ? price.id : "no matching price");
     } catch (error) {
-      check(`${envVar} resolves`, false, error.message);
+      check(`Stripe ${kind} lookup`, false, error.message);
     }
   }
 }

@@ -13,8 +13,10 @@ import {
   isStripeConfigured,
   priceForVoipAmount,
   priceIdFor,
-  voipNumberPortPriceId,
+  resolveVoipNumberPortPriceId,
+  trialEndFor,
 } from "@/lib/portal/stripe";
+import { activateRemainingAutopay, chargePortFeeOffSession } from "@/lib/portal/activate-autopay";
 import { sendManualPaymentRecorded } from "@/lib/portal/emails";
 import {
   intervalMonths,
@@ -40,14 +42,6 @@ async function getOrigin(): Promise<string> {
   if (!host) return siteConfig.url;
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   return `${proto}://${host}`;
-}
-
-/** Stripe wants trial_end at least 48h out; use it only when clearly future. */
-function trialEndFor(nextDueOn: string | null): number | undefined {
-  if (!nextDueOn) return undefined;
-  const dueMs = new Date(`${nextDueOn}T12:00:00Z`).getTime();
-  if (dueMs - Date.now() < 3 * 86_400_000) return undefined;
-  return Math.floor(dueMs / 1000);
 }
 
 export async function createCheckoutSession(input: { serviceId: string }): Promise<CheckoutResult> {
@@ -144,7 +138,10 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
+      payment_method_collection: "always",
       // One subscription, one line, quantity 1. VoIP add-ons are in the price.
+      // Other approved services and any port fee start on this same card
+      // after checkout.session.completed (activateRemainingAutopay).
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/user-dashboard?payment=success`,
       cancel_url: `${origin}/user-dashboard?payment=cancelled`,
@@ -181,6 +178,94 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
     console.error("[portal] createCheckoutSession failed:", error);
     return { ok: false, error: "Could not start checkout. Please try again or contact McKee Security." };
   }
+}
+
+/** Client pays an outstanding VoIP port fee on the card already on file. */
+export async function payOwnVoipPortFeeAction(input: {
+  serviceId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await tryRequireUser();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const { profile } = auth;
+
+  if (!z.uuid().safeParse(input.serviceId).success) {
+    return { ok: false, error: "Invalid service." };
+  }
+  if (!isStripeConfigured()) {
+    return { ok: false, error: "Online payment is not available yet. Please contact McKee Security to pay." };
+  }
+
+  const supabase = await createPortalServerClient();
+  const { data: service } = await supabase
+    .from("services")
+    .select("id, profile_id, service_type, status, billing_method, port_count, port_fee_charged_count")
+    .eq("id", input.serviceId)
+    .eq("profile_id", profile.id)
+    .maybeSingle();
+  if (!service) return { ok: false, error: "Service not found." };
+  if (!isVoipService(service.service_type) || service.billing_method !== "stripe") {
+    return { ok: false, error: "This port fee is not set up for card payment." };
+  }
+  if (service.status === "paused" || service.status === "cancelled") {
+    return { ok: false, error: "This service is not accepting payments right now." };
+  }
+  const uncharged = voipUnchargedPorts(service.port_count, service.port_fee_charged_count);
+  if (uncharged < 1) {
+    return { ok: false, error: "There is no outstanding port fee on this service." };
+  }
+  if (!profile.stripe_customer_id) {
+    return { ok: false, error: "Add a card on one of your services first. The port fee will be charged on that card." };
+  }
+
+  const stripe = getStripeClient();
+  const methods = await stripe.paymentMethods.list({
+    customer: profile.stripe_customer_id,
+    type: "card",
+  });
+  const paymentMethodId = methods.data[0]?.id;
+  if (!paymentMethodId) {
+    return { ok: false, error: "Add a card on one of your services first. The port fee will be charged on that card." };
+  }
+
+  try {
+    const result = await chargePortFeeOffSession({
+      serviceId: service.id,
+      profileId: profile.id,
+      customerId: profile.stripe_customer_id,
+      paymentMethodId,
+      uncharged,
+      alreadyCharged: service.port_fee_charged_count,
+    });
+    if (!result.ok) return result;
+  } catch (error) {
+    console.error("[portal] payOwnVoipPortFee failed:", error);
+    return { ok: false, error: "The card could not be charged. Try again or contact McKee Security." };
+  }
+
+  revalidatePath("/user-dashboard");
+  revalidatePath("/admin-dashboard", "layout");
+  return { ok: true };
+}
+
+/** Card already on file: start any leftover approved services and port fees. */
+export async function confirmRemainingAutopayAction(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await tryRequireUser();
+  if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  if (!isStripeConfigured()) {
+    return { ok: false, error: "Online payment is not available yet. Please contact McKee Security to pay." };
+  }
+  if (!auth.profile.stripe_customer_id) {
+    return { ok: false, error: "Add your card first, then these payments can start." };
+  }
+  try {
+    await activateRemainingAutopay({ profileId: auth.profile.id });
+  } catch (error) {
+    console.error("[portal] confirmRemainingAutopay failed:", error);
+    return { ok: false, error: "Could not start the remaining payments. Try again or contact McKee Security." };
+  }
+  revalidatePath("/user-dashboard");
+  revalidatePath("/admin-dashboard", "layout");
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -476,13 +561,22 @@ export async function chargeVoipPortFee(input: {
   const { data: service } = await supabase
     .from("services")
     .select(
-      "id, profile_id, service_type, port_count, port_fee_charged_count, billing_method, profiles(first_name, email, stripe_customer_id)",
+      "id, profile_id, service_type, status, port_count, port_fee_charged_count, billing_method, profiles(first_name, email, stripe_customer_id)",
     )
     .eq("id", input.serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
   if (!isVoipService(service.service_type)) {
     return { ok: false, error: "Port fees apply to VoIP only." };
+  }
+  if (service.status === "paused" || service.status === "cancelled") {
+    return {
+      ok: false,
+      error:
+        service.status === "paused"
+          ? "Restart this service before charging the port fee. Pause holds all card charges."
+          : "This service is cancelled. Record the port fee on the manual rail if it is still owed.",
+    };
   }
   const uncharged = voipUnchargedPorts(service.port_count, service.port_fee_charged_count);
   if (uncharged < 1) {
@@ -524,12 +618,22 @@ export async function chargeVoipPortFee(input: {
     }
     const client = service.profiles;
     const customerId = client?.stripe_customer_id;
-    const portPrice = voipNumberPortPriceId();
-    if (!customerId || !portPrice) {
+    if (!customerId) {
       await markPortFeeCharged(supabase, service.id, nextChargedCount, service.port_fee_charged_count);
       return {
         ok: false,
-        error: "Port fee needs a Stripe customer and STRIPE_PRICE_VOIP_NUMBER_PORT. Record it on the manual rail, or finish card setup first.",
+        error: "Port fee needs a Stripe customer. Record it on the manual rail, or finish card setup first.",
+      };
+    }
+    let portPrice: string;
+    try {
+      portPrice = await resolveVoipNumberPortPriceId();
+    } catch (error) {
+      console.error("[portal] VoIP port-fee price lookup failed:", error);
+      await markPortFeeCharged(supabase, service.id, nextChargedCount, service.port_fee_charged_count);
+      return {
+        ok: false,
+        error: "Could not find the Number Port Fee in Stripe. Try again or record it on the manual rail.",
       };
     }
     try {
