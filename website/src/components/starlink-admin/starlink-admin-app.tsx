@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
+  CircleDollarSign,
   ListChecks,
   Loader2,
   LogOut,
@@ -11,7 +12,7 @@ import {
   Satellite,
   Settings2,
 } from "lucide-react";
-import type { RentalWithUnit, Unit } from "@/lib/starlink/types";
+import type { RentalWithUnit, Unit, UnitCost } from "@/lib/starlink/types";
 import { fetchOverview } from "@/lib/starlink/client-api";
 import { todayIsoToronto } from "@/lib/starlink/dates";
 import { cn } from "@/lib/utils";
@@ -19,15 +20,17 @@ import { StarlinkStatsBar } from "./stats-bar";
 import { ScheduleView } from "./schedule-view";
 import { RentalsTable } from "./rentals-table";
 import { FleetManager } from "./fleet-manager";
+import { ProfitView } from "./profit-view";
 import { RentalModal } from "./rental-modal";
 import { Toast, type ToastState } from "./toast";
 
-type View = "schedule" | "rentals" | "fleet";
+type View = "schedule" | "rentals" | "fleet" | "profit";
 
 const TABS: { id: View; label: string; icon: typeof CalendarDays }[] = [
   { id: "schedule", label: "Schedule", icon: CalendarDays },
   { id: "rentals", label: "Rentals", icon: ListChecks },
   { id: "fleet", label: "Fleet", icon: Settings2 },
+  { id: "profit", label: "Profit", icon: CircleDollarSign },
 ];
 
 export function StarlinkAdminApp() {
@@ -36,6 +39,7 @@ export function StarlinkAdminApp() {
 
   const [units, setUnits] = useState<Unit[]>([]);
   const [rentals, setRentals] = useState<RentalWithUnit[]>([]);
+  const [costs, setCosts] = useState<UnitCost[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [view, setView] = useState<View>("schedule");
@@ -50,6 +54,7 @@ export function StarlinkAdminApp() {
       const data = await fetchOverview();
       setUnits(data.units);
       setRentals(data.rentals);
+      setCosts(data.costs);
       setLoadError("");
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Could not load data.");
@@ -176,14 +181,14 @@ export function StarlinkAdminApp() {
                   type="button"
                   onClick={() => setView(tab.id)}
                   className={cn(
-                    "flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors sm:min-h-0",
+                    "flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors sm:min-h-0 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-sm",
                     active
                       ? "bg-primary text-white"
                       : "text-white/65 hover:bg-white/5 hover:text-white",
                   )}
                   aria-current={active ? "page" : undefined}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-4 w-4" aria-hidden="true" />
                   {tab.label}
                 </button>
               );
@@ -208,6 +213,17 @@ export function StarlinkAdminApp() {
           {view === "fleet" ? (
             <FleetManager
               units={units}
+              onChanged={refresh}
+              onError={handleError}
+              onSuccess={handleSuccess}
+            />
+          ) : null}
+          {view === "profit" ? (
+            <ProfitView
+              units={units}
+              rentals={rentals}
+              costs={costs}
+              todayIso={todayIso}
               onChanged={refresh}
               onError={handleError}
               onSuccess={handleSuccess}

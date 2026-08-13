@@ -52,6 +52,17 @@ export function formatDateShort(iso: string): string {
   });
 }
 
+export function formatMonthYear(iso: string): string {
+  const parts = partsFromIso(iso);
+  if (!parts) return iso;
+  const [y, m] = parts;
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-CA", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** Relative humanized timestamp, e.g. "2 days ago" or "just now". */
 export function formatRelative(isoTimestamp: string | null | undefined): string {
   if (!isoTimestamp) return "—";

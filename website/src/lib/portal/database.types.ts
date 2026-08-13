@@ -387,6 +387,41 @@ export type Database = {
         }
         Relationships: []
       }
+      unit_costs: {
+        Row: {
+          created_at: string
+          effective_from: string
+          id: string
+          monthly_cost: number
+          plan_name: string | null
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from: string
+          id?: string
+          monthly_cost: number
+          plan_name?: string | null
+          unit_id: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          id?: string
+          monthly_cost?: number
+          plan_name?: string | null
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_costs_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rental_reminders: {
         Row: {
           id: string

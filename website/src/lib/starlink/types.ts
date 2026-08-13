@@ -1,6 +1,7 @@
 import type { Tables } from "./database.types";
 
 export type Unit = Tables<"units">;
+export type UnitCost = Tables<"unit_costs">;
 export type Rental = Tables<"rentals">;
 
 export type RentalUnitSummary = Pick<Unit, "id" | "name" | "color" | "active">;

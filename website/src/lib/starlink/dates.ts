@@ -86,6 +86,55 @@ export function rangesOverlapInclusive(
   return aStart <= bEnd && bStart <= aEnd;
 }
 
+/** Inclusive days shared by two ranges, or 0 when they miss each other. */
+export function overlapDaysInclusive(
+  aStart: string,
+  aEnd: string,
+  bStart: string,
+  bEnd: string,
+): number {
+  const start = aStart > bStart ? aStart : bStart;
+  const end = aEnd < bEnd ? aEnd : bEnd;
+  if (end < start) return 0;
+  return daysBetweenInclusive(start, end);
+}
+
+/** First day of the calendar month containing `iso`. */
+export function startOfMonthIso(iso: string): string {
+  return `${iso.slice(0, 7)}-01`;
+}
+
+/** Last day of the calendar month containing `iso`. */
+export function endOfMonthIso(iso: string): string {
+  const [y, m] = iso.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
+}
+
+/** Number of days in the calendar month containing `iso`. */
+export function daysInMonthIso(iso: string): number {
+  const [y, m] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+/**
+ * Monday of the ISO week containing `iso`. Sunday belongs to the week that
+ * started the previous Monday, which matches how a shop week is talked about.
+ */
+export function startOfIsoWeek(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const weekday = dt.getUTCDay(); // 0 = Sunday
+  const offset = weekday === 0 ? -6 : 1 - weekday;
+  dt.setUTCDate(dt.getUTCDate() + offset);
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Sunday of the ISO week containing `iso`. */
+export function endOfIsoWeek(iso: string): string {
+  return addDaysIso(startOfIsoWeek(iso), 6);
+}
+
 /** Monday–Friday check for a `YYYY-MM-DD` date (uses UTC to stay stable). */
 export function isWeekdayIsoUtc(iso: string): boolean {
   if (!isValidIsoDate(iso)) return false;

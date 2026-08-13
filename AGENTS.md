@@ -15,7 +15,7 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
 - Lint: `cd website && npm run lint`. The command works but the checked-in code currently has
   pre-existing lint errors/warnings; a clean exit is not expected on an unmodified tree.
 - There is no automated test suite. `data-drops-aws-backend` has a placeholder `test` script, and
-  `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner. Four are worth
+  `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner. Five are worth
   re-running after UI or email changes:
   - `mobile-audit.mjs` — both portals in a real browser at an iPhone viewport (needs seeded Supabase
     users). Flags horizontal overflow and screenshots every page.
@@ -23,6 +23,9 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
     dev server. Needs `STARLINK_ADMIN_PASSWORD` set for both the server and the script. Measures
     document width, tap-target and focused-font sizes, the booking modal's sticky bars, and the kit
     availability path including the double-booking confirm dialog.
+  - `profit-check.mjs` — Starlink profitability math (deposits excluded, straddling
+    bookings split, mid-month rate changes) via the alias loader:
+    `node --import ./scripts/register-ts-alias.mjs scripts/profit-check.mjs`.
   - `email-render-check.mjs` — renders the Starlink reminder emails through the real send path with
     `fetch` stubbed (nothing is sent) and asserts the things that break silently in mail clients:
     rgba() text colours, block elements orphaned out of a `<p>`, unwrappable long values, escaping,

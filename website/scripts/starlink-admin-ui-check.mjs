@@ -161,6 +161,15 @@ console.log(`\n=== iPhone 13 (390x844) ${baseUrl}/starlink-admin`);
       await page.screenshot({ path: `${outDir}/mobile-fleet.png`, fullPage: true });
     }
 
+    const profit = page.getByRole("button", { name: /^Profit$/ });
+    if (await profit.count()) {
+      await profit.first().click();
+      await page.waitForTimeout(900);
+      const p = await overflowReport(page);
+      check(!p.overflow, "no horizontal overflow on the profit tab", `doc ${p.docW} vs vw ${p.vw}`);
+      await page.screenshot({ path: `${outDir}/mobile-profit.png`, fullPage: true });
+    }
+
     // The booking modal is the main event.
     await page.getByRole("button", { name: /^Rentals$/ }).first().click();
     await page.waitForTimeout(700);

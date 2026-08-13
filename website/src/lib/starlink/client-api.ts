@@ -1,4 +1,4 @@
-import type { RentalWithUnit, Unit } from "./types";
+import type { RentalWithUnit, Unit, UnitCost } from "./types";
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
   let data: unknown = null;
@@ -18,9 +18,15 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
 export async function fetchOverview(): Promise<{
   units: Unit[];
   rentals: RentalWithUnit[];
+  costs: UnitCost[];
 }> {
   const res = await fetch("/api/starlink-admin/overview", { cache: "no-store" });
-  return jsonOrThrow(res);
+  const data = await jsonOrThrow<{
+    units: Unit[];
+    rentals: RentalWithUnit[];
+    costs?: UnitCost[];
+  }>(res);
+  return { ...data, costs: data.costs ?? [] };
 }
 
 export async function createUnit(body: Record<string, unknown>): Promise<{ unit: Unit }> {
@@ -46,6 +52,18 @@ export async function updateUnit(
 
 export async function deleteUnit(id: string): Promise<{ ok: true }> {
   const res = await fetch(`/api/starlink-admin/units/${id}`, { method: "DELETE" });
+  return jsonOrThrow(res);
+}
+
+export async function upsertUnitCost(
+  unitId: string,
+  body: { monthly_cost: number; plan_name?: string | null; effective_from?: string },
+): Promise<{ cost: UnitCost }> {
+  const res = await fetch(`/api/starlink-admin/units/${unitId}/costs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   return jsonOrThrow(res);
 }
 

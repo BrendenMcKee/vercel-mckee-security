@@ -86,6 +86,13 @@ export const rentalUpdateSchema = z
     },
   );
 
+export const unitCostUpsertSchema = z.object({
+  monthly_cost: z.number().nonnegative().max(1_000_000),
+  plan_name: z.string().trim().max(120).nullable().optional(),
+  /** First day this rate applies. Defaults to today on the server. */
+  effective_from: isoDate.optional(),
+});
+
 export const availabilityQuerySchema = z
   .object({
     start: isoDate,
@@ -98,5 +105,6 @@ export const availabilityQuerySchema = z
 
 export type UnitCreateInput = z.infer<typeof unitCreateSchema>;
 export type UnitUpdateInput = z.infer<typeof unitUpdateSchema>;
+export type UnitCostUpsertInput = z.infer<typeof unitCostUpsertSchema>;
 export type RentalCreateInput = z.infer<typeof rentalCreateSchema>;
 export type RentalUpdateInput = z.infer<typeof rentalUpdateSchema>;
