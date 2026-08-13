@@ -1471,10 +1471,10 @@ function DevicesCard({
     <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
       <h2 className="text-lg font-bold text-white">Devices</h2>
       <p className="mt-1 text-xs text-white/40">
-        Track the equipment on this account and when it should be replaced.
-        When a device comes due, the system automatically emails both the
-        client and the McKee inbox. The client sees this list on their
-        dashboard but only McKee can change it.
+        Name devices however you need (hallway smoke 1, bedroom smoke). The
+        Devices tab filters by category, not by name. A wireless smoke or CO
+        detector is two rows: the detector unit, and its battery. When a
+        device comes due, both the client and the McKee inbox are emailed.
       </p>
 
       <div className="mt-4 space-y-3">

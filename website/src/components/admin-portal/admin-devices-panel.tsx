@@ -100,8 +100,9 @@ export function AdminDevicesPanel({ devices }: { devices: AdminDeviceRow[] }) {
       <p className="text-xs text-white/40">
         Every device tracked across all clients, soonest replacement first.
         Filter by category to plan a service run (all system batteries, all
-        smoke detectors). Devices are added and edited on each client&apos;s
-        page.
+        device batteries, all smoke / CO detectors). Names are free text, so
+        do not filter by name. Devices are added and edited on each
+        client&apos;s page.
       </p>
 
       <div className="flex flex-wrap gap-2">

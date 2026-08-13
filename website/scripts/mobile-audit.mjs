@@ -84,7 +84,7 @@ await admin.from("caller_id_contacts").insert([
 await admin.from("devices").insert([
   { profile_id: clientUser.profileId, label: "7Ah Security System Battery", category: "system_battery", lifetime_years: 5, installed_on: "2019-02-01" },
   { profile_id: clientUser.profileId, label: "Smoke Detector - Upstairs Hallway", category: "detector", lifetime_years: 10, installed_on: "2024-06-15" },
-  { profile_id: clientUser.profileId, label: "Wireless Door Contact - Front", category: "wireless_device", lifetime_years: 10, installed_on: "2022-09-01" },
+  { profile_id: clientUser.profileId, label: "Wireless Door Contact - Front", category: "device_battery", lifetime_years: 5, installed_on: "2022-09-01" },
 ]);
 await admin.from("manual_payments").insert({
   profile_id: clientUser.profileId,

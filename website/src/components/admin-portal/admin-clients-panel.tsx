@@ -759,7 +759,9 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   Devices
                 </legend>
                 <p className="text-xs text-white/45">
-                  Optional now. Track batteries, detectors, and wireless devices so replacement reminders start on day one.
+                  Optional now. Name them however you need (hallway smoke 1, bedroom
+                  smoke). Filter later by category, not by name. A wireless smoke or
+                  CO detector is two rows: the detector itself, and its battery.
                 </p>
                 {draftDevices.length > 0 && (
                   <ul className="space-y-2">
