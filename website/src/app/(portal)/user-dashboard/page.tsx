@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getAuthContext } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import {
@@ -20,6 +21,7 @@ import { PayNowButton } from "@/components/portal/pay-now-button";
 import { ManageBillingButton } from "@/components/portal/manage-billing-button";
 import { PortalCard } from "@/components/portal/portal-card";
 import { CloudBackupInterest } from "@/components/portal/cloud-backup-interest";
+import { ClientSettingsForm } from "@/components/portal/client-settings-form";
 
 export const metadata: Metadata = {
   title: "Manage Account",
@@ -51,10 +53,18 @@ type PaymentHistoryEntry = {
  * card setup for autopay services, and the Stripe portal for receipts/card
  * updates. Reads go through RLS: a client can only see their own rows.
  */
+const CLIENT_TABS = [
+  { id: "dashboard", label: "Dashboard", href: "/user-dashboard" },
+  { id: "settings", label: "Settings", href: "/user-dashboard?tab=settings" },
+  { id: "alerts", label: "Alerts", href: "/user-dashboard?tab=alerts" },
+] as const;
+
+type ClientTabId = (typeof CLIENT_TABS)[number]["id"];
+
 export default async function UserDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ payment?: string }>;
+  searchParams: Promise<{ payment?: string; tab?: string }>;
 }) {
   // Pages render in parallel with their layout, so unauthenticated visits
   // reach this code even though the layout shows SignIn instead. Render
@@ -62,7 +72,9 @@ export default async function UserDashboardPage({
   const { user, profile } = await getAuthContext();
   if (!user || !profile || profile.status === "disabled" || profile.role === "admin") return null;
 
-  const { payment } = await searchParams;
+  const { payment, tab } = await searchParams;
+  const activeTab: ClientTabId =
+    tab === "settings" ? "settings" : tab === "alerts" ? "alerts" : "dashboard";
 
   const supabase = await createPortalServerClient();
   const [
@@ -167,9 +179,62 @@ export default async function UserDashboardPage({
 
   const billableServices = services.filter((s) => s.status !== "cancelled");
   const hasCardOnFile = services.some((s) => s.stripe_subscription_id);
+  const expiredDevices = devicesResult.data.filter((device) =>
+    isDeviceExpired(device.installed_on, device.lifetime_years),
+  );
+  const alertCount =
+    unpaidServices.length +
+    (missingCallerId ? 1 : 0) +
+    cardSetupNeeded.length +
+    expiredDevices.length;
 
   return (
     <div className="space-y-6">
+      <nav
+        className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto border-b border-white/10 px-4 sm:mx-0 sm:gap-2 sm:px-0"
+        aria-label="Client portal sections"
+      >
+        {CLIENT_TABS.map((item) => (
+          <Link
+            key={item.id}
+            href={item.href}
+            className={`shrink-0 whitespace-nowrap rounded-t-xl px-3.5 py-2.5 text-[13px] font-bold uppercase tracking-wide transition-colors sm:px-5 sm:text-sm ${
+              activeTab === item.id
+                ? "border border-b-0 border-white/10 bg-surface text-white"
+                : "text-white/50 hover:text-white"
+            }`}
+            aria-current={activeTab === item.id ? "page" : undefined}
+          >
+            <span className="inline-flex items-center gap-2">
+              {item.label}
+              {item.id === "alerts" && (
+                <span
+                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+                    alertCount > 0
+                      ? "bg-red-500 text-white"
+                      : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40"
+                  }`}
+                  aria-label={`${alertCount} alerts`}
+                >
+                  {alertCount}
+                </span>
+              )}
+            </span>
+          </Link>
+        ))}
+      </nav>
+
+      {activeTab === "settings" ? (
+        <ClientSettingsForm email={profile.email} phone={profile.phone} address={profile.address} />
+      ) : activeTab === "alerts" ? (
+        <ClientAlertsPanel
+          unpaidServices={unpaidServices}
+          missingCallerId={missingCallerId}
+          cardSetupNeeded={cardSetupNeeded}
+          expiredDevices={expiredDevices}
+        />
+      ) : (
+        <>
       {payment === "success" && (
         <p
           role="status"
@@ -236,7 +301,7 @@ export default async function UserDashboardPage({
             passcode.
           </p>
           <a
-            href="#alarm-contact-list"
+            href="/user-dashboard#alarm-contact-list"
             className="mt-4 inline-flex cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
           >
             Add contacts
@@ -272,6 +337,7 @@ export default async function UserDashboardPage({
           tone="monitoring"
           title={SERVICE_TYPE_LABELS.monitoring}
           description="Your alarm monitoring plan"
+          status={<ServiceStatusBadge status={monitoring.status} withIcon />}
           action={<ServiceStatusBadge status={monitoring.status} />}
         >
           <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
@@ -310,6 +376,7 @@ export default async function UserDashboardPage({
           tone="voip"
           title={SERVICE_TYPE_LABELS.voip}
           description="Your phone service plan"
+          status={<ServiceStatusBadge status={voip.status} withIcon />}
           action={<ServiceStatusBadge status={voip.status} />}
         >
           <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
@@ -348,6 +415,7 @@ export default async function UserDashboardPage({
           tone="cloud_backup"
           title={SERVICE_TYPE_LABELS.cloud_backup}
           description="Camera footage stored securely off-site"
+          status={<ServiceStatusBadge status={cloud.status} withIcon />}
           action={<ServiceStatusBadge status={cloud.status} />}
         >
           <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
@@ -386,7 +454,15 @@ export default async function UserDashboardPage({
                   <dl className="mt-3.5 space-y-2.5 text-sm">
                     <div className="flex items-baseline justify-between gap-4">
                       <dt className="shrink-0 text-white/45">How you pay</dt>
-                      <dd className="text-right text-white/85">
+                      <dd
+                        className={`text-right ${
+                          service.billing_method === "stripe"
+                            ? service.stripe_subscription_id
+                              ? "font-semibold text-emerald-300"
+                              : "font-semibold text-amber-300"
+                            : "text-white/85"
+                        }`}
+                      >
                         {service.billing_method === "stripe"
                           ? service.stripe_subscription_id
                             ? "Automatic (card on file)"
@@ -600,6 +676,145 @@ export default async function UserDashboardPage({
           )}
         </div>
       )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ClientAlertsPanel({
+  unpaidServices,
+  missingCallerId,
+  cardSetupNeeded,
+  expiredDevices,
+}: {
+  unpaidServices: Array<{
+    id: string;
+    service_type: "monitoring" | "cloud_backup" | "voip";
+    tier: string;
+    billing_method: string;
+    billing_interval: "monthly" | "annual";
+    monthly_amount_cents: number | null;
+    next_due_on: string | null;
+  }>;
+  missingCallerId: boolean;
+  cardSetupNeeded: Array<{
+    id: string;
+    service_type: "monitoring" | "cloud_backup" | "voip";
+    next_due_on: string | null;
+  }>;
+  expiredDevices: Array<{
+    id: string;
+    label: string;
+    installed_on: string;
+    lifetime_years: number;
+  }>;
+}) {
+  const clear =
+    unpaidServices.length === 0 &&
+    !missingCallerId &&
+    cardSetupNeeded.length === 0 &&
+    expiredDevices.length === 0;
+
+  if (clear) {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 sm:p-6">
+        <h2 className="text-lg font-bold text-emerald-100">All clear</h2>
+        <p className="mt-2 text-sm leading-relaxed text-emerald-200/90">
+          Nothing on this account needs your attention right now.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-white/50">
+        Everything that needs attention on this account. Payment items also stay at the top of
+        your Dashboard.
+      </p>
+      {unpaidServices.map((service) => (
+        <div
+          key={service.id}
+          className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6"
+        >
+          <h2 className="text-lg font-bold text-amber-100">
+            Payment needed: {SERVICE_TYPE_LABELS[service.service_type]}
+          </h2>
+          {service.billing_method === "stripe" ? (
+            <div className="mt-3 space-y-4">
+              <p className="text-sm leading-relaxed text-amber-200/90">
+                Your {SERVICE_TYPE_LABELS[service.service_type].toLowerCase()} plan (
+                {tierLabel(service.tier)}) is waiting on a payment.
+              </p>
+              <PayNowButton serviceId={service.id} />
+            </div>
+          ) : (
+            <div className="mt-3 space-y-2 text-sm leading-relaxed text-amber-200/90">
+              <p>
+                {service.monthly_amount_cents
+                  ? `Amount due: ${formatCents(service.monthly_amount_cents * intervalMonths(service.billing_interval))} plus tax${
+                      service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""
+                    }.`
+                  : "A payment is due on this service."}
+              </p>
+              <p>{PAYMENT_INSTRUCTIONS}</p>
+            </div>
+          )}
+        </div>
+      ))}
+      {missingCallerId && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6">
+          <h2 className="text-lg font-bold text-amber-100">Alarm contact list needed</h2>
+          <p className="mt-3 text-sm leading-relaxed text-amber-200/90">
+            Your monitoring plan is on this account, but the monitoring station does not have
+            anyone to call yet.
+          </p>
+          <a
+            href="/user-dashboard#alarm-contact-list"
+            className="mt-4 inline-flex cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
+          >
+            Add contacts
+          </a>
+        </div>
+      )}
+      {cardSetupNeeded.map((service) => (
+        <div
+          key={service.id}
+          className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-4 sm:p-6"
+        >
+          <h2 className="text-lg font-bold text-sky-100">
+            Set up automatic payments: {SERVICE_TYPE_LABELS[service.service_type]}
+          </h2>
+          <div className="mt-3 space-y-4">
+            <p className="text-sm leading-relaxed text-sky-200/90">
+              Add a card so automatic payments can start
+              {service.next_due_on ? ` on ${formatDate(service.next_due_on)}` : ""}.
+            </p>
+            <PayNowButton serviceId={service.id} label="Set Up Automatic Payments" />
+          </div>
+        </div>
+      ))}
+      {expiredDevices.map((device) => {
+        const expiry = deviceExpiryDate(device.installed_on, device.lifetime_years);
+        return (
+          <div
+            key={device.id}
+            className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6"
+          >
+            <h2 className="text-lg font-bold text-amber-100">Device replacement due</h2>
+            <p className="mt-3 text-sm leading-relaxed text-amber-200/90">
+              {device.label} was due for replacement in{" "}
+              {expiry.toLocaleDateString("en-CA", { year: "numeric", month: "long" })}. Call McKee
+              Security at{" "}
+              <a href="tel:+17054572156" className="font-bold text-white hover:text-primary">
+                (705) 457-2156
+              </a>{" "}
+              to schedule it.
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }

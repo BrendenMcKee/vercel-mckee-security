@@ -24,6 +24,7 @@ const createClientSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required").max(100),
   email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address"))]),
   address: z.string().trim().max(300),
+  phone: z.string().trim().max(40),
   monitoringTier: z.enum(["", "landline", "cellular", "cellular_tc", "cellular_tc_home"]),
   cloudTier: z.enum(["", "7day", "30day", "90day"]),
   // VoIP phone service (R42): optional plan; every VoIP plan is per line.
@@ -91,8 +92,16 @@ export async function createClientAction(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { firstName, lastName, email, address, monitoringTier, cloudTier, voipTier, voipLines, billingMethod } =
+  const { firstName, lastName, email, address, phone, monitoringTier, cloudTier, voipTier, voipLines, billingMethod } =
     parsed.data;
+
+  let storedPhone: string | null = null;
+  if (phone) {
+    storedPhone = normalizePhone(phone);
+    if (!storedPhone) {
+      return { ok: false, error: "Enter a valid North American phone number, or leave it blank." };
+    }
+  }
 
   // Keep the future service visible in the form without allowing a stale UI
   // or hand-crafted server-action request to assign it before Track 2 ships.
@@ -157,6 +166,14 @@ export async function createClientAction(
   if (error || !profileId) {
     console.error("[portal] createClient failed:", error);
     return { ok: false, error: "Could not create the client. Please try again." };
+  }
+
+  if (storedPhone) {
+    const { error: phoneError } = await supabase
+      .from("profiles")
+      .update({ phone: storedPhone })
+      .eq("id", profileId);
+    if (phoneError) console.error("[portal] createClient phone set failed:", phoneError);
   }
 
   // The RPC created the services on the default (manual) rail; apply the
@@ -342,16 +359,16 @@ const updateProfileSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required").max(100),
   email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address"))]),
   address: z.string().trim().max(300),
+  phone: z.string().trim().max(40),
 });
 
 export type UpdateClientProfileInput = z.infer<typeof updateProfileSchema>;
 export type UpdateClientProfileResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Phase 3 client detail: admin edits identity fields (handover: clients cannot
- * change their own name/address; changes go through McKee). Email here is the
- * contact/invite email on the profile; it does not change the sign-in email of
- * an already-activated auth user.
+ * Admin edits identity fields. Email here is the contact/invite email on the
+ * profile; it does not change the sign-in email of an already-activated auth
+ * user. Clients can update phone and service address themselves from Settings.
  */
 export async function updateClientProfileAction(
   input: UpdateClientProfileInput,
@@ -362,7 +379,15 @@ export async function updateClientProfileAction(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { profileId, firstName, lastName, email, address } = parsed.data;
+  const { profileId, firstName, lastName, email, address, phone } = parsed.data;
+
+  let storedPhone: string | null = null;
+  if (phone) {
+    storedPhone = normalizePhone(phone);
+    if (!storedPhone) {
+      return { ok: false, error: "Enter a valid North American phone number, or leave it blank." };
+    }
+  }
 
   const supabase = await createPortalServerClient();
   const { data: target } = await supabase
@@ -382,6 +407,7 @@ export async function updateClientProfileAction(
       last_name: lastName,
       email: email || null,
       address: address || null,
+      phone: storedPhone,
     })
     .eq("id", profileId);
 

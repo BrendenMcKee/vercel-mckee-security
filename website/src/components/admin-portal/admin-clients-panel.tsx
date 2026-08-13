@@ -10,6 +10,7 @@ import {
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
 import {
+  CLOUD_BACKUP_PLANNED_RETENTION_COPY,
   SERVICE_THEME,
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
@@ -22,11 +23,12 @@ import { tierOptionLabel } from "@/lib/portal/billing";
 import {
   DEVICE_CATEGORIES,
   DEVICE_CATEGORY_LABELS,
-  DEVICE_PRESETS,
   type DeviceCategory,
 } from "@/lib/portal/devices";
 import { formatPhone, normalizePhone } from "@/lib/portal/phone";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge } from "@/components/admin-portal/ui";
+import { DatePickerInput } from "@/components/portal/date-picker-input";
+import { DeviceNameSelect } from "@/components/portal/device-name-select";
 
 type DraftContact = { label: string; phone: string; passcode: string };
 type DraftDevice = {
@@ -51,6 +53,7 @@ const EMPTY_FORM: CreateClientInput = {
   lastName: "",
   email: "",
   address: "",
+  phone: "",
   monitoringTier: "",
   cloudTier: "",
   voipTier: "",
@@ -543,7 +546,17 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Address
+                Phone number
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => set("phone", e.target.value)}
+                  placeholder="(705) 555-0123"
+                  className={adminInputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Service address
                 <input
                   value={form.address}
                   onChange={(e) => set("address", e.target.value)}
@@ -646,9 +659,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 <p className="text-xs leading-relaxed text-white/45">
                   {CLOUD_BACKUP_AVAILABLE
                     ? "Choose how long camera footage is retained off-site."
-                    : `Planned retention options: ${SERVICE_TIERS.cloud_backup
-                        .map(tierLabel)
-                        .join(" · ")}. Assignment and billing unlock after Track 2 launches.`}
+                    : `Planned retention options: ${CLOUD_BACKUP_PLANNED_RETENTION_COPY}. Assignment and billing unlock after Track 2 launches.`}
                 </p>
                 <label className="flex flex-col gap-1.5 text-sm text-white/80">
                   Plan
@@ -679,7 +690,9 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   Alarm contact list
                 </legend>
                 <p className="text-xs text-white/45">
-                  Optional now. Add the people the monitoring station should call. You can finish this later on the client page.
+                  Optional now. Add the people the monitoring station should call. You can finish
+                  this later on the client page. The client can also add their own contacts through
+                  their client portal if you would rather they do it themselves.
                 </p>
                 {draftContacts.length > 0 && (
                   <ul className="space-y-2">
@@ -775,27 +788,17 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <label className="flex flex-col gap-1.5 text-sm text-white/80">
                     Device name
-                    <input
-                      list="create-device-suggestions"
+                    <DeviceNameSelect
                       value={deviceDraft.label}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        const preset = DEVICE_PRESETS.find((p) => p.label === value);
+                      onChange={(label, preset) =>
                         setDeviceDraft((prev) => ({
                           ...prev,
-                          label: value,
+                          label,
                           category: preset?.category ?? prev.category,
                           years: preset ? String(preset.years) : prev.years,
-                        }));
-                      }}
-                      placeholder="e.g. 7Ah Security System Battery"
-                      className={adminInputClass}
+                        }))
+                      }
                     />
-                    <datalist id="create-device-suggestions">
-                      {DEVICE_PRESETS.map((preset) => (
-                        <option key={preset.label} value={preset.label} />
-                      ))}
-                    </datalist>
                   </label>
                   <label className="flex flex-col gap-1.5 text-sm text-white/80">
                     Category
@@ -815,10 +818,9 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   </label>
                   <label className="flex flex-col gap-1.5 text-sm text-white/80">
                     Installed on
-                    <input
-                      type="date"
+                    <DatePickerInput
                       value={deviceDraft.installedOn}
-                      onChange={(e) => setDeviceDraft((prev) => ({ ...prev, installedOn: e.target.value }))}
+                      onChange={(value) => setDeviceDraft((prev) => ({ ...prev, installedOn: value }))}
                       className={adminInputClass}
                     />
                   </label>

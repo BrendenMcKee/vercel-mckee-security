@@ -112,6 +112,7 @@ async function runSave(opts: {
     clientName: opts.clientName,
     clientEmail: opts.clientEmail,
     changedByDescription: opts.changedByDescription,
+    contacts: opts.contacts,
     added,
     removed,
     authorizedVia: opts.authorizedVia,
@@ -128,6 +129,7 @@ async function runSave(opts: {
       clientEmailSent = await sendCallerIdClientNotification({
         to: opts.clientEmail,
         firstName: opts.clientFirstName,
+        contacts: opts.contacts,
         added,
         removed,
         authorizedVia: opts.authorizedVia!,

@@ -76,31 +76,39 @@ export const SERVICE_STATUS_LABELS: Record<ServiceStatus, string> = {
 };
 
 /**
+ * Planned Camera Cloud Backup retention windows mentioned in generic copy.
+ * 180-day is preview-only until Track 2; it is not an assignable `services.tier`.
+ */
+export const CLOUD_BACKUP_PLANNED_RETENTION_COPY =
+  "7-Day Retention · 30-Day Retention · 90-Day Retention · 180-Day Retention";
+
+/**
  * Stable per-service colors used on both portals so a glance at a chip,
- * icon, or card tells you which product it is. Monitoring stays brand red;
- * VoIP is teal; Camera Cloud Backup is sky. Billing uses brand red because
- * it is company-wide, not a product.
+ * icon, or card tells you which product it is. Monitoring uses the brand
+ * primary red (`#c91818`); VoIP is a brighter teal; Camera Cloud Backup is
+ * sky. Billing / account chrome stays neutral so it does not look like
+ * another security card.
  */
 export const SERVICE_THEME: Record<
   ServiceType,
   { chip: string; icon: string; card: string; dot: string }
 > = {
   monitoring: {
-    chip: "border-red-500/40 bg-red-500/15 text-red-100",
-    icon: "bg-red-500/15 text-red-400",
-    card: "border-red-500/25",
-    dot: "bg-red-400",
+    chip: "border-primary/45 bg-primary/15 text-red-100",
+    icon: "bg-primary/15 text-primary",
+    card: "border-2 border-primary/70",
+    dot: "bg-primary",
   },
   voip: {
-    chip: "border-teal-500/40 bg-teal-500/15 text-teal-100",
-    icon: "bg-teal-500/15 text-teal-300",
-    card: "border-teal-500/25",
+    chip: "border-teal-400/50 bg-teal-400/15 text-teal-50",
+    icon: "bg-teal-400/20 text-teal-300",
+    card: "border-2 border-teal-400/75",
     dot: "bg-teal-400",
   },
   cloud_backup: {
-    chip: "border-sky-500/40 bg-sky-500/15 text-sky-100",
-    icon: "bg-sky-500/15 text-sky-300",
-    card: "border-sky-500/25",
+    chip: "border-sky-400/50 bg-sky-400/15 text-sky-50",
+    icon: "bg-sky-400/20 text-sky-300",
+    card: "border-2 border-sky-400/75",
     dot: "bg-sky-400",
   },
 };

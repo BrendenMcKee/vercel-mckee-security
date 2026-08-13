@@ -16,6 +16,7 @@ import {
   updateServiceTierAction,
 } from "@/lib/portal/actions/services";
 import {
+  CLOUD_BACKUP_PLANNED_RETENTION_COPY,
   SERVICE_THEME,
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
@@ -44,7 +45,6 @@ import {
 import {
   DEVICE_CATEGORIES,
   DEVICE_CATEGORY_LABELS,
-  DEVICE_PRESETS,
   deviceCategoryLabel,
   deviceExpiryDate,
   isDeviceExpired,
@@ -52,6 +52,8 @@ import {
 } from "@/lib/portal/devices";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor, type CallerIdContact } from "@/components/portal/caller-id-editor";
+import { DatePickerInput } from "@/components/portal/date-picker-input";
+import { DeviceNameSelect } from "@/components/portal/device-name-select";
 
 type InvitationSummary = Pick<
   Tables<"invitations">,
@@ -105,6 +107,7 @@ function ProfileCard({ client }: { client: AdminClientDetailRow }) {
     lastName: client.last_name,
     email: client.email ?? "",
     address: client.address ?? "",
+    phone: client.phone ? formatPhone(client.phone) : "",
   });
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
@@ -175,7 +178,17 @@ function ProfileCard({ client }: { client: AdminClientDetailRow }) {
               />
             </label>
             <label className="flex flex-col gap-1.5 text-sm text-white/80">
-              Address
+              Phone number
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="(705) 555-0123"
+                className={adminInputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              Service address
               <input
                 value={form.address}
                 onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
@@ -199,7 +212,11 @@ function ProfileCard({ client }: { client: AdminClientDetailRow }) {
               <dd className="mt-1 text-white/80">{client.email ?? "Not on file"}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-widest text-white/40">Address</dt>
+              <dt className="text-xs uppercase tracking-widest text-white/40">Phone</dt>
+              <dd className="mt-1 text-white/80">{client.phone ? formatPhone(client.phone) : "Not on file"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-widest text-white/40">Service address</dt>
               <dd className="mt-1 text-white/80">{client.address ?? "Not on file"}</dd>
             </div>
             <div>
@@ -250,9 +267,9 @@ function CloudBackupDevelopmentCard() {
         </span>
       </div>
       <p className="mt-3 text-xs leading-relaxed text-white/45">
-        Planned retention options:{" "}
-        {SERVICE_TIERS.cloud_backup.map(tierLabel).join(" · ")}. This template
-        will unlock after the camera ingestion and retrieval system is ready.
+        Planned retention options: {CLOUD_BACKUP_PLANNED_RETENTION_COPY}. This
+        template will unlock after the camera ingestion and retrieval system is
+        ready.
       </p>
       <label className="mt-3 flex max-w-sm flex-col gap-1.5 text-sm text-white/60">
         Retention plan
@@ -891,10 +908,9 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
               </label>
               <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
                 Next payment due
-                <input
-                  type="date"
+                <DatePickerInput
                   value={dueOn}
-                  onChange={(e) => setDueOn(e.target.value)}
+                  onChange={setDueOn}
                   className={adminInputClass}
                 />
               </label>
@@ -980,11 +996,10 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
           </label>
           <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Received on
-            <input
-              type="date"
+            <DatePickerInput
               required
               value={payDate}
-              onChange={(e) => setPayDate(e.target.value)}
+              onChange={setPayDate}
               className={adminInputClass}
             />
           </label>
@@ -1376,10 +1391,9 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
           </label>
           <label className="flex min-w-0 flex-col gap-1.5 text-xs text-white/60">
             Installed / last replaced
-            <input
-              type="date"
+            <DatePickerInput
               value={installedOn}
-              onChange={(e) => setInstalledOn(e.target.value)}
+              onChange={setInstalledOn}
               className={adminInputClass}
             />
           </label>
@@ -1421,16 +1435,6 @@ function DevicesCard({
   const [category, setCategory] = useState<DeviceCategory>("other");
   const [installedOn, setInstalledOn] = useState("");
   const [years, setYears] = useState("5");
-
-  function handleLabelChange(value: string) {
-    setLabel(value);
-    // Picking a suggestion prefills its category and usual replacement interval.
-    const preset = DEVICE_PRESETS.find((p) => p.label === value);
-    if (preset) {
-      setCategory(preset.category);
-      setYears(String(preset.years));
-    }
-  }
 
   function add(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1489,20 +1493,17 @@ function DevicesCard({
         >
           <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[12rem] sm:flex-1">
             Add a device
-            <input
+            <DeviceNameSelect
               required
-              list="device-name-suggestions"
-              placeholder="e.g. 7Ah Security System Battery"
-              maxLength={80}
               value={label}
-              onChange={(e) => handleLabelChange(e.target.value)}
-              className={adminInputClass}
+              onChange={(next, preset) => {
+                setLabel(next);
+                if (preset) {
+                  setCategory(preset.category);
+                  setYears(String(preset.years));
+                }
+              }}
             />
-            <datalist id="device-name-suggestions">
-              {DEVICE_PRESETS.map((preset) => (
-                <option key={preset.label} value={preset.label} />
-              ))}
-            </datalist>
           </label>
           <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Category
@@ -1520,11 +1521,10 @@ function DevicesCard({
           </label>
           <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
             Installed on
-            <input
-              type="date"
+            <DatePickerInput
               required
               value={installedOn}
-              onChange={(e) => setInstalledOn(e.target.value)}
+              onChange={setInstalledOn}
               className={adminInputClass}
             />
           </label>

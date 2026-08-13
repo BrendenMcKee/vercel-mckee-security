@@ -12,7 +12,8 @@ export type PortalIcon =
   | "card"
   | "phone"
   | "voip"
-  | "wrench";
+  | "wrench"
+  | "settings";
 
 export type PortalCardTone = ServiceType | "billing" | "muted";
 
@@ -61,13 +62,23 @@ const ICON_PATHS: Record<PortalIcon, ReactNode> = {
       d="M14.7 6.3a4.5 4.5 0 00-6 5.6L3.5 17.1a2 2 0 102.8 2.8l5.2-5.2a4.5 4.5 0 005.6-6l-3 3-2.8-.7-.7-2.8 3.1-2.9z"
     />
   ),
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19.4 13.5a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V20a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1.08-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1.08 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1.08H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1.42z"
+      />
+    </>
+  ),
 };
 
 const TONE_ICON: Record<PortalCardTone, string> = {
   monitoring: SERVICE_THEME.monitoring.icon,
   voip: SERVICE_THEME.voip.icon,
   cloud_backup: SERVICE_THEME.cloud_backup.icon,
-  billing: "bg-primary/15 text-primary",
+  billing: "bg-white/10 text-white/80",
   muted: "bg-white/5 text-white/35",
 };
 
@@ -100,6 +111,7 @@ export function PortalCard({
   icon,
   title,
   description,
+  status,
   action,
   className,
   tone = "billing",
@@ -109,7 +121,9 @@ export function PortalCard({
   icon: PortalIcon;
   title: ReactNode;
   description?: ReactNode;
-  /** Rendered to the right of the header (e.g. a status badge). */
+  /** Status chip shown immediately beside the title. */
+  status?: ReactNode;
+  /** Rendered to the right of the header (e.g. a compact status badge). */
   action?: ReactNode;
   className?: string;
   tone?: PortalCardTone;
@@ -126,19 +140,22 @@ export function PortalCard({
           : tone === "billing"
             ? "border-white/10 bg-surface transition-colors hover:border-white/20"
             : `${SERVICE_THEME[tone].card} bg-surface transition-colors`
-      } ${className ?? ""}`}
+      } ${id ? "scroll-mt-[calc(var(--site-header-height)+1rem)]" : ""} ${className ?? ""}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <PortalCardIcon icon={icon} tone={tone} />
           <div className="min-w-0">
-            <h2
-              className={`text-lg font-bold leading-snug tracking-tight sm:text-xl ${
-                muted ? "text-white/70" : "text-white"
-              }`}
-            >
-              {title}
-            </h2>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2
+                className={`text-lg font-bold leading-snug tracking-tight sm:text-xl ${
+                  muted ? "text-white/70" : "text-white"
+                }`}
+              >
+                {title}
+              </h2>
+              {status}
+            </div>
             {description && (
               <p className={`mt-1 text-[13px] leading-relaxed ${muted ? "text-white/35" : "text-white/50"}`}>
                 {description}

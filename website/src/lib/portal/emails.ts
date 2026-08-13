@@ -118,39 +118,55 @@ export async function sendInvitationEmail({
 export type CallerIdDiffEntry = { phone: string; label: string; passcode?: string | null };
 
 const DIFF_GREEN = "#22c55e";
-const DIFF_GREEN_BG = "rgba(34, 197, 94, 0.12)";
+const DIFF_GREEN_BG = "#16351f";
 const DIFF_RED = "#ef4444";
-const DIFF_RED_BG = "rgba(239, 68, 68, 0.12)";
+const DIFF_RED_BG = "#3a1616";
+const DIFF_UNCHANGED = "#d4d4d4";
+const DIFF_UNCHANGED_BG = "#181818";
+const DIFF_UNCHANGED_BORDER = "#3f3f3f";
+
+type CallerIdRowKind = "added" | "removed" | "unchanged";
 
 // Display order per stakeholder: name first, then phone, then the
 // monitoring-station passcode (needed verbatim for the Lanvac entry).
-function diffRowHtml(entry: CallerIdDiffEntry, kind: "added" | "removed"): string {
-  const color = kind === "added" ? DIFF_GREEN : DIFF_RED;
-  const bg = kind === "added" ? DIFF_GREEN_BG : DIFF_RED_BG;
-  const sign = kind === "added" ? "+" : "&minus;";
+function listRowHtml(entry: CallerIdDiffEntry, kind: CallerIdRowKind): string {
+  const color = kind === "added" ? DIFF_GREEN : kind === "removed" ? DIFF_RED : DIFF_UNCHANGED;
+  const bg = kind === "added" ? DIFF_GREEN_BG : kind === "removed" ? DIFF_RED_BG : DIFF_UNCHANGED_BG;
+  const border = kind === "unchanged" ? DIFF_UNCHANGED_BORDER : color;
+  const sign = kind === "added" ? "+" : kind === "removed" ? "&minus;" : "";
   const passcode = entry.passcode
     ? `<span style="color:#a3a3a3;">&nbsp;&middot;&nbsp;passcode:&nbsp;</span><span style="color:#f5f5f5;font-weight:700;">${escapeHtml(entry.passcode)}</span>`
     : "";
-  return `<div style="background:${bg};border:1px solid ${color};border-radius:8px;padding:8px 12px;margin:0 0 6px;">
-    <span style="color:${color};font-weight:700;">${sign}&nbsp;${escapeHtml(entry.label)}</span>
+  return `<div style="background:${bg};border:1px solid ${border};border-radius:8px;padding:8px 12px;margin:0 0 6px;">
+    <span style="color:${color};font-weight:700;">${sign}${sign ? "&nbsp;" : ""}${escapeHtml(entry.label)}</span>
     <span style="color:#f5f5f5;">&nbsp;&middot;&nbsp;${escapeHtml(formatPhone(entry.phone))}</span>${passcode}
   </div>`;
 }
 
-function diffHtml(added: CallerIdDiffEntry[], removed: CallerIdDiffEntry[]): string {
+function fullListHtml(
+  contacts: CallerIdDiffEntry[],
+  added: CallerIdDiffEntry[],
+  removed: CallerIdDiffEntry[],
+): string {
+  const addedPhones = new Set(added.map((entry) => entry.phone));
   const rows = [
-    ...added.map((e) => diffRowHtml(e, "added")),
-    ...removed.map((e) => diffRowHtml(e, "removed")),
+    ...contacts.map((entry) => listRowHtml(entry, addedPhones.has(entry.phone) ? "added" : "unchanged")),
+    ...removed.map((entry) => listRowHtml(entry, "removed")),
   ];
-  return rows.join("") || "<em>No changes</em>";
+  return rows.join("") || "<em>Empty list</em>";
 }
 
-function diffText(added: CallerIdDiffEntry[], removed: CallerIdDiffEntry[]): string {
-  const line = (e: CallerIdDiffEntry) =>
-    `${e.label}, ${formatPhone(e.phone)}${e.passcode ? `, passcode: ${e.passcode}` : ""}`;
+function fullListText(
+  contacts: CallerIdDiffEntry[],
+  added: CallerIdDiffEntry[],
+  removed: CallerIdDiffEntry[],
+): string {
+  const addedPhones = new Set(added.map((entry) => entry.phone));
+  const line = (entry: CallerIdDiffEntry, prefix: string) =>
+    `${prefix}${entry.label}, ${formatPhone(entry.phone)}${entry.passcode ? `, passcode: ${entry.passcode}` : ""}`;
   return [
-    ...added.map((e) => `+ ${line(e)}`),
-    ...removed.map((e) => `- ${line(e)}`),
+    ...contacts.map((entry) => line(entry, addedPhones.has(entry.phone) ? "+ " : "  ")),
+    ...removed.map((entry) => line(entry, "- ")),
   ].join("\n");
 }
 
@@ -164,6 +180,7 @@ export async function sendCallerIdAdminAlert({
   clientName,
   clientEmail,
   changedByDescription,
+  contacts,
   added,
   removed,
   authorizedVia,
@@ -173,6 +190,7 @@ export async function sendCallerIdAdminAlert({
   clientName: string;
   clientEmail: string | null;
   changedByDescription: string;
+  contacts: CallerIdDiffEntry[];
   added: CallerIdDiffEntry[];
   removed: CallerIdDiffEntry[];
   authorizedVia?: string | null;
@@ -188,9 +206,9 @@ export async function sendCallerIdAdminAlert({
     { label: "Client", value: `${clientName}${clientEmail ? ` (${clientEmail})` : ""}`, highlight: true },
     { label: "Changed by", value: changedByDescription },
     {
-      label: "Changes (green added, red removed)",
-      value: diffText(added, removed),
-      htmlValue: diffHtml(added, removed),
+      label: "Full caller ID list (green added, red removed, gray unchanged)",
+      value: fullListText(contacts, added, removed),
+      htmlValue: fullListHtml(contacts, added, removed),
     },
   ];
   if (authorizedVia) {
@@ -201,14 +219,14 @@ export async function sendCallerIdAdminAlert({
   }
   fields.push({
     label: "Update the monitoring station",
-    value: "Apply this exact diff to the Lanvac call list, then archive this email as the record.",
+    value: "Apply this entire list to the Lanvac call list, then archive this email as the record.",
     href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
     cta: true,
     buttonLabel: "Open Client Detail",
   });
 
   return dispatchPortalEmail("Caller ID admin alert", {
-    subject: `Caller ID change: ${clientName}`,
+    subject: `📞 Caller ID change: ${clientName}`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
@@ -230,6 +248,7 @@ export const AUTHORIZATION_LABELS: Record<string, string> = {
 export async function sendCallerIdClientNotification({
   to,
   firstName,
+  contacts,
   added,
   removed,
   authorizedVia,
@@ -237,6 +256,7 @@ export async function sendCallerIdClientNotification({
 }: {
   to: string;
   firstName: string;
+  contacts: CallerIdDiffEntry[];
   added: CallerIdDiffEntry[];
   removed: CallerIdDiffEntry[];
   authorizedVia: string;
@@ -253,9 +273,9 @@ export async function sendCallerIdClientNotification({
       value: `Hi ${firstName},\n\nMcKee Security updated the caller ID contact list for your alarm monitoring, as requested.`,
     },
     {
-      label: "Changes (green added, red removed)",
-      value: diffText(added, removed),
-      htmlValue: diffHtml(added, removed),
+      label: "Your full caller ID list (green added, red removed, gray unchanged)",
+      value: fullListText(contacts, added, removed),
+      htmlValue: fullListHtml(contacts, added, removed),
     },
     { label: "Authorization on file", value: AUTHORIZATION_LABELS[authorizedVia] ?? authorizedVia },
     { label: "Reason recorded", value: changeReason },
@@ -411,7 +431,7 @@ export async function sendCardPaymentFailedAlert({
   ];
 
   return dispatchPortalEmail("Card payment failed alert", {
-    subject: `Card payment failed: ${clientName}`,
+    subject: `⚠️ Card payment failed: ${clientName}`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
@@ -490,7 +510,7 @@ export async function sendDeviceExpiryAdminAlert({
   ];
 
   return dispatchPortalEmail("Device expiry admin alert", {
-    subject: `Device replacement due: ${deviceLabel} (${clientName})`,
+    subject: `🔋 Device replacement due: ${deviceLabel} (${clientName})`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
@@ -582,7 +602,71 @@ export async function sendCollectionsDigest(rows: CollectionsDigestRow[]): Promi
   });
 
   return dispatchPortalEmail("Collections digest", {
-    subject: `Collections digest: ${overdueRows.length} overdue, ${dueRows.length} due soon`,
+    subject: `📋 Collections digest: ${overdueRows.length} overdue, ${dueRows.length} due soon`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
+}
+
+export type AccountChangeField = { field: string; from: string; to: string };
+
+/** McKee inbox notice when a client updates Settings (profile or password). */
+export async function sendAccountChangeAdminAlert({
+  clientName,
+  clientEmail,
+  profileId,
+  kind,
+  changes,
+}: {
+  clientName: string;
+  clientEmail: string | null;
+  profileId: string;
+  kind: "profile" | "password";
+  changes: AccountChangeField[];
+}): Promise<boolean> {
+  const needsBooksUpdate = kind === "profile";
+  const changeLines = changes
+    .map((change) => `${change.field}\n  Was: ${change.from}\n  Now: ${change.to}`)
+    .join("\n\n");
+
+  const meta = {
+    title: kind === "password" ? "Client Password Changed" : "Client Account Updated",
+    inboxLabel:
+      kind === "password"
+        ? "No QuickBooks update needed"
+        : "Update QuickBooks if this contact information is used for billing",
+  };
+
+  const fields: EmailField[] = [
+    { label: "Client", value: `${clientName}${clientEmail ? ` (${clientEmail})` : ""}`, highlight: true },
+    { label: "Changed by", value: "The client themselves via the client portal Settings tab" },
+    { label: "What changed", value: changeLines },
+  ];
+  if (needsBooksUpdate) {
+    fields.push({
+      label: "QuickBooks",
+      value:
+        "Update the customer record in QuickBooks if this phone number or service address is used for invoices or statements. The sign-in email did not change.",
+    });
+  } else {
+    fields.push({
+      label: "QuickBooks",
+      value: "This is a portal password change only. No QuickBooks update is needed.",
+    });
+  }
+  fields.push({
+    label: "Open the client",
+    value: "Review the saved account details on their profile.",
+    href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
+    cta: true,
+    buttonLabel: "Open Client Detail",
+  });
+
+  return dispatchPortalEmail("Account change admin alert", {
+    subject:
+      kind === "password"
+        ? `🔐 Password changed: ${clientName}`
+        : `✏️ Account updated: ${clientName}`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });

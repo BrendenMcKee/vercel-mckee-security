@@ -219,7 +219,7 @@ export function buildBrandedEmailHtml(
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG};">
       <tr>
         <td align="center" class="ee-outer" style="padding:32px 12px;">
-          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${CARD};border:1px solid ${BORDER};border-radius:18px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.45);">
+          <table role="presentation" width="760" cellpadding="0" cellspacing="0" style="width:100%;max-width:760px;background:${CARD};border:1px solid ${BORDER};border-radius:18px;overflow:hidden;box-shadow:0 24px 48px rgba(0,0,0,0.45);">
             <tr>
               <td style="height:4px;background:linear-gradient(90deg, ${BRAND_RED} 0%, #8f1010 100%);font-size:0;line-height:0;">&nbsp;</td>
             </tr>

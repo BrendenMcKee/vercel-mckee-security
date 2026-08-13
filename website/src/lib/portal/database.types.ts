@@ -321,6 +321,7 @@ export type Database = {
           id: string
           last_name: string
           password_set_at: string | null
+          phone: string | null
           role: Database["public"]["Enums"]["user_role"]
           status: Database["public"]["Enums"]["profile_status"]
           stripe_customer_id: string | null
@@ -335,6 +336,7 @@ export type Database = {
           id?: string
           last_name: string
           password_set_at?: string | null
+          phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["profile_status"]
           stripe_customer_id?: string | null
@@ -349,6 +351,7 @@ export type Database = {
           id?: string
           last_name?: string
           password_set_at?: string | null
+          phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["profile_status"]
           stripe_customer_id?: string | null
