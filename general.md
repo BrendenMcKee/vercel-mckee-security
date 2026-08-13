@@ -1,6 +1,6 @@
 # McKee Security Vercel Migration Master Plan
 
-> **Single source of truth** for this project. Refer here before each work session so context never drifts.
+> **Superseded for product work.** This file is the 2026 WordPress-to-Vercel marketing migration log. It predates the Supabase portal and is not the plan for `/user-dashboard` or `/admin-dashboard`. Use [`PORTAL_PLAN.md`](./PORTAL_PLAN.md) (implementation) and [`PRODUCT_HANDOVER.md`](./PRODUCT_HANDOVER.md) (original requirements). Keep this file only as history of the public-site rebuild.
 
 **Live WordPress site:** https://mckeesecurity.ca  
 **Goal:** Rebuild as a fast, maintainable Next.js app on Vercel. Editable via Git and AI agents, not WordPress or Flatsome workarounds.

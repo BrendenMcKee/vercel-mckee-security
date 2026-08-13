@@ -4,8 +4,8 @@ This repository is a monorepo containing both deployable apps:
 
 ```
 vercel-mckee-security/
-├── website/                  # Next.js marketing site + Data Drops UI  -> Vercel
-└── data-drops-aws-backend/   # Express API (Elastic Beanstalk + RDS)    -> AWS
+├── website/                  # Next.js: marketing, portals, Starlink, Data Drops  -> Vercel
+└── data-drops-aws-backend/   # Express API (Elastic Beanstalk + RDS)              -> AWS
 ```
 
 The two deploy to different platforms and should be released independently.

@@ -1,5 +1,7 @@
 # McKee Security Customer Portal — Product Handover Document
 
+> **Current implementation is in [`PORTAL_PLAN.md`](./PORTAL_PLAN.md) and the code.** This handover is the July 2026 requirements baseline (what / why). Several UX decisions have since superseded the sketches here: the client portal is tabbed (Dashboard / Settings / Alerts), sign-in email is locked, devices are an open categorized list (not a fixed battery/smoke pair), caller ID is editable by admin with recorded authorization, VoIP is a first-class service, and QuickBooks accounting is Track 1 Phase 8. Do not implement from this document's "four main sections" layout without checking the plan.
+
 **Purpose:** This document describes *what* McKee Security is building with this project. It is intended for a new development team rebuilding the platform on a modern technology stack. It focuses on product scope, user experience, business rules, and functional requirements—the *what* and *why*, not the legacy prototype's implementation.
 
 **Rebuild direction:** Next.js + TypeScript on Vercel, Supabase (database + auth with RLS), optional Google Cloud Run for advanced backend logic, and AWS Arctic storage for archived footage. **QuickBooks Desktop integration** (task queue, local bridge, Stripe payment posting) is a **follow-on** to the core portal—see [Section 23](#23-quickbooks-integration--portal-scope--future-roadmap). See [Section 19](#19-target-platform--rebuild-direction) for platform guidance.

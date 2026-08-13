@@ -1,8 +1,15 @@
 # McKee Security website
 
-Next.js 16 (App Router) marketing site for [mckeesecurity.ca](https://mckeesecurity.ca),
-plus the internal Data Drops tool. This is the `website/` app in the
+Next.js 16 (App Router) app for [mckeesecurity.ca](https://mckeesecurity.ca):
+marketing site, customer portal, admin portal, Starlink rental admin, and the
+internal Data Drops tool. This is the `website/` app in the
 [vercel-mckee-security monorepo](../README.md) and is the Vercel root directory.
+
+Portal implementation lives in [`../PORTAL_PLAN.md`](../PORTAL_PLAN.md). The
+client portal (`/user-dashboard`) is tabbed: **Dashboard** (services, billing,
+alarm contacts, equipment), **Settings** (phone, service address, password;
+sign-in email is locked), and **Alerts**. The staff console is
+`/admin-dashboard` (Overview, Clients, Billing, Devices, Alerts).
 
 ## Local development
 
@@ -20,6 +27,12 @@ npm run dev    # http://localhost:3000
 ## Notable areas
 
 - Marketing pages: `src/app/*` and `src/components/*`
+- Customer portal: `src/app/(portal)/user-dashboard`, `src/components/portal/*`,
+  `src/lib/portal/*`. Tabs are query-param driven (`?tab=settings`, `?tab=alerts`).
+- Admin portal: `src/app/(admin-portal)/admin-dashboard`,
+  `src/components/admin-portal/*`
+- Starlink rental admin: `src/app/starlink-admin`, `src/components/starlink-admin/*`,
+  `src/lib/starlink/*`. Profit math: [../docs/STARLINK-PROFITABILITY.md](../docs/STARLINK-PROFITABILITY.md)
 - Data Drops tool: `src/app/(data-drops)/*`, `src/app/api/dd/*` (proxy),
   `src/app/api/data-drops/*` (gate), `src/components/data-drops/*`,
   `src/lib/data-drops/*`. See [../docs/DATA-DROPS.md](../docs/DATA-DROPS.md).
@@ -34,6 +47,8 @@ npm run dev    # http://localhost:3000
 | `STARLINK_REMINDER_EMAIL` | Optional. Who gets Starlink rental reminders (comma-separated). Defaults to `andi@mckeesecurity.ca`. See [../docs/STARLINK-RENTAL-REMINDERS.md](../docs/STARLINK-RENTAL-REMINDERS.md) |
 | `DATA_DROPS_PASSWORD` | Shared access password for the Data Drops pages |
 | `DATA_DROPS_API_URL` | Optional. Defaults to `https://app-mckeesecurity.ca/api` |
+
+Portal / Stripe / cron variables are in [`../PORTAL_PLAN.md`](../PORTAL_PLAN.md) Section 12. Local portal work also needs the three Supabase keys in `.env.local`.
 
 ## Agent note
 

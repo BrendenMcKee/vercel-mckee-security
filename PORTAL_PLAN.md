@@ -149,22 +149,26 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 
 ## 3. Target Architecture
 
-### 3.1 File manifest (files to create)
+### 3.1 File manifest (as built; Track 2 / Phase 8 paths still planned)
 
 ```
 website/
-├── proxy.ts                                    # NEW: token refresh, matcher scoped to portal routes
-├── vercel.json                                 # NEW (Phase 7): cron schedules
+├── vercel.json                                 # cron schedules (Phase 7)
 └── src/
+    ├── proxy.ts                                # session refresh only; matcher scoped to portal routes
     ├── app/
     │   ├── (portal)/
-    │   │   ├── layout.tsx                      # getClaims() gate; logged-out renders <SignIn/>; noindex
-    │   │   ├── user-dashboard/page.tsx         # 4 sections + payment banner
+    │   │   ├── user-dashboard/
+    │   │   │   ├── layout.tsx                  # getClaims() gate; logged-out renders <SignIn/>; admin wrong-door (R46); forced password (R25)
+    │   │   │   └── page.tsx                    # Dashboard / Settings / Alerts (R47). Cards render inline via PortalCard
     │   │   └── account/
-    │   │       └── activate/page.tsx           # token validation + method choice
+    │   │       ├── activate/page.tsx           # token validation + method choice
+    │   │       └── reset-password/page.tsx     # recovery form
     │   ├── (admin-portal)/
     │   │   ├── layout.tsx                      # getClaims() + role=admin gate; noindex
-    │   │   └── admin-dashboard/page.tsx        # tabbed admin UI
+    │   │   └── admin-dashboard/
+    │   │       ├── page.tsx                    # Overview / Clients / Billing / Devices / Alerts
+    │   │       └── clients/[profileId]/page.tsx
     │   └── api/
     │       ├── auth/callback/route.ts          # PKCE code exchange, activation-aware redirect
     │       ├── stripe/webhook/route.ts         # Phase 5
@@ -174,45 +178,44 @@ website/
     │           ├── payment-due/route.ts        # Phase 7: manual-payer reminders + admin collections digest (R22)
     │           ├── gateway-health/route.ts     # Track 2 (6A): offline alerting + site_usage rollup
     │           └── footage-poller/route.ts     # dormant (only if a Deep Archive tier is ever sold, 9.3)
-    ├── components/portal/
-    │   ├── sign-in.tsx                         # Google button + email/password form
-    │   ├── activate-account.tsx                # Google / set-password chooser
-    │   ├── dashboard/                          # client dashboard section components
-    │   │   ├── monitoring-card.tsx
-    │   │   ├── cloud-backup-card.tsx           # status display + footage request form (no plan controls, R21)
-    │   │   ├── caller-id-card.tsx
-    │   │   ├── devices-card.tsx
-    │   │   └── payment-banner.tsx
-    │   └── admin/                              # admin dashboard components (tab spec in 7.2)
-    │       ├── overview-stats.tsx              # KPI cards + activity feed
-    │       ├── client-table.tsx                # search, filters, sort, pagination
-    │       ├── create-client-form.tsx
-    │       ├── client-detail.tsx               # services, billing, devices, caller IDs, invites per client
-    │       ├── billing-board.tsx               # autopay failures + manual dues/overdues (7.3)
-    │       ├── record-payment-form.tsx         # manual_payments insert (7.3)
-    │       └── ...
+    ├── components/portal/                      # client auth + shared widgets (no dashboard/ subdirectory)
+    │   ├── auth-frame.tsx                      # client vs staff sign-in chrome (R46)
+    │   ├── sign-in.tsx
+    │   ├── activate-account.tsx
+    │   ├── client-settings-form.tsx            # Settings tab (R47)
+    │   ├── portal-card.tsx                     # shared service / billing / equipment card
+    │   ├── caller-id-editor.tsx
+    │   ├── device-name-select.tsx              # typeable combobox (presets + free text)
+    │   ├── date-picker-input.tsx
+    │   ├── pay-now-button.tsx
+    │   └── manage-billing-button.tsx
+    ├── components/admin-portal/                # tab spec in 7.2
+    │   ├── admin-overview.tsx
+    │   ├── admin-clients-panel.tsx             # table + create-client form
+    │   ├── admin-client-detail.tsx
+    │   ├── admin-billing.tsx
+    │   ├── admin-devices.tsx / admin-devices-panel.tsx
+    │   ├── admin-alerts.tsx
+    │   └── ui.tsx                              # ServiceStatusBadge and shared admin chrome
     ├── lib/portal/
-    │   ├── supabase/
-    │   │   ├── server.ts                       # createServerClient (publishable key + cookies), per-request
-    │   │   ├── client.ts                       # createBrowserClient for client components
-    │   │   ├── admin.ts                        # service-role client, server-only (mirror starlink pattern)
-    │   │   └── proxy-session.ts                # session refresh helper used by proxy.ts
-    │   ├── auth.ts                             # getAuthUser(), requireUser(), requireAdmin()
-    │   ├── invitations.ts                      # token generate/hash/validate/consume
-    │   ├── actions/                            # server actions by feature
-    │   │   ├── admin-clients.ts                # create/invite/resend/tier changes/cancel/restart
-    │   │   ├── activation.ts                   # link auth user to pending profile
-    │   │   ├── caller-id.ts                    # save list + diff + history + admin email (client and admin paths, R23)
-    │   │   ├── devices.ts                      # admin date updates
-    │   │   ├── billing.ts                      # checkout session; admin-only plan change/cancel (Phase 5, R21)
-    │   │   ├── payments.ts                     # record manual payment, billing method switch (Phase 5, R22)
-    │   │   └── footage.ts                      # create request (Phase 6B)
-    │   ├── emails.ts                           # portal template builders (uses lib/email.ts)
-    │   ├── phone.ts                            # NANP/E.164 normalization + validation
-    │   ├── stripe.ts                           # Stripe client + tier-to-price map (Phase 5)
-    │   ├── footage-retrieval.ts                # S3 presign + Glacier restore (Phase 6B)
-    │   └── database.types.ts                   # generated via MCP generate_typescript_types
-    └── styles/portal.css                       # dashboard-specific styles (pattern: starlink-admin.css)
+    │   ├── supabase/{server,client,admin,proxy-session}.ts
+    │   ├── auth.ts
+    │   ├── invitations.ts
+    │   ├── actions/
+    │   │   ├── clients.ts                      # create/invite/resend/profile
+    │   │   ├── services.ts                     # assign/tier/status
+    │   │   ├── activation.ts
+    │   │   ├── account.ts                      # client Settings: phone/address + password (current required)
+    │   │   ├── password.ts                     # forced set-password + recovery (R25)
+    │   │   ├── caller-id.ts
+    │   │   ├── devices.ts
+    │   │   ├── payments.ts
+    │   │   ├── cloud-backup-interest.ts
+    │   │   └── alerts.ts
+    │   ├── emails.ts
+    │   ├── billing.ts / stripe.ts / phone.ts / devices.ts / service-labels.ts
+    │   └── database.types.ts
+    └── (no portal.css: Tailwind + shared site tokens)
 
 supabase/
 ├── config.toml                                 # CLI init
@@ -641,7 +644,7 @@ Dummy-proofing so "I don't know my password" can never lock a client out:
 
 - `profiles.password_set_at` (Migration 3) records whether the account has a usable password. The password activation path (6.3) stamps it at creation; Google activations (6.4) leave it null.
 - The `/user-dashboard` layout gate forces a **set-password screen** for any `role='client'` profile with a null stamp, on every visit until completed: success banner ("your account is activated, Google sign-in is linked — you can always use Continue with Google") + required password form. No skip. Admin profiles are exempt.
-- `updatePassword` server action: `auth.updateUser({ password })` on the user context (enforces min length 8 + HIBP leaked-password check), then stamps `password_set_at` via service role (clients deliberately have no UPDATE policy on profiles).
+- `updatePassword` (`actions/password.ts`) is the **first-time / recovery** path: `auth.updateUser({ password })` on the user context (min length 8 + HIBP), then stamps `password_set_at` via service role. The Settings tab uses a different action, `updateMyPasswordAction` (`actions/account.ts`): it re-authenticates with the **current** password (`signInWithPassword`) before `updateUser`, so a stolen session cannot take over the account (R47). Clients still have no UPDATE policy on profiles.
 - **Forgot password:** "Forgot password?" on the `SignIn` form -> `resetPasswordForEmail` with `redirectTo=<origin>/api/auth/callback?next=/account/reset-password` -> recovery link establishes a session through the PKCE callback -> `/account/reset-password` renders the same password form (reset variant). No session on that page = invalid/expired/used link -> "Link Expired" screen with an inline re-request form. Callback failures now land on the intended `next` path with `?auth_error=callback` instead of hard-coding `/user-dashboard`.
 - Auth emails (recovery, confirmation) go out through **custom SMTP via Resend** (branded sender `McKee Security <info@mckeesecurity.ca>`, rate limit raised from the built-in mailer's 2/hour), configured by `scripts/configure-auth-smtp.ps1` via the Management API.
 
@@ -669,9 +672,10 @@ Global chrome: site `Header`/`Footer` stay (portal is native to the site); welco
 | Security Monitoring | tier + status chip beside the title (icon + Active/Unpaid/Paused/Cancelled) and the compact top-right badge. If absent, a **secondary** dashed/muted card lives in an "Other McKee services" band below billing, never mixed with owned services | **none** (read-only); absent clients can call McKee | Handover 6.2. Unused services are visually demoted (stakeholder 2026-08-13). Product color: brand primary red; billing chrome stays neutral so it does not look like another security card |
 | VoIP Phone Service | plan + rate (x lines when per-line) + status badge when assigned; unused VoIP is the same muted secondary card as unused monitoring | **none** (read-only; line/plan changes go through McKee) | R42. Product color: teal, coherent on client cards, admin chips, and overview |
 | Cloud Backup | tier + status when assigned. Until Track 2 launch, clients without it see the interest card in the same secondary band | "Notify Me When Available" (outline button in the unused band) opts the account email into `cloud_backup_interest` | R43. Product color: sky |
-| Caller ID | shown only with current monitoring or historic contacts (R45). Empty list on a fresh monitoring account also raises a top-of-page banner with a scroll-to link | add, remove, save (single save action commits the batch) | Validation: NANP format, no duplicates, cap (D6). Save triggers admin diff email |
-| Device Maintenance | battery + smoke install dates, expiry state | none | Expired = amber/error highlight, not brand red (handover 14) |
-| Payment banner | shown when any service is `'unpaid'` or a manual payment is due/overdue | Autopay services: Pay Now -> Stripe Checkout (Phase 5). Manual services: due date + amount + payment instructions (D11), no checkout button | Tier server-validated, success/cancel return states; banner variant driven by `billing_method` (R22) |
+| Caller ID | shown only with current monitoring or historic contacts (R45). Empty list on a fresh monitoring account also raises a top-of-page banner with a scroll-to `#alarm-contact-list` link | add, remove, save (single save action commits the batch) | Validation: NANP format, no duplicates, cap (D6). Save triggers admin diff email |
+| Equipment Maintenance | open list (label, category, install date, lifetime). Shown only with current monitoring or historic device rows (R45) | none (read-only) | Expired tiles are amber, not brand red (handover 14). Category is the filter on the admin Devices tab; names are free text |
+| Billing & Payments | how each active service is paid (green "card on file" / amber "card not set up yet" / e-transfer copy), amount, next payment, unified history (manual ledger + `invoice.paid`) | Stripe customer portal when a card is on file (receipts / card update; cancel and plan-change disabled, R21) | Neutral billing chrome so this card does not look like Security Monitoring |
+| Payment / setup banners | unpaid service, missing alarm contacts, or autopay with no card yet | Autopay: Pay Now / Set Up Automatic Payments -> Stripe Checkout. Manual: due date + amount + payment instructions (D11), no checkout button. Add contacts scrolls to the list | Tier server-validated, success/cancel return states; banner variant driven by `billing_method` (R22) |
 | Settings tab | locked sign-in email; editable phone and service address; change password while authenticated | save account details; update password (current password required) | R47. Service-role write of `phone`/`address` only. McKee inbox notified on every change. Password change re-authenticates with the current password so a stolen session cannot take over the account |
 | Alerts tab | same attention items as the dashboard banners, plus expired devices; all-clear state when the count is zero | Pay Now / Add contacts / Set up card, same as Dashboard | Badge always-on (green `0` / red count), matching admin |
 
@@ -712,7 +716,7 @@ Not every client pays by credit card, and the business must never depend on some
 
 Task 2.1 extends `src/lib/email.ts`: optional `to: string | string[]` and `cc` in the payload (default stays `CONTACT_EMAIL`). Portal templates live in `src/lib/portal/emails.ts` reusing the existing branded HTML shell.
 
-Email presentation amendment (stakeholder 2026-07-18): the HTML header uses the real McKee favicon shield (`/images/favicon-192.png`) instead of platform-dependent emoji artwork, and all green CTA buttons render clean text with **no appended arrow**. Every outbound system subject is normalized to the professional plain-text form `McKee Security | <message>`; subjects cannot contain images, so this is the inbox-safe brand treatment. Website-form and portal subjects plus plaintext fallbacks contain no emoji. HTML includes a short hidden preheader for a controlled inbox preview. The body uses only one small HTTPS image from the same McKee domain, with explicit dimensions and adjacent text branding, so blocked images do not affect comprehension and the design stays deliverability-conscious. The client invitation leads with the benefit ("one place to review services, manage billing, and keep account information current"), says setup takes about a minute, and avoids system-generated language.
+Email presentation amendment (stakeholder 2026-07-18, amended R48 2026-08-13): the HTML header uses the real McKee favicon shield (`/images/favicon-192.png`) instead of platform-dependent emoji artwork, and all green CTA buttons render clean text with **no appended arrow**. Every outbound system subject is normalized to `McKee Security | <message>`. Branded cards are **760px** so desktop admin mail is not a skinny column. **Client-facing** subjects, website-form subjects, and plaintext fallbacks stay emoji-free. **Admin-action** subjects add a leading inbox emoji (`📞` caller ID, `⚠️` card failed, `🔋` device due, `📋` collections, `✏️`/`🔐` account changes). Caller ID mail (admin and matching client) shows the **entire** list: added green, removed red, unchanged gray. HTML includes a short hidden preheader. The body uses only one small HTTPS image from the same McKee domain, with explicit dimensions and adjacent text branding. The client invitation leads with the benefit ("one place to review services, manage billing, and keep account information current"), says setup takes about a minute, and avoids system-generated language.
 
 | Template | Trigger | To | Phase |
 |----------|---------|----|----|
@@ -727,6 +731,7 @@ Email presentation amendment (stakeholder 2026-07-18): the HTML header uses the 
 | Manual payment recorded | admin records a payment (7.3) | client | 5 |
 | Collections digest | cron: any manual payer due or overdue | admin inbox | 7 |
 | Card payment failed | Stripe `invoice.payment_failed` webhook | admin inbox | 5 |
+| Client account change | client saves phone, service address, or password in Settings (R47) | admin inbox (`✏️` / `🔐` subject) | R47 |
 
 Caller ID diff email: added contacts styled green, removed styled red (handover 6.4), plain-text fallback included. This email is the operational trigger for staff to update Lanvac (the alarm monitoring station), so it fires on every list change from either side (R23) and names who made the change. Email send failures are logged and surfaced in the admin alerts area (handover 22.3); a failed notification never rolls back the underlying save.
 
@@ -1310,6 +1315,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-13 | **Docs catch-up for the shipped dashboards.** File tree (3.1) now matches the as-built portal (tabbed client page, `admin-portal/` components, Settings actions). Section 7.1 lists Billing & Payments and the open equipment list instead of the old battery/smoke pair. Section 8 records 760px cards, full caller-ID diffs, admin-action subject emojis, and the Settings account-change mail. Root / website READMEs and `docs/DEPLOYMENT.md` now name the portal; `general.md` and `PRODUCT_HANDOVER.md` point here for current implementation. |
 | 2026-08-13 | **Plan: monitoring start date + per-tier cost before profitability (R49, D15, D16).** Not implemented yet. Every monitoring service will store `started_on` (the day they first began being monitored — not invitation, not activation, not `profiles.created_at`). Create-client / add-service will require it; the QuickBooks seed will infer the earliest monitoring invoice for admin confirmation. Cancel/restart will not overwrite it. Year-over-year monitoring P&L also needs the real cost McKee pays per monitored client by tier (landline / cellular / cellular_tc / cellular_tc_home), stored later like Starlink `unit_costs`. That cost table is a prerequisite for a profit view, not for 8A or 8C posting. Do not invent numbers. |
 | 2026-08-13 | **Device names are free text again; categories are the filter.** The admin device name field is a typeable combobox: pick a common starting name or type "Hallway smoke 1". The Devices tab filters by category only. `wireless_device` folded into `device_battery` (wireless sensor batteries, including a smoke/CO battery). Smoke/CO detector units stay on `detector` so a wireless detector is two rows with two clocks. Presets include detector-battery starters. |
 | 2026-08-13 | **Client portal tabs, settings, and admin UX polish (R47/R48).** Client dashboard is now Dashboard / Settings / Alerts. Settings locks the sign-in email and lets the client change phone, service address, and password; McKee is emailed on every change (`profiles.phone` added, service-role write, no client UPDATE RLS). Alerts mirrors payment / caller-ID / card-setup / expired-device items with the same always-on green-0 / red-count badge as admin. Add Contacts scrolls to the top of the Alarm Contact List card (`scroll-mt` under the site header). Service cards use thicker brand-red / brighter-teal / sky borders; billing chrome is neutral white so it no longer looks like Security Monitoring. Status chips with icons sit beside each service title; billing "card on file" is green and "card not set up yet" is amber. Create-client alarm-contact copy notes that the client can add contacts themselves. Device name is a real select (presets stay visible; selected option stays highlighted) plus Custom name. Portal admin date fields open the calendar on click and block typed year/month/day. Planned cloud-backup copy now includes 180-day (not an assignable tier). Admin emails are 760px wide; caller ID mail shows the full list (added / removed / unchanged); admin-action subjects use inbox emojis |

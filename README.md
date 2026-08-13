@@ -1,19 +1,24 @@
 # McKee Security Monorepo
 
-Monorepo for [mckeesecurity.ca](https://mckeesecurity.ca): the Next.js marketing site and the Data Drops backend, managed together so the whole product lives in one place.
+Monorepo for [mckeesecurity.ca](https://mckeesecurity.ca): the Next.js marketing site, the customer and admin portals, Starlink rental admin, and the Data Drops backend.
 
-- **Master plan and progress:** [`general.md`](./general.md)
+- **Portal (authoritative):** [`PORTAL_PLAN.md`](./PORTAL_PLAN.md) — client dashboard at `/user-dashboard` (Dashboard / Settings / Alerts), staff console at `/admin-dashboard`. Plain-language accounting companion: [`ACCOUNTING_PLAN.md`](./ACCOUNTING_PLAN.md).
+- **Requirements baseline (not the current UI spec):** [`PRODUCT_HANDOVER.md`](./PRODUCT_HANDOVER.md)
 - **Deployment and workflow:** [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)
 - **Data Drops architecture:** [`docs/DATA-DROPS.md`](./docs/DATA-DROPS.md)
+- **Older marketing-migration notes:** [`general.md`](./general.md) (superseded for product work; do not treat as the plan)
 
 ## Repository structure
 
 ```
 vercel-mckee-security/
-├── general.md                # Master plan and progress tracker
+├── PORTAL_PLAN.md            # Authoritative portal / admin / billing plan
+├── ACCOUNTING_PLAN.md        # Stakeholder explainer for the QuickBooks rail
+├── PRODUCT_HANDOVER.md       # Original requirements baseline
 ├── docs/                     # Deployment and architecture docs
 ├── audit/                    # WordPress audit (reference only, not deployed)
-├── website/                  # Next.js app (marketing site + Data Drops UI). Vercel root directory.
+├── website/                  # Next.js app (marketing, portals, Starlink, Data Drops). Vercel root.
+├── supabase/                 # Portal migrations
 └── data-drops-aws-backend/   # Express API for Data Drops (AWS Elastic Beanstalk + RDS)
 ```
 
@@ -23,7 +28,7 @@ The two apps deploy independently: the website to Vercel, the backend to AWS Ela
 
 ### Website (Vercel)
 
-Next.js 16 marketing site plus the internal Data Drops tool. The Vercel root directory is `website`. Pushes to `main` auto-deploy.
+Next.js 16 marketing site, customer portal (`/user-dashboard`), admin portal (`/admin-dashboard`), Starlink rental admin, and the Data Drops UI. The Vercel root directory is `website`. Pushes to `main` auto-deploy.
 
 ```bash
 cd website
@@ -61,6 +66,8 @@ Optional (not enabled): if backend-only commits ever become frequent, set the Ve
 | `EMAIL_FROM` | Sender address for Resend |
 | `DATA_DROPS_PASSWORD` | Shared access password for the Data Drops pages |
 | `DATA_DROPS_API_URL` | Optional. Data Drops API base. Defaults to `https://app-mckeesecurity.ca/api` |
+
+Portal and Stripe keys are listed in [`PORTAL_PLAN.md`](./PORTAL_PLAN.md) Section 12. The portals also need `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`.
 
 ### AWS Elastic Beanstalk (backend)
 

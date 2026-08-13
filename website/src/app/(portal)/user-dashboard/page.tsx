@@ -45,13 +45,12 @@ type PaymentHistoryEntry = {
 };
 
 /**
- * Client dashboard (PORTAL_PLAN.md 7.1). Phase 3 gave it the read-only
- * monitoring/cloud cards; Phase 4 adds caller ID list management and device
- * maintenance; Phase 5 adds the payment banner (Stripe Pay Now vs manual
- * instructions). Stakeholder round 2 adds the Billing & Payments card:
- * next payment date, full payment history (manual ledger + card payments),
- * card setup for autopay services, and the Stripe portal for receipts/card
- * updates. Reads go through RLS: a client can only see their own rows.
+ * Client portal (PORTAL_PLAN.md 7.1). Tabs: Dashboard / Settings / Alerts
+ * (R47). Dashboard: owned service cards, Billing & Payments, alarm contacts
+ * and equipment when R45 applies, unused services in a dashed band, plus
+ * payment / contact / card-setup banners. Settings: locked email, phone,
+ * address, password (current required). Alerts mirrors the banners with the
+ * same always-on count badge as admin. Reads go through RLS.
  */
 const CLIENT_TABS = [
   { id: "dashboard", label: "Dashboard", href: "/user-dashboard" },
