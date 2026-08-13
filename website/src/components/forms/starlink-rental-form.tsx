@@ -325,7 +325,7 @@ export function StarlinkRentalForm({
               : "mckee-form-submit min-w-[220px]"
           }
         >
-          {isSubmitting ? "Sending..." : "Send Inquiry"}
+          {isSubmitting ? "Booking..." : "Book now"}
         </button>
       </div>
     </form>

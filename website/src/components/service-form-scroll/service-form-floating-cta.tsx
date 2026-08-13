@@ -5,7 +5,13 @@ import { ServiceFormScrollButton } from "@/components/service-form-scroll/servic
 import { SERVICE_QUOTE_SECTION_ID } from "@/lib/scroll-to-service-quote";
 import { cn } from "@/lib/utils";
 
-export function ServiceFormFloatingCta() {
+export function ServiceFormFloatingCta({
+  label,
+  ariaLabel,
+}: {
+  label?: string;
+  ariaLabel?: string;
+}) {
   const [formVisible, setFormVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -42,7 +48,11 @@ export function ServiceFormFloatingCta() {
       )}
       aria-hidden={formVisible}
     >
-      <ServiceFormScrollButton variant="floating" />
+      <ServiceFormScrollButton
+        variant="floating"
+        label={label}
+        ariaLabel={ariaLabel}
+      />
     </div>
   );
 }

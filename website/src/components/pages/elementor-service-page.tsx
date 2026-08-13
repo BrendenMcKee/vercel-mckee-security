@@ -68,7 +68,12 @@ export function ElementorServicePage({ slug }: { slug: string }) {
       {data.ctaTitle && data.ctaText && (
         <>
           <ServiceFormHeroCta containerRef={containerRef} slug={slug} />
-          <ServiceFormFloatingCta />
+          <ServiceFormFloatingCta
+            label={slug === "starlink-rental" ? "Book now" : undefined}
+            ariaLabel={
+              slug === "starlink-rental" ? "Scroll to booking form" : undefined
+            }
+          />
           <ServiceQuoteSection
             title={data.ctaTitle}
             description={data.ctaText}

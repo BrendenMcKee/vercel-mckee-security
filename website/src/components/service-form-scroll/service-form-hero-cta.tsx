@@ -57,5 +57,14 @@ export function ServiceFormHeroCta({ containerRef, slug }: ServiceFormHeroCtaPro
 
   if (!mountNode) return null;
 
-  return createPortal(<ServiceFormScrollButton variant="hero" />, mountNode);
+  return createPortal(
+    <ServiceFormScrollButton
+      variant="hero"
+      label={slug === "starlink-rental" ? "Book Now" : undefined}
+      ariaLabel={
+        slug === "starlink-rental" ? "Scroll to booking form" : undefined
+      }
+    />,
+    mountNode,
+  );
 }
