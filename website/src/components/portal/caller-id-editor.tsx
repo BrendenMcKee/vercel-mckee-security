@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition, type PointerEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type PointerEvent } from "react";
 import { formatPhone, normalizePhone } from "@/lib/portal/phone";
 import {
   saveMyCallerIdList,
   saveClientCallerIdList,
   type SaveCallerIdResult,
 } from "@/lib/portal/actions/caller-id";
+import {
+  CALLER_ID_CLIENT_COOLDOWN_SECONDS,
+  callerIdWaitMessage,
+} from "@/lib/portal/caller-id-wait";
 
 export type CallerIdContact = {
   id: string;
@@ -56,22 +60,40 @@ export function CallerIdEditor({
   initialContacts: CallerIdContact[];
 }) {
   const [contacts, setContacts] = useState<CallerIdContact[]>(() => withStableIds(initialContacts));
+  const [baseline, setBaseline] = useState<CallerIdContact[]>(() => withStableIds(initialContacts));
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [waitUntil, setWaitUntil] = useState<number | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newPasscode, setNewPasscode] = useState("");
   const [authorizedVia, setAuthorizedVia] = useState("");
   const [changeReason, setChangeReason] = useState("");
-  const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [notice, setNotice] = useState<{ kind: "ok" | "error" | "wait"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const dirty = useMemo(() => {
-    if (contacts.length !== initialContacts.length) return true;
+    if (contacts.length !== baseline.length) return true;
     return contacts.some((contact, index) => {
-      const initial = initialContacts[index];
-      return !initial || contactKey(contact) !== contactKey(initial);
+      const saved = baseline[index];
+      return !saved || contactKey(contact) !== contactKey(saved);
     });
-  }, [contacts, initialContacts]);
+  }, [contacts, baseline]);
+
+  useEffect(() => {
+    if (waitUntil == null || notice?.kind !== "wait") return;
+    function tick() {
+      if (waitUntil == null) return;
+      const remaining = Math.ceil((waitUntil - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setWaitUntil(null);
+        setNotice({ kind: "ok", text: "You can save your list again now." });
+        return;
+      }
+      setNotice({ kind: "wait", text: callerIdWaitMessage(remaining) });
+    }
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [waitUntil, notice?.kind]);
 
   // Existing contacts saved before passcodes existed need one before the
   // next save goes through.
@@ -136,7 +158,6 @@ export function CallerIdEditor({
   }
 
   function onDragHandlePointerDown(id: string, event: PointerEvent<HTMLButtonElement>) {
-    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     setDraggingId(id);
     setNotice(null);
@@ -167,14 +188,14 @@ export function CallerIdEditor({
   }
 
   function describeDiff(): string {
-    const initial = new Set(initialContacts.map(contactKey));
+    const initial = new Set(baseline.map(contactKey));
     const next = new Set(contacts.map(contactKey));
     const added = contacts.filter((c) => !initial.has(contactKey(c)));
-    const removed = initialContacts.filter((c) => !next.has(contactKey(c)));
+    const removed = baseline.filter((c) => !next.has(contactKey(c)));
     const line = (c: CallerIdContact, index: number) =>
       `#${index + 1} ${c.label}, ${formatPhone(c.phone)}${c.passcode ? `, passcode: ${c.passcode}` : ""}`;
     const moved = contacts.flatMap((c, index) => {
-      const from = initialContacts.findIndex((entry) => contactKey(entry) === contactKey(c));
+      const from = baseline.findIndex((entry) => contactKey(entry) === contactKey(c));
       if (from < 0 || from === index) return [];
       return [`~ ${line(c, index)} (was #${from + 1})`];
     });
@@ -187,6 +208,14 @@ export function CallerIdEditor({
 
   function save() {
     setNotice(null);
+
+    if (variant === "client" && waitUntil != null && Date.now() < waitUntil) {
+      setNotice({
+        kind: "wait",
+        text: callerIdWaitMessage(Math.ceil((waitUntil - Date.now()) / 1000)),
+      });
+      return;
+    }
 
     if (missingPasscodes.length > 0) {
       setNotice({
@@ -227,12 +256,21 @@ export function CallerIdEditor({
       }
 
       if (!result.ok) {
+        if (result.waitSeconds != null) {
+          setWaitUntil(Date.now() + result.waitSeconds * 1000);
+          setNotice({ kind: "wait", text: result.error });
+          return;
+        }
         setNotice({ kind: "error", text: result.error });
         return;
       }
       if (result.noChange) {
         setNotice({ kind: "ok", text: "No changes to save." });
         return;
+      }
+      setBaseline(contacts);
+      if (variant === "client") {
+        setWaitUntil(Date.now() + CALLER_ID_CLIENT_COOLDOWN_SECONDS * 1000);
       }
       const parts = [
         result.reordered.length > 0 && result.added.length === 0 && result.removed.length === 0
@@ -435,10 +473,12 @@ export function CallerIdEditor({
       {notice && (
         <p
           role={notice.kind === "error" ? "alert" : "status"}
-          className={`rounded-xl border p-4 text-sm ${
+          className={`rounded-xl border p-4 text-sm leading-relaxed ${
             notice.kind === "ok"
               ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-              : "border-amber-500/30 bg-amber-500/10 text-amber-200"
+              : notice.kind === "wait"
+                ? "border-sky-400/30 bg-sky-500/10 text-sky-100"
+                : "border-amber-500/30 bg-amber-500/10 text-amber-200"
           }`}
         >
           {notice.text}
@@ -448,7 +488,7 @@ export function CallerIdEditor({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-white/40">
           {variant === "client"
-            ? "Saving notifies McKee Security, who update the monitoring station."
+            ? "Saving emails McKee Security so they can update the monitoring station. Please wait a couple of minutes between saves."
             : "Both McKee and the client are emailed the exact changes on save."}
         </p>
         <button

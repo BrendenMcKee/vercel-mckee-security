@@ -11,6 +11,7 @@ import type { Database } from "@/lib/portal/database.types";
  * - invitation validation before a session exists
  * - Stripe webhook and cron contexts
  * - rate-limit RPC + portal_alerts writes (service-role-only surfaces)
+ * - last caller-id change time (clients have no SELECT on caller_id_changes)
  * The Phase 7 security sweep greps for getPortalAdminClient and checks every
  * call site against this list.
  *

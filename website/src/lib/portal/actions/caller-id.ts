@@ -4,13 +4,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireUser } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
-import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
+import { getPortalAdminClient, isPortalAdminConfigured } from "@/lib/portal/supabase/admin";
 import { normalizePhone } from "@/lib/portal/phone";
 import {
   sendCallerIdAdminAlert,
   sendCallerIdClientNotification,
   type CallerIdDiffEntry,
 } from "@/lib/portal/emails";
+import {
+  CALLER_ID_CLIENT_COOLDOWN_SECONDS,
+  callerIdWaitMessage,
+} from "@/lib/portal/caller-id-wait";
 
 /** D6/Q16 defaults (pending stakeholder confirmation): 1..15 contacts. */
 const MIN_CONTACTS = 1;
@@ -39,7 +43,32 @@ export type SaveCallerIdResult =
       adminEmailSent: boolean;
       clientEmailSent: boolean | null;
     }
-  | { ok: false; error: string };
+  | { ok: false; error: string; waitSeconds?: number };
+
+async function clientSaveWaitSeconds(profileId: string): Promise<number | null> {
+  if (!isPortalAdminConfigured()) return null;
+  try {
+    const { data, error } = await getPortalAdminClient()
+      .from("caller_id_changes")
+      .select("created_at")
+      .eq("profile_id", profileId)
+      .eq("changed_via", "client_dashboard")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error("[portal] caller ID cooldown lookup failed (allowing save):", error);
+      return null;
+    }
+    if (!data?.created_at) return null;
+    const elapsedMs = Date.now() - new Date(data.created_at).getTime();
+    const remaining = CALLER_ID_CLIENT_COOLDOWN_SECONDS - Math.floor(elapsedMs / 1000);
+    return remaining > 0 ? remaining : null;
+  } catch (error) {
+    console.error("[portal] caller ID cooldown lookup threw (allowing save):", error);
+    return null;
+  }
+}
 
 type NormalizedList = { contacts: CallerIdDiffEntry[] } | { error: string };
 
@@ -196,6 +225,11 @@ export async function saveMyCallerIdList(input: {
 
   const normalized = normalizeList(input.contacts ?? []);
   if ("error" in normalized) return { ok: false, error: normalized.error };
+
+  const waitSeconds = await clientSaveWaitSeconds(profile.id);
+  if (waitSeconds != null) {
+    return { ok: false, error: callerIdWaitMessage(waitSeconds), waitSeconds };
+  }
 
   return runSave({
     profileId: profile.id,
