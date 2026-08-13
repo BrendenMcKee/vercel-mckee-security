@@ -14,6 +14,9 @@ its Starlink subscription, and is the fleet as a whole.
 A booking that runs 29 Aug – 7 Sep contributes 3/10 of its rental payment to
 August and 7/10 to September. Changing a kit's monthly rate inserts a new
 `unit_costs` row from the chosen date; days before that keep the old rate.
+A rate dated in the future is shown as upcoming and does not replace the
+current plan on the kit card. Cost never starts before the kit's Toronto
+creation date, even if someone backdates `effective_from`.
 
 ## Rates in force (seeded 2026-08-13)
 

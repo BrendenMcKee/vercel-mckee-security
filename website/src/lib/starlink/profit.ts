@@ -11,12 +11,13 @@
  */
 
 import {
+  addDaysIso,
   daysBetweenInclusive,
   daysInMonthIso,
-  eachDateIso,
   endOfIsoWeek,
   endOfMonthIso,
   isoDateInToronto,
+  isValidIsoDate,
   overlapDaysInclusive,
   startOfIsoWeek,
   startOfMonthIso,
@@ -35,8 +36,10 @@ export type UnitProfit = {
   name: string;
   color: string;
   active: boolean;
-  /** Current subscription, for the editor — not necessarily the rate in-period. */
+  /** Current subscription as of today, for the editor. */
   currentCost: UnitCost | null;
+  /** Next scheduled rate if one is waiting in the future. */
+  upcomingCost: UnitCost | null;
   revenue: number;
   cost: number;
   profit: number;
@@ -70,6 +73,10 @@ const EARNING_STATUS = new Set(["confirmed", "active", "returned"]);
 function asMoney(value: number | string | null | undefined): number {
   const n = typeof value === "string" ? Number(value) : (value ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+function sortedByEffectiveFrom(costs: UnitCost[]): UnitCost[] {
+  return costs.slice().sort((a, b) => a.effective_from.localeCompare(b.effective_from));
 }
 
 function roundCents(value: number): number {
@@ -109,31 +116,88 @@ export function rentalRevenueInPeriod(
 
 /** The rate in force on `day` for a kit, or 0 if none has been set yet. */
 export function monthlyCostOnDay(costs: UnitCost[], day: string): number {
-  let current = 0;
-  for (const row of costs) {
+  const current = costAsOf(costs, day);
+  return current ? asMoney(current.monthly_cost) : 0;
+}
+
+/** Last rate whose `effective_from` is on or before `day`. */
+export function costAsOf(costs: UnitCost[], day: string): UnitCost | null {
+  let current: UnitCost | null = null;
+  for (const row of sortedByEffectiveFrom(costs)) {
     if (row.effective_from > day) break;
-    current = asMoney(row.monthly_cost);
+    current = row;
   }
   return current;
 }
 
+/** First rate that has not started yet as of `day`. */
+export function upcomingCost(costs: UnitCost[], day: string): UnitCost | null {
+  return sortedByEffectiveFrom(costs).find((row) => row.effective_from > day) ?? null;
+}
+
 /**
- * Subscription cost for `period`, using each day's own monthly rate divided
- * by that day's calendar-month length so a week in February is not charged
- * the same as a week in January.
+ * Subscription dollars for every day in `start`..`end` at a single monthly
+ * rate. Walks month by month so a 10-year all-time view is a few dozen steps,
+ * not a few thousand date strings.
  */
-export function unitCostInPeriod(costs: UnitCost[], period: ProfitPeriod): number {
-  if (costs.length === 0) return 0;
-  const days = eachDateIso(period.start, period.end, 5000);
+function costAtRateAcross(start: string, end: string, monthly: number): number {
+  if (
+    monthly === 0 ||
+    end < start ||
+    !isValidIsoDate(start) ||
+    !isValidIsoDate(end)
+  ) {
+    return 0;
+  }
   let total = 0;
-  for (const day of days) {
-    total += monthlyCostOnDay(costs, day) / daysInMonthIso(day);
+  let cursor = start;
+  let guard = 0;
+  while (cursor <= end && guard < 2400) {
+    const monthEnd = endOfMonthIso(cursor);
+    const sliceEnd = monthEnd < end ? monthEnd : end;
+    const days = daysBetweenInclusive(cursor, sliceEnd);
+    const dim = daysInMonthIso(cursor);
+    if (dim > 0) total += (monthly / dim) * days;
+    cursor = addDaysIso(sliceEnd, 1);
+    guard += 1;
   }
   return total;
 }
 
-export function latestCost(costs: UnitCost[]): UnitCost | null {
-  return costs.length > 0 ? costs[costs.length - 1] : null;
+/**
+ * Subscription cost for `period`. Each historical rate covers the days from
+ * its `effective_from` until the day before the next one. `notBefore` is the
+ * kit's creation date, so a backdated rate cannot invent a bill for months
+ * the dish did not exist.
+ */
+export function unitCostInPeriod(
+  costs: UnitCost[],
+  period: ProfitPeriod,
+  notBefore?: string | null,
+): number {
+  if (costs.length === 0) return 0;
+  const start =
+    notBefore && notBefore > period.start ? notBefore : period.start;
+  if (period.end < start) return 0;
+
+  const ordered = sortedByEffectiveFrom(costs);
+  let total = 0;
+  for (let i = 0; i < ordered.length; i += 1) {
+    const rowStart = ordered[i].effective_from;
+    const rowEnd =
+      i + 1 < ordered.length
+        ? addDaysIso(ordered[i + 1].effective_from, -1)
+        : period.end;
+    const sliceStart = rowStart > start ? rowStart : start;
+    const sliceEnd = rowEnd < period.end ? rowEnd : period.end;
+    if (sliceEnd < sliceStart) continue;
+    total += costAtRateAcross(
+      sliceStart,
+      sliceEnd,
+      asMoney(ordered[i].monthly_cost),
+    );
+  }
+  return total;
 }
 
 export function costsForUnit(all: UnitCost[], unitId: string): UnitCost[] {
@@ -182,19 +246,37 @@ function occupiedDaysInPeriod(
   rentals: RentalWithUnit[],
   period: ProfitPeriod,
 ): number {
-  const days = new Set<string>();
+  const spans: Array<[string, string]> = [];
   for (const rental of rentals) {
     if (!rentalEarnsRevenue(rental.status)) continue;
-    const overlapStart =
+    const start =
       rental.pickup_date > period.start ? rental.pickup_date : period.start;
-    const overlapEnd =
+    const end =
       rental.return_date < period.end ? rental.return_date : period.end;
-    if (overlapEnd < overlapStart) continue;
-    for (const day of eachDateIso(overlapStart, overlapEnd, 5000)) {
-      days.add(day);
+    if (end < start) continue;
+    spans.push([start, end]);
+  }
+  if (spans.length === 0) return 0;
+  spans.sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
+
+  // Merge touching/overlapping spans so two back-to-back bookings on the same
+  // kit count as one run of days, and a silent 5000-day cap cannot truncate a
+  // long all-time view.
+  let total = 0;
+  let [curStart, curEnd] = spans[0];
+  for (let i = 1; i < spans.length; i += 1) {
+    const [nextStart, nextEnd] = spans[i];
+    if (nextStart <= addDaysIso(curEnd, 1)) {
+      if (nextEnd > curEnd) curEnd = nextEnd;
+    } else {
+      total += daysBetweenInclusive(curStart, curEnd);
+      curStart = nextStart;
+      curEnd = nextEnd;
     }
   }
-  return days.size;
+  total += daysBetweenInclusive(curStart, curEnd);
+  const periodDays = daysBetweenInclusive(period.start, period.end);
+  return periodDays > 0 ? Math.min(total, periodDays) : 0;
 }
 
 export function buildProfitReport(
@@ -206,11 +288,23 @@ export function buildProfitReport(
   todayIso: string,
 ): ProfitReport {
   const allTime = allTimeBounds(units, rentals, todayIso);
-  const period = periodForGrain(grain, anchorIso, allTime);
+  const period = periodForGrain(
+    grain,
+    isValidIsoDate(anchorIso) ? anchorIso : todayIso,
+    allTime,
+  );
   const periodDays = Math.max(1, daysBetweenInclusive(period.start, period.end));
 
+  const costsByUnit = new Map<string, UnitCost[]>();
+  for (const row of costs) {
+    const list = costsByUnit.get(row.unit_id);
+    if (list) list.push(row);
+    else costsByUnit.set(row.unit_id, [row]);
+  }
+
   const unitRows: UnitProfit[] = units.map((unit) => {
-    const unitCosts = costsForUnit(costs, unit.id);
+    const unitCosts = costsByUnit.get(unit.id) ?? [];
+    const created = isoDateInToronto(unit.created_at);
     const unitRentals = rentals.filter((r) => r.unit_id === unit.id);
     const earning = unitRentals.filter((r) => rentalEarnsRevenue(r.status));
     const inPeriod = earning.filter(
@@ -225,14 +319,15 @@ export function buildProfitReport(
     const revenue = roundCents(
       inPeriod.reduce((sum, r) => sum + rentalRevenueInPeriod(r, period), 0),
     );
-    const cost = roundCents(unitCostInPeriod(unitCosts, period));
+    const cost = roundCents(unitCostInPeriod(unitCosts, period, created));
     const occupiedDays = occupiedDaysInPeriod(unitRentals, period);
     return {
       unitId: unit.id,
       name: unit.name,
       color: unit.color,
       active: unit.active,
-      currentCost: latestCost(unitCosts),
+      currentCost: costAsOf(unitCosts, todayIso),
+      upcomingCost: upcomingCost(unitCosts, todayIso),
       revenue,
       cost,
       profit: roundCents(revenue - cost),

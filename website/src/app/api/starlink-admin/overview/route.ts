@@ -30,14 +30,17 @@ export async function GET() {
   if (rentalsRes.error) {
     return NextResponse.json({ error: rentalsRes.error.message }, { status: 500 });
   }
+  // A missing or unreadable cost table must not take down the rest of the
+  // admin: Schedule/Rentals/Fleet still work, and Profit just shows $0 cost
+  // until the rates can be loaded.
   if (costsRes.error) {
-    return NextResponse.json({ error: costsRes.error.message }, { status: 500 });
+    console.error("[starlink] unit_costs lookup failed:", costsRes.error.message);
   }
 
   const res = NextResponse.json({
     units: unitsRes.data ?? [],
     rentals: rentalsRes.data ?? [],
-    costs: costsRes.data ?? [],
+    costs: costsRes.error ? [] : (costsRes.data ?? []),
   });
   res.headers.set("Cache-Control", "no-store");
   return res;

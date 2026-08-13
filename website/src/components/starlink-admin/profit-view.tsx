@@ -14,6 +14,7 @@ import { parseMoneyInput } from "@/lib/starlink/billing";
 import { upsertUnitCost } from "@/lib/starlink/client-api";
 import {
   addDaysIso,
+  isValidIsoDate,
   startOfMonthIso,
   todayIsoToronto,
 } from "@/lib/starlink/dates";
@@ -24,7 +25,9 @@ import {
 } from "@/lib/starlink/format";
 import {
   buildProfitReport,
+  costAsOf,
   recentMonthAnchors,
+  upcomingCost,
   type ProfitGrain,
   type UnitProfit,
 } from "@/lib/starlink/profit";
@@ -198,6 +201,12 @@ function UnitCard({ row }: { row: UnitProfit }) {
               ? `${row.currentCost.plan_name ?? "Plan"} · ${formatCurrency(row.currentCost.monthly_cost)}/mo`
               : "No monthly rate set"}
           </p>
+          {row.upcomingCost ? (
+            <p className="mt-0.5 text-xs text-amber-200/90">
+              Changes to {formatCurrency(row.upcomingCost.monthly_cost)}/mo on{" "}
+              {formatDateShort(row.upcomingCost.effective_from)}
+            </p>
+          ) : null}
         </div>
         <p className={cn("text-xl font-bold tabular-nums", profitTone(row.profit))}>
           {formatCurrency(row.profit)}
@@ -227,25 +236,29 @@ function CostEditor({
   onSaved: (message: string) => Promise<void> | void;
   onError: (message: string) => void;
 }) {
-  const latest = [...costs]
-    .filter((c) => c.unit_id === unit.id)
-    .sort((a, b) => a.effective_from.localeCompare(b.effective_from))
-    .at(-1);
-  const [planName, setPlanName] = useState(latest?.plan_name ?? "");
+  const unitCosts = costs.filter((c) => c.unit_id === unit.id);
+  const current = costAsOf(unitCosts, todayIsoToronto());
+  const upcoming = upcomingCost(unitCosts, todayIsoToronto());
+  const [planName, setPlanName] = useState(current?.plan_name ?? "");
   const [costText, setCostText] = useState(
-    latest ? String(latest.monthly_cost) : "",
+    current ? String(current.monthly_cost) : "",
   );
   const [from, setFrom] = useState(todayIsoToronto());
   const [busy, setBusy] = useState(false);
 
   async function save() {
-    const parsed = parseMoneyInput(costText);
-    if (!parsed.ok || parsed.value == null) {
-      onError("Enter a monthly cost, like 200 or 110.");
-      return;
-    }
+    if (busy) return;
     setBusy(true);
     try {
+      const parsed = parseMoneyInput(costText);
+      if (!parsed.ok || parsed.value == null) {
+        onError("Enter a monthly cost, like 200 or 110.");
+        return;
+      }
+      if (!isValidIsoDate(from)) {
+        onError("Pick a real date this rate should start on.");
+        return;
+      }
       await upsertUnitCost(unit.id, {
         monthly_cost: parsed.value,
         plan_name: planName.trim() || null,
@@ -269,11 +282,14 @@ function CostEditor({
         />
         <h3 className="text-sm font-bold text-white">{unit.name}</h3>
       </div>
-      {latest ? (
+      {current ? (
         <p className="mb-3 text-xs text-white/50">
-          Current: {latest.plan_name ?? "Plan"} ·{" "}
-          {formatCurrency(latest.monthly_cost)}/mo since{" "}
-          {formatDateShort(latest.effective_from)}
+          Current: {current.plan_name ?? "Plan"} ·{" "}
+          {formatCurrency(current.monthly_cost)}/mo since{" "}
+          {formatDateShort(current.effective_from)}
+          {upcoming
+            ? ` · next: ${formatCurrency(upcoming.monthly_cost)}/mo from ${formatDateShort(upcoming.effective_from)}`
+            : ""}
         </p>
       ) : (
         <p className="mb-3 text-xs text-amber-200/90">
@@ -301,6 +317,7 @@ function CostEditor({
             value={planName}
             onChange={(e) => setPlanName(e.target.value)}
             placeholder="e.g. Roam - Unlimited"
+            maxLength={120}
             className={inputClass}
           />
         </Field>

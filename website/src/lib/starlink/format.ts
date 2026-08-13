@@ -17,9 +17,11 @@ const cad = new Intl.NumberFormat("en-CA", {
   minimumFractionDigits: 2,
 });
 
-export function formatCurrency(value: number | null | undefined): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return "—";
-  return cad.format(value);
+export function formatCurrency(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  const n = typeof value === "string" ? Number(value) : value;
+  if (!Number.isFinite(n)) return "—";
+  return cad.format(n);
 }
 
 function partsFromIso(iso: string): [number, number, number] | null {

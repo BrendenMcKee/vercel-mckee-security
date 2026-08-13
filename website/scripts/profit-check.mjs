@@ -267,6 +267,108 @@ console.log("\n=== profitability math");
   check(all.period.start <= "2026-06-29", "all-time starts at the kit's creation");
 }
 
+{
+  const withFutureRate = [
+    costs[0],
+    {
+      id: "c1-future",
+      unit_id: "unit-a",
+      monthly_cost: 220,
+      plan_name: "Roam - Unlimited",
+      effective_from: "2026-08-16",
+      created_at: "2026-08-13T00:00:00.000Z",
+    },
+  ];
+  const report = buildProfitReport(
+    [unitA],
+    [],
+    withFutureRate,
+    "month",
+    "2026-08-13",
+    "2026-08-13",
+  );
+  const row = report.units[0];
+  check(
+    row.currentCost?.monthly_cost === 200,
+    "a future rate is not shown as the current plan",
+    `${row.currentCost?.monthly_cost}`,
+  );
+  check(
+    row.upcomingCost?.effective_from === "2026-08-16",
+    "the next scheduled rate is exposed as upcoming",
+    `${row.upcomingCost?.effective_from}`,
+  );
+  check(
+    row.currentCost?.effective_from === "2026-06-29",
+    "current plan is still the rate in force today",
+  );
+}
+
+{
+  const overlapping = [
+    rental({
+      pickup_date: "2026-08-01",
+      return_date: "2026-08-10",
+      amount_received: 100,
+    }),
+    rental({
+      id: "rental-2",
+      pickup_date: "2026-08-05",
+      return_date: "2026-08-15",
+      amount_received: 100,
+    }),
+  ];
+  const report = buildProfitReport(
+    [unitA],
+    overlapping,
+    costs,
+    "month",
+    "2026-08-13",
+    "2026-08-13",
+  );
+  check(
+    report.units[0].occupiedDays === 15,
+    "overlapping bookings on one kit count unique days",
+    `${report.units[0].occupiedDays}`,
+  );
+  check(
+    report.units[0].occupiedDays <= report.units[0].periodDays,
+    "occupancy never exceeds the days in the period",
+  );
+}
+
+{
+  const lateKit = {
+    ...unitA,
+    created_at: "2026-08-15T16:00:00.000Z",
+  };
+  const backdated = [
+    {
+      id: "c-back",
+      unit_id: "unit-a",
+      monthly_cost: 200,
+      plan_name: "Roam - Unlimited",
+      effective_from: "2026-01-01",
+      created_at: "2026-08-15T00:00:00.000Z",
+    },
+  ];
+  const report = buildProfitReport(
+    [lateKit],
+    [],
+    backdated,
+    "month",
+    "2026-08-13",
+    "2026-08-13",
+  );
+  // Created Aug 15 Toronto; Aug 15–31 is 17 days of 200/31.
+  const expected = (17 * 200) / 31;
+  check(
+    close(report.units[0].cost, expected),
+    "a backdated rate does not bill days before the kit existed",
+    `${report.units[0].cost} vs ${expected.toFixed(2)}`,
+  );
+}
+
 console.log("\n----------------------------------------");
 if (failures.length) {
   console.log(`${failures.length} FAILED:`);

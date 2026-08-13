@@ -40,11 +40,27 @@ export function mapDbError(error: { code?: string; message?: string }): NextResp
       { status: 409 },
     );
   }
-  // 23514 = check_violation (e.g. return before pickup)
+  // 23514 = check_violation. Rental date order has its own copy; everything
+  // else (non-negative money, enum checks) gets a generic line so a cost
+  // constraint cannot be reported as a pickup/return problem.
   if (error.code === "23514") {
+    const dates = /rentals_dates_chk|pickup_date|return_date/i.test(
+      error.message ?? "",
+    );
     return NextResponse.json(
-      { error: "Invalid dates. Return must be on or after pickup." },
+      {
+        error: dates
+          ? "Invalid dates. Return must be on or after pickup."
+          : "That value isn't allowed.",
+      },
       { status: 400 },
+    );
+  }
+  // 23505 = unique_violation
+  if (error.code === "23505") {
+    return NextResponse.json(
+      { error: "That record already exists." },
+      { status: 409 },
     );
   }
   return NextResponse.json(

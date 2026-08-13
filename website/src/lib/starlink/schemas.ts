@@ -1,9 +1,11 @@
 import { z } from "zod";
+import { isValidIsoDate } from "./dates";
 import { RENTAL_SOURCES, RENTAL_STATUSES } from "./types";
 
 const isoDate = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+  .refine(isValidIsoDate, "Use a real calendar date");
 
 /**
  * Optional money field: accepts a non-negative number or null/omitted.
@@ -90,7 +92,10 @@ export const unitCostUpsertSchema = z.object({
   monthly_cost: z.number().nonnegative().max(1_000_000),
   plan_name: z.string().trim().max(120).nullable().optional(),
   /** First day this rate applies. Defaults to today on the server. */
-  effective_from: isoDate.optional(),
+  effective_from: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    isoDate.optional(),
+  ),
 });
 
 export const availabilityQuerySchema = z
