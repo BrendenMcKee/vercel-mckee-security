@@ -271,8 +271,8 @@ export async function sendCallerIdAdminAlert({
 
   return dispatchPortalEmail("Caller ID admin alert", {
     subject: onlyOrder
-      ? `Caller ID call order changed: ${clientName}`
-      : `Caller ID change: ${clientName}`,
+      ? `📞 Caller ID call order changed: ${clientName}`
+      : `📞 Caller ID change: ${clientName}`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
