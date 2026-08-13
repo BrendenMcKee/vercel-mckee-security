@@ -74,3 +74,44 @@ export const SERVICE_STATUS_LABELS: Record<ServiceStatus, string> = {
   cancelled: "Cancelled",
   unpaid: "Unpaid",
 };
+
+/**
+ * Stable per-service colors used on both portals so a glance at a chip,
+ * icon, or card tells you which product it is. Monitoring stays brand red;
+ * VoIP is teal; Camera Cloud Backup is sky. Billing uses brand red because
+ * it is company-wide, not a product.
+ */
+export const SERVICE_THEME: Record<
+  ServiceType,
+  { chip: string; icon: string; card: string; dot: string }
+> = {
+  monitoring: {
+    chip: "border-red-500/40 bg-red-500/15 text-red-100",
+    icon: "bg-red-500/15 text-red-400",
+    card: "border-red-500/25",
+    dot: "bg-red-400",
+  },
+  voip: {
+    chip: "border-teal-500/40 bg-teal-500/15 text-teal-100",
+    icon: "bg-teal-500/15 text-teal-300",
+    card: "border-teal-500/25",
+    dot: "bg-teal-400",
+  },
+  cloud_backup: {
+    chip: "border-sky-500/40 bg-sky-500/15 text-sky-100",
+    icon: "bg-sky-500/15 text-sky-300",
+    card: "border-sky-500/25",
+    dot: "bg-sky-400",
+  },
+};
+
+export function serviceChipClass(serviceType: string): string {
+  return SERVICE_THEME[serviceType as ServiceType]?.chip ?? "border-white/15 bg-white/5 text-white/70";
+}
+
+/** Current (not cancelled) security monitoring. Caller ID and devices belong here. */
+export function hasCurrentMonitoring(
+  services: ReadonlyArray<{ service_type: string; status: string }>,
+): boolean {
+  return services.some((service) => service.service_type === "monitoring" && service.status !== "cancelled");
+}

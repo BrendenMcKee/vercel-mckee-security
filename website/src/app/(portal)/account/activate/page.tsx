@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/portal/auth";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/portal/rate-limit";
 import { ActivateAccount } from "@/components/portal/activate-account";
 import { ActivateAsCurrentUser } from "@/components/portal/activate-as-current-user";
+import { AuthFrame } from "@/components/portal/auth-frame";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
 export const metadata: Metadata = {
@@ -22,36 +23,51 @@ const ERROR_COPY: Record<string, string> = {
     "This activation link is no longer valid.",
 };
 
-function ActivateShell({ children }: { children: React.ReactNode }) {
+function ActivateShell({
+  heading,
+  description,
+  children,
+  footer,
+}: {
+  heading: React.ReactNode;
+  description?: React.ReactNode;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
   return (
-    <section className="mx-auto flex min-h-[60vh] w-full max-w-xl flex-col items-center justify-center px-4 py-20">
-      <p className="text-sm font-bold uppercase tracking-widest text-primary">
-        McKee Security Client Portal
-      </p>
+    <AuthFrame
+      variant="client"
+      eyebrow="McKee Security Client Portal"
+      heading={heading}
+      description={description}
+      footer={footer}
+    >
       {children}
-    </section>
+    </AuthFrame>
   );
 }
 
 function ErrorScreen({ message }: { message: string }) {
   return (
-    <ActivateShell>
-      <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-        Activation Problem
-      </h1>
-      <p className="mt-4 max-w-md text-center text-base leading-relaxed text-white/65">
-        {message}
-      </p>
-      <p className="mt-6 max-w-md text-center text-sm text-white/50">
-        Need a new invitation? Call McKee Security at{" "}
-        <a href="tel:+17054572156" className="font-bold text-white/80 hover:text-white">
-          (705) 457-2156
-        </a>{" "}
-        or email{" "}
-        <a href="mailto:info@mckeesecurity.ca" className="font-bold text-white/80 hover:text-white">
-          info@mckeesecurity.ca
-        </a>
-        .
+    <ActivateShell
+      heading="Activation Problem"
+      description={message}
+      footer={
+        <>
+          Need a new invitation? Call McKee Security at{" "}
+          <a href="tel:+17054572156" className="font-bold text-white/80 hover:text-white">
+            (705) 457-2156
+          </a>{" "}
+          or email{" "}
+          <a href="mailto:info@mckeesecurity.ca" className="font-bold text-white/80 hover:text-white">
+            info@mckeesecurity.ca
+          </a>
+          .
+        </>
+      }
+    >
+      <p className="text-sm leading-relaxed text-white/55">
+        Use the full link from your invitation email, or contact the office for a fresh one.
       </p>
     </ActivateShell>
   );
@@ -110,19 +126,18 @@ export default async function ActivateAccountPage({
   if (user) {
     if (sessionProfile) {
       return (
-        <ActivateShell>
-          <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-            Already Signed In
-          </h1>
-          <p className="mt-4 max-w-md text-center text-base leading-relaxed text-white/65">
-            You are signed in as{" "}
-            <span className="font-bold text-white">{user.email}</span>, which is
-            already an activated account. To use this invitation for a different
-            account, sign out first and reopen your activation link.
-          </p>
-          <div className="mt-6">
-            <SignOutButton />
-          </div>
+        <ActivateShell
+          heading="Already Signed In"
+          description={
+            <>
+              You are signed in as{" "}
+              <span className="font-bold text-white">{user.email}</span>, which is
+              already an activated account. To use this invitation for a different
+              account, sign out first and reopen your activation link.
+            </>
+          }
+        >
+          <SignOutButton />
         </ActivateShell>
       );
     }
@@ -130,46 +145,42 @@ export default async function ActivateAccountPage({
     const targetEmail = invitation.target_email?.toLowerCase() ?? null;
     if (targetEmail && targetEmail !== (user.email ?? "").toLowerCase()) {
       return (
-        <ActivateShell>
-          <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-            Wrong Account
-          </h1>
-          <p className="mt-4 max-w-md text-center text-base leading-relaxed text-white/65">
-            You are signed in as{" "}
-            <span className="font-bold text-white">{user.email}</span>, but this
-            invitation was issued for a different email address. Sign out, then
-            reopen your activation link with the matching account.
-          </p>
-          <div className="mt-6">
-            <SignOutButton />
-          </div>
+        <ActivateShell
+          heading="Wrong Account"
+          description={
+            <>
+              You are signed in as{" "}
+              <span className="font-bold text-white">{user.email}</span>, but this
+              invitation was issued for a different email address. Sign out, then
+              reopen your activation link with the matching account.
+            </>
+          }
+        >
+          <SignOutButton />
         </ActivateShell>
       );
     }
 
     return (
-      <ActivateShell>
-        <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-          Welcome, {profile.first_name}
-        </h1>
-        <p className="mt-4 max-w-md text-center text-base leading-relaxed text-white/65">
-          Finish setting up your McKee Security client portal account as{" "}
-          <span className="font-bold text-white">{user.email}</span>.
-        </p>
+      <ActivateShell
+        heading={`Welcome, ${profile.first_name}`}
+        description={
+          <>
+            Finish setting up your McKee Security client portal account as{" "}
+            <span className="font-bold text-white">{user.email}</span>.
+          </>
+        }
+      >
         <ActivateAsCurrentUser token={token} />
       </ActivateShell>
     );
   }
 
   return (
-    <ActivateShell>
-      <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-        Welcome, {profile.first_name}
-      </h1>
-      <p className="mt-4 max-w-md text-center text-base leading-relaxed text-white/65">
-        Set up your McKee Security client portal account. Choose how you want to
-        sign in: continue with Google, or set a password.
-      </p>
+    <ActivateShell
+      heading={`Welcome, ${profile.first_name}`}
+      description="Set up your client portal account. Choose how you want to sign in: continue with Google, or set a password."
+    >
       <ActivateAccount token={token} targetEmail={invitation.target_email} />
     </ActivateShell>
   );

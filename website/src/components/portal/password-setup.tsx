@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updatePassword } from "@/lib/portal/actions/password";
+import { AuthFrame } from "@/components/portal/auth-frame";
 import { PasswordInput } from "@/components/portal/password-input";
 
 const COPY = {
@@ -56,47 +57,33 @@ export function PasswordSetup({
   }
 
   return (
-    <section className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-4 py-20">
-      <p className="text-sm font-bold uppercase tracking-widest text-primary">
-        {copy.eyebrow}
-      </p>
-      <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-        {copy.heading}
-      </h1>
-
-      {variant === "first-access" ? (
-        <div className="mt-6 w-full space-y-3">
-          <div className="flex items-start gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-            <span aria-hidden="true" className="mt-0.5 text-emerald-300">✓</span>
-            <p className="text-sm leading-relaxed text-emerald-200">
-              Your account{email ? (
-                <>
-                  {" "}for <span className="font-bold">{email}</span>
-                </>
-              ) : null}{" "}
-              is activated{googleLinked ? " and your Google sign-in is linked. You can always use Continue with Google." : "."}
-            </p>
-          </div>
-          <p className="text-center text-sm leading-relaxed text-white/65">
-            Now set a password as a backup way to sign in. From then on, either
-            method works.
+    <AuthFrame
+      variant="client"
+      eyebrow={copy.eyebrow}
+      heading={copy.heading}
+      description={
+        variant === "first-access"
+          ? "Now set a password as a backup way to sign in. From then on, either method works."
+          : email
+            ? `Choose a new password for ${email}.`
+            : "Choose a new password."
+      }
+    >
+      {variant === "first-access" && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+          <span aria-hidden="true" className="mt-0.5 text-emerald-300">✓</span>
+          <p className="text-sm leading-relaxed text-emerald-200">
+            Your account{email ? (
+              <>
+                {" "}for <span className="font-bold">{email}</span>
+              </>
+            ) : null}{" "}
+            is activated{googleLinked ? " and your Google sign-in is linked. You can always use Continue with Google." : "."}
           </p>
         </div>
-      ) : (
-        <p className="mt-4 max-w-sm text-center text-base leading-relaxed text-white/65">
-          Choose a new password{email ? (
-            <>
-              {" "}for <span className="font-bold text-white">{email}</span>
-            </>
-          ) : null}
-          .
-        </p>
       )}
 
-      <form
-        onSubmit={submit}
-        className="mt-6 flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-surface p-6"
-      >
+      <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm text-white/80">
           New password
           <PasswordInput
@@ -137,6 +124,6 @@ export function PasswordSetup({
           {pending ? "Saving..." : copy.button}
         </button>
       </form>
-    </section>
+    </AuthFrame>
   );
 }

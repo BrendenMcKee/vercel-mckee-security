@@ -10,9 +10,12 @@ import {
 export function CloudBackupInterest({
   initiallyInterested,
   email,
+  quiet = false,
 }: {
   initiallyInterested: boolean;
   email: string | null;
+  /** Outline button for the unused-service section. */
+  quiet?: boolean;
 }) {
   const router = useRouter();
   const [interested, setInterested] = useState(initiallyInterested);
@@ -83,7 +86,11 @@ export function CloudBackupInterest({
         disabled={pending || !email}
         onClick={join}
         aria-busy={pending}
-        className="relative cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover) disabled:cursor-default disabled:opacity-50"
+        className={`relative cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 disabled:cursor-default disabled:opacity-50 ${
+          quiet
+            ? "border border-white/20 bg-transparent text-white/70 hover:border-white/40 hover:text-white"
+            : "bg-primary text-white hover:bg-(--primary-hover)"
+        }`}
       >
         <span className={pending ? "invisible" : undefined}>
           {email ? "Notify Me When Available" : "Email Address Required"}

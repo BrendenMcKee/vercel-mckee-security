@@ -16,8 +16,10 @@ import {
   updateServiceTierAction,
 } from "@/lib/portal/actions/services";
 import {
+  SERVICE_THEME,
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
+  hasCurrentMonitoring,
   isPerLineService,
   isServiceAvailable,
   tierLabel,
@@ -755,9 +757,10 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       : null;
 
   return (
-    <div className="space-y-4 rounded-xl border border-white/10 bg-background p-4 sm:p-5">
+    <div className={`space-y-4 rounded-xl border bg-background p-4 sm:p-5 ${SERVICE_THEME[service.service_type].card}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
+          <span className={`h-2.5 w-2.5 rounded-full ${SERVICE_THEME[service.service_type].dot}`} aria-hidden />
           <span className="font-bold text-white">{serviceLabel}</span>
           <ServiceStatusBadge status={service.status} />
         </div>
@@ -1567,6 +1570,10 @@ export function AdminClientDetail({
   cardPayments: CardPaymentEntry[];
   cloudBackupInterest: Tables<"cloud_backup_interest"> | null;
 }) {
+  const showCallerId =
+    hasCurrentMonitoring(client.services) || callerIdContacts.length > 0 || callerIdChanges.length > 0;
+  const showDevices = hasCurrentMonitoring(client.services) || devices.length > 0;
+
   return (
     <div className="space-y-6">
       <ProfileCard client={client} />
@@ -1576,8 +1583,10 @@ export function AdminClientDetail({
         cardPayments={cardPayments}
         cloudBackupInterest={cloudBackupInterest}
       />
-      <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
-      <DevicesCard client={client} devices={devices} />
+      {showCallerId && (
+        <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
+      )}
+      {showDevices && <DevicesCard client={client} devices={devices} />}
       <InvitationCard client={client} />
       <DangerZone client={client} />
     </div>

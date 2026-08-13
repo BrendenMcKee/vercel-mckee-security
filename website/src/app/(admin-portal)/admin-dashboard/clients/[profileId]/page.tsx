@@ -113,7 +113,7 @@ export default async function AdminClientDetailPage({
         <div className="min-w-0">
           <Link
             href="/admin-dashboard?tab=clients"
-            className="text-sm font-bold uppercase tracking-widest text-primary hover:text-white"
+            className="text-sm font-bold uppercase tracking-widest text-amber-300 hover:text-white"
           >
             &larr; All Clients
           </Link>

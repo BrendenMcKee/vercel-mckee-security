@@ -14,6 +14,8 @@ import {
   isPerLineService,
   isServiceAvailable,
 } from "@/lib/portal/service-labels";
+import { DEVICE_CATEGORIES } from "@/lib/portal/devices";
+import { normalizePhone } from "@/lib/portal/phone";
 import { getStripeClient, isStripeConfigured } from "@/lib/portal/stripe";
 import { siteConfig } from "@/lib/site-config";
 
@@ -34,6 +36,24 @@ const createClientSchema = z.object({
 
 export type CreateClientInput = z.infer<typeof createClientSchema>;
 
+const createContactDraftSchema = z.object({
+  label: z.string().trim().min(1).max(80),
+  phone: z.string().trim().min(1),
+  passcode: z.string().trim().min(1).max(40),
+});
+
+const createDeviceDraftSchema = z.object({
+  label: z.string().trim().min(1).max(80),
+  category: z.enum(DEVICE_CATEGORIES),
+  installedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  lifetimeYears: z.number().int().min(1).max(50),
+});
+
+export type CreateClientExtras = {
+  contacts?: z.infer<typeof createContactDraftSchema>[];
+  devices?: z.infer<typeof createDeviceDraftSchema>[];
+};
+
 export type CreateClientResult =
   | {
       ok: true;
@@ -42,6 +62,8 @@ export type CreateClientResult =
       activateUrl: string;
       emailSent: boolean;
       emailAttempted: boolean;
+      /** Client exists; optional follow-up if contacts/devices did not save. */
+      warning?: string;
     }
   | { ok: false; error: string };
 
@@ -61,6 +83,7 @@ async function getOrigin(): Promise<string> {
  */
 export async function createClientAction(
   input: CreateClientInput,
+  extras: CreateClientExtras = {},
 ): Promise<CreateClientResult> {
   if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
@@ -75,6 +98,44 @@ export async function createClientAction(
   // or hand-crafted server-action request to assign it before Track 2 ships.
   if (cloudTier && !isServiceAvailable("cloud_backup")) {
     return { ok: false, error: CLOUD_BACKUP_DEVELOPMENT_MESSAGE };
+  }
+
+  const seedContacts: { phone: string; label: string; passcode: string }[] = [];
+  const seedDevices: z.infer<typeof createDeviceDraftSchema>[] = [];
+  if (monitoringTier) {
+    const seenPhones = new Set<string>();
+    for (const rawContact of extras.contacts ?? []) {
+      const parsedContact = createContactDraftSchema.safeParse(rawContact);
+      if (!parsedContact.success) {
+        return { ok: false, error: parsedContact.error.issues[0]?.message ?? "Invalid alarm contact." };
+      }
+      const phone = normalizePhone(parsedContact.data.phone);
+      if (!phone) {
+        return { ok: false, error: `"${parsedContact.data.phone}" is not a valid North American phone number.` };
+      }
+      if (seenPhones.has(phone)) {
+        return { ok: false, error: "The same phone number cannot appear twice on the alarm contact list." };
+      }
+      if (seenPhones.size >= 15) {
+        return { ok: false, error: "The alarm contact list is capped at 15 people." };
+      }
+      seenPhones.add(phone);
+      seedContacts.push({
+        phone,
+        label: parsedContact.data.label,
+        passcode: parsedContact.data.passcode,
+      });
+    }
+    for (const rawDevice of extras.devices ?? []) {
+      const parsedDevice = createDeviceDraftSchema.safeParse(rawDevice);
+      if (!parsedDevice.success) {
+        return { ok: false, error: parsedDevice.error.issues[0]?.message ?? "Invalid device." };
+      }
+      if (new Date(parsedDevice.data.installedOn).getTime() > Date.now()) {
+        return { ok: false, error: "Device install date cannot be in the future." };
+      }
+      seedDevices.push(parsedDevice.data);
+    }
   }
 
   const { raw, hash } = generateInvitationToken();
@@ -131,6 +192,38 @@ export async function createClientAction(
     if (priceError) console.error(`[portal] ${prefill.serviceType} price prefill failed:`, priceError);
   }
 
+  const seedWarnings: string[] = [];
+  if (seedContacts.length > 0) {
+    const { error: contactError } = await supabase.from("caller_id_contacts").insert(
+      seedContacts.map((contact) => ({
+        profile_id: profileId,
+        phone: contact.phone,
+        label: contact.label,
+        passcode: contact.passcode,
+      })),
+    );
+    if (contactError) {
+      console.error("[portal] createClient caller ID seed failed:", contactError);
+      seedWarnings.push("The alarm contact list could not be saved. Open the client and add it there.");
+    }
+  }
+
+  if (seedDevices.length > 0) {
+    const { error: deviceError } = await supabase.from("devices").insert(
+      seedDevices.map((device) => ({
+        profile_id: profileId,
+        label: device.label,
+        category: device.category,
+        installed_on: device.installedOn,
+        lifetime_years: device.lifetimeYears,
+      })),
+    );
+    if (deviceError) {
+      console.error("[portal] createClient device seed failed:", deviceError);
+      seedWarnings.push("A device could not be saved. Open the client and add it there.");
+    }
+  }
+
   const activateUrl = `${await getOrigin()}/account/activate?token=${raw}`;
 
   let emailSent = false;
@@ -150,7 +243,14 @@ export async function createClientAction(
   }
 
   revalidatePath("/admin-dashboard", "layout");
-  return { ok: true, profileId, activateUrl, emailSent, emailAttempted: Boolean(email) };
+  return {
+    ok: true,
+    profileId,
+    activateUrl,
+    emailSent,
+    emailAttempted: Boolean(email),
+    warning: seedWarnings.length > 0 ? seedWarnings.join(" ") : undefined,
+  };
 }
 
 export type ResendInviteResult =

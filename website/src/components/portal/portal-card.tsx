@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SERVICE_THEME, type ServiceType } from "@/lib/portal/service-labels";
 
 /**
  * Shared card shell for the client dashboard: icon chip + title + optional
@@ -12,6 +13,8 @@ export type PortalIcon =
   | "phone"
   | "voip"
   | "wrench";
+
+export type PortalCardTone = ServiceType | "billing" | "muted";
 
 const ICON_PATHS: Record<PortalIcon, ReactNode> = {
   shield: (
@@ -60,9 +63,25 @@ const ICON_PATHS: Record<PortalIcon, ReactNode> = {
   ),
 };
 
-export function PortalCardIcon({ icon }: { icon: PortalIcon }) {
+const TONE_ICON: Record<PortalCardTone, string> = {
+  monitoring: SERVICE_THEME.monitoring.icon,
+  voip: SERVICE_THEME.voip.icon,
+  cloud_backup: SERVICE_THEME.cloud_backup.icon,
+  billing: "bg-primary/15 text-primary",
+  muted: "bg-white/5 text-white/35",
+};
+
+export function PortalCardIcon({
+  icon,
+  tone = "billing",
+}: {
+  icon: PortalIcon;
+  tone?: PortalCardTone;
+}) {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+    <span
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${TONE_ICON[tone]}`}
+    >
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -83,6 +102,8 @@ export function PortalCard({
   description,
   action,
   className,
+  tone = "billing",
+  id,
   children,
 }: {
   icon: PortalIcon;
@@ -91,21 +112,37 @@ export function PortalCard({
   /** Rendered to the right of the header (e.g. a status badge). */
   action?: ReactNode;
   className?: string;
+  tone?: PortalCardTone;
+  id?: string;
   children: ReactNode;
 }) {
+  const muted = tone === "muted";
   return (
     <section
-      className={`rounded-2xl border border-white/10 bg-surface p-4 transition-colors hover:border-white/20 sm:p-7 ${className ?? ""}`}
+      id={id}
+      className={`rounded-2xl border p-4 sm:p-7 ${
+        muted
+          ? "border-dashed border-white/10 bg-white/2.5"
+          : tone === "billing"
+            ? "border-white/10 bg-surface transition-colors hover:border-white/20"
+            : `${SERVICE_THEME[tone].card} bg-surface transition-colors`
+      } ${className ?? ""}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <PortalCardIcon icon={icon} />
+          <PortalCardIcon icon={icon} tone={tone} />
           <div className="min-w-0">
-            <h2 className="text-lg font-bold leading-snug tracking-tight text-white sm:text-xl">
+            <h2
+              className={`text-lg font-bold leading-snug tracking-tight sm:text-xl ${
+                muted ? "text-white/70" : "text-white"
+              }`}
+            >
               {title}
             </h2>
             {description && (
-              <p className="mt-1 text-[13px] leading-relaxed text-white/50">{description}</p>
+              <p className={`mt-1 text-[13px] leading-relaxed ${muted ? "text-white/35" : "text-white/50"}`}>
+                {description}
+              </p>
             )}
           </div>
         </div>

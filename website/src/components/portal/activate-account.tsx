@@ -73,7 +73,7 @@ export function ActivateAccount({
 
   if (confirmEmailSent) {
     return (
-      <div className="mt-8 w-full rounded-2xl border border-white/10 bg-surface p-6 text-center">
+      <div className="text-center">
         <h2 className="text-xl font-bold text-white">Confirm your email</h2>
         <p className="mt-3 text-sm leading-relaxed text-white/65">
           Your account was created. We sent a confirmation link to{" "}
@@ -85,7 +85,7 @@ export function ActivateAccount({
   }
 
   return (
-    <div className="mt-8 w-full rounded-2xl border border-white/10 bg-surface p-6">
+    <div>
       <button
         type="button"
         onClick={continueWithGoogle}

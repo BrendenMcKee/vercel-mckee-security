@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortalBrowserClient } from "@/lib/portal/supabase/client";
+import { AuthFrame } from "@/components/portal/auth-frame";
 
 const COPY = {
   client: {
@@ -12,9 +13,9 @@ const COPY = {
     footer: "invitation",
   },
   admin: {
-    eyebrow: "McKee Security Internal",
+    eyebrow: "McKee Security Staff Console",
     heading: "Admin Sign In",
-    description: "Sign in with your McKee Security staff account.",
+    description: "This is the internal office console. Client accounts sign in at Manage Account.",
     footer: "staff",
   },
 } as const;
@@ -123,45 +124,55 @@ export function SignIn({
 
   if (mode === "sent") {
     return (
-      <section className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-4 py-20">
-        <p className="text-sm font-bold uppercase tracking-widest text-primary">
-          {copy.eyebrow}
+      <AuthFrame
+        variant={variant}
+        eyebrow={copy.eyebrow}
+        heading="Check Your Email"
+        description={
+          <>
+            If an account exists for{" "}
+            <span className="font-bold text-white">{email}</span>, a password
+            reset link is on its way. The link expires after one hour.
+          </>
+        }
+        footer={
+          <button
+            type="button"
+            onClick={() => setMode("signin")}
+            className="cursor-pointer text-sm font-bold text-white/70 underline underline-offset-4 hover:text-white"
+          >
+            Back to sign in
+          </button>
+        }
+      >
+        <p className="text-sm leading-relaxed text-white/55">
+          Check your inbox and spam folder. The message comes from McKee Security.
         </p>
-        <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-          Check Your Email
-        </h1>
-        <p className="mt-4 max-w-sm text-center text-base leading-relaxed text-white/65">
-          If an account exists for{" "}
-          <span className="font-bold text-white">{email}</span>, a password
-          reset link is on its way. The link expires after one hour.
-        </p>
-        <button
-          type="button"
-          onClick={() => setMode("signin")}
-          className="mt-6 cursor-pointer text-sm font-bold text-white/70 underline underline-offset-4 hover:text-white"
-        >
-          Back to sign in
-        </button>
-      </section>
+      </AuthFrame>
     );
   }
 
   if (mode === "forgot") {
     return (
-      <section className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-4 py-20">
-        <p className="text-sm font-bold uppercase tracking-widest text-primary">
-          {copy.eyebrow}
-        </p>
-        <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-          Forgot Password
-        </h1>
-        <p className="mt-4 max-w-sm text-center text-base leading-relaxed text-white/65">
-          Enter your email and we&apos;ll send you a link to reset your password.
-        </p>
-        <form
-          onSubmit={sendResetLink}
-          className="mt-8 flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-surface p-6"
-        >
+      <AuthFrame
+        variant={variant}
+        eyebrow={copy.eyebrow}
+        heading="Forgot Password"
+        description="Enter your email and we will send you a link to reset your password."
+        footer={
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signin");
+              setError(null);
+            }}
+            className="cursor-pointer text-sm font-bold text-white/70 underline underline-offset-4 hover:text-white"
+          >
+            Back to sign in
+          </button>
+        }
+      >
+        <form onSubmit={sendResetLink} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-white/80">
             Email
             <input
@@ -181,38 +192,46 @@ export function SignIn({
           <button
             type="submit"
             disabled={pending}
-            className="cursor-pointer rounded-xl bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+            className={`cursor-pointer rounded-xl px-6 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg transition-all duration-200 disabled:cursor-default disabled:opacity-50 ${
+              variant === "admin"
+                ? "bg-amber-500 shadow-amber-500/20 hover:bg-amber-400"
+                : "bg-primary shadow-primary/25 hover:bg-[var(--primary-hover)]"
+            }`}
           >
             {pending ? "Sending..." : "Send Reset Link"}
           </button>
         </form>
-        <button
-          type="button"
-          onClick={() => {
-            setMode("signin");
-            setError(null);
-          }}
-          className="mt-6 cursor-pointer text-sm font-bold text-white/70 underline underline-offset-4 hover:text-white"
-        >
-          Back to sign in
-        </button>
-      </section>
+      </AuthFrame>
     );
   }
 
   return (
-    <section className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center px-4 py-20">
-      <p className="text-sm font-bold uppercase tracking-widest text-primary">
-        {copy.eyebrow}
-      </p>
-      <h1 className="mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-        {copy.heading}
-      </h1>
-      <p className="mt-4 max-w-sm text-center text-base leading-relaxed text-white/65">
-        {copy.description}
-      </p>
-
-      <div className="mt-8 w-full rounded-2xl border border-white/10 bg-surface p-6">
+    <AuthFrame
+      variant={variant}
+      eyebrow={copy.eyebrow}
+      heading={copy.heading}
+      description={copy.description}
+      footer={
+        copy.footer === "invitation" ? (
+          <>
+            New to the portal? Access is by invitation. If you received an activation link
+            from McKee Security, use it to set up your account, or call{" "}
+            <a href="tel:+17054572156" className="font-bold text-white/80 hover:text-white">
+              (705) 457-2156
+            </a>
+            .
+          </>
+        ) : (
+          <>
+            Looking for your client account? Sign in at{" "}
+            <a href="/user-dashboard" className="font-bold text-amber-200 underline underline-offset-4 hover:text-white">
+              Manage Account
+            </a>
+            . This page is for McKee Security staff only.
+          </>
+        )
+      }
+    >
         <button
           type="button"
           onClick={signInWithGoogle}
@@ -278,31 +297,15 @@ export function SignIn({
           <button
             type="submit"
             disabled={pending || googlePending}
-            className="cursor-pointer rounded-xl bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+            className={`cursor-pointer rounded-xl px-6 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg transition-all duration-200 disabled:cursor-default disabled:opacity-50 ${
+              variant === "admin"
+                ? "bg-amber-500 shadow-amber-500/20 hover:bg-amber-400"
+                : "bg-primary shadow-primary/25 hover:bg-[var(--primary-hover)]"
+            }`}
           >
             {pending ? "Signing in..." : "Sign In"}
           </button>
         </form>
-      </div>
-
-      {copy.footer === "invitation" ? (
-        <p className="mt-6 max-w-sm text-center text-sm text-white/50">
-          New to the portal? Access is by invitation. If you received an activation link
-          from McKee Security, use it to set up your account, or call{" "}
-          <a href="tel:+17054572156" className="font-bold text-white/80 hover:text-white">
-            (705) 457-2156
-          </a>
-          .
-        </p>
-      ) : (
-        <p className="mt-6 max-w-sm text-center text-sm text-white/50">
-          McKee Security staff only. Looking for your client account? Sign in at{" "}
-          <a href="/user-dashboard" className="font-bold text-white/80 hover:text-white">
-            Manage Account
-          </a>
-          .
-        </p>
-      )}
-    </section>
+    </AuthFrame>
   );
 }

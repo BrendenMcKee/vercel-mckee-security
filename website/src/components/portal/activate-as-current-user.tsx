@@ -24,7 +24,7 @@ export function ActivateAsCurrentUser({ token }: { token: string }) {
   }
 
   return (
-    <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-4">
+    <div className="flex w-full flex-col items-center gap-4">
       <button
         type="button"
         onClick={activate}

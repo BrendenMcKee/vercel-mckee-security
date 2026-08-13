@@ -1,4 +1,5 @@
 import { getAuthContext } from "@/lib/portal/auth";
+import { AuthFrame } from "@/components/portal/auth-frame";
 import { SignIn } from "@/components/portal/sign-in";
 import { OrphanAccount } from "@/components/portal/orphan-account";
 import { PasswordSetup } from "@/components/portal/password-setup";
@@ -30,6 +31,25 @@ export default async function UserDashboardLayout({
 
   if (profile.status === "disabled") {
     return <OrphanAccount email={user.email} />;
+  }
+
+  if (profile.role === "admin") {
+    return (
+      <AuthFrame
+        variant="admin"
+        eyebrow="McKee Security Staff Console"
+        heading="You are an administrator"
+        description="This is the client portal. Staff accounts do not have client services here. Sign in on the admin side to manage the business."
+        footer={<SignOutButton />}
+      >
+        <a
+          href="/admin-dashboard"
+          className="flex w-full cursor-pointer items-center justify-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-lg shadow-amber-500/20 transition-all duration-200 hover:bg-amber-400"
+        >
+          Open the admin dashboard
+        </a>
+      </AuthFrame>
+    );
   }
 
   // Dummy-proofing (stakeholder 2026-07-05): a client who activated via Google

@@ -10,14 +10,31 @@ import {
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
 import {
+  SERVICE_THEME,
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
   isServiceAvailable,
+  serviceChipClass,
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
 import { tierOptionLabel } from "@/lib/portal/billing";
+import {
+  DEVICE_CATEGORIES,
+  DEVICE_CATEGORY_LABELS,
+  DEVICE_PRESETS,
+  type DeviceCategory,
+} from "@/lib/portal/devices";
+import { formatPhone, normalizePhone } from "@/lib/portal/phone";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge } from "@/components/admin-portal/ui";
+
+type DraftContact = { label: string; phone: string; passcode: string };
+type DraftDevice = {
+  label: string;
+  category: DeviceCategory;
+  installedOn: string;
+  lifetimeYears: number;
+};
 
 type InvitationSummary = Pick<
   Tables<"invitations">,
@@ -69,11 +86,12 @@ const SERVICE_CHIP_LABELS: Record<string, string> = {
   voip: "VoIP",
 };
 
-function serviceChips(services: Tables<"services">[]): string[] {
-  return services.map(
-    (s) =>
-      `${SERVICE_CHIP_LABELS[s.service_type] ?? s.service_type} · ${tierLabel(s.tier)}${s.status !== "active" ? ` (${s.status})` : ""}`,
-  );
+function serviceChips(services: Tables<"services">[]): { key: string; label: string; type: string }[] {
+  return services.map((s) => ({
+    key: s.id,
+    type: s.service_type,
+    label: `${SERVICE_CHIP_LABELS[s.service_type] ?? s.service_type} · ${tierLabel(s.tier)}${s.status !== "active" ? ` (${s.status})` : ""}`,
+  }));
 }
 
 function compare(a: AdminClientRow, b: AdminClientRow, key: SortKey): number {
@@ -100,6 +118,15 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
   const [page, setPage] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateClientInput>(EMPTY_FORM);
+  const [draftContacts, setDraftContacts] = useState<DraftContact[]>([]);
+  const [contactDraft, setContactDraft] = useState<DraftContact>({ label: "", phone: "", passcode: "" });
+  const [draftDevices, setDraftDevices] = useState<DraftDevice[]>([]);
+  const [deviceDraft, setDeviceDraft] = useState({
+    label: "",
+    category: "other" as DeviceCategory,
+    installedOn: "",
+    years: "5",
+  });
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string; link?: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [resendingId, setResendingId] = useState<string | null>(null);
@@ -165,33 +192,144 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
 
   function set<K extends keyof CreateClientInput>(key: K, value: CreateClientInput[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+    if (key === "monitoringTier" && !value) {
+      setDraftContacts([]);
+      setContactDraft({ label: "", phone: "", passcode: "" });
+      setDraftDevices([]);
+      setDeviceDraft({ label: "", category: "other", installedOn: "", years: "5" });
+    }
+  }
+
+  function resetCreateForm() {
+    setForm(EMPTY_FORM);
+    setDraftContacts([]);
+    setContactDraft({ label: "", phone: "", passcode: "" });
+    setDraftDevices([]);
+    setDeviceDraft({ label: "", category: "other", installedOn: "", years: "5" });
+  }
+
+  function addDraftContact() {
+    const label = contactDraft.label.trim();
+    const passcode = contactDraft.passcode.trim();
+    const phone = normalizePhone(contactDraft.phone);
+    if (!label || !passcode || !phone) {
+      setNotice({
+        kind: "error",
+        text: "Each alarm contact needs a name, a valid phone number, and their passcode.",
+      });
+      return;
+    }
+    if (draftContacts.length >= 15) {
+      setNotice({ kind: "error", text: "The alarm contact list is capped at 15 people." });
+      return;
+    }
+    if (draftContacts.some((c) => c.phone === phone)) {
+      setNotice({ kind: "error", text: "That phone number is already on this list." });
+      return;
+    }
+    setDraftContacts((prev) => [...prev, { label, phone, passcode }]);
+    setContactDraft({ label: "", phone: "", passcode: "" });
+    setNotice(null);
+  }
+
+  function addDraftDevice() {
+    const label = deviceDraft.label.trim();
+    const lifetimeYears = Number.parseInt(deviceDraft.years, 10);
+    if (!label || !deviceDraft.installedOn || !Number.isFinite(lifetimeYears) || lifetimeYears < 1) {
+      setNotice({
+        kind: "error",
+        text: "Give the device a name, an install date, and how many years until replacement.",
+      });
+      return;
+    }
+    setDraftDevices((prev) => [
+      ...prev,
+      { label, category: deviceDraft.category, installedOn: deviceDraft.installedOn, lifetimeYears },
+    ]);
+    setDeviceDraft({ label: "", category: "other", installedOn: "", years: "5" });
+    setNotice(null);
   }
 
   function submitCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
+
+    let contacts = draftContacts;
+    const pendingLabel = contactDraft.label.trim();
+    const pendingPasscode = contactDraft.passcode.trim();
+    const pendingPhone = normalizePhone(contactDraft.phone);
+    if (form.monitoringTier && (pendingLabel || pendingPasscode || contactDraft.phone.trim())) {
+      if (!pendingLabel || !pendingPasscode || !pendingPhone) {
+        setNotice({
+          kind: "error",
+          text: "Finish the alarm contact (name, phone, and passcode) or clear those fields before creating the client.",
+        });
+        return;
+      }
+      if (contacts.some((c) => c.phone === pendingPhone)) {
+        setNotice({ kind: "error", text: "That phone number is already on this list." });
+        return;
+      }
+      if (contacts.length >= 15) {
+        setNotice({ kind: "error", text: "The alarm contact list is capped at 15 people." });
+        return;
+      }
+      contacts = [...contacts, { label: pendingLabel, phone: pendingPhone, passcode: pendingPasscode }];
+    }
+
+    let devices = draftDevices;
+    if (
+      form.monitoringTier &&
+      (deviceDraft.label.trim() || deviceDraft.installedOn)
+    ) {
+      const lifetimeYears = Number.parseInt(deviceDraft.years, 10);
+      if (!deviceDraft.label.trim() || !deviceDraft.installedOn || !Number.isFinite(lifetimeYears) || lifetimeYears < 1) {
+        setNotice({
+          kind: "error",
+          text: "Finish the device (name, install date, and years) or clear those fields before creating the client.",
+        });
+        return;
+      }
+      devices = [
+        ...devices,
+        {
+          label: deviceDraft.label.trim(),
+          category: deviceDraft.category,
+          installedOn: deviceDraft.installedOn,
+          lifetimeYears,
+        },
+      ];
+    }
+
     startTransition(async () => {
-      const result = await createClientAction(form);
+      const result = await createClientAction(form, {
+        contacts: form.monitoringTier ? contacts : [],
+        devices: form.monitoringTier ? devices : [],
+      });
       if (!result.ok) {
         setNotice({ kind: "error", text: result.error });
         return;
       }
-      setForm(EMPTY_FORM);
+      resetCreateForm();
       setShowForm(false);
+      const seedNote = result.warning ? ` ${result.warning}` : "";
       if (!result.emailAttempted) {
         setNotice({
           kind: "ok",
-          text: "Client created. There is no email on file, so copy the activation link and deliver it yourself:",
+          text: `Client created. There is no email on file, so copy the activation link and deliver it yourself:${seedNote}`,
           link: result.activateUrl,
         });
       } else if (!result.emailSent) {
         setNotice({
           kind: "error",
-          text: "Client created, but the invitation email failed to send. Copy the link and deliver it yourself:",
+          text: `Client created, but the invitation email failed to send. Copy the link and deliver it yourself:${seedNote}`,
           link: result.activateUrl,
         });
       } else {
-        setNotice({ kind: "ok", text: "Client created and invitation email sent." });
+        setNotice({
+          kind: result.warning ? "error" : "ok",
+          text: `Client created and invitation email sent.${seedNote}`,
+        });
       }
     });
   }
@@ -424,7 +562,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               from their detail page.
             </p>
             <div className="grid gap-3 lg:grid-cols-3">
-              <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className={`space-y-3 rounded-xl border bg-black/20 p-4 ${SERVICE_THEME.monitoring.card}`}>
                 <p className="text-sm font-bold text-white">
                   {SERVICE_TYPE_LABELS.monitoring}
                 </p>
@@ -448,7 +586,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 </label>
               </div>
 
-              <div className="space-y-3 rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className={`space-y-3 rounded-xl border bg-black/20 p-4 ${SERVICE_THEME.voip.card}`}>
                 <p className="text-sm font-bold text-white">{SERVICE_TYPE_LABELS.voip}</p>
                 <p className="text-xs text-white/40">
                   Monthly rate per line, always billed monthly.
@@ -534,6 +672,179 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             </div>
           </fieldset>
 
+          {form.monitoringTier && (
+            <>
+              <fieldset className="space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+                <legend className="px-1 text-xs font-bold uppercase tracking-widest text-red-200">
+                  Alarm contact list
+                </legend>
+                <p className="text-xs text-white/45">
+                  Optional now. Add the people the monitoring station should call. You can finish this later on the client page.
+                </p>
+                {draftContacts.length > 0 && (
+                  <ul className="space-y-2">
+                    {draftContacts.map((contact) => (
+                      <li
+                        key={contact.phone}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-background px-3 py-2 text-sm"
+                      >
+                        <span className="text-white">
+                          {contact.label}{" "}
+                          <span className="text-white/50">{formatPhone(contact.phone)}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setDraftContacts((prev) => prev.filter((c) => c.phone !== contact.phone))}
+                          className="cursor-pointer text-xs font-bold uppercase tracking-wide text-white/50 hover:text-white"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                    Name / relation
+                    <input
+                      value={contactDraft.label}
+                      onChange={(e) => setContactDraft((prev) => ({ ...prev, label: e.target.value }))}
+                      placeholder="e.g. Sarah (daughter)"
+                      className={adminInputClass}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                    Phone number
+                    <input
+                      value={contactDraft.phone}
+                      onChange={(e) => setContactDraft((prev) => ({ ...prev, phone: e.target.value }))}
+                      placeholder="(705) 555-0123"
+                      className={adminInputClass}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                    Passcode
+                    <input
+                      value={contactDraft.passcode}
+                      onChange={(e) => setContactDraft((prev) => ({ ...prev, passcode: e.target.value }))}
+                      placeholder="Their verification word"
+                      className={adminInputClass}
+                    />
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={addDraftContact}
+                  className="cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 hover:bg-white/10"
+                >
+                  Add contact
+                </button>
+              </fieldset>
+
+              <fieldset className="space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+                <legend className="px-1 text-xs font-bold uppercase tracking-widest text-red-200">
+                  Devices
+                </legend>
+                <p className="text-xs text-white/45">
+                  Optional now. Track batteries, detectors, and wireless devices so replacement reminders start on day one.
+                </p>
+                {draftDevices.length > 0 && (
+                  <ul className="space-y-2">
+                    {draftDevices.map((device, index) => (
+                      <li
+                        key={`${device.label}-${index}`}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-background px-3 py-2 text-sm"
+                      >
+                        <span className="text-white">
+                          {device.label}{" "}
+                          <span className="text-white/50">
+                            · {DEVICE_CATEGORY_LABELS[device.category]} · installed {device.installedOn}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setDraftDevices((prev) => prev.filter((_, i) => i !== index))}
+                          className="cursor-pointer text-xs font-bold uppercase tracking-wide text-white/50 hover:text-white"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                    Device name
+                    <input
+                      list="create-device-suggestions"
+                      value={deviceDraft.label}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const preset = DEVICE_PRESETS.find((p) => p.label === value);
+                        setDeviceDraft((prev) => ({
+                          ...prev,
+                          label: value,
+                          category: preset?.category ?? prev.category,
+                          years: preset ? String(preset.years) : prev.years,
+                        }));
+                      }}
+                      placeholder="e.g. 7Ah Security System Battery"
+                      className={adminInputClass}
+                    />
+                    <datalist id="create-device-suggestions">
+                      {DEVICE_PRESETS.map((preset) => (
+                        <option key={preset.label} value={preset.label} />
+                      ))}
+                    </datalist>
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                    Category
+                    <select
+                      value={deviceDraft.category}
+                      onChange={(e) =>
+                        setDeviceDraft((prev) => ({ ...prev, category: e.target.value as DeviceCategory }))
+                      }
+                      className={selectClass}
+                    >
+                      {DEVICE_CATEGORIES.map((value) => (
+                        <option key={value} value={value}>
+                          {DEVICE_CATEGORY_LABELS[value]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                    Installed on
+                    <input
+                      type="date"
+                      value={deviceDraft.installedOn}
+                      onChange={(e) => setDeviceDraft((prev) => ({ ...prev, installedOn: e.target.value }))}
+                      className={adminInputClass}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                    Replace every (years)
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={deviceDraft.years}
+                      onChange={(e) => setDeviceDraft((prev) => ({ ...prev, years: e.target.value }))}
+                      className={adminInputClass}
+                    />
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={addDraftDevice}
+                  className="cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 hover:bg-white/10"
+                >
+                  Add device
+                </button>
+              </fieldset>
+            </>
+          )}
+
           <fieldset className="space-y-3">
             <legend className="text-xs font-bold uppercase tracking-widest text-white/40">
               Billing
@@ -605,10 +916,10 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {serviceChips(client.services).map((chip) => (
                     <span
-                      key={chip}
-                      className="rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs text-white/70"
+                      key={chip.key}
+                      className={`rounded-full border px-2.5 py-0.5 text-xs ${serviceChipClass(chip.type)}`}
                     >
-                      {chip}
+                      {chip.label}
                     </span>
                   ))}
                 </div>
@@ -716,10 +1027,10 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                       <div className="flex flex-wrap gap-1.5">
                         {serviceChips(client.services).map((chip) => (
                           <span
-                            key={chip}
-                            className="rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-xs text-white/70"
+                            key={chip.key}
+                            className={`rounded-full border px-2.5 py-0.5 text-xs ${serviceChipClass(chip.type)}`}
                           >
-                            {chip}
+                            {chip.label}
                           </span>
                         ))}
                       </div>

@@ -81,7 +81,7 @@ export async function sendInvitationEmail({
   expiresAt: string;
 }): Promise<boolean> {
   const meta = {
-    title: "Your McKee Security Portal Is Ready",
+    title: "Your portal is ready",
     inboxLabel: "A simpler way to manage your account",
   };
 

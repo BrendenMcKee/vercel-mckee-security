@@ -28,7 +28,7 @@ export function ResetLinkRequest() {
 
   if (sent) {
     return (
-      <p className="mt-6 max-w-sm text-center text-sm leading-relaxed text-white/65">
+      <p className="text-sm leading-relaxed text-white/65">
         If an account exists for <span className="font-bold text-white">{email}</span>,
         a new reset link is on its way. The link expires after one hour.
       </p>
@@ -38,7 +38,7 @@ export function ResetLinkRequest() {
   return (
     <form
       onSubmit={submit}
-      className="mt-6 flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-surface p-6"
+      className="flex w-full flex-col gap-4"
     >
       <label className="flex flex-col gap-1.5 text-sm text-white/80">
         Email

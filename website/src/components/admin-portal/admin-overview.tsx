@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import {
+  SERVICE_THEME,
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
   tierLabel,
@@ -8,13 +10,72 @@ import {
 } from "@/lib/portal/service-labels";
 
 type FeedItem = { at: string; text: string; href?: string };
+type KpiTone = "neutral" | "good" | "watch" | "alert";
 
-function KpiCard({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
+const TONE_STYLES: Record<KpiTone, { card: string; value: string; icon: string }> = {
+  neutral: {
+    card: "border-white/10 bg-surface",
+    value: "text-white",
+    icon: "bg-white/10 text-white/70",
+  },
+  good: {
+    card: "border-emerald-500/25 bg-emerald-500/10",
+    value: "text-emerald-100",
+    icon: "bg-emerald-500/15 text-emerald-300",
+  },
+  watch: {
+    card: "border-amber-500/30 bg-amber-500/10",
+    value: "text-amber-100",
+    icon: "bg-amber-500/15 text-amber-300",
+  },
+  alert: {
+    card: "border-red-500/30 bg-red-500/10",
+    value: "text-red-100",
+    icon: "bg-red-500/15 text-red-300",
+  },
+};
+
+function KpiIcon({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-5">
-      <p className="text-xs uppercase tracking-widest text-white/40">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-white sm:text-3xl">{value}</p>
-      {sub && <p className="mt-1 text-xs text-white/40">{sub}</p>}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-5 w-5" aria-hidden>
+      {children}
+    </svg>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  sub,
+  tone = "neutral",
+  icon,
+}: {
+  label: string;
+  value: number | string;
+  sub?: string;
+  tone?: KpiTone;
+  icon: ReactNode;
+}) {
+  const styles = TONE_STYLES[tone];
+  return (
+    <div className={`rounded-2xl border p-4 sm:p-5 ${styles.card}`}>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[13px] font-bold uppercase tracking-wide text-white/70">{label}</p>
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}>
+          {icon}
+        </span>
+      </div>
+      <p className={`mt-3 text-3xl font-bold tracking-tight sm:text-4xl ${styles.value}`}>{value}</p>
+      {sub && <p className="mt-1.5 text-xs leading-relaxed text-white/45">{sub}</p>}
+    </div>
+  );
+}
+
+function SectionHeading({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="mb-3">
+      <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-white/55">{title}</h2>
+      {hint && <p className="mt-1 text-xs text-white/35">{hint}</p>}
     </div>
   );
 }
@@ -112,52 +173,130 @@ export async function AdminOverview() {
     .slice(0, 10);
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <KpiCard label="Active clients" value={activeClients} />
-        <KpiCard label="Pending activations" value={pendingActivations} sub="Invited, not yet activated" />
-        <KpiCard label="Unpaid services" value={unpaidServices} sub="Assigned, awaiting payment" />
-        <KpiCard label="Disabled accounts" value={disabledClients} />
-      </div>
+    <div className="space-y-8 sm:space-y-10">
+      <section>
+        <SectionHeading title="Clients" hint="Who is on the books right now" />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+          <KpiCard
+            label="Active clients"
+            value={activeClients}
+            tone={activeClients > 0 ? "good" : "neutral"}
+            icon={
+              <KpiIcon>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+              </KpiIcon>
+            }
+          />
+          <KpiCard
+            label="Pending activations"
+            value={pendingActivations}
+            sub="Invited, not yet signed in"
+            tone={pendingActivations > 0 ? "watch" : "good"}
+            icon={
+              <KpiIcon>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 2M12 22a10 10 0 110-20 10 10 0 010 20z" />
+              </KpiIcon>
+            }
+          />
+          <KpiCard
+            label="Disabled accounts"
+            value={disabledClients}
+            tone={disabledClients > 0 ? "watch" : "neutral"}
+            icon={
+              <KpiIcon>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636A9 9 0 105.636 18.364M6 6l12 12" />
+              </KpiIcon>
+            }
+          />
+        </div>
+      </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-        <KpiCard
-          label="Booked monthly revenue"
-          value={dollars(autopayCents + manualCents)}
-          sub="Across all active services with a rate set"
-        />
-        <KpiCard
-          label="Card vs direct payers"
-          value={`${dollars(autopayCents)} / ${dollars(manualCents)}`}
-          sub="Automatic card payments vs e-Transfer/cheque/cash"
-        />
-        <KpiCard
-          label="Overdue payments to collect"
-          value={overdueManual}
-          sub="Direct payers past their due date. See the Billing tab"
-        />
-        <KpiCard
-          label="Failed card payments"
-          value={failedPayments30d}
-          sub="Last 30 days"
-        />
-      </div>
+      <section>
+        <SectionHeading title="Billing" hint="What is booked each month" />
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+          <KpiCard
+            label="Booked monthly revenue"
+            value={dollars(autopayCents + manualCents)}
+            sub="Across all active services with a rate set"
+            tone="neutral"
+            icon={
+              <KpiIcon>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+              </KpiIcon>
+            }
+          />
+          <KpiCard
+            label="Card vs direct payers"
+            value={`${dollars(autopayCents)} / ${dollars(manualCents)}`}
+            sub="Automatic card payments vs e-Transfer, cheque, or cash"
+            tone="neutral"
+            icon={
+              <KpiIcon>
+                <rect x="2.75" y="5.25" width="18.5" height="13.5" rx="2.5" />
+                <path strokeLinecap="round" d="M2.75 9.75h18.5M6.25 14.75h4" />
+              </KpiIcon>
+            }
+          />
+        </div>
+      </section>
+
+      <section>
+        <SectionHeading title="Needs attention" hint="Items that should be handled this week" />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+          <KpiCard
+            label="Unpaid services"
+            value={unpaidServices}
+            sub="Assigned, awaiting first payment"
+            tone={unpaidServices > 0 ? "watch" : "good"}
+            icon={
+              <KpiIcon>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4M12 16h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </KpiIcon>
+            }
+          />
+          <KpiCard
+            label="Overdue to collect"
+            value={overdueManual}
+            sub="Direct payers past their due date"
+            tone={overdueManual > 0 ? "alert" : "good"}
+            icon={
+              <KpiIcon>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 2M4.93 19.07A10 10 0 1119.07 4.93 10 10 0 014.93 19.07z" />
+              </KpiIcon>
+            }
+          />
+          <KpiCard
+            label="Failed card payments"
+            value={failedPayments30d}
+            sub="Last 30 days"
+            tone={failedPayments30d > 0 ? "alert" : "good"}
+            icon={
+              <KpiIcon>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </KpiIcon>
+            }
+          />
+        </div>
+      </section>
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
-          <h2 className="text-lg font-bold text-white">Services by tier</h2>
+          <h2 className="text-lg font-bold text-white">Services by plan</h2>
           <p className="mt-1 text-xs text-white/40">Cancelled services excluded.</p>
           <div className="mt-4 space-y-5">
             {(Object.keys(SERVICE_TIERS) as ServiceType[]).map((type) => (
               <div key={type}>
-                <p className="text-sm font-bold text-white/80">{SERVICE_TYPE_LABELS[type]}</p>
+                <p className="flex items-center gap-2 text-sm font-bold text-white">
+                  <span className={`h-2.5 w-2.5 rounded-full ${SERVICE_THEME[type].dot}`} />
+                  {SERVICE_TYPE_LABELS[type]}
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {SERVICE_TIERS[type].map((tier) => (
                     <span
                       key={tier}
-                      className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70"
+                      className={`rounded-full border px-3 py-1 text-xs ${SERVICE_THEME[type].chip}`}
                     >
-                      {tierLabel(tier)}: <span className="font-bold text-white">{tierCounts.get(`${type}:${tier}`) ?? 0}</span>
+                      {tierLabel(tier)}: <span className="font-bold">{tierCounts.get(`${type}:${tier}`) ?? 0}</span>
                     </span>
                   ))}
                 </div>

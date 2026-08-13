@@ -3,6 +3,7 @@ import { getAuthContext } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import {
   SERVICE_TYPE_LABELS,
+  hasCurrentMonitoring,
   tierLabel,
 } from "@/lib/portal/service-labels";
 import {
@@ -59,7 +60,7 @@ export default async function UserDashboardPage({
   // reach this code even though the layout shows SignIn instead. Render
   // nothing in every state the layout gates away.
   const { user, profile } = await getAuthContext();
-  if (!user || !profile || profile.status === "disabled") return null;
+  if (!user || !profile || profile.status === "disabled" || profile.role === "admin") return null;
 
   const { payment } = await searchParams;
 
@@ -129,6 +130,9 @@ export default async function UserDashboardPage({
   const monitoring = services.find((s) => s.service_type === "monitoring");
   const cloud = services.find((s) => s.service_type === "cloud_backup");
   const voip = services.find((s) => s.service_type === "voip");
+  const showCallerId = hasCurrentMonitoring(services) || contactsResult.data.length > 0;
+  const showDevices = hasCurrentMonitoring(services) || devicesResult.data.length > 0;
+  const missingCallerId = hasCurrentMonitoring(services) && contactsResult.data.length === 0;
   const unpaidServices = services.filter((s) => s.status === "unpaid");
   const serviceTypeById = new Map(services.map((s) => [s.id, s.service_type]));
 
@@ -221,6 +225,25 @@ export default async function UserDashboardPage({
         </div>
       ))}
 
+      {missingCallerId && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6">
+          <h2 className="text-lg font-bold text-amber-100">
+            Alarm contact list needed
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-amber-200/90">
+            Your monitoring plan is on this account, but the monitoring station
+            does not have anyone to call yet. Add at least one person with their
+            passcode.
+          </p>
+          <a
+            href="#alarm-contact-list"
+            className="mt-4 inline-flex cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
+          >
+            Add contacts
+          </a>
+        </div>
+      )}
+
       {cardSetupNeeded.map((service) => (
         <div
           key={service.id}
@@ -246,6 +269,7 @@ export default async function UserDashboardPage({
       {monitoring && (
         <PortalCard
           icon="shield"
+          tone="monitoring"
           title={SERVICE_TYPE_LABELS.monitoring}
           description="Your alarm monitoring plan"
           action={<ServiceStatusBadge status={monitoring.status} />}
@@ -283,6 +307,7 @@ export default async function UserDashboardPage({
       {voip && (
         <PortalCard
           icon="voip"
+          tone="voip"
           title={SERVICE_TYPE_LABELS.voip}
           description="Your phone service plan"
           action={<ServiceStatusBadge status={voip.status} />}
@@ -320,6 +345,7 @@ export default async function UserDashboardPage({
       {cloud && (
         <PortalCard
           icon="cloud"
+          tone="cloud_backup"
           title={SERVICE_TYPE_LABELS.cloud_backup}
           description="Camera footage stored securely off-site"
           action={<ServiceStatusBadge status={cloud.status} />}
@@ -344,6 +370,7 @@ export default async function UserDashboardPage({
       {billableServices.length > 0 && (
         <PortalCard
           icon="card"
+          tone="billing"
           title={<>Billing &amp; Payments</>}
           description="What you pay, when it comes out, and every payment you have made"
         >
@@ -435,9 +462,11 @@ export default async function UserDashboardPage({
         </PortalCard>
       )}
 
-      {monitoring && (
+      {showCallerId && (
         <PortalCard
+          id="alarm-contact-list"
           icon="phone"
+          tone="monitoring"
           title="Alarm Contact List (Caller ID)"
           description="Who the monitoring station calls when your alarm goes off"
         >
@@ -455,9 +484,10 @@ export default async function UserDashboardPage({
         </PortalCard>
       )}
 
-      {devicesResult.data.length > 0 && (
+      {showDevices && devicesResult.data.length > 0 && (
         <PortalCard
           icon="wrench"
+          tone="monitoring"
           title="Equipment Maintenance"
           description="Install dates and upcoming replacements for your system's hardware"
         >
@@ -493,45 +523,82 @@ export default async function UserDashboardPage({
         </PortalCard>
       )}
 
-      {!monitoring && (
-        <PortalCard
-          icon="shield"
-          title={SERVICE_TYPE_LABELS.monitoring}
-          description="24/7 alarm monitoring from McKee Security"
-        >
-          <p className="border-t border-white/10 pt-5 text-sm leading-relaxed text-white/65">
-            No monitoring service is connected to this account. If you would
-            like to protect your property with professional alarm monitoring,
-            call{" "}
-            <a
-              href="tel:+17054572156"
-              className="whitespace-nowrap font-bold text-white hover:text-primary"
-            >
-              (705) 457-2156
-            </a>
-            .
-          </p>
-        </PortalCard>
-      )}
-
-      {!cloud && (
-        <PortalCard
-          icon="cloud"
-          title={SERVICE_TYPE_LABELS.cloud_backup}
-          description="Future off-site protection for your IP-camera footage"
-        >
-          <div className="space-y-4 border-t border-white/10 pt-5">
-            <p className="max-w-3xl text-sm leading-relaxed text-white/65">
-              Camera Cloud Backup will keep a secure off-site copy of your
-              IP-camera footage, helping protect it if the recorder is damaged,
-              stolen, or fails. The service is still being prepared.
+      {(!monitoring || !voip || !cloud) && (
+        <div className="space-y-3 pt-4">
+          <div className="border-t border-dashed border-white/10 pt-6">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">
+              Other McKee services
             </p>
-            <CloudBackupInterest
-              initiallyInterested={cloudInterestResult.data != null}
-              email={profile.email}
-            />
+            <p className="mt-1 text-sm text-white/40">
+              These are not on your account. Call the office if you would like to add one.
+            </p>
           </div>
-        </PortalCard>
+
+          {!monitoring && (
+            <PortalCard
+              icon="shield"
+              tone="muted"
+              title={SERVICE_TYPE_LABELS.monitoring}
+              description="Not on this account"
+            >
+              <p className="border-t border-white/10 pt-4 text-sm leading-relaxed text-white/45">
+                No monitoring service is connected to this account. If you would
+                like to protect your property with professional alarm monitoring,
+                call{" "}
+                <a
+                  href="tel:+17054572156"
+                  className="whitespace-nowrap font-bold text-white/70 hover:text-white"
+                >
+                  (705) 457-2156
+                </a>
+                .
+              </p>
+            </PortalCard>
+          )}
+
+          {!voip && (
+            <PortalCard
+              icon="voip"
+              tone="muted"
+              title={SERVICE_TYPE_LABELS.voip}
+              description="Not on this account"
+            >
+              <p className="border-t border-white/10 pt-4 text-sm leading-relaxed text-white/45">
+                No VoIP phone service is connected to this account. If you would
+                like professional phone service for your home or business, call{" "}
+                <a
+                  href="tel:+17054572156"
+                  className="whitespace-nowrap font-bold text-white/70 hover:text-white"
+                >
+                  (705) 457-2156
+                </a>
+                .
+              </p>
+            </PortalCard>
+          )}
+
+          {!cloud && (
+            <PortalCard
+              icon="cloud"
+              tone="muted"
+              title={SERVICE_TYPE_LABELS.cloud_backup}
+              description="Not on this account yet"
+            >
+              <div className="space-y-4 border-t border-white/10 pt-4">
+                <p className="max-w-3xl text-sm leading-relaxed text-white/45">
+                  Camera Cloud Backup will keep a secure off-site copy of your
+                  IP-camera footage if the recorder is damaged, stolen, or fails.
+                  The service is still being prepared.
+                </p>
+                <CloudBackupInterest
+                  initiallyInterested={cloudInterestResult.data != null}
+                  email={profile.email}
+                  quiet
+                />
+              </div>
+            </PortalCard>
+          )}
+        </div>
       )}
     </div>
   );

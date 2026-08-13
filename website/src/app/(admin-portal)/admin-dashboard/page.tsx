@@ -58,8 +58,8 @@ export default async function AdminDashboardPage({
     <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-primary">
-            McKee Security Internal
+          <p className="text-sm font-bold uppercase tracking-widest text-amber-300">
+            McKee Security Staff Console
           </p>
           <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
             Admin Dashboard
@@ -83,12 +83,21 @@ export default async function AdminDashboardPage({
             }`}
             aria-current={activeTab === t.id ? "page" : undefined}
           >
-            {t.label}
-            {t.id === "alerts" && (openAlerts ?? 0) > 0 && (
-              <span className="ml-1.5 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-300">
-                {openAlerts}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-2">
+              {t.label}
+              {t.id === "alerts" && (
+                <span
+                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+                    (openAlerts ?? 0) > 0
+                      ? "bg-red-500 text-white"
+                      : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40"
+                  }`}
+                  aria-label={`${openAlerts ?? 0} open alerts`}
+                >
+                  {openAlerts ?? 0}
+                </span>
+              )}
+            </span>
           </Link>
         ))}
       </nav>
