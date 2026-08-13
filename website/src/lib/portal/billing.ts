@@ -199,13 +199,18 @@ export function addMonths(isoDate: string, months: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** Interac e-Transfer recipient (D11). */
+export const ETRANSFER_EMAIL = "dennis@mckeesecurity.ca";
+export const PAYMENT_PHONE = "(705) 457-2156";
+export const PAYMENT_PHONE_TEL = "+17054572156";
+
 /**
- * D11 default copy (pending stakeholder confirmation): how legacy-rail
- * clients pay. Used verbatim in the dashboard banner and reminder emails.
+ * D11 default copy: how legacy-rail clients pay. Used in reminder emails.
+ * The dashboard renders the same facts as structured rows, not this sentence.
  */
 export const PAYMENT_INSTRUCTIONS =
-  "Send an Interac e-Transfer for the exact amount shown (includes HST) to dennis@mckeesecurity.ca with your name in the message, " +
-  "or call (705) 457-2156 to arrange payment by cheque or cash.";
+  `Send an Interac e-Transfer for the exact amount shown (includes HST) to ${ETRANSFER_EMAIL} with your name in the message, ` +
+  `or call ${PAYMENT_PHONE} to arrange payment by cheque or cash.`;
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   etransfer: "e-Transfer",

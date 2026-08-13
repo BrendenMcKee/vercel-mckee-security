@@ -8,11 +8,9 @@ import {
   tierLabel,
 } from "@/lib/portal/service-labels";
 import {
-  PAYMENT_INSTRUCTIONS,
   PAYMENT_METHOD_LABELS,
   formatCents,
   intervalMonths,
-  invoicePreTaxCents,
   invoiceSendCents,
   voipCoverageLabel,
   voipUnchargedPorts,
@@ -22,6 +20,7 @@ import { deviceCategoryLabel, deviceExpiryDate, isDeviceExpired } from "@/lib/po
 import { ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor } from "@/components/portal/caller-id-editor";
 import { ManageBillingButton } from "@/components/portal/manage-billing-button";
+import { ManualPaymentBanner, ServiceRateLine } from "@/components/portal/manual-payment-notice";
 import { PaymentSetupBanner } from "@/components/portal/payment-setup-banner";
 import { PortalCard } from "@/components/portal/portal-card";
 import { CloudBackupInterest } from "@/components/portal/cloud-backup-interest";
@@ -281,27 +280,14 @@ export default async function UserDashboardPage({
       {unpaidServices
         .filter((service) => service.billing_method === "manual")
         .map((service) => (
-        <div
-          key={service.id}
-          className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6"
-        >
-          <h2 className="text-lg font-bold text-amber-100">
-            Payment needed: {SERVICE_TYPE_LABELS[service.service_type]}
-          </h2>
-            <div className="mt-3 space-y-2 text-sm leading-relaxed text-amber-200/90">
-              <p>
-                {service.monthly_amount_cents
-                  ? `Send exactly ${formatCents(invoiceSendCents(service.monthly_amount_cents, service.billing_interval))} (includes 13% HST)${service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""}. That is ${formatCents(invoicePreTaxCents(service.monthly_amount_cents, service.billing_interval))} before tax${
-                      service.billing_interval === "annual"
-                        ? ` (${formatCents(service.monthly_amount_cents)}/month, invoiced annually)`
-                        : " per month"
-                    }.`
-                  : "A payment is due on this service."}
-              </p>
-              <p>{PAYMENT_INSTRUCTIONS}</p>
-            </div>
-        </div>
-      ))}
+          <ManualPaymentBanner
+            key={service.id}
+            serviceLabel={SERVICE_TYPE_LABELS[service.service_type]}
+            monthlyCents={service.monthly_amount_cents}
+            interval={service.billing_interval}
+            dueOn={service.next_due_on}
+          />
+        ))}
 
       <PaymentSetupBanner
         services={stripePayables}
@@ -343,30 +329,11 @@ export default async function UserDashboardPage({
                 {tierLabel(monitoring.tier)}
               </p>
               {monitoring.monthly_amount_cents != null && (
-                <p className="mt-2 text-[15px] text-white/55">
-                  {monitoring.billing_method === "manual" ? (
-                    <>
-                      <span className="font-semibold text-white/80">
-                        {formatCents(monitoring.monthly_amount_cents)}
-                      </span>
-                      /month before tax, invoiced annually. Send{" "}
-                      <span className="font-semibold text-white/80">
-                        {formatCents(
-                          invoiceSendCents(monitoring.monthly_amount_cents, monitoring.billing_interval),
-                        )}
-                      </span>{" "}
-                      (includes 13% HST)
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-semibold text-white/80">
-                        {formatCents(monitoring.monthly_amount_cents)}
-                      </span>
-                      /month plus HST
-                      {monitoring.billing_interval === "annual" && ", invoiced annually"}
-                    </>
-                  )}
-                </p>
+                <ServiceRateLine
+                  monthlyCents={monitoring.monthly_amount_cents}
+                  interval={monitoring.billing_interval}
+                  billingMethod={monitoring.billing_method}
+                />
               )}
             </div>
             <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
@@ -399,38 +366,16 @@ export default async function UserDashboardPage({
                 {tierLabel(voip.tier)}
               </p>
               {voip.monthly_amount_cents != null && (
-                <p className="mt-2 text-[15px] text-white/55">
-                  {voip.billing_method === "manual" ? (
-                    <>
-                      <span className="font-semibold text-white/80">
-                        {formatCents(voip.monthly_amount_cents)}
-                      </span>
-                      /month before tax
-                      {` for ${voipCoverageLabel({
-                        tier: voip.tier,
-                        numberCount: voip.number_count,
-                        seatCount: voip.seat_count,
-                      })}`}
-                      . Send{" "}
-                      <span className="font-semibold text-white/80">
-                        {formatCents(invoiceSendCents(voip.monthly_amount_cents, voip.billing_interval))}
-                      </span>{" "}
-                      (includes 13% HST)
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-semibold text-white/80">
-                        {formatCents(voip.monthly_amount_cents)}
-                      </span>
-                      /month plus HST
-                      {` for ${voipCoverageLabel({
-                        tier: voip.tier,
-                        numberCount: voip.number_count,
-                        seatCount: voip.seat_count,
-                      })}`}
-                    </>
-                  )}
-                </p>
+                <ServiceRateLine
+                  monthlyCents={voip.monthly_amount_cents}
+                  interval={voip.billing_interval}
+                  billingMethod={voip.billing_method}
+                  suffix={` for ${voipCoverageLabel({
+                    tier: voip.tier,
+                    numberCount: voip.number_count,
+                    seatCount: voip.seat_count,
+                  })}`}
+                />
               )}
             </div>
             <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
@@ -511,29 +456,26 @@ export default async function UserDashboardPage({
                     </div>
                     {invoiceCents != null && (
                       <div className="flex items-baseline justify-between gap-4">
-                        <dt className="shrink-0 text-white/45">
-                          {service.billing_method === "manual" ? "Send this amount" : "Amount"}
-                        </dt>
+                        <dt className="shrink-0 text-white/45">Amount</dt>
                         <dd className="text-right tabular-nums text-white/85">
-                          {service.billing_method === "manual" && service.monthly_amount_cents != null ? (
-                            <>
-                              <span className="font-semibold text-white">
-                                {formatCents(
-                                  invoiceSendCents(service.monthly_amount_cents, service.billing_interval),
-                                )}
-                              </span>
-                              <span className="block text-xs font-normal text-white/50">
-                                includes 13% HST. {formatCents(invoiceCents)} before tax
-                                {service.billing_interval === "annual" ? " per year" : " per month"}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="font-semibold text-white">{formatCents(invoiceCents)}</span>
-                              {" "}plus HST
-                              {service.billing_interval === "annual" ? " per year" : " per month"}
-                            </>
-                          )}
+                          <span className="font-semibold text-white">{formatCents(invoiceCents)}</span>
+                          {" "}plus HST
+                          {service.billing_interval === "annual" ? " per year" : " per month"}
+                        </dd>
+                      </div>
+                    )}
+                    {service.billing_method === "manual" && service.monthly_amount_cents != null && (
+                      <div className="flex items-baseline justify-between gap-4">
+                        <dt className="shrink-0 text-white/45">Amount to send</dt>
+                        <dd className="text-right tabular-nums">
+                          <span className="font-semibold text-white">
+                            {formatCents(
+                              invoiceSendCents(service.monthly_amount_cents, service.billing_interval),
+                            )}
+                          </span>
+                          <span className="block text-xs font-normal text-white/50">
+                            includes 13% HST
+                          </span>
                         </dd>
                       </div>
                     )}
@@ -809,27 +751,14 @@ function ClientAlertsPanel({
       {unpaidServices
         .filter((service) => service.billing_method === "manual")
         .map((service) => (
-        <div
-          key={service.id}
-          className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6"
-        >
-          <h2 className="text-lg font-bold text-amber-100">
-            Payment needed: {SERVICE_TYPE_LABELS[service.service_type]}
-          </h2>
-            <div className="mt-3 space-y-2 text-sm leading-relaxed text-amber-200/90">
-              <p>
-                {service.monthly_amount_cents
-                  ? `Send exactly ${formatCents(invoiceSendCents(service.monthly_amount_cents, service.billing_interval))} (includes 13% HST)${service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""}. That is ${formatCents(invoicePreTaxCents(service.monthly_amount_cents, service.billing_interval))} before tax${
-                      service.billing_interval === "annual"
-                        ? ` (${formatCents(service.monthly_amount_cents)}/month, invoiced annually)`
-                        : " per month"
-                    }.`
-                  : "A payment is due on this service."}
-              </p>
-              <p>{PAYMENT_INSTRUCTIONS}</p>
-            </div>
-        </div>
-      ))}
+          <ManualPaymentBanner
+            key={service.id}
+            serviceLabel={SERVICE_TYPE_LABELS[service.service_type]}
+            monthlyCents={service.monthly_amount_cents}
+            interval={service.billing_interval}
+            dueOn={service.next_due_on}
+          />
+        ))}
       <PaymentSetupBanner
         services={stripePayables}
         portFee={outstandingPortFee}
