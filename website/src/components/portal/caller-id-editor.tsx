@@ -188,12 +188,17 @@ export function CallerIdEditor({
   return (
     <div className="space-y-4">
       {contacts.length === 0 ? (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-200">
           No contacts on the list. The monitoring station needs at least one
-          person to call when the alarm goes off.
+          person to call when the alarm goes off. If nobody answers, they
+          dispatch the appropriate authorities.
         </p>
       ) : (
-        <ul className="space-y-2">
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-white/40">
+            Call order
+          </p>
+          <ul className="space-y-2">
           {contacts.map((contact, index) => (
             <li
               key={contact.phone}
@@ -238,49 +243,52 @@ export function CallerIdEditor({
               </button>
             </li>
           ))}
-        </ul>
+          </ul>
+        </div>
       )}
 
-      <div className="grid gap-3 rounded-xl border border-dashed border-white/15 p-4 sm:flex sm:flex-wrap sm:items-end">
-        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[10rem] sm:flex-1">
-          Name / relation
-          <input
-            placeholder="e.g. Sarah (daughter)"
-            maxLength={80}
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[10rem] sm:flex-1">
-          Phone number
-          <input
-            type="tel"
-            placeholder="(705) 555-0123"
-            value={newPhone}
-            onChange={(e) => setNewPhone(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80 sm:min-w-[10rem] sm:flex-1">
-          Passcode
-          <input
-            placeholder="Their verification word"
-            maxLength={40}
-            value={newPasscode}
-            onChange={(e) => setNewPasscode(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={addContact}
-          className="cursor-pointer rounded-xl border border-white/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50"
-        >
-          Add
-        </button>
-        <p className="w-full text-xs text-white/40">
+      <div className="rounded-xl border border-dashed border-white/15 p-4">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+            Name / relation
+            <input
+              placeholder="e.g. Sarah (daughter)"
+              maxLength={80}
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+            Phone number
+            <input
+              type="tel"
+              placeholder="(705) 555-0123"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+            Passcode
+            <input
+              placeholder="Their verification word"
+              maxLength={40}
+              value={newPasscode}
+              onChange={(e) => setNewPasscode(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={addContact}
+            className="cursor-pointer rounded-xl border border-white/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-white/40">
           The passcode is the word this person gives the monitoring station to
           prove who they are when the alarm goes off.
         </p>

@@ -546,15 +546,25 @@ export default async function UserDashboardPage({
           icon="phone"
           tone="monitoring"
           title="Alarm Contact List (Caller ID)"
-          description="Who the monitoring station calls when your alarm goes off"
+          description="Who the monitoring station calls, in order, when your alarm goes off"
         >
           <div className="border-t border-white/10 pt-5">
-            <p className="max-w-3xl text-sm leading-relaxed text-white/55">
-              These are the people the monitoring station calls, in order, when
-              your alarm goes off. Each person has a passcode they give the
-              station to confirm who they are. Add or remove contacts and save.
-              McKee Security is notified automatically and updates the station.
-            </p>
+            <div className="max-w-3xl space-y-3 text-sm leading-relaxed text-white/55">
+              <p>
+                When your alarm goes off, the monitoring station works down this
+                list from #1 to the last person. They call everyone, in that
+                order. Each person has a passcode they give the station to
+                confirm who they are.
+              </p>
+              <p>
+                If no one on the list answers, the station dispatches the
+                appropriate authorities.
+              </p>
+              <p>
+                Add or remove contacts and save. McKee Security is notified
+                automatically and updates the station.
+              </p>
+            </div>
             <div className="mt-5">
               <CallerIdEditor variant="client" initialContacts={contactsResult.data} />
             </div>
