@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-13 (monitoring start dates on import/create, and per-tier monitoring cost before any profitability view)
+**Last updated:** 2026-08-13 (VoIP 3.12 rate card in the portal: one monthly figure per system, not per line; port fee one-time; recurring never in an installation invoice)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -14,7 +14,7 @@ The customer portal handles everything customers and admins touch day to day: ac
 
 ## 2. The pieces, in plain language
 
-**The portal (already built, running on Vercel and Supabase).** Where admins manage clients, tiers, due dates, devices, and payments, and where clients see their account, alarm contact list, and payment history. It sends all the reminder and confirmation emails. As of 2026-07-18 it also carries the **VoIP phone service**: a Residential plan ($34.99/month plus HST) and a Business plan ($59.99/month plus HST), both **priced per line** and both on the same autopay and manual rails as monitoring. VoIP bills monthly (monitoring bills annually), and the portal tracks each customer's number of lines and bills rate times lines automatically, including on the customer's card subscription.
+**The portal (already built, running on Vercel and Supabase).** Where admins manage clients, tiers, due dates, devices, and payments, and where clients see their account, alarm contact list, and payment history. It sends all the reminder and confirmation emails. It also carries the **VoIP phone service** on the same autopay and manual rails as monitoring. VoIP bills monthly (monitoring bills annually). The monthly figure is **one amount per system**, derived from the rate card below, not a per-phone or per-number charge. The client sees one line that names the service and what it covers. Recurring VoIP is never folded into an installation invoice, a project total, a payment threshold, or a payment split.
 
 **QuickBooks Desktop (unchanged).** The official financial record. It keeps working exactly as it does now. The bookkeeper can keep doing anything they do today; the automation works around them, not instead of them.
 
@@ -29,6 +29,41 @@ The customer portal handles everything customers and admins touch day to day: ac
 **The task queue (Phase 8B).** A to-do list in the cloud that is the only way anything gets written into QuickBooks. Every entry says exactly what to do ("record a $419.33 payment from Jane Smith"), carries a fingerprint so the same payment can never be posted twice even if a glitch replays it, and moves through checked states: pending, approved, posted, or needs review. Anything that fails or looks ambiguous parks in "needs review" on the admin Accounting tab with a plain explanation and suggested fixes.
 
 **The AI accounting assistant (Phase 8D, the MCP server).** Once the plumbing above is trusted, staff can ask questions in plain English from Cursor: "who owes us money?", "what did monitoring bring in last quarter?", "draft a collection email for overdue accounts". It answers from the mirrors, so it works even when the office PC is off. It is rolled out in three deliberate stages: read-only questions first, then drafting (drafts post nothing), then payment posting that still requires admin approval in the portal. It can never void, delete, journal, or touch payroll or closed periods. Those operations simply do not exist in its vocabulary.
+
+### How VoIP is billed (the live rate card)
+
+This is how the portal actually prices VoIP today (company knowledge 3.12, locked 2026-08-13). The rate card is how the figure is derived internally. The client document is always **one line** at the total.
+
+| Item | Rate (pre-tax) |
+|---|---|
+| Commercial VoIP Service, base system per month (1 number + 1 user seat) | $59.99 |
+| Residential VoIP Service, base system per month (1 number + 1 user seat) | $34.99 |
+| Each additional number (commercial and residential) | $4.99 |
+| Each additional user seat (commercial only) | $24.99 |
+| Number Port Fee, per number ported (one time, not recurring) | $49.99 |
+
+Residential has no seat add-on at all. The additional-number rate is the same on both plans. Phones and handsets add nothing to the monthly: a DECT base with three handsets on one number is still the base $59.99 (Haliburton Automotive).
+
+**Formula:** monthly pre-tax = base + ($4.99 × extra numbers) + ($24.99 × extra seats). HST at 13% is applied to that sum once, not component by component.
+
+**Worked figures the portal must keep matching:**
+
+| Configuration | Pre-tax | With HST |
+|---|---|---|
+| Residential, 1 number, 1 seat | $34.99 | $39.54 |
+| Commercial, 1 number, 1 seat | $59.99 | $67.79 |
+| Commercial, 2 numbers, 1 seat (Vision Care Centre) | $64.98 | $73.43 |
+| Commercial, 1 number, 3 seats | $109.97 | $124.27 |
+
+**Rules the automation already encodes:**
+
+- One subscription, one line item, quantity 1. The line names the service and states the coverage (number count, seat count) and carries the total. Base and add-ons are never separate lines on a client invoice.
+- Charged once per system. Never per phone, never per number, never per handset.
+- Recurring is fully separate from installation. Monthly service bills on its own invoice on its own cycle. It never appears inside a one-time installation invoice.
+- The port fee is a separate one-time charge (card invoice or a recorded payment). It does not move the next monthly due date and is never mixed into the subscription.
+- Internal cost (BrightPBX, never shown to a client): $5.95 per user seat per month. Number (DID) cost is unconfirmed and treated as $0.00 until BrightPBX answers. There is no per-client floor.
+
+In the portal, Commercial is the display name for the `professional` plan. Stripe catalog prices are the two bases; a system above the base uses one matching monthly price on the same product. The Number Port Fee is its own one-time Stripe price.
 
 ---
 
@@ -76,7 +111,7 @@ Before customers are invited to anything, the portal is seeded from QuickBooks s
 - **A per-customer migration checklist** shows exactly where each imported customer stands: imported, monitoring start date confirmed, alarm contacts entered, devices entered, invited, activated. Whether something is "done or not" is always visible on their page and filterable on the Billing tab; it never depends on anyone's memory.
 - **Invitation date and activation date are not the monitoring start date.** Those two dates only tell us when they were invited to the portal and when they first signed in. A customer who has been monitored for years still needs the original start day on file, so later year-over-year monitoring profitability can look at real history, not just the portal era. The same date is required when you type a customer in by hand.
 
-**VoIP customers are not part of the bulk import.** There are exactly two today (one residential, one commercial on the Business plan), so the import machinery is deliberately not extended to them. You will enter both by hand through the normal create-client form (you chose to do this when Stripe goes live), with their real plan, line count, amount, and next due date, and then link each to their QuickBooks customer record with the same one-click linking screen the monitoring import uses. From that moment their payments flow through every story in Section 3 like anyone else's.
+**VoIP customers are not part of the bulk import.** There are exactly two today (one residential, one commercial), so the import machinery is deliberately not extended to them. You will enter both by hand through the normal create-client form (you chose to do this when Stripe goes live), with their real plan, number count, seat count, any numbers being ported, amount, and next due date, and then link each to their QuickBooks customer record with the same one-click linking screen the monitoring import uses. From that moment their payments flow through every story in Section 3 like anyone else's. A later port-fee payment is a one-time amount and must not be treated as a monthly renewal.
 
 The result: the admin Billing tab shows the entire business's real renewal calendar from day one, before a single customer has touched the portal. Reminders, the collections board, and the books all agree from the start.
 
@@ -121,7 +156,7 @@ Everyone imported starts on the legacy rail (cash, cheque, e-transfer), because 
 
 ## 9. The build order
 
-- **Already done (2026-07-18): VoIP in the portal.** Before any accounting automation is built, the VoIP service was fully implemented on the website and in Stripe, the same way monitoring was. This was deliberate: the accounting rail below is being designed against the complete service catalog, not retrofitted for VoIP later.
+- **Already done (2026-07-18, rate card updated 2026-08-13): VoIP in the portal.** Before any accounting automation is built, the VoIP service was fully implemented on the website and in Stripe, the same way monitoring was. The live model is the 3.12 rate card above (one monthly figure per system, port fee one-time). This was deliberate: the accounting rail below is being designed against the complete service catalog, not retrofitted for VoIP later.
 - **8A: Bridge and mirrors.** Install the bridge, mirror QuickBooks into the cloud (read-only), build the linking and bulk-import screens, run the import. Built and tested against a QuickBooks *sample* company file first; the real books are not touched.
 - **8B: The task queue.** The to-do list, the state machine, the approval screens, the Accounting tab. Still against the sample file.
 - **8C: Payments post to the books.** The bookkeeper mapping session happens (monitoring and VoIP income both mapped), the bridge points at the real company file, both payment rails start posting automatically, history is backfilled, and the reverse sync (QuickBooks to portal) plus the duplicate-entry guard go live. Stripe's switch from test mode to live mode ideally lands here, so the first real card payment posts to the books automatically.
@@ -149,16 +184,16 @@ Audited 2026-08-13 against every stakeholder checkpoint in the `PORTAL_PLAN.md` 
 7. **A few sample to-do entries.** Copy the text of three or four typical device/battery entries from the QuickBooks company to-do list (exact wording and dates). The import parses those notes into draft device records, and real samples are how we make the parser match how they were actually written.
 8. **A review pass on the import itself.** When the import screen is ready, you (or whoever knows the accounts best) spot-check the drafted tiers, amounts, **monitoring start dates** (the inferred first-invoice dates, especially on long-standing accounts), due dates, contacts, and devices before committing. Budget an hour or two; this is the human gate that makes the seeding trustworthy. When you later type a customer in by hand, enter that same start date — not the invitation or activation date.
 
-**For VoIP (the portal side is already live; env vars are already in Vercel):**
+**For VoIP (the portal rate card is live; base Stripe prices are already in Vercel):**
 
-9. **The two VoIP customers, entered by hand.** You chose to do this yourself **when Stripe goes live** (with 8C): create the residential customer on the Residential plan and the commercial customer on the Business plan, each with their real line count and true next payment date, via the normal create-client form. During 8A they get linked to their QuickBooks customer records like everyone else.
-10. **The VoIP item names in QuickBooks.** What the line items on the two customers' VoIP invoices are called today (the VoIP equivalent of item 5). This is how the automation posts VoIP revenue against the right items instead of monitoring ones.
-11. **A decision checkpoint on VoIP pricing, only when you are ready.** Current pricing (both plans per line) is treated as interim. Nothing is blocked on this; when the tier structure firms up, plans and prices are extended the same way any catalog change is.
+9. **The two VoIP customers, entered by hand.** You chose to do this yourself **when Stripe goes live** (with 8C): create the residential customer and the commercial customer via the normal create-client form, each with their real number count, seat count (commercial only), any numbers being ported, and true next payment date. During 8A they get linked to their QuickBooks customer records like everyone else.
+10. **The VoIP item names in QuickBooks.** What the line items on the two customers' VoIP invoices are called today (the VoIP equivalent of item 5). This is how the automation posts VoIP revenue against the right items instead of monitoring ones. Confirm whether the port fee uses a separate QuickBooks item.
+11. **BrightPBX DID (number) cost, when they confirm it.** Seat cost is already $5.95 per user per month. DID cost is treated as $0.00 and flagged unconfirmed. This is internal margin only and never appears on a client document. Nothing is blocked on it. Also add `STRIPE_PRICE_VOIP_NUMBER_PORT` to Vercel (test mode now; live IDs at go-live).
 
 **Before 8C (posting to the real books):**
 
 12. **A session with the bookkeeper.** One sitting to agree the account mapping: which income accounts monitoring and VoIP each land in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
-13. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode products/prices created (a script re-run, monitoring and VoIP together), the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). Mostly done for you by scripts; your part is approving the switch and updating the Vercel values. This is also the moment you enter the two VoIP customers (item 9).
+13. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode products/prices created (a script re-run, monitoring and VoIP together, including the VoIP Number Port Fee), the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). Mostly done for you by scripts; your part is approving the switch and updating the Vercel values. This is also the moment you enter the two VoIP customers (item 9).
 
 **Nice to have:**
 

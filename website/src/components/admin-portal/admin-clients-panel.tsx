@@ -19,7 +19,14 @@ import {
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
-import { tierOptionLabel } from "@/lib/portal/billing";
+import {
+  formatCents,
+  tierOptionLabel,
+  voipCoverageLabel,
+  voipMonthlyCents,
+  voipPortFeeCents,
+  withHstCents,
+} from "@/lib/portal/billing";
 import {
   DEVICE_CATEGORIES,
   DEVICE_CATEGORY_LABELS,
@@ -57,7 +64,9 @@ const EMPTY_FORM: CreateClientInput = {
   monitoringTier: "",
   cloudTier: "",
   voipTier: "",
-  voipLines: 1,
+  voipNumbers: 1,
+  voipSeats: 1,
+  voipPorts: 0,
   billingMethod: "stripe",
 };
 
@@ -602,13 +611,19 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               <div className={`space-y-3 rounded-xl border bg-black/20 p-4 ${SERVICE_THEME.voip.card}`}>
                 <p className="text-sm font-bold text-white">{SERVICE_TYPE_LABELS.voip}</p>
                 <p className="text-xs text-white/40">
-                  Monthly rate per line, always billed monthly.
+                  One monthly amount for the whole system. First number and first
+                  seat are included. Phones add nothing. Always billed monthly,
+                  never folded into an installation invoice.
                 </p>
                 <label className="flex flex-col gap-1.5 text-sm text-white/80">
                   Plan
                   <select
                     value={form.voipTier}
-                    onChange={(e) => set("voipTier", e.target.value as CreateClientInput["voipTier"])}
+                    onChange={(e) => {
+                      const tier = e.target.value as CreateClientInput["voipTier"];
+                      set("voipTier", tier);
+                      if (tier === "residential") set("voipSeats", 1);
+                    }}
                     className={selectClass}
                   >
                     <option value="">None</option>
@@ -622,20 +637,91 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 <label
                   className={`flex flex-col gap-1.5 text-sm transition-opacity ${form.voipTier ? "text-white/80" : "pointer-events-none opacity-40"}`}
                 >
-                  Phone lines
+                  Phone numbers
                   <input
                     type="number"
                     min={1}
                     max={100}
                     disabled={!form.voipTier}
-                    value={form.voipLines}
-                    onChange={(e) => set("voipLines", Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
+                    value={form.voipNumbers}
+                    onChange={(e) => set("voipNumbers", Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
                     className={adminInputClass}
                   />
                   <span className="text-xs text-white/40">
-                    Count every line, including extras like a fax line.
+                    First number is included. Each extra is $4.99 / month on either plan.
                   </span>
                 </label>
+                <label
+                  className={`flex flex-col gap-1.5 text-sm transition-opacity ${
+                    form.voipTier === "professional" ? "text-white/80" : "pointer-events-none opacity-40"
+                  }`}
+                >
+                  User seats
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    disabled={form.voipTier !== "professional"}
+                    value={form.voipTier === "residential" ? 1 : form.voipSeats}
+                    onChange={(e) => set("voipSeats", Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
+                    className={adminInputClass}
+                  />
+                  <span className="text-xs text-white/40">
+                    {form.voipTier === "residential"
+                      ? "Residential has no seat add-on."
+                      : "First seat is included. Each extra is $24.99 / month. Commercial only."}
+                  </span>
+                </label>
+                <label
+                  className={`flex flex-col gap-1.5 text-sm transition-opacity ${form.voipTier ? "text-white/80" : "pointer-events-none opacity-40"}`}
+                >
+                  Numbers to port (one-time)
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    disabled={!form.voipTier}
+                    value={form.voipPorts}
+                    onChange={(e) => set("voipPorts", Math.max(0, Number.parseInt(e.target.value, 10) || 0))}
+                    className={adminInputClass}
+                  />
+                  <span className="text-xs text-white/40">
+                    $49.99 per number, one time. Not part of the monthly subscription.
+                  </span>
+                </label>
+                {form.voipTier && (
+                  <p className="text-xs leading-relaxed text-white/55">
+                    Monthly:{" "}
+                    <span className="font-semibold text-white">
+                      {formatCents(
+                        voipMonthlyCents({
+                          tier: form.voipTier,
+                          numberCount: form.voipNumbers,
+                          seatCount: form.voipTier === "professional" ? form.voipSeats : 1,
+                        }),
+                      )}{" "}
+                      plus tax
+                    </span>{" "}
+                    ({voipCoverageLabel({
+                      tier: form.voipTier,
+                      numberCount: form.voipNumbers,
+                      seatCount: form.voipTier === "professional" ? form.voipSeats : 1,
+                    })}
+                    , {formatCents(
+                      withHstCents(
+                        voipMonthlyCents({
+                          tier: form.voipTier,
+                          numberCount: form.voipNumbers,
+                          seatCount: form.voipTier === "professional" ? form.voipSeats : 1,
+                        }),
+                      ),
+                    )}{" "}
+                    with HST)
+                    {form.voipPorts > 0
+                      ? `. Port fee ${formatCents(voipPortFeeCents(form.voipPorts))} plus tax, charged separately.`
+                      : ""}
+                  </p>
+                )}
               </div>
 
               <div

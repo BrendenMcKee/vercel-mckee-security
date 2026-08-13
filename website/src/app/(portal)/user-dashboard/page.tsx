@@ -12,6 +12,7 @@ import {
   PAYMENT_METHOD_LABELS,
   formatCents,
   intervalMonths,
+  voipCoverageLabel,
   type PaymentMethod,
 } from "@/lib/portal/billing";
 import { deviceCategoryLabel, deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
@@ -87,7 +88,7 @@ export default async function UserDashboardPage({
       supabase
         .from("services")
         .select(
-          "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, line_count, next_due_on, stripe_subscription_id",
+          "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, number_count, seat_count, next_due_on, stripe_subscription_id",
         )
         .eq("profile_id", profile.id)
         .order("service_type"),
@@ -389,13 +390,17 @@ export default async function UserDashboardPage({
                     {formatCents(voip.monthly_amount_cents)}
                   </span>
                   /month plus tax
-                  {voip.line_count > 1 && ` for ${voip.line_count} lines`}
+                  {` for ${voipCoverageLabel({
+                    tier: voip.tier,
+                    numberCount: voip.number_count,
+                    seatCount: voip.seat_count,
+                  })}`}
                 </p>
               )}
             </div>
             <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
-              Your phone service is managed by McKee Security. To add lines or
-              make changes, call{" "}
+              Your phone service is managed by McKee Security. To add numbers or
+              seats, or to make other changes, call{" "}
               <a
                 href="tel:+17054572156"
                 className="whitespace-nowrap font-bold text-white hover:text-primary"

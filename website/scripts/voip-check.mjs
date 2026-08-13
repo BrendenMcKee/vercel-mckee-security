@@ -1,11 +1,15 @@
-// One-shot gate for the VoIP service rail (R42): verifies the hosted schema
-// accepts VoIP services, the per-line professional plan stores correctly, the
-// tier CHECK rejects junk, the extended admin_create_client RPC works, and the
-// Stripe price env vars resolve to real monthly CAD prices.
+// Gate for the VoIP rate card (R50 / company knowledge 3.12): worked figures,
+// schema (numbers/seats/ports), residential seat lock, RPC args, and Stripe
+// catalog prices including the one-time port fee.
 //
-//   node --env-file=.env.local scripts/voip-check.mjs
+//   node --env-file=.env.local --import ./scripts/register-ts-alias.mjs scripts/voip-check.mjs
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import {
+  voipMonthlyCents,
+  voipPortFeeCents,
+  withHstCents,
+} from "@/lib/portal/billing.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,7 +25,31 @@ function check(name, ok, detail = "") {
   if (!ok) failures += 1;
 }
 
-// 1. RPC with a VoIP professional plan, 3 lines.
+const figures = [
+  { name: "Residential 1 number 1 seat", tier: "residential", numbers: 1, seats: 1, preTax: 3499, withHst: 3954 },
+  { name: "Commercial 1 number 1 seat", tier: "professional", numbers: 1, seats: 1, preTax: 5999, withHst: 6779 },
+  { name: "Commercial 2 numbers 1 seat (Vision Care)", tier: "professional", numbers: 2, seats: 1, preTax: 6498, withHst: 7343 },
+  { name: "Commercial 1 number 3 seats", tier: "professional", numbers: 1, seats: 3, preTax: 10997, withHst: 12427 },
+];
+
+for (const row of figures) {
+  const preTax = voipMonthlyCents({
+    tier: row.tier,
+    numberCount: row.numbers,
+    seatCount: row.seats,
+  });
+  const taxed = withHstCents(preTax);
+  check(`${row.name} pre-tax`, preTax === row.preTax, `${preTax} vs ${row.preTax}`);
+  check(`${row.name} with HST`, taxed === row.withHst, `${taxed} vs ${row.withHst}`);
+}
+
+check("Residential seats are ignored", voipMonthlyCents({
+  tier: "residential",
+  numberCount: 1,
+  seatCount: 4,
+}) === 3499);
+check("Port fee 2 numbers", voipPortFeeCents(2) === 9998);
+
 const { data: profileId, error: rpcError } = await admin.rpc("admin_create_client", {
   p_first_name: "VoIP",
   p_last_name: "Checkrun",
@@ -32,62 +60,72 @@ const { data: profileId, error: rpcError } = await admin.rpc("admin_create_clien
   p_token_hash: `voip-check-${Date.now()}`,
   p_target_email: "",
   p_voip_tier: "professional",
-  p_voip_lines: 3,
+  p_voip_numbers: 2,
+  p_voip_seats: 3,
+  p_voip_ports: 1,
 });
 check("admin_create_client accepts VoIP args", !rpcError && Boolean(profileId), rpcError?.message);
 
 if (profileId) {
   const { data: service } = await admin
     .from("services")
-    .select("id, service_type, tier, line_count, billing_interval, monthly_amount_cents")
+    .select("id, service_type, tier, number_count, seat_count, port_count, billing_interval, monthly_amount_cents")
     .eq("profile_id", profileId)
     .eq("service_type", "voip")
     .maybeSingle();
   check("VoIP service row created", Boolean(service));
   check("professional plan stored", service?.tier === "professional");
-  check("line_count stored (3)", service?.line_count === 3);
+  check("number_count stored (2)", service?.number_count === 2);
+  check("seat_count stored (3)", service?.seat_count === 3);
+  check("port_count stored (1)", service?.port_count === 1);
   check("VoIP bills monthly", service?.billing_interval === "monthly");
 
-  // 2. Amount prefill happens app-side (createClientAction); emulate it here
-  // and confirm the column takes the per-line total.
   if (service) {
+    const amount = voipMonthlyCents({
+      tier: "professional",
+      numberCount: 2,
+      seatCount: 3,
+    });
     const { error: amountError } = await admin
       .from("services")
-      .update({ monthly_amount_cents: 5999 * 3 })
+      .update({ monthly_amount_cents: amount })
       .eq("id", service.id);
-    check("per-line amount (5999 x 3) accepted", !amountError, amountError?.message);
+    check(`derived amount (${amount}) accepted`, !amountError, amountError?.message);
+
+    const { error: junkError } = await admin
+      .from("services")
+      .update({ tier: "enterprise" })
+      .eq("id", service.id);
+    check("tier CHECK rejects unknown VoIP tier", Boolean(junkError), junkError?.code);
+
+    const { error: zeroError } = await admin
+      .from("services")
+      .update({ number_count: 0 })
+      .eq("id", service.id);
+    check("number_count CHECK rejects 0", Boolean(zeroError), zeroError?.code);
+
+    const { error: seatError } = await admin
+      .from("services")
+      .update({ tier: "residential", seat_count: 2, number_count: 1 })
+      .eq("id", service.id);
+    check("residential seat_count > 1 rejected", Boolean(seatError), seatError?.code);
   }
 
-  // 3. Tier CHECK rejects junk VoIP tiers.
-  const { error: junkError } = await admin
-    .from("services")
-    .update({ tier: "enterprise" })
-    .eq("id", service?.id ?? "");
-  check("tier CHECK rejects unknown VoIP tier", Boolean(junkError), junkError?.code);
-
-  // 4. line_count CHECK rejects zero.
-  const { error: zeroError } = await admin
-    .from("services")
-    .update({ line_count: 0 })
-    .eq("id", service?.id ?? "");
-  check("line_count CHECK rejects 0", Boolean(zeroError), zeroError?.code);
-
-  // Cleanup: cascade removes the service + invitation.
   const { error: cleanupError } = await admin.from("profiles").delete().eq("id", profileId);
   check("cleanup", !cleanupError, cleanupError?.message);
 }
 
-// 5. Stripe prices resolve and are monthly CAD at the confirmed rates.
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 const priceIds = {
-  STRIPE_PRICE_VOIP_RESIDENTIAL: 3499,
-  STRIPE_PRICE_VOIP_PROFESSIONAL: 5999,
+  STRIPE_PRICE_VOIP_RESIDENTIAL: { cents: 3499, recurring: "month" },
+  STRIPE_PRICE_VOIP_PROFESSIONAL: { cents: 5999, recurring: "month" },
+  STRIPE_PRICE_VOIP_NUMBER_PORT: { cents: 4999, recurring: null },
 };
 if (!stripeKey) {
   check("Stripe configured", false, "STRIPE_SECRET_KEY missing");
 } else {
   const stripe = new Stripe(stripeKey);
-  for (const [envVar, cents] of Object.entries(priceIds)) {
+  for (const [envVar, expect] of Object.entries(priceIds)) {
     const id = process.env[envVar];
     if (!id) {
       check(`${envVar} set`, false);
@@ -95,10 +133,16 @@ if (!stripeKey) {
     }
     try {
       const price = await stripe.prices.retrieve(id);
+      const recurringOk = expect.recurring
+        ? price.recurring?.interval === expect.recurring
+        : !price.recurring;
+      const label = expect.recurring
+        ? `$${(expect.cents / 100).toFixed(2)}/month CAD`
+        : `$${(expect.cents / 100).toFixed(2)} one-time CAD`;
       check(
-        `${envVar} is $${(cents / 100).toFixed(2)}/month CAD`,
-        price.currency === "cad" && price.unit_amount === cents && price.recurring?.interval === "month",
-        `${price.currency} ${price.unit_amount} /${price.recurring?.interval}`,
+        `${envVar} is ${label}`,
+        price.currency === "cad" && price.unit_amount === expect.cents && recurringOk,
+        `${price.currency} ${price.unit_amount} /${price.recurring?.interval ?? "one-time"}`,
       );
     } catch (error) {
       check(`${envVar} resolves`, false, error.message);

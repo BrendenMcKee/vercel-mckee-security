@@ -7,11 +7,11 @@ import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import {
   CLOUD_BACKUP_DEVELOPMENT_MESSAGE,
   SERVICE_TIERS,
-  isPerLineService,
   isServiceAvailable,
+  isVoipService,
 } from "@/lib/portal/service-labels";
-import { planMonthlyCents } from "@/lib/portal/billing";
-import { getStripeClient, isStripeConfigured, priceIdFor } from "@/lib/portal/stripe";
+import { normalizeVoipConfig, serviceMonthlyCents } from "@/lib/portal/billing";
+import { getStripeClient, isStripeConfigured, priceForVoipAmount, priceIdFor } from "@/lib/portal/stripe";
 
 export type ServiceActionResult = { ok: true } | { ok: false; error: string };
 
@@ -19,8 +19,42 @@ const assignSchema = z.object({
   profileId: z.uuid(),
   serviceType: z.enum(["monitoring", "cloud_backup", "voip"]),
   tier: z.string().min(1),
-  lineCount: z.number().int().min(1).max(100).optional(),
+  numberCount: z.number().int().min(1).max(100).optional(),
+  seatCount: z.number().int().min(1).max(100).optional(),
+  portCount: z.number().int().min(0).max(100).optional(),
 });
+
+async function syncVoipStripePrice(input: {
+  subscriptionId: string;
+  tier: string;
+  numberCount: number;
+  seatCount: number;
+  amountCents: number;
+}): Promise<string | null> {
+  if (!isStripeConfigured()) {
+    return "This service has a Stripe subscription but Stripe is not configured on the server.";
+  }
+  try {
+    const stripe = getStripeClient();
+    const subscription = await stripe.subscriptions.retrieve(input.subscriptionId);
+    const itemId = subscription.items.data[0]?.id;
+    if (!itemId) return "The Stripe subscription has no billable item. Fix it in Stripe first.";
+    const priceId = await priceForVoipAmount({
+      tier: input.tier,
+      amountCents: input.amountCents,
+      numberCount: input.numberCount,
+      seatCount: input.seatCount,
+    });
+    await stripe.subscriptions.update(input.subscriptionId, {
+      items: [{ id: itemId, price: priceId, quantity: 1 }],
+      proration_behavior: "none",
+    });
+    return null;
+  } catch (error) {
+    console.error("[portal] Stripe VoIP price sync failed:", error);
+    return "Stripe rejected the change; nothing was modified. Check the Stripe dashboard.";
+  }
+}
 
 /**
  * Phase 3 admin service management (PORTAL_PLAN.md 7.2, R21): assignment,
@@ -32,7 +66,9 @@ export async function assignServiceAction(input: {
   profileId: string;
   serviceType: "monitoring" | "cloud_backup" | "voip";
   tier: string;
-  lineCount?: number;
+  numberCount?: number;
+  seatCount?: number;
+  portCount?: number;
 }): Promise<ServiceActionResult> {
   if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
@@ -48,18 +84,33 @@ export async function assignServiceAction(input: {
     return { ok: false, error: "That tier does not exist for this service." };
   }
 
-  // The confirmed monthly rate is prefilled so reminders and revenue KPIs are
-  // correct from day one. Monitoring is invoiced annually (site terms); VoIP
-  // bills monthly (R42), per line via line_count.
-  const lineCount = isPerLineService(serviceType, tier) ? (parsed.data.lineCount ?? 1) : 1;
-  const planRate = planMonthlyCents(serviceType, tier);
+  const voip = isVoipService(serviceType)
+    ? normalizeVoipConfig({
+        tier,
+        numberCount: parsed.data.numberCount ?? 1,
+        seatCount: parsed.data.seatCount ?? 1,
+      })
+    : null;
+  const monthly = serviceMonthlyCents({
+    serviceType,
+    tier,
+    numberCount: voip?.numberCount,
+    seatCount: voip?.seatCount,
+  });
+
   const supabase = await createPortalServerClient();
   const { error } = await supabase.from("services").insert({
     profile_id: profileId,
     service_type: serviceType,
     tier,
-    line_count: lineCount,
-    ...(planRate != null ? { monthly_amount_cents: planRate * lineCount } : {}),
+    ...(voip
+      ? {
+          number_count: voip.numberCount,
+          seat_count: voip.seatCount,
+          port_count: Math.max(0, parsed.data.portCount ?? 0),
+        }
+      : {}),
+    ...(monthly != null ? { monthly_amount_cents: monthly } : {}),
     ...(serviceType === "monitoring" ? { billing_interval: "annual" as const } : {}),
   });
 
@@ -93,7 +144,7 @@ export async function updateServiceTierAction(input: {
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, service_type, line_count, stripe_subscription_id")
+    .select("id, service_type, number_count, seat_count, stripe_subscription_id")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
@@ -102,44 +153,60 @@ export async function updateServiceTierAction(input: {
     return { ok: false, error: "That tier does not exist for this service." };
   }
 
-  // Per-line plans keep their line count; flat plans collapse back to 1.
-  const lineCount = isPerLineService(service.service_type, tier) ? service.line_count : 1;
+  const voip = isVoipService(service.service_type)
+    ? normalizeVoipConfig({
+        tier,
+        numberCount: service.number_count,
+        seatCount: service.seat_count,
+      })
+    : null;
+  const monthly = serviceMonthlyCents({
+    serviceType: service.service_type,
+    tier,
+    numberCount: voip?.numberCount,
+    seatCount: voip?.seatCount,
+  });
 
-  // Phase 5 (9.1): a plan change on an autopay service swaps the Stripe
-  // subscription price too, so the next invoice bills the new tier.
   if (service.stripe_subscription_id) {
-    if (!isStripeConfigured()) {
-      return { ok: false, error: "This service has a Stripe subscription but Stripe is not configured on the server." };
-    }
-    const priceId = priceIdFor(service.service_type, tier);
-    if (!priceId) {
-      return { ok: false, error: "No Stripe price is configured for that tier yet. Add the price ID env var first." };
-    }
-    try {
-      const stripe = getStripeClient();
-      const subscription = await stripe.subscriptions.retrieve(service.stripe_subscription_id);
-      const itemId = subscription.items.data[0]?.id;
-      if (!itemId) return { ok: false, error: "The Stripe subscription has no billable item. Fix it in Stripe first." };
-      await stripe.subscriptions.update(service.stripe_subscription_id, {
-        items: [{ id: itemId, price: priceId, quantity: lineCount }],
-        proration_behavior: "none",
+    if (voip && monthly != null) {
+      const stripeError = await syncVoipStripePrice({
+        subscriptionId: service.stripe_subscription_id,
+        tier,
+        numberCount: voip.numberCount,
+        seatCount: voip.seatCount,
+        amountCents: monthly,
       });
-    } catch (error) {
-      console.error("[portal] Stripe tier swap failed:", error);
-      return { ok: false, error: "Stripe rejected the plan change; the tier was not modified. Check the Stripe dashboard." };
+      if (stripeError) return { ok: false, error: stripeError };
+    } else {
+      if (!isStripeConfigured()) {
+        return { ok: false, error: "This service has a Stripe subscription but Stripe is not configured on the server." };
+      }
+      const priceId = priceIdFor(service.service_type, tier);
+      if (!priceId) {
+        return { ok: false, error: "No Stripe price is configured for that tier yet. Add the price ID env var first." };
+      }
+      try {
+        const stripe = getStripeClient();
+        const subscription = await stripe.subscriptions.retrieve(service.stripe_subscription_id);
+        const itemId = subscription.items.data[0]?.id;
+        if (!itemId) return { ok: false, error: "The Stripe subscription has no billable item. Fix it in Stripe first." };
+        await stripe.subscriptions.update(service.stripe_subscription_id, {
+          items: [{ id: itemId, price: priceId, quantity: 1 }],
+          proration_behavior: "none",
+        });
+      } catch (error) {
+        console.error("[portal] Stripe tier swap failed:", error);
+        return { ok: false, error: "Stripe rejected the plan change; the tier was not modified. Check the Stripe dashboard." };
+      }
     }
   }
 
-  // A plan change re-syncs the amount to the confirmed rate (times lines for
-  // per-line plans); the admin can still override it afterwards on the manual
-  // rail in the Billing card.
-  const planRate = planMonthlyCents(service.service_type, tier);
   const { error } = await supabase
     .from("services")
     .update({
       tier,
-      line_count: lineCount,
-      ...(planRate != null ? { monthly_amount_cents: planRate * lineCount } : {}),
+      ...(voip ? { number_count: voip.numberCount, seat_count: voip.seatCount } : {}),
+      ...(monthly != null ? { monthly_amount_cents: monthly } : {}),
     })
     .eq("id", serviceId);
   if (error) {
@@ -151,71 +218,80 @@ export async function updateServiceTierAction(input: {
   return { ok: true };
 }
 
-const lineCountSchema = z.object({
+const voipConfigSchema = z.object({
   serviceId: z.uuid(),
-  lineCount: z.number().int().min(1).max(100),
+  numberCount: z.number().int().min(1).max(100),
+  seatCount: z.number().int().min(1).max(100),
+  portCount: z.number().int().min(0).max(100),
 });
 
 /**
- * Line count change for per-line plans (all VoIP plans, R42). On autopay
- * the Stripe subscription quantity is updated too, so the next invoice bills
- * the new number of lines; the stored amount re-syncs to rate times lines.
+ * Numbers, seats, and pending port count for a VoIP system (R50). On autopay
+ * the Stripe subscription is swapped to a single price at the new total
+ * (quantity 1). Residential seats are forced to 1.
  */
-export async function updateServiceLineCountAction(input: {
+export async function updateVoipConfigAction(input: {
   serviceId: string;
-  lineCount: number;
+  numberCount: number;
+  seatCount: number;
+  portCount: number;
 }): Promise<ServiceActionResult> {
   if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
-  const parsed = lineCountSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Enter a line count between 1 and 100." };
-  const { serviceId, lineCount } = parsed.data;
+  const parsed = voipConfigSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Enter valid number, seat, and port counts." };
+  const { serviceId } = parsed.data;
 
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, service_type, tier, billing_method, stripe_subscription_id")
+    .select("id, service_type, tier, stripe_subscription_id")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
-  if (!isPerLineService(service.service_type, service.tier)) {
-    return { ok: false, error: "This plan is not billed per line." };
+  if (!isVoipService(service.service_type)) {
+    return { ok: false, error: "Only VoIP services have numbers and seats." };
   }
+
+  const voip = normalizeVoipConfig({
+    tier: service.tier,
+    numberCount: parsed.data.numberCount,
+    seatCount: parsed.data.seatCount,
+  });
+  const monthly = voipMonthlyOrError(service.tier, voip.numberCount, voip.seatCount);
+  if (monthly == null) return { ok: false, error: "That VoIP plan has no rate." };
 
   if (service.stripe_subscription_id) {
-    if (!isStripeConfigured()) {
-      return { ok: false, error: "This service has a Stripe subscription but Stripe is not configured on the server." };
-    }
-    try {
-      const stripe = getStripeClient();
-      const subscription = await stripe.subscriptions.retrieve(service.stripe_subscription_id);
-      const itemId = subscription.items.data[0]?.id;
-      if (!itemId) return { ok: false, error: "The Stripe subscription has no billable item. Fix it in Stripe first." };
-      await stripe.subscriptions.update(service.stripe_subscription_id, {
-        items: [{ id: itemId, quantity: lineCount }],
-        proration_behavior: "none",
-      });
-    } catch (error) {
-      console.error("[portal] Stripe line count update failed:", error);
-      return { ok: false, error: "Stripe rejected the line change; nothing was modified. Check the Stripe dashboard." };
-    }
+    const stripeError = await syncVoipStripePrice({
+      subscriptionId: service.stripe_subscription_id,
+      tier: service.tier,
+      numberCount: voip.numberCount,
+      seatCount: voip.seatCount,
+      amountCents: monthly,
+    });
+    if (stripeError) return { ok: false, error: stripeError };
   }
 
-  const planRate = planMonthlyCents(service.service_type, service.tier);
   const { error } = await supabase
     .from("services")
     .update({
-      line_count: lineCount,
-      ...(planRate != null ? { monthly_amount_cents: planRate * lineCount } : {}),
+      number_count: voip.numberCount,
+      seat_count: voip.seatCount,
+      port_count: parsed.data.portCount,
+      monthly_amount_cents: monthly,
     })
     .eq("id", serviceId);
   if (error) {
-    console.error("[portal] updateServiceLineCount failed:", error);
-    return { ok: false, error: "Could not change the line count. Please try again." };
+    console.error("[portal] updateVoipConfig failed:", error);
+    return { ok: false, error: "Could not save the VoIP configuration. Please try again." };
   }
 
   revalidatePath("/admin-dashboard", "layout");
   return { ok: true };
+}
+
+function voipMonthlyOrError(tier: string, numberCount: number, seatCount: number): number | null {
+  return serviceMonthlyCents({ serviceType: "voip", tier, numberCount, seatCount });
 }
 
 const statusChangeSchema = z.object({

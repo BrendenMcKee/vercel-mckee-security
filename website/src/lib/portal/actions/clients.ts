@@ -8,10 +8,9 @@ import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
 import { sendInvitationEmail } from "@/lib/portal/emails";
-import { planMonthlyCents } from "@/lib/portal/billing";
+import { serviceMonthlyCents } from "@/lib/portal/billing";
 import {
   CLOUD_BACKUP_DEVELOPMENT_MESSAGE,
-  isPerLineService,
   isServiceAvailable,
 } from "@/lib/portal/service-labels";
 import { DEVICE_CATEGORIES } from "@/lib/portal/devices";
@@ -27,9 +26,10 @@ const createClientSchema = z.object({
   phone: z.string().trim().max(40),
   monitoringTier: z.enum(["", "landline", "cellular", "cellular_tc", "cellular_tc_home"]),
   cloudTier: z.enum(["", "7day", "30day", "90day"]),
-  // VoIP phone service (R42): optional plan; every VoIP plan is per line.
   voipTier: z.enum(["", "residential", "professional"]),
-  voipLines: z.number().int().min(1).max(100),
+  voipNumbers: z.number().int().min(1).max(100),
+  voipSeats: z.number().int().min(1).max(100),
+  voipPorts: z.number().int().min(0).max(100),
   // Stakeholder 2026-07-06: billing is chosen at creation. Autopay is the
   // default; the client is asked for their card as part of activation.
   billingMethod: z.enum(["stripe", "manual"]),
@@ -92,7 +92,7 @@ export async function createClientAction(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { firstName, lastName, email, address, phone, monitoringTier, cloudTier, voipTier, voipLines, billingMethod } =
+  const { firstName, lastName, email, address, phone, monitoringTier, cloudTier, voipTier, voipNumbers, voipSeats, voipPorts, billingMethod } =
     parsed.data;
 
   let storedPhone: string | null = null;
@@ -160,7 +160,9 @@ export async function createClientAction(
     p_token_hash: hash,
     p_target_email: email || "",
     p_voip_tier: voipTier,
-    p_voip_lines: isPerLineService("voip", voipTier) ? voipLines : 1,
+    p_voip_numbers: voipTier ? voipNumbers : 1,
+    p_voip_seats: voipTier === "professional" ? voipSeats : 1,
+    p_voip_ports: voipTier ? voipPorts : 0,
   });
 
   if (error || !profileId) {
@@ -187,23 +189,27 @@ export async function createClientAction(
     if (railError) console.error("[portal] billing method set failed:", railError);
   }
 
-  // Prefill the confirmed monthly rate on each priced service so pricing has
-  // a single source (billing.ts). VoIP professional multiplies by lines.
-  const pricePrefills: { serviceType: "monitoring" | "voip"; tier: string; lines: number }[] = [];
-  if (monitoringTier) pricePrefills.push({ serviceType: "monitoring", tier: monitoringTier, lines: 1 });
+  const pricePrefills: {
+    serviceType: "monitoring" | "voip";
+    tier: string;
+    numberCount?: number;
+    seatCount?: number;
+  }[] = [];
+  if (monitoringTier) pricePrefills.push({ serviceType: "monitoring", tier: monitoringTier });
   if (voipTier) {
     pricePrefills.push({
       serviceType: "voip",
       tier: voipTier,
-      lines: isPerLineService("voip", voipTier) ? voipLines : 1,
+      numberCount: voipNumbers,
+      seatCount: voipTier === "professional" ? voipSeats : 1,
     });
   }
   for (const prefill of pricePrefills) {
-    const rate = planMonthlyCents(prefill.serviceType, prefill.tier);
+    const rate = serviceMonthlyCents(prefill);
     if (rate == null) continue;
     const { error: priceError } = await supabase
       .from("services")
-      .update({ monthly_amount_cents: rate * prefill.lines })
+      .update({ monthly_amount_cents: rate })
       .eq("profile_id", profileId)
       .eq("service_type", prefill.serviceType);
     if (priceError) console.error(`[portal] ${prefill.serviceType} price prefill failed:`, priceError);

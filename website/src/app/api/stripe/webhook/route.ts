@@ -3,8 +3,7 @@ import type Stripe from "stripe";
 import { getStripeClient, isStripeConfigured, tierForPriceId } from "@/lib/portal/stripe";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { sendCardPaymentFailedAlert, sendPaymentSuccessEmail } from "@/lib/portal/emails";
-import { planMonthlyCents } from "@/lib/portal/billing";
-import { isPerLineService } from "@/lib/portal/service-labels";
+import { serviceMonthlyCents } from "@/lib/portal/billing";
 
 /**
  * Stripe webhook (PORTAL_PLAN.md 9.1). Signature-verified with the raw body;
@@ -223,7 +222,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   const { data: service } = await admin
     .from("services")
-    .select("id, status, tier, service_type, line_count, next_due_on")
+    .select("id, status, tier, service_type, number_count, seat_count, next_due_on")
     .eq("stripe_subscription_id", subscription.id)
     .maybeSingle();
   if (!service) return;
@@ -232,7 +231,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     status?: "active" | "unpaid" | "cancelled";
     tier?: string;
     next_due_on?: string | null;
-    line_count?: number;
     monthly_amount_cents?: number;
   } = {};
 
@@ -262,20 +260,16 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     }
   }
 
-  // Line-count sync for per-line plans (all VoIP plans, R42): the Stripe
-  // subscription quantity is what actually gets charged, so it drives the
-  // stored line_count and the display amount.
-  const quantity = subscription.items.data[0]?.quantity;
   const effectiveTier = updates.tier ?? service.tier;
-  if (
-    typeof quantity === "number" &&
-    quantity >= 1 &&
-    isPerLineService(service.service_type, effectiveTier) &&
-    quantity !== service.line_count
-  ) {
-    updates.line_count = quantity;
-    const planRate = planMonthlyCents(service.service_type, effectiveTier);
-    if (planRate != null) updates.monthly_amount_cents = planRate * quantity;
+  const expected = serviceMonthlyCents({
+    serviceType: service.service_type,
+    tier: effectiveTier,
+    numberCount: service.number_count,
+    seatCount: service.seat_count,
+  });
+  const billed = subscription.items.data[0]?.price?.unit_amount;
+  if (expected != null && typeof billed === "number" && billed !== expected) {
+    updates.monthly_amount_cents = expected;
   }
 
   if (Object.keys(updates).length > 0) {

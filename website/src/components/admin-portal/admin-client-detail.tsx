@@ -11,9 +11,9 @@ import {
 } from "@/lib/portal/actions/clients";
 import {
   assignServiceAction,
-  updateServiceLineCountAction,
   updateServiceStatusAction,
   updateServiceTierAction,
+  updateVoipConfigAction,
 } from "@/lib/portal/actions/services";
 import {
   CLOUD_BACKUP_PLANNED_RETENTION_COPY,
@@ -21,8 +21,8 @@ import {
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
   hasCurrentMonitoring,
-  isPerLineService,
   isServiceAvailable,
+  isVoipService,
   tierLabel,
   type ServiceType,
 } from "@/lib/portal/service-labels";
@@ -31,7 +31,7 @@ import {
   deleteDeviceAction,
   updateDeviceAction,
 } from "@/lib/portal/actions/devices";
-import { recordManualPayment, updateServiceBilling } from "@/lib/portal/actions/payments";
+import { chargeVoipPortFee, recordManualPayment, updateServiceBilling } from "@/lib/portal/actions/payments";
 import { formatPhone } from "@/lib/portal/phone";
 import {
   BILLING_INTERVAL_LABELS,
@@ -39,6 +39,11 @@ import {
   formatCents,
   intervalMonths,
   tierOptionLabel,
+  voipCoverageLabel,
+  voipInternalCostCents,
+  voipMonthlyCents,
+  voipPortFeeCents,
+  VOIP_DID_COST_CONFIRMED,
   type BillingInterval,
   type PaymentMethod,
 } from "@/lib/portal/billing";
@@ -296,7 +301,9 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   const [pending, startTransition] = useTransition();
   const [assignType, setAssignType] = useState<ServiceType | "">("");
   const [assignTier, setAssignTier] = useState("");
-  const [assignLines, setAssignLines] = useState("1");
+  const [assignNumbers, setAssignNumbers] = useState("1");
+  const [assignSeats, setAssignSeats] = useState("1");
+  const [assignPorts, setAssignPorts] = useState("0");
 
   const unassignedTypes = (Object.keys(SERVICE_TIERS) as ServiceType[]).filter(
     (type) =>
@@ -305,14 +312,20 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   );
   if (unassignedTypes.length === 0) return null;
 
-  const perLine = assignType !== "" && isPerLineService(assignType);
+  const voip = assignType === "voip";
 
   function assign(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!assignType || !assignTier) return;
-    const lineCount = perLine ? Number.parseInt(assignLines, 10) : 1;
-    if (perLine && (!Number.isFinite(lineCount) || lineCount < 1)) {
-      setNotice({ kind: "error", text: "Enter how many phone lines this plan covers." });
+    const numberCount = voip ? Number.parseInt(assignNumbers, 10) : 1;
+    const seatCount = assignTier === "professional" ? Number.parseInt(assignSeats, 10) : 1;
+    const portCount = voip ? Number.parseInt(assignPorts, 10) : 0;
+    if (voip && (!Number.isFinite(numberCount) || numberCount < 1)) {
+      setNotice({ kind: "error", text: "Enter how many phone numbers this system includes." });
+      return;
+    }
+    if (assignTier === "professional" && (!Number.isFinite(seatCount) || seatCount < 1)) {
+      setNotice({ kind: "error", text: "Enter how many user seats this system includes." });
       return;
     }
     setNotice(null);
@@ -321,7 +334,9 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
         profileId: client.id,
         serviceType: assignType,
         tier: assignTier,
-        lineCount,
+        numberCount,
+        seatCount,
+        portCount: Number.isFinite(portCount) ? Math.max(0, portCount) : 0,
       });
       if (!result.ok) {
         setNotice({ kind: "error", text: result.error });
@@ -329,7 +344,9 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
       }
       setAssignType("");
       setAssignTier("");
-      setAssignLines("1");
+      setAssignNumbers("1");
+      setAssignSeats("1");
+      setAssignPorts("0");
       setNotice({ kind: "ok", text: "Service added. Set up its billing below." });
     });
   }
@@ -377,16 +394,46 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
           </select>
         </label>
         <label
-          className={`flex min-w-0 flex-col gap-1.5 text-sm transition-opacity ${perLine ? "text-white/80" : "pointer-events-none text-white/80 opacity-40"}`}
+          className={`flex min-w-0 flex-col gap-1.5 text-sm transition-opacity ${voip ? "text-white/80" : "pointer-events-none text-white/80 opacity-40"}`}
         >
-          Phone lines
+          Numbers
           <input
             type="number"
             min={1}
             max={100}
-            disabled={!perLine}
-            value={assignLines}
-            onChange={(e) => setAssignLines(e.target.value)}
+            disabled={!voip}
+            value={assignNumbers}
+            onChange={(e) => setAssignNumbers(e.target.value)}
+            className={`${adminInputClass} sm:w-24`}
+          />
+        </label>
+        <label
+          className={`flex min-w-0 flex-col gap-1.5 text-sm transition-opacity ${
+            assignTier === "professional" ? "text-white/80" : "pointer-events-none text-white/80 opacity-40"
+          }`}
+        >
+          Seats
+          <input
+            type="number"
+            min={1}
+            max={100}
+            disabled={assignTier !== "professional"}
+            value={assignTier === "residential" ? "1" : assignSeats}
+            onChange={(e) => setAssignSeats(e.target.value)}
+            className={`${adminInputClass} sm:w-24`}
+          />
+        </label>
+        <label
+          className={`flex min-w-0 flex-col gap-1.5 text-sm transition-opacity ${voip ? "text-white/80" : "pointer-events-none text-white/80 opacity-40"}`}
+        >
+          Ports
+          <input
+            type="number"
+            min={0}
+            max={100}
+            disabled={!voip}
+            value={assignPorts}
+            onChange={(e) => setAssignPorts(e.target.value)}
             className={`${adminInputClass} sm:w-24`}
           />
         </label>
@@ -621,9 +668,11 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
     service.monthly_amount_cents != null ? (service.monthly_amount_cents / 100).toFixed(2) : "",
   );
   const [dueOn, setDueOn] = useState(service.next_due_on ?? "");
-  const [lines, setLines] = useState(String(service.line_count));
+  const [numbers, setNumbers] = useState(String(service.number_count));
+  const [seats, setSeats] = useState(String(service.seat_count));
+  const [ports, setPorts] = useState(String(service.port_count));
 
-  const perLine = isPerLineService(service.service_type, service.tier);
+  const voip = isVoipService(service.service_type);
 
   // Prefill the received amount with one full invoice (monthly rate x
   // interval, pre-tax); the admin adjusts for tax or partial payments.
@@ -658,26 +707,68 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
     });
   }
 
-  function saveLines() {
-    const lineCount = Number.parseInt(lines, 10);
-    if (!Number.isFinite(lineCount) || lineCount < 1) {
-      setNotice({ kind: "error", text: "Enter how many phone lines this plan covers." });
+  function saveVoipConfig() {
+    const numberCount = Number.parseInt(numbers, 10);
+    const seatCount = service.tier === "residential" ? 1 : Number.parseInt(seats, 10);
+    const portCount = Number.parseInt(ports, 10);
+    if (!Number.isFinite(numberCount) || numberCount < 1) {
+      setNotice({ kind: "error", text: "Enter how many phone numbers this system includes." });
       return;
     }
-    if (lineCount === service.line_count) return;
+    if (!Number.isFinite(seatCount) || seatCount < 1) {
+      setNotice({ kind: "error", text: "Enter how many user seats this system includes." });
+      return;
+    }
+    if (!Number.isFinite(portCount) || portCount < 0) {
+      setNotice({ kind: "error", text: "Enter how many numbers are being ported, or 0." });
+      return;
+    }
+    if (
+      numberCount === service.number_count &&
+      seatCount === service.seat_count &&
+      portCount === service.port_count
+    ) {
+      return;
+    }
     setNotice(null);
     startTransition(async () => {
-      const result = await updateServiceLineCountAction({ serviceId: service.id, lineCount });
+      const result = await updateVoipConfigAction({
+        serviceId: service.id,
+        numberCount,
+        seatCount,
+        portCount,
+      });
       setNotice(
         result.ok
           ? {
               kind: "ok",
-              text: `Now billing for ${lineCount} line${lineCount === 1 ? "" : "s"}.${
+              text: `Now ${voipCoverageLabel({ tier: service.tier, numberCount, seatCount })}.${
                 service.stripe_subscription_id
-                  ? " Their automatic card payments charge the new total from the next invoice."
+                  ? " Their automatic card payments charge the new monthly total from the next invoice."
                   : ""
               }`,
             }
+          : { kind: "error", text: result.error },
+      );
+    });
+  }
+
+  function chargePortFee() {
+    const portCount = Number.parseInt(ports, 10) || service.port_count;
+    if (portCount < 1) {
+      setNotice({ kind: "error", text: "Set how many numbers are being ported first." });
+      return;
+    }
+    const confirmed = window.confirm(
+      `Charge the one-time number port fee of ${formatCents(voipPortFeeCents(portCount))} plus tax for ${portCount} number${portCount === 1 ? "" : "s"}? This is not part of the monthly subscription.`,
+    );
+    if (!confirmed) return;
+    setNotice(null);
+    startTransition(async () => {
+      const result = await chargeVoipPortFee({ serviceId: service.id });
+      setNotice(
+        result.ok
+          ? { kind: "ok", text: "Port fee recorded. It does not change the next monthly due date." }
           : { kind: "error", text: result.error },
       );
     });
@@ -809,22 +900,47 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
             ))}
           </select>
         </label>
-        {perLine && (
+        {voip && (
           <>
             <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
-              Phone lines
+              Numbers
               <input
                 type="number"
                 min={1}
                 max={100}
-                value={lines}
-                onChange={(e) => setLines(e.target.value)}
+                value={numbers}
+                onChange={(e) => setNumbers(e.target.value)}
                 className={`${adminInputClass} sm:w-24`}
               />
             </label>
-            {lines !== String(service.line_count) && (
-              <button type="button" disabled={pending} onClick={saveLines} className={buttonSecondary}>
-                {pending ? "Saving..." : "Save Lines"}
+            <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+              Seats
+              <input
+                type="number"
+                min={1}
+                max={100}
+                disabled={service.tier === "residential"}
+                value={service.tier === "residential" ? "1" : seats}
+                onChange={(e) => setSeats(e.target.value)}
+                className={`${adminInputClass} sm:w-24 disabled:opacity-40`}
+              />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
+              Ports
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={ports}
+                onChange={(e) => setPorts(e.target.value)}
+                className={`${adminInputClass} sm:w-24`}
+              />
+            </label>
+            {(numbers !== String(service.number_count) ||
+              seats !== String(service.seat_count) ||
+              ports !== String(service.port_count)) && (
+              <button type="button" disabled={pending} onClick={saveVoipConfig} className={buttonSecondary}>
+                {pending ? "Saving..." : "Save VoIP"}
               </button>
             )}
           </>
@@ -940,7 +1056,12 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                     {formatCents(invoiceCents)} plus tax
                     {service.billing_interval === "annual" ? " per year" : " per month"}
                   </span>
-                  {perLine && ` for ${service.line_count} line${service.line_count === 1 ? "" : "s"}`}
+                  {voip &&
+                    ` for ${voipCoverageLabel({
+                      tier: service.tier,
+                      numberCount: service.number_count,
+                      seatCount: service.seat_count,
+                    })}`}
                   {". "}
                 </>
               )}
@@ -957,6 +1078,44 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                 The client sees a &ldquo;Set up automatic payments&rdquo; button
                 on their dashboard until they enter their card.
               </p>
+            )}
+          </div>
+        )}
+
+        {voip && (
+          <div className="space-y-2 rounded-lg border border-white/10 bg-surface/40 p-3 text-xs leading-relaxed text-white/50">
+            <p>
+              Monthly total is one line:{" "}
+              <span className="font-semibold text-white/80">
+                {formatCents(
+                  voipMonthlyCents({
+                    tier: service.tier,
+                    numberCount: service.number_count,
+                    seatCount: service.seat_count,
+                  }),
+                )}{" "}
+                plus tax
+              </span>
+              . Phones add nothing. Internal cost {formatCents(
+                voipInternalCostCents({
+                  tier: service.tier,
+                  numberCount: service.number_count,
+                  seatCount: service.seat_count,
+                }),
+              )}
+              /month
+              {VOIP_DID_COST_CONFIRMED ? "" : " (DID cost unconfirmed, treated as $0.00)"}. Never shown to the client.
+            </p>
+            {service.port_count > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <p>
+                  Port fee due: {formatCents(voipPortFeeCents(service.port_count))} plus tax
+                  for {service.port_count} number{service.port_count === 1 ? "" : "s"}, one time.
+                </p>
+                <button type="button" disabled={pending} onClick={chargePortFee} className={buttonSecondary}>
+                  {pending ? "Charging..." : "Charge port fee"}
+                </button>
+              </div>
             )}
           </div>
         )}

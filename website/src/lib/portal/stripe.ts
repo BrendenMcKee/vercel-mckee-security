@@ -1,5 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
+import { voipInvoiceDescription } from "@/lib/portal/billing";
 
 /**
  * Stripe integration (PORTAL_PLAN.md 9.1). Lazy client so builds and the
@@ -10,9 +11,11 @@ import Stripe from "stripe";
  *     (annual-interval prices: 12 x the monthly rate, plus tax via Stripe Tax
  *      or a tax rate; monitoring is invoiced annually per the site terms)
  *   STRIPE_PRICE_VOIP_RESIDENTIAL / _PROFESSIONAL
- *     (monthly-interval prices; every VoIP plan is per line, charged with the
- *      subscription quantity set to the service's line_count. "professional"
- *      is displayed as "Business" in the portal)
+ *     (monthly-interval catalog prices for the base system: 1 number + 1 seat.
+ *      Configurations above the base reuse the same product and a matching
+ *      monthly CAD price at the derived total; quantity is always 1. R50)
+ *   STRIPE_PRICE_VOIP_NUMBER_PORT
+ *     (one-time CAD price, $49.99 per number ported; never on the subscription)
  *   STRIPE_PRICE_CLOUD_7DAY / _30DAY / _90DAY   (Track 2; test mode only)
  *
  * Client code never sees or sends price IDs; checkout reads the admin-assigned
@@ -43,6 +46,7 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   "monitoring:cellular_tc_home": "STRIPE_PRICE_MONITORING_CELLULAR_TC_HOME",
   "voip:residential": "STRIPE_PRICE_VOIP_RESIDENTIAL",
   "voip:professional": "STRIPE_PRICE_VOIP_PROFESSIONAL",
+  "voip:number_port": "STRIPE_PRICE_VOIP_NUMBER_PORT",
   "cloud_backup:7day": "STRIPE_PRICE_CLOUD_7DAY",
   "cloud_backup:30day": "STRIPE_PRICE_CLOUD_30DAY",
   "cloud_backup:90day": "STRIPE_PRICE_CLOUD_90DAY",
@@ -59,10 +63,65 @@ export function tierForPriceId(priceId: string): { serviceType: string; tier: st
   for (const [key, envKey] of Object.entries(PRICE_ENV_KEYS)) {
     if (process.env[envKey] === priceId) {
       const [serviceType, tier] = key.split(":");
+      if (tier === "number_port") return null;
       return { serviceType, tier };
     }
   }
   return null;
+}
+
+export function voipNumberPortPriceId(): string | null {
+  return process.env.STRIPE_PRICE_VOIP_NUMBER_PORT || null;
+}
+
+/**
+ * One subscription, one line item (R50). Finds or creates a monthly CAD price
+ * on the VoIP product at the derived total so add-ons are never separate
+ * Stripe lines. Quantity at checkout is always 1.
+ */
+export async function priceForVoipAmount(params: {
+  tier: string;
+  amountCents: number;
+  numberCount: number;
+  seatCount: number;
+}): Promise<string> {
+  const stripe = getStripeClient();
+  const catalogPriceId = priceIdFor("voip", params.tier);
+  if (!catalogPriceId) {
+    throw new Error("VoIP product is not configured in Stripe.");
+  }
+  const catalog = await stripe.prices.retrieve(catalogPriceId);
+  if (catalog.unit_amount === params.amountCents && catalog.recurring?.interval === "month") {
+    return catalog.id;
+  }
+  const productId = typeof catalog.product === "string" ? catalog.product : catalog.product.id;
+  const existing = await stripe.prices.list({ product: productId, active: true, limit: 100 });
+  const match = existing.data.find(
+    (price) =>
+      price.currency === "cad" &&
+      price.unit_amount === params.amountCents &&
+      price.recurring?.interval === "month" &&
+      price.recurring.interval_count === 1,
+  );
+  if (match) return match.id;
+
+  const created = await stripe.prices.create({
+    product: productId,
+    currency: "cad",
+    unit_amount: params.amountCents,
+    recurring: { interval: "month" },
+    nickname: voipInvoiceDescription({
+      tier: params.tier,
+      numberCount: params.numberCount,
+      seatCount: params.seatCount,
+    }),
+    metadata: {
+      marker: params.tier === "residential" ? "mckee_voip_residential" : "mckee_voip_professional",
+      number_count: String(params.numberCount),
+      seat_count: String(params.seatCount),
+    },
+  });
+  return created.id;
 }
 
 // ---------------------------------------------------------------------------

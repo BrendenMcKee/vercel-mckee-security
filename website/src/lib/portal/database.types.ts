@@ -553,10 +553,12 @@ export type Database = {
           created_at: string
           due_alerted_at: string | null
           id: string
-          line_count: number
           monthly_amount_cents: number | null
           next_due_on: string | null
+          number_count: number
+          port_count: number
           profile_id: string
+          seat_count: number
           service_type: Database["public"]["Enums"]["service_type"]
           status: Database["public"]["Enums"]["service_status"]
           stripe_subscription_id: string | null
@@ -569,10 +571,12 @@ export type Database = {
           created_at?: string
           due_alerted_at?: string | null
           id?: string
-          line_count?: number
           monthly_amount_cents?: number | null
           next_due_on?: string | null
+          number_count?: number
+          port_count?: number
           profile_id: string
+          seat_count?: number
           service_type: Database["public"]["Enums"]["service_type"]
           status?: Database["public"]["Enums"]["service_status"]
           stripe_subscription_id?: string | null
@@ -585,10 +589,12 @@ export type Database = {
           created_at?: string
           due_alerted_at?: string | null
           id?: string
-          line_count?: number
           monthly_amount_cents?: number | null
           next_due_on?: string | null
+          number_count?: number
+          port_count?: number
           profile_id?: string
+          seat_count?: number
           service_type?: Database["public"]["Enums"]["service_type"]
           status?: Database["public"]["Enums"]["service_status"]
           stripe_subscription_id?: string | null
@@ -647,7 +653,9 @@ export type Database = {
           p_monitoring_tier: string
           p_target_email: string
           p_token_hash: string
-          p_voip_lines?: number
+          p_voip_numbers?: number
+          p_voip_ports?: number
+          p_voip_seats?: number
           p_voip_tier?: string
         }
         Returns: string
