@@ -1,6 +1,6 @@
 // Responsive/behaviour check for the Starlink admin. Measures the things that
 // are easy to get wrong in CSS and impossible to eyeball reliably: horizontal
-// overflow, whether the booking modal's sticky header and footer actually pin,
+// overflow, whether the booking modal's header and footer stay on the card,
 // focused-field font size (iOS zooms below 16px), and touch target sizes.
 //
 // Run: node --env-file=.env.local scripts/starlink-admin-ui-check.mjs [baseUrl]
@@ -208,41 +208,44 @@ console.log(`\n=== iPhone 13 (390x844) ${baseUrl}/starlink-admin`);
         fontSizes.map((f) => `${f.tag}=${f.px}px`).join(", "),
       );
 
-      // Sticky header/footer: scroll the overlay and re-measure.
-      const sticky = await page.evaluate(async () => {
+      // Header/footer are flex chrome on the dialog. Scroll the body, not the
+      // overlay, and confirm the title bar stays on the card.
+      const chrome = await page.evaluate(async () => {
         const dialog = document.querySelector('[role="dialog"]');
-        const overlay = dialog?.parentElement;
-        const header = dialog?.querySelector(".sticky");
-        const footers = dialog?.querySelectorAll(".sticky");
-        const footer = footers?.[footers.length - 1];
-        if (!overlay || !header || !footer) return null;
+        const header = dialog?.querySelector("[data-modal-chrome='header']");
+        const footer = dialog?.querySelector("[data-modal-chrome='footer']");
+        const body = dialog?.querySelector("[data-modal-chrome='body']");
+        if (!dialog || !header || !footer || !body) return null;
         const before = {
           panelHeight: Math.round(dialog.getBoundingClientRect().height),
-          scrollable: overlay.scrollHeight - overlay.clientHeight,
+          scrollable: body.scrollHeight - body.clientHeight,
         };
-        overlay.scrollTop = Math.min(600, overlay.scrollHeight);
+        body.scrollTop = Math.min(600, body.scrollHeight);
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const dialogBox = dialog.getBoundingClientRect();
         return {
           ...before,
-          scrolledBy: Math.round(overlay.scrollTop),
+          scrolledBy: Math.round(body.scrollTop),
           headerTop: Math.round(header.getBoundingClientRect().top),
+          dialogTop: Math.round(dialogBox.top),
           footerBottom: Math.round(footer.getBoundingClientRect().bottom),
+          dialogBottom: Math.round(dialogBox.bottom),
           viewportHeight: window.innerHeight,
         };
       });
-      if (!sticky) {
-        check(false, "found the modal's sticky bars to measure");
+      if (!chrome) {
+        check(false, "found the modal's header and footer to measure");
       } else {
-        console.log(`       panel ${sticky.panelHeight}px, scrolled ${sticky.scrolledBy}px of ${sticky.scrollable}px`);
+        console.log(`       panel ${chrome.panelHeight}px, scrolled ${chrome.scrolledBy}px of ${chrome.scrollable}px`);
         check(
-          sticky.scrolledBy === 0 || sticky.headerTop >= -2,
-          "modal header stays pinned when scrolled",
-          `header top ${sticky.headerTop}px`,
+          chrome.scrolledBy === 0 || chrome.headerTop >= chrome.dialogTop - 2,
+          "modal header stays on the card when the body scrolls",
+          `header ${chrome.headerTop}px vs dialog ${chrome.dialogTop}px`,
         );
         check(
-          sticky.scrolledBy === 0 || sticky.footerBottom <= sticky.viewportHeight + 2,
-          "Save/Cancel footer stays reachable when scrolled",
-          `footer bottom ${sticky.footerBottom}px of ${sticky.viewportHeight}px`,
+          chrome.scrolledBy === 0 || chrome.footerBottom <= chrome.dialogBottom + 2,
+          "Save/Cancel footer stays on the card when the body scrolls",
+          `footer ${chrome.footerBottom}px vs dialog ${chrome.dialogBottom}px`,
         );
       }
       await page.screenshot({ path: `${outDir}/mobile-modal.png`, fullPage: true });
@@ -434,23 +437,30 @@ console.log(`\n=== 740x360 (phone in landscape, modal open)`);
     if (await newBooking.count()) {
       await newBooking.first().click();
       await page.waitForTimeout(900);
-      const sticky = await page.evaluate(async () => {
+      const chrome = await page.evaluate(async () => {
         const dialog = document.querySelector('[role="dialog"]');
-        const overlay = dialog?.parentElement;
-        const bars = dialog?.querySelectorAll(".sticky");
-        if (!overlay || !bars?.length) return null;
-        overlay.scrollTop = overlay.scrollHeight;
+        const header = dialog?.querySelector("[data-modal-chrome='header']");
+        const footer = dialog?.querySelector("[data-modal-chrome='footer']");
+        const body = dialog?.querySelector("[data-modal-chrome='body']");
+        if (!dialog || !header || !footer || !body) return null;
+        body.scrollTop = body.scrollHeight;
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const dialogBox = dialog.getBoundingClientRect();
         return {
-          headerTop: Math.round(bars[0].getBoundingClientRect().top),
-          footerBottom: Math.round(bars[bars.length - 1].getBoundingClientRect().bottom),
+          headerTop: Math.round(header.getBoundingClientRect().top),
+          dialogTop: Math.round(dialogBox.top),
+          footerBottom: Math.round(footer.getBoundingClientRect().bottom),
+          dialogBottom: Math.round(dialogBox.bottom),
           viewportHeight: window.innerHeight,
         };
       });
       check(
-        sticky !== null && sticky.headerTop >= -2 && sticky.footerBottom <= sticky.viewportHeight + 2,
+        chrome !== null &&
+          chrome.headerTop >= chrome.dialogTop - 2 &&
+          chrome.footerBottom <= chrome.dialogBottom + 2 &&
+          chrome.footerBottom <= chrome.viewportHeight + 2,
         "modal bars still pin in short landscape",
-        JSON.stringify(sticky),
+        JSON.stringify(chrome),
       );
       await page.screenshot({ path: `${outDir}/landscape-modal.png` });
     }

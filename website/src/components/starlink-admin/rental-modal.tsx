@@ -504,7 +504,7 @@ export function RentalModal({
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/70 p-3 sm:p-6"
+      className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/70 p-3 sm:p-6"
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -513,26 +513,25 @@ export function RentalModal({
         role="dialog"
         aria-modal="true"
         aria-label={isEdit ? "Rental details" : "New rental"}
-        // `clip` rather than `hidden`: both round off the gradient bar, but
-        // `hidden` makes this a scroll container, and a sticky child sticks to
-        // its nearest scrolling ancestor. This card never scrolls (the overlay
-        // does), so `hidden` silently disabled the sticky header and footer,
-        // leaving Save about three screens down on a phone.
-        className="my-auto w-full max-w-2xl overflow-clip rounded-2xl border bg-surface shadow-2xl shadow-black/50 transition-colors"
+        // Header and footer are flex chrome, not sticky. Sticky was pinning to
+        // the overlay (the overlay is what actually scrolls), so the title bar
+        // slid off the rounded card and left a gap under the status stripe.
+        className="flex max-h-full min-h-0 w-full max-w-2xl flex-col overflow-hidden rounded-2xl border bg-surface shadow-2xl shadow-black/50 transition-colors"
         style={{
           borderColor: hexToRgba(statusHex, 0.55),
           boxShadow: `0 0 0 1px ${hexToRgba(statusHex, 0.18)}, 0 25px 50px -12px rgba(0,0,0,0.6)`,
         }}
       >
         <div
-          className="h-1.5 w-full"
+          className="h-1.5 w-full shrink-0"
           style={{
             background: `linear-gradient(90deg, ${statusHex}, ${unitColor ?? statusHex})`,
           }}
           aria-hidden="true"
         />
         <div
-          className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-surface px-5 py-4"
+          data-modal-chrome="header"
+          className="flex shrink-0 items-center justify-between gap-3 border-b bg-surface px-5 py-4"
           style={{ borderBottomColor: hexToRgba(statusHex, 0.3) }}
         >
           <div className="flex min-w-0 flex-wrap items-center gap-2.5">
@@ -578,7 +577,10 @@ export function RentalModal({
           </button>
         </div>
 
-        <div className="space-y-5 px-5 py-5">
+        <div
+          data-modal-chrome="body"
+          className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5"
+        >
           {/* Customer */}
           <Section icon={User} title="Customer">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -893,7 +895,10 @@ export function RentalModal({
           ) : null}
         </div>
 
-        <div className="sticky bottom-0 flex items-center justify-between gap-3 rounded-b-2xl border-t border-white/10 bg-surface px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div
+          data-modal-chrome="footer"
+          className="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 bg-surface px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
           {isEdit ? (
             <button
               type="button"
