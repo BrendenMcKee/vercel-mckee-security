@@ -78,8 +78,8 @@ const { data: svc } = await admin
   .select("id")
   .single();
 await admin.from("caller_id_contacts").insert([
-  { profile_id: clientUser.profileId, phone: "+17055550101", label: "Mobilia MobileAudit (homeowner)", passcode: "bluebird" },
-  { profile_id: clientUser.profileId, phone: "+17055550102", label: "Neighbour With A Long Name", passcode: "acorn" },
+  { profile_id: clientUser.profileId, phone: "+17055550101", label: "Mobilia MobileAudit (homeowner)", passcode: "bluebird", sort_order: 1 },
+  { profile_id: clientUser.profileId, phone: "+17055550102", label: "Neighbour With A Long Name", passcode: "acorn", sort_order: 2 },
 ]);
 await admin.from("devices").insert([
   { profile_id: clientUser.profileId, label: "7Ah Security System Battery", category: "system_battery", lifetime_years: 5, installed_on: "2019-02-01" },

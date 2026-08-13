@@ -382,8 +382,9 @@ A row exists **only while consent is active**. Joining inserts the row; "Remove 
 | `profile_id` | uuid | FK profiles, not null |
 | `phone` | text | not null, E.164 normalized, CHECK `phone ~ '^\+1[2-9]\d{9}$'` (NANP; revisit if non-NA clients appear) |
 | `label` | text | not null, length 1..80 |
-| `passcode` | text | nullable in schema (pre-existing rows), length 1..40; **required by the app for every contact** — the word each person gives the monitoring station to verify their identity (stakeholder 2026-07-06). Displayed name-first: label, phone, passcode |
-| `unique (profile_id, phone)` | | duplicate prevention (handover 6.4) |
+| `passcode` | text | nullable in schema (pre-existing rows), length 1..40; **required by the app for every contact** — the word each person gives the monitoring station to verify their identity (stakeholder 2026-07-06). Displayed name-first: call order, label, phone, passcode |
+| `sort_order` | int | not null, `>= 1`, unique per profile. **1 is who the station calls first.** The editor drag handle writes this; the RPC stores array order as 1..n. |
+| `unique (profile_id, sort_order)` | | one person per call-order slot. The same phone may appear more than once (a parent listing their number for a child). |
 
 Contact cap (default 15, pending D6/Q16) enforced in the server action, not the schema.
 
@@ -395,8 +396,9 @@ Contact cap (default 15, pending D6/Q16) enforced in the server action, not the 
 | `profile_id` | uuid | FK profiles, not null |
 | `changed_by` | uuid | FK auth.users, not null (the authenticated actor) |
 | `changed_via` | text | not null, CHECK in (`'client_dashboard'`, `'admin_dashboard'`) (where/how the change was made) |
-| `added` | jsonb | array of `{phone,label,passcode}` |
-| `removed` | jsonb | array of `{phone,label,passcode}` (a passcode edit audits as remove + add, like a name edit) |
+| `added` | jsonb | array of `{phone,label,passcode,sort_order}` |
+| `removed` | jsonb | array of `{phone,label,passcode,sort_order}` (a passcode edit audits as remove + add, like a name edit) |
+| `reordered` | jsonb | array of `{phone,label,passcode,from_order,to_order}` when a surviving contact changes call-order number. A reorder-only save is still a change (history row + Lanvac email, blue rows). |
 | `authorized_via` | text | null for client changes; **required for admin changes**, CHECK in (`'client_email'`, `'client_verbal'`, `'client_in_person'`, `'mckee_initiated'`) |
 | `change_reason` | text | null for client changes; **required non-empty for admin changes** (references the client request, R24) |
 | `client_notified_at` | timestamptz | nullable; stamped when the client notification email sends (admin changes only) |
@@ -1369,6 +1371,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-13 | **Caller ID call order.** Contacts store `sort_order` (#1 is first). The list shows #1, #2, #3 and a drag handle (touch + mouse + arrow keys) to reorder. Reorder-only saves write history and email McKee with blue “was #n” rows so Lanvac can be updated. The same phone may appear more than once. |
 | 2026-08-13 | **Manual-rail billing defaults.** Monitoring has no monthly option (DB CHECK + admin UI); VoIP stays monthly. Setting up e-transfer / cheque / cash treats the first invoice as due today (Toronto date); the admin can still change it if they are already paid ahead. Recording that payment moves the next due date forward one year or one month. |
 | 2026-08-13 | **Phase 8 company-file hygiene (R51 / D17).** 8A/8B and the bulk import run against a named copy of the live QuickBooks file, not the Intuit sample and not the live books. Live stays the business file and keeps TSheets / Web Connector. The bridge uses the Desktop SDK (not Web Connector) and refuses to run if the open file is not the expected path. MCP stays in the cloud (8D); only the bridge is installed on the QuickBooks PC. `ACCOUNTING_PLAN.md` Section 10 rewritten to match. |
 | 2026-08-13 | **Reuse Stripe customers by email.** Deleting a portal client still cancels live subscriptions and erases the portal row, but the Stripe customer is kept (invoices and receipts stay in Stripe). Checkout uses `findOrCreateStripeCustomer`: stored `stripe_customer_id`, else an existing Stripe customer with that email (prefer a matching `profile_id`, then one with a card on file), else create. Recreating a test client with the same email no longer makes a second Stripe customer. |

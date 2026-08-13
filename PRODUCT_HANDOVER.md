@@ -381,12 +381,13 @@ Regardless of section, the dashboard should include:
 3. An email is sent to McKee admin showing exactly what changed:
    - **Added contacts** highlighted in green
    - **Removed contacts** highlighted in red
+   - **Call-order changes** highlighted in blue (`#2` was `#4`) so Lanvac can be updated
 
 **Business rule:** Caller ID changes affect emergency response. Admin must be notified immediately on every change so the monitoring station's records can be updated.
 
 **Data quality (recommended):**
 - Validate phone number format before save (E.164 or North American formats—team to confirm with McKee)
-- Prevent duplicate phone numbers on the same client's list
+- The same phone may appear more than once (a parent listing their number for a child). Call order is stored (`#1` is first) and can be dragged to reorder.
 - Consider a reasonable maximum number of contacts (e.g., cap at 10–15—confirm with operations)
 - Optional: require at least one contact before save if McKee policy mandates a minimum emergency contact list
 

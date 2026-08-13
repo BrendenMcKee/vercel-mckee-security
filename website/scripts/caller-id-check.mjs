@@ -7,7 +7,8 @@
 //  - admin save WITHOUT authorization/reason is rejected by the DB CHECK
 //  - admin save WITH authorization + reason records full audit metadata
 //  - caller_id_changes is append-only: UPDATE/DELETE fail for client AND admin
-//  - invalid phone format and duplicate numbers are rejected by constraints
+//  - invalid phone format is rejected; the same phone may appear twice
+//    (different names). Reordering the list is a recorded change.
 //  - cross-profile writes are blocked by RLS (client cannot touch another list)
 //  - devices: expired device (2018 battery) renders amber on the client
 //    dashboard; admin date update clears it; clients cannot write devices
@@ -195,13 +196,46 @@ try {
   {
     const { data } = await admin
       .from("caller_id_contacts")
-      .select("phone")
+      .select("phone, sort_order")
       .eq("profile_id", clientUser.profileId)
-      .order("phone");
+      .order("sort_order");
     check(
       "live list replaced transactionally",
       data?.length === 2 && data[0].phone === "+17055550101" && data[1].phone === "+17055550103",
       JSON.stringify(data?.map((c) => c.phone)),
+    );
+  }
+
+  // --- Reorder-only save is a real change -----------------------------------
+  {
+    const { data, error } = await clientSession.ssr.rpc("save_caller_id_list", {
+      p_profile_id: clientUser.profileId,
+      p_contacts: [
+        { phone: "+17055550103", label: "Cousin Cal", passcode: "maple" },
+        { phone: "+17055550101", label: "Callerina (self)", passcode: "garnet" },
+      ],
+      p_changed_via: "client_dashboard",
+      p_changed_by_email: clientUser.email,
+    });
+    check(
+      "reorder-only save records reordered and no add/remove",
+      !error &&
+        (data?.added ?? []).length === 0 &&
+        (data?.removed ?? []).length === 0 &&
+        (data?.reordered ?? []).length === 2,
+      JSON.stringify({ added: data?.added, removed: data?.removed, reordered: data?.reordered }),
+    );
+  }
+  {
+    const { data } = await admin
+      .from("caller_id_contacts")
+      .select("phone, sort_order")
+      .eq("profile_id", clientUser.profileId)
+      .order("sort_order");
+    check(
+      "live list stored in the new call order",
+      data?.[0]?.phone === "+17055550103" && data?.[1]?.phone === "+17055550101",
+      JSON.stringify(data),
     );
   }
 
@@ -265,6 +299,7 @@ try {
       profile_id: clientUser.profileId,
       phone: "555-0101",
       label: "Bad format",
+      sort_order: 99,
     });
     check("invalid phone format rejected by CHECK (23514)", error?.code === "23514", error?.code ?? "no error");
   }
@@ -272,9 +307,11 @@ try {
     const { error } = await clientSession.ssr.from("caller_id_contacts").insert({
       profile_id: clientUser.profileId,
       phone: "+17055550101",
-      label: "Duplicate",
+      label: "Kid on parent phone",
+      passcode: "pebble",
+      sort_order: 98,
     });
-    check("duplicate phone rejected by UNIQUE (23505)", error?.code === "23505", error?.code ?? "no error");
+    check("same phone with a different name is allowed", !error, error?.code ?? error?.message ?? "");
   }
 
   // --- Cross-profile writes blocked by RLS -----------------------------------

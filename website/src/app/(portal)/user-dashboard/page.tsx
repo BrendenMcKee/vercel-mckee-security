@@ -96,9 +96,9 @@ export default async function UserDashboardPage({
         .order("service_type"),
       supabase
         .from("caller_id_contacts")
-        .select("phone, label, passcode")
+        .select("id, phone, label, passcode, sort_order")
         .eq("profile_id", profile.id)
-        .order("created_at"),
+        .order("sort_order"),
       supabase
         .from("devices")
         .select("id, label, category, installed_on, lifetime_years")

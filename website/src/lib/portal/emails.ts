@@ -115,31 +115,54 @@ export async function sendInvitationEmail({
 // Caller ID change emails (PORTAL_PLAN.md Section 8, R23/R24)
 // ---------------------------------------------------------------------------
 
-export type CallerIdDiffEntry = { phone: string; label: string; passcode?: string | null };
+export type CallerIdDiffEntry = {
+  phone: string;
+  label: string;
+  passcode?: string | null;
+  sort_order?: number;
+  from_order?: number;
+  to_order?: number;
+};
 
 const DIFF_GREEN = "#22c55e";
 const DIFF_GREEN_BG = "#16351f";
 const DIFF_RED = "#ef4444";
 const DIFF_RED_BG = "#3a1616";
+const DIFF_MOVED = "#38bdf8";
+const DIFF_MOVED_BG = "#0c2a3d";
 const DIFF_UNCHANGED = "#d4d4d4";
 const DIFF_UNCHANGED_BG = "#181818";
 const DIFF_UNCHANGED_BORDER = "#3f3f3f";
 
-type CallerIdRowKind = "added" | "removed" | "unchanged";
+type CallerIdRowKind = "added" | "removed" | "moved" | "unchanged";
 
-// Display order per stakeholder: name first, then phone, then the
+function callerIdEntryKey(entry: CallerIdDiffEntry): string {
+  return `${entry.phone}|${entry.label}|${entry.passcode ?? ""}`;
+}
+
+function callerIdRowTone(kind: CallerIdRowKind): { color: string; bg: string; border: string } {
+  if (kind === "added") return { color: DIFF_GREEN, bg: DIFF_GREEN_BG, border: DIFF_GREEN };
+  if (kind === "removed") return { color: DIFF_RED, bg: DIFF_RED_BG, border: DIFF_RED };
+  if (kind === "moved") return { color: DIFF_MOVED, bg: DIFF_MOVED_BG, border: DIFF_MOVED };
+  return { color: DIFF_UNCHANGED, bg: DIFF_UNCHANGED_BG, border: DIFF_UNCHANGED_BORDER };
+}
+
+// Display order per stakeholder: call-order number, name, phone, then the
 // monitoring-station passcode (needed verbatim for the Lanvac entry).
-function listRowHtml(entry: CallerIdDiffEntry, kind: CallerIdRowKind): string {
-  const color = kind === "added" ? DIFF_GREEN : kind === "removed" ? DIFF_RED : DIFF_UNCHANGED;
-  const bg = kind === "added" ? DIFF_GREEN_BG : kind === "removed" ? DIFF_RED_BG : DIFF_UNCHANGED_BG;
-  const border = kind === "unchanged" ? DIFF_UNCHANGED_BORDER : color;
-  const sign = kind === "added" ? "+" : kind === "removed" ? "&minus;" : "";
+function listRowHtml(entry: CallerIdDiffEntry, kind: CallerIdRowKind, position?: number): string {
+  const { color, bg, border } = callerIdRowTone(kind);
+  const sign = kind === "added" ? "+" : kind === "removed" ? "&minus;" : kind === "moved" ? "&#8645;" : "";
+  const number = position != null ? `#${position}` : entry.sort_order != null ? `#${entry.sort_order}` : "";
+  const movedNote =
+    kind === "moved" && entry.from_order != null && entry.to_order != null
+      ? ` <span style="color:${DIFF_MOVED};font-weight:600;">(was #${entry.from_order})</span>`
+      : "";
   const passcode = entry.passcode
     ? `<span style="color:#a3a3a3;">&nbsp;&middot;&nbsp;passcode:&nbsp;</span><span style="color:#f5f5f5;font-weight:700;">${escapeHtml(entry.passcode)}</span>`
     : "";
   return `<div style="background:${bg};border:1px solid ${border};border-radius:8px;padding:8px 12px;margin:0 0 6px;">
-    <span style="color:${color};font-weight:700;">${sign}${sign ? "&nbsp;" : ""}${escapeHtml(entry.label)}</span>
-    <span style="color:#f5f5f5;">&nbsp;&middot;&nbsp;${escapeHtml(formatPhone(entry.phone))}</span>${passcode}
+    <span style="color:${color};font-weight:700;">${sign}${sign ? "&nbsp;" : ""}${number ? `${number}&nbsp;` : ""}${escapeHtml(entry.label)}</span>
+    <span style="color:#f5f5f5;">&nbsp;&middot;&nbsp;${escapeHtml(formatPhone(entry.phone))}</span>${passcode}${movedNote}
   </div>`;
 }
 
@@ -147,11 +170,18 @@ function fullListHtml(
   contacts: CallerIdDiffEntry[],
   added: CallerIdDiffEntry[],
   removed: CallerIdDiffEntry[],
+  reordered: CallerIdDiffEntry[] = [],
 ): string {
-  const addedPhones = new Set(added.map((entry) => entry.phone));
+  const addedKeys = new Set(added.map(callerIdEntryKey));
+  const movedByKey = new Map(reordered.map((entry) => [callerIdEntryKey(entry), entry]));
   const rows = [
-    ...contacts.map((entry) => listRowHtml(entry, addedPhones.has(entry.phone) ? "added" : "unchanged")),
-    ...removed.map((entry) => listRowHtml(entry, "removed")),
+    ...contacts.map((entry, index) => {
+      const key = callerIdEntryKey(entry);
+      const moved = movedByKey.get(key);
+      const kind: CallerIdRowKind = addedKeys.has(key) ? "added" : moved ? "moved" : "unchanged";
+      return listRowHtml(moved ? { ...entry, ...moved } : entry, kind, index + 1);
+    }),
+    ...removed.map((entry) => listRowHtml(entry, "removed", entry.sort_order)),
   ];
   return rows.join("") || "<em>Empty list</em>";
 }
@@ -160,13 +190,24 @@ function fullListText(
   contacts: CallerIdDiffEntry[],
   added: CallerIdDiffEntry[],
   removed: CallerIdDiffEntry[],
+  reordered: CallerIdDiffEntry[] = [],
 ): string {
-  const addedPhones = new Set(added.map((entry) => entry.phone));
-  const line = (entry: CallerIdDiffEntry, prefix: string) =>
-    `${prefix}${entry.label}, ${formatPhone(entry.phone)}${entry.passcode ? `, passcode: ${entry.passcode}` : ""}`;
+  const addedKeys = new Set(added.map(callerIdEntryKey));
+  const movedByKey = new Map(reordered.map((entry) => [callerIdEntryKey(entry), entry]));
+  const line = (entry: CallerIdDiffEntry, prefix: string, position?: number) => {
+    const number = position != null ? `#${position} ` : entry.sort_order != null ? `#${entry.sort_order} ` : "";
+    const moved =
+      entry.from_order != null && entry.to_order != null ? ` (was #${entry.from_order})` : "";
+    return `${prefix}${number}${entry.label}, ${formatPhone(entry.phone)}${entry.passcode ? `, passcode: ${entry.passcode}` : ""}${moved}`;
+  };
   return [
-    ...contacts.map((entry) => line(entry, addedPhones.has(entry.phone) ? "+ " : "  ")),
-    ...removed.map((entry) => line(entry, "- ")),
+    ...contacts.map((entry, index) => {
+      const key = callerIdEntryKey(entry);
+      const moved = movedByKey.get(key);
+      const prefix = addedKeys.has(key) ? "+ " : moved ? "~ " : "  ";
+      return line(moved ? { ...entry, ...moved } : entry, prefix, index + 1);
+    }),
+    ...removed.map((entry) => line(entry, "- ", entry.sort_order)),
   ].join("\n");
 }
 
@@ -183,6 +224,7 @@ export async function sendCallerIdAdminAlert({
   contacts,
   added,
   removed,
+  reordered = [],
   authorizedVia,
   changeReason,
   profileId,
@@ -193,22 +235,24 @@ export async function sendCallerIdAdminAlert({
   contacts: CallerIdDiffEntry[];
   added: CallerIdDiffEntry[];
   removed: CallerIdDiffEntry[];
+  reordered?: CallerIdDiffEntry[];
   authorizedVia?: string | null;
   changeReason?: string | null;
   profileId: string;
 }): Promise<boolean> {
+  const onlyOrder = added.length === 0 && removed.length === 0 && reordered.length > 0;
   const meta = {
-    title: "Caller ID List Changed",
-    inboxLabel: "Update Lanvac to match the new list",
+    title: onlyOrder ? "Caller ID Call Order Changed" : "Caller ID List Changed",
+    inboxLabel: "Update Lanvac to match the new list and call order",
   };
 
   const fields: EmailField[] = [
     { label: "Client", value: `${clientName}${clientEmail ? ` (${clientEmail})` : ""}`, highlight: true },
     { label: "Changed by", value: changedByDescription },
     {
-      label: "Full caller ID list (green added, red removed, gray unchanged)",
-      value: fullListText(contacts, added, removed),
-      htmlValue: fullListHtml(contacts, added, removed),
+      label: "Full caller ID list (green added, red removed, blue call-order change, gray unchanged)",
+      value: fullListText(contacts, added, removed, reordered),
+      htmlValue: fullListHtml(contacts, added, removed, reordered),
     },
   ];
   if (authorizedVia) {
@@ -226,7 +270,9 @@ export async function sendCallerIdAdminAlert({
   });
 
   return dispatchPortalEmail("Caller ID admin alert", {
-    subject: `📞 Caller ID change: ${clientName}`,
+    subject: onlyOrder
+      ? `Caller ID call order changed: ${clientName}`
+      : `Caller ID change: ${clientName}`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
@@ -251,6 +297,7 @@ export async function sendCallerIdClientNotification({
   contacts,
   added,
   removed,
+  reordered = [],
   authorizedVia,
   changeReason,
 }: {
@@ -259,6 +306,7 @@ export async function sendCallerIdClientNotification({
   contacts: CallerIdDiffEntry[];
   added: CallerIdDiffEntry[];
   removed: CallerIdDiffEntry[];
+  reordered?: CallerIdDiffEntry[];
   authorizedVia: string;
   changeReason: string;
 }): Promise<boolean> {
@@ -273,9 +321,9 @@ export async function sendCallerIdClientNotification({
       value: `Hi ${firstName},\n\nMcKee Security updated the caller ID contact list for your alarm monitoring, as requested.`,
     },
     {
-      label: "Your full caller ID list (green added, red removed, gray unchanged)",
-      value: fullListText(contacts, added, removed),
-      htmlValue: fullListHtml(contacts, added, removed),
+      label: "Your full caller ID list (green added, red removed, blue call-order change, gray unchanged)",
+      value: fullListText(contacts, added, removed, reordered),
+      htmlValue: fullListHtml(contacts, added, removed, reordered),
     },
     { label: "Authorization on file", value: AUTHORIZATION_LABELS[authorizedVia] ?? authorizedVia },
     { label: "Reason recorded", value: changeReason },

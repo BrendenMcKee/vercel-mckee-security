@@ -61,9 +61,9 @@ export default async function AdminClientDetailPage({
   ] = await Promise.all([
       supabase
         .from("caller_id_contacts")
-        .select("phone, label, passcode")
+        .select("id, phone, label, passcode, sort_order")
         .eq("profile_id", profileId)
-        .order("created_at"),
+        .order("sort_order"),
       supabase
         .from("caller_id_changes")
         .select("*")

@@ -235,8 +235,8 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       setNotice({ kind: "error", text: "The alarm contact list is capped at 15 people." });
       return;
     }
-    if (draftContacts.some((c) => c.phone === phone)) {
-      setNotice({ kind: "error", text: "That phone number is already on this list." });
+    if (draftContacts.some((c) => c.phone === phone && c.label === label && c.passcode === passcode)) {
+      setNotice({ kind: "error", text: "That person is already on this list." });
       return;
     }
     setDraftContacts((prev) => [...prev, { label, phone, passcode }]);
@@ -792,18 +792,19 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 </p>
                 {draftContacts.length > 0 && (
                   <ul className="space-y-2">
-                    {draftContacts.map((contact) => (
+                    {draftContacts.map((contact, index) => (
                       <li
-                        key={contact.phone}
+                        key={`${contact.phone}-${contact.label}-${index}`}
                         className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-background px-3 py-2 text-sm"
                       >
                         <span className="text-white">
+                          <span className="font-bold tabular-nums text-white/70">#{index + 1}</span>{" "}
                           {contact.label}{" "}
                           <span className="text-white/50">{formatPhone(contact.phone)}</span>
                         </span>
                         <button
                           type="button"
-                          onClick={() => setDraftContacts((prev) => prev.filter((c) => c.phone !== contact.phone))}
+                          onClick={() => setDraftContacts((prev) => prev.filter((_, i) => i !== index))}
                           className="cursor-pointer text-xs font-bold uppercase tracking-wide text-white/50 hover:text-white"
                         >
                           Remove

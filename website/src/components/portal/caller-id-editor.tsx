@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type PointerEvent } from "react";
 import { formatPhone, normalizePhone } from "@/lib/portal/phone";
 import {
   saveMyCallerIdList,
@@ -8,7 +8,12 @@ import {
   type SaveCallerIdResult,
 } from "@/lib/portal/actions/caller-id";
 
-export type CallerIdContact = { phone: string; label: string; passcode: string | null };
+export type CallerIdContact = {
+  id: string;
+  phone: string;
+  label: string;
+  passcode: string | null;
+};
 
 const AUTHORIZATION_OPTIONS = [
   { value: "client_email", label: "Client emailed the request (preferred)" },
@@ -22,6 +27,15 @@ const inputClass =
 
 const contactKey = (c: { phone: string; label: string; passcode?: string | null }) =>
   `${c.phone}|${c.label}|${c.passcode ?? ""}`;
+
+function withStableIds(contacts: Array<Partial<CallerIdContact> & { phone: string; label: string; passcode: string | null }>): CallerIdContact[] {
+  return contacts.map((contact, index) => ({
+    id: contact.id ?? `tmp-${index}-${contact.phone}`,
+    phone: contact.phone,
+    label: contact.label,
+    passcode: contact.passcode,
+  }));
+}
 
 /**
  * Shared caller ID list editor (R23): the client dashboard and the admin
@@ -41,7 +55,8 @@ export function CallerIdEditor({
   profileId?: string;
   initialContacts: CallerIdContact[];
 }) {
-  const [contacts, setContacts] = useState<CallerIdContact[]>(initialContacts);
+  const [contacts, setContacts] = useState<CallerIdContact[]>(() => withStableIds(initialContacts));
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newPasscode, setNewPasscode] = useState("");
@@ -52,8 +67,10 @@ export function CallerIdEditor({
 
   const dirty = useMemo(() => {
     if (contacts.length !== initialContacts.length) return true;
-    const initial = new Set(initialContacts.map(contactKey));
-    return contacts.some((c) => !initial.has(contactKey(c)));
+    return contacts.some((contact, index) => {
+      const initial = initialContacts[index];
+      return !initial || contactKey(contact) !== contactKey(initial);
+    });
   }, [contacts, initialContacts]);
 
   // Existing contacts saved before passcodes existed need one before the
@@ -80,28 +97,73 @@ export function CallerIdEditor({
       });
       return;
     }
-    if (contacts.some((c) => c.phone === phone)) {
-      setNotice({ kind: "error", text: `${formatPhone(phone)} is already on the list.` });
+    if (contacts.some((c) => contactKey(c) === `${phone}|${label}|${passcode}`)) {
+      setNotice({ kind: "error", text: `${label} with that number and passcode is already on the list.` });
       return;
     }
     if (contacts.length >= 15) {
       setNotice({ kind: "error", text: "The list is capped at 15 contacts." });
       return;
     }
-    setContacts((list) => [...list, { phone, label, passcode }]);
+    setContacts((list) => [
+      ...list,
+      { id: crypto.randomUUID(), phone, label, passcode },
+    ]);
     setNewLabel("");
     setNewPhone("");
     setNewPasscode("");
   }
 
-  function removeContact(phone: string) {
+  function removeContact(id: string) {
     setNotice(null);
-    setContacts((list) => list.filter((c) => c.phone !== phone));
+    setContacts((list) => list.filter((c) => c.id !== id));
   }
 
-  function setPasscode(phone: string, passcode: string) {
+  function setPasscode(id: string, passcode: string) {
     setNotice(null);
-    setContacts((list) => list.map((c) => (c.phone === phone ? { ...c, passcode } : c)));
+    setContacts((list) => list.map((c) => (c.id === id ? { ...c, passcode } : c)));
+  }
+
+  function moveContact(id: string, toIndex: number) {
+    setContacts((list) => {
+      const from = list.findIndex((c) => c.id === id);
+      if (from < 0 || toIndex < 0 || toIndex >= list.length || from === toIndex) return list;
+      const next = [...list];
+      const [item] = next.splice(from, 1);
+      next.splice(toIndex, 0, item);
+      return next;
+    });
+  }
+
+  function onDragHandlePointerDown(id: string, event: PointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDraggingId(id);
+    setNotice(null);
+  }
+
+  function onDragHandlePointerMove(event: PointerEvent<HTMLButtonElement>) {
+    if (!draggingId) return;
+    const el = document.elementFromPoint(event.clientX, event.clientY);
+    const row = el?.closest("[data-contact-id]") as HTMLElement | null;
+    const overId = row?.dataset.contactId;
+    if (!overId || overId === draggingId) return;
+    setContacts((list) => {
+      const from = list.findIndex((c) => c.id === draggingId);
+      const to = list.findIndex((c) => c.id === overId);
+      if (from < 0 || to < 0 || from === to) return list;
+      const next = [...list];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }
+
+  function onDragHandlePointerUp(event: PointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setDraggingId(null);
   }
 
   function describeDiff(): string {
@@ -109,11 +171,17 @@ export function CallerIdEditor({
     const next = new Set(contacts.map(contactKey));
     const added = contacts.filter((c) => !initial.has(contactKey(c)));
     const removed = initialContacts.filter((c) => !next.has(contactKey(c)));
-    const line = (c: CallerIdContact) =>
-      `${c.label}, ${formatPhone(c.phone)}${c.passcode ? `, passcode: ${c.passcode}` : ""}`;
+    const line = (c: CallerIdContact, index: number) =>
+      `#${index + 1} ${c.label}, ${formatPhone(c.phone)}${c.passcode ? `, passcode: ${c.passcode}` : ""}`;
+    const moved = contacts.flatMap((c, index) => {
+      const from = initialContacts.findIndex((entry) => contactKey(entry) === contactKey(c));
+      if (from < 0 || from === index) return [];
+      return [`~ ${line(c, index)} (was #${from + 1})`];
+    });
     return [
-      ...added.map((c) => `+ ${line(c)}`),
-      ...removed.map((c) => `- ${line(c)}`),
+      ...added.map((c) => `+ ${line(c, contacts.indexOf(c))}`),
+      ...removed.map((c) => `- ${c.label}, ${formatPhone(c.phone)}`),
+      ...moved,
     ].join("\n");
   }
 
@@ -167,7 +235,9 @@ export function CallerIdEditor({
         return;
       }
       const parts = [
-        `List saved (${result.added.length} added, ${result.removed.length} removed).`,
+        result.reordered.length > 0 && result.added.length === 0 && result.removed.length === 0
+          ? "Call order saved."
+          : `List saved (${result.added.length} added, ${result.removed.length} removed${result.reordered.length > 0 ? `, ${result.reordered.length} moved` : ""}).`,
         result.adminEmailSent
           ? "McKee has been notified and will update the monitoring station."
           : "Heads up: the notification email to McKee failed; please call to confirm the change was received.",
@@ -198,15 +268,48 @@ export function CallerIdEditor({
           <p className="text-xs font-bold uppercase tracking-widest text-white/40">
             Call order
           </p>
+          <p className="text-xs leading-relaxed text-white/40">
+            Drag the handle to change who the station calls first. #1 is first.
+          </p>
           <ul className="space-y-2">
           {contacts.map((contact, index) => (
             <li
-              key={contact.phone}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-background px-4 py-3"
+              key={contact.id}
+              data-contact-id={contact.id}
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background px-3 py-3 sm:px-4 ${
+                draggingId === contact.id
+                  ? "border-sky-400/50 bg-sky-500/10"
+                  : "border-white/10"
+              }`}
             >
-              <div className="flex min-w-0 items-center gap-3.5">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/60">
-                  {index + 1}
+              <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
+                <button
+                  type="button"
+                  aria-label={`Reorder ${contact.label}. Currently #${index + 1}. Use arrow keys or drag.`}
+                  disabled={pending}
+                  onPointerDown={(event) => onDragHandlePointerDown(contact.id, event)}
+                  onPointerMove={onDragHandlePointerMove}
+                  onPointerUp={onDragHandlePointerUp}
+                  onPointerCancel={onDragHandlePointerUp}
+                  onKeyDown={(event) => {
+                    if (event.key === "ArrowUp") {
+                      event.preventDefault();
+                      moveContact(contact.id, index - 1);
+                    } else if (event.key === "ArrowDown") {
+                      event.preventDefault();
+                      moveContact(contact.id, index + 1);
+                    }
+                  }}
+                  className="touch-none inline-flex h-11 w-11 shrink-0 cursor-grab items-center justify-center rounded-lg text-white/45 hover:bg-white/10 hover:text-white active:cursor-grabbing disabled:cursor-default disabled:opacity-50"
+                >
+                  <svg viewBox="0 0 20 20" aria-hidden className="h-5 w-5 fill-current">
+                    <rect x="4" y="5" width="12" height="1.8" rx="0.9" />
+                    <rect x="4" y="9.1" width="12" height="1.8" rx="0.9" />
+                    <rect x="4" y="13.2" width="12" height="1.8" rx="0.9" />
+                  </svg>
+                </button>
+                <span className="w-8 shrink-0 text-sm font-bold tabular-nums text-white">
+                  #{index + 1}
                 </span>
                 <div className="min-w-0">
                   <p className="font-bold text-white">{contact.label}</p>
@@ -225,7 +328,7 @@ export function CallerIdEditor({
                           placeholder="Add passcode"
                           maxLength={40}
                           value={contact.passcode ?? ""}
-                          onChange={(e) => setPasscode(contact.phone, e.target.value)}
+                          onChange={(e) => setPasscode(contact.id, e.target.value)}
                           className={`${inputClass} !py-1 w-36`}
                         />
                       </span>
@@ -236,7 +339,7 @@ export function CallerIdEditor({
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => removeContact(contact.phone)}
+                onClick={() => removeContact(contact.id)}
                 className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
               >
                 Remove

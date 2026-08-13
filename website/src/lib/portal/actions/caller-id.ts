@@ -30,7 +30,15 @@ const contactSchema = z.object({
 const AUTHORIZED_VIA = ["client_email", "client_verbal", "client_in_person", "mckee_initiated"] as const;
 
 export type SaveCallerIdResult =
-  | { ok: true; noChange: boolean; added: CallerIdDiffEntry[]; removed: CallerIdDiffEntry[]; adminEmailSent: boolean; clientEmailSent: boolean | null }
+  | {
+      ok: true;
+      noChange: boolean;
+      added: CallerIdDiffEntry[];
+      removed: CallerIdDiffEntry[];
+      reordered: CallerIdDiffEntry[];
+      adminEmailSent: boolean;
+      clientEmailSent: boolean | null;
+    }
   | { ok: false; error: string };
 
 type NormalizedList = { contacts: CallerIdDiffEntry[] } | { error: string };
@@ -44,7 +52,7 @@ function normalizeList(raw: { phone: string; label: string; passcode: string }[]
   }
   const contacts: CallerIdDiffEntry[] = [];
   const seen = new Set<string>();
-  for (const entry of raw) {
+  for (const [index, entry] of raw.entries()) {
     const parsed = contactSchema.safeParse(entry);
     if (!parsed.success) {
       return { error: parsed.error.issues[0]?.message ?? "Invalid contact." };
@@ -53,16 +61,28 @@ function normalizeList(raw: { phone: string; label: string; passcode: string }[]
     if (!phone) {
       return { error: `"${parsed.data.phone}" is not a valid North American phone number.` };
     }
-    if (seen.has(phone)) {
-      return { error: `${parsed.data.phone} appears more than once. Each number can only be listed once.` };
+    const identity = `${phone}|${parsed.data.label}|${parsed.data.passcode}`;
+    if (seen.has(identity)) {
+      return { error: `${parsed.data.label} with that number and passcode is already on the list.` };
     }
-    seen.add(phone);
-    contacts.push({ phone, label: parsed.data.label, passcode: parsed.data.passcode });
+    seen.add(identity);
+    contacts.push({
+      phone,
+      label: parsed.data.label,
+      passcode: parsed.data.passcode,
+      sort_order: index + 1,
+    });
   }
   return { contacts };
 }
 
-type RpcDiff = { no_change?: boolean; change_id?: string; added?: CallerIdDiffEntry[]; removed?: CallerIdDiffEntry[] };
+type RpcDiff = {
+  no_change?: boolean;
+  change_id?: string;
+  added?: CallerIdDiffEntry[];
+  removed?: CallerIdDiffEntry[];
+  reordered?: CallerIdDiffEntry[];
+};
 
 /**
  * Shared core (R23): both dashboards run the same transactional RPC
@@ -102,11 +122,20 @@ async function runSave(opts: {
 
   const diff = (data ?? {}) as RpcDiff;
   if (diff.no_change) {
-    return { ok: true, noChange: true, added: [], removed: [], adminEmailSent: false, clientEmailSent: null };
+    return {
+      ok: true,
+      noChange: true,
+      added: [],
+      removed: [],
+      reordered: [],
+      adminEmailSent: false,
+      clientEmailSent: null,
+    };
   }
 
   const added = diff.added ?? [];
   const removed = diff.removed ?? [];
+  const reordered = diff.reordered ?? [];
 
   const adminEmailSent = await sendCallerIdAdminAlert({
     clientName: opts.clientName,
@@ -115,6 +144,7 @@ async function runSave(opts: {
     contacts: opts.contacts,
     added,
     removed,
+    reordered,
     authorizedVia: opts.authorizedVia,
     changeReason: opts.changeReason,
     profileId: opts.profileId,
@@ -132,6 +162,7 @@ async function runSave(opts: {
         contacts: opts.contacts,
         added,
         removed,
+        reordered,
         authorizedVia: opts.authorizedVia!,
         changeReason: opts.changeReason!,
       });
@@ -149,7 +180,7 @@ async function runSave(opts: {
 
   revalidatePath("/user-dashboard");
   revalidatePath("/admin-dashboard", "layout");
-  return { ok: true, noChange: false, added, removed, adminEmailSent, clientEmailSent };
+  return { ok: true, noChange: false, added, removed, reordered, adminEmailSent, clientEmailSent };
 }
 
 /** Client saves their own list (handover 6.4). The session is the authorization. */

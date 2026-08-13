@@ -1504,19 +1504,37 @@ const AUTHORIZED_VIA_LABELS: Record<string, string> = {
   mckee_initiated: "McKee-initiated",
 };
 
-type DiffEntry = { phone: string; label: string; passcode?: string | null };
+type DiffEntry = {
+  phone: string;
+  label: string;
+  passcode?: string | null;
+  sort_order?: number;
+  from_order?: number;
+  to_order?: number;
+};
 
-function HistoryDiffList({ entries, kind }: { entries: DiffEntry[]; kind: "added" | "removed" }) {
+function HistoryDiffList({
+  entries,
+  kind,
+}: {
+  entries: DiffEntry[];
+  kind: "added" | "removed" | "moved";
+}) {
   if (entries.length === 0) return null;
-  const color = kind === "added" ? "text-emerald-300" : "text-red-300";
-  const sign = kind === "added" ? "+" : "−";
+  const color = kind === "added" ? "text-emerald-300" : kind === "removed" ? "text-red-300" : "text-sky-300";
+  const sign = kind === "added" ? "+" : kind === "removed" ? "−" : "~";
   return (
     <>
       {entries.map((entry) => (
-        <p key={`${kind}-${entry.phone}-${entry.label}`} className={`text-sm ${color}`}>
-          {sign} {entry.label} <span className="text-white/50">{formatPhone(entry.phone)}</span>
+        <p key={`${kind}-${entry.phone}-${entry.label}-${entry.from_order ?? ""}-${entry.to_order ?? ""}`} className={`text-sm ${color}`}>
+          {sign}{" "}
+          {entry.to_order != null ? `#${entry.to_order} ` : entry.sort_order != null ? `#${entry.sort_order} ` : ""}
+          {entry.label} <span className="text-white/50">{formatPhone(entry.phone)}</span>
           {entry.passcode && (
             <span className="text-white/40"> &middot; passcode: {entry.passcode}</span>
+          )}
+          {kind === "moved" && entry.from_order != null && (
+            <span className="text-sky-200/70"> (was #{entry.from_order})</span>
           )}
         </p>
       ))}
@@ -1551,7 +1569,7 @@ function CallerIdCard({
 
       <div className="mt-5">
         <CallerIdEditor
-          key={contacts.map((c) => `${c.phone}|${c.label}|${c.passcode ?? ""}`).join(",")}
+          key={contacts.map((c) => `${c.id}|${c.phone}|${c.label}|${c.passcode ?? ""}`).join(",")}
           variant="admin"
           profileId={client.id}
           initialContacts={contacts}
@@ -1569,6 +1587,7 @@ function CallerIdCard({
           {changes.map((change) => {
             const added = (change.added ?? []) as DiffEntry[];
             const removed = (change.removed ?? []) as DiffEntry[];
+            const reordered = (change.reordered ?? []) as DiffEntry[];
             const isAdmin = change.changed_via === "admin_dashboard";
             return (
               <div key={change.id} className="rounded-xl border border-white/10 bg-background p-4">
@@ -1586,6 +1605,7 @@ function CallerIdCard({
                 <div className="mt-2 space-y-0.5">
                   <HistoryDiffList entries={added} kind="added" />
                   <HistoryDiffList entries={removed} kind="removed" />
+                  <HistoryDiffList entries={reordered} kind="moved" />
                 </div>
                 {isAdmin && (
                   <div className="mt-2 space-y-1 text-xs text-white/50">

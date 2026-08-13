@@ -69,6 +69,7 @@ export type Database = {
           id: string
           profile_id: string
           removed: Json
+          reordered: Json
         }
         Insert: {
           added?: Json
@@ -82,6 +83,7 @@ export type Database = {
           id?: string
           profile_id: string
           removed?: Json
+          reordered?: Json
         }
         Update: {
           added?: Json
@@ -95,6 +97,7 @@ export type Database = {
           id?: string
           profile_id?: string
           removed?: Json
+          reordered?: Json
         }
         Relationships: [
           {
@@ -114,6 +117,7 @@ export type Database = {
           passcode: string | null
           phone: string
           profile_id: string
+          sort_order: number
         }
         Insert: {
           created_at?: string
@@ -122,6 +126,7 @@ export type Database = {
           passcode?: string | null
           phone: string
           profile_id: string
+          sort_order: number
         }
         Update: {
           created_at?: string
@@ -130,6 +135,7 @@ export type Database = {
           passcode?: string | null
           phone?: string
           profile_id?: string
+          sort_order?: number
         }
         Relationships: [
           {

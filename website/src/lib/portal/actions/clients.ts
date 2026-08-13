@@ -224,11 +224,12 @@ export async function createClientAction(
   const seedWarnings: string[] = [];
   if (seedContacts.length > 0) {
     const { error: contactError } = await supabase.from("caller_id_contacts").insert(
-      seedContacts.map((contact) => ({
+      seedContacts.map((contact, index) => ({
         profile_id: profileId,
         phone: contact.phone,
         label: contact.label,
         passcode: contact.passcode,
+        sort_order: index + 1,
       })),
     );
     if (contactError) {
