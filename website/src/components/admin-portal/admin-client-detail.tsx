@@ -175,8 +175,9 @@ function ProfileCard({ client }: { client: AdminClientDetailRow }) {
               />
             </label>
             <label className="flex flex-col gap-1.5 text-sm text-white/80">
-              Email
+              Email *
               <input
+                required
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}

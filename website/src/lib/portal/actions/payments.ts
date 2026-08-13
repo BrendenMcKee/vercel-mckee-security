@@ -8,6 +8,7 @@ import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireUser } from "@/lib/po
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import {
+  findOrCreateStripeCustomer,
   getBillingPortalConfigurationId,
   getStripeClient,
   isStripeConfigured,
@@ -117,16 +118,15 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
     const stripe = getStripeClient();
     const admin = getPortalAdminClient();
 
-    // Create/reuse the Stripe customer; persisted via service role because
-    // clients have no UPDATE policy on profiles.
-    let customerId = profile.stripe_customer_id;
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email ?? undefined,
-        name: `${profile.first_name} ${profile.last_name}`,
-        metadata: { profile_id: profile.id },
-      });
-      customerId = customer.id;
+    // One portal client, one Stripe customer. Reuse the stored id or an
+    // existing Stripe customer with this email (same person after a delete).
+    const customerId = await findOrCreateStripeCustomer({
+      existingCustomerId: profile.stripe_customer_id,
+      profileId: profile.id,
+      email: user.email ?? profile.email,
+      name: `${profile.first_name} ${profile.last_name}`,
+    });
+    if (customerId !== profile.stripe_customer_id) {
       const { error: saveError } = await admin
         .from("profiles")
         .update({ stripe_customer_id: customerId })

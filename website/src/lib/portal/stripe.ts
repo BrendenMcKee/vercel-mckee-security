@@ -48,6 +48,59 @@ export function getStripeClient(): Stripe {
   return stripeClient;
 }
 
+/**
+ * One portal client, one Stripe customer. Reuse the stored id, then an
+ * existing customer with the same email (same person recreated after a
+ * delete), and only then create. We never delete Stripe customers from the
+ * portal: invoices and receipts stay in Stripe.
+ */
+export async function findOrCreateStripeCustomer(input: {
+  existingCustomerId: string | null;
+  profileId: string;
+  email: string | null;
+  name: string;
+}): Promise<string> {
+  const stripe = getStripeClient();
+
+  if (input.existingCustomerId) {
+    try {
+      const existing = await stripe.customers.retrieve(input.existingCustomerId);
+      if (!existing.deleted) return existing.id;
+    } catch {
+      // Stored id is gone in Stripe; fall through to email reuse or create.
+    }
+  }
+
+  if (input.email) {
+    const listed = await stripe.customers.list({ email: input.email, limit: 10 });
+    const hasCard = (customer: (typeof listed.data)[number]) =>
+      Boolean(customer.invoice_settings?.default_payment_method || customer.default_source);
+    const match =
+      listed.data.find((customer) => customer.metadata?.profile_id === input.profileId) ??
+      listed.data.find(hasCard) ??
+      listed.data[0];
+    if (match) {
+      await stripe.customers.update(match.id, {
+        name: input.name,
+        email: input.email,
+        metadata: {
+          ...match.metadata,
+          profile_id: input.profileId,
+          portal_deleted_at: "",
+        },
+      });
+      return match.id;
+    }
+  }
+
+  const created = await stripe.customers.create({
+    email: input.email ?? undefined,
+    name: input.name,
+    metadata: { profile_id: input.profileId },
+  });
+  return created.id;
+}
+
 const PRICE_ENV_KEYS: Record<string, string> = {
   "monitoring:landline": "STRIPE_PRICE_MONITORING_LANDLINE",
   "monitoring:cellular": "STRIPE_PRICE_MONITORING_CELLULAR",

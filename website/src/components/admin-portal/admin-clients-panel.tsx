@@ -543,15 +543,16 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Email
+                Email *
                 <input
+                  required
                   type="email"
                   value={form.email}
                   onChange={(e) => set("email", e.target.value)}
                   className={adminInputClass}
                 />
                 <span className="text-xs text-white/40">
-                  Invitation is emailed when set; otherwise you get a link to deliver.
+                  Required. The invitation, receipts, and reminders go here. This is also their sign-in email.
                 </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
@@ -564,13 +565,16 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   className={adminInputClass}
                 />
               </label>
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              <label className="flex flex-col gap-1.5 text-sm text-white/80 sm:col-span-2">
                 Service address
                 <input
                   value={form.address}
                   onChange={(e) => set("address", e.target.value)}
                   className={adminInputClass}
                 />
+                <span className="text-xs text-white/40">
+                  Optional here. The site we monitor or install at. Stripe does not need it; the client can add it in Settings.
+                </span>
               </label>
             </div>
           </fieldset>

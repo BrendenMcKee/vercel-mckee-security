@@ -81,9 +81,9 @@ export function PaymentSetupBanner({
     <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6">
       <h2 className="text-lg font-bold text-amber-100">Set up your card to start your services</h2>
       <p className="mt-3 text-sm leading-relaxed text-amber-200/90">
-        Your services are already approved. Add your card once and we start all of them, including
-        any one-time number port fee. After that, payments are automatic. Change your card any time
-        from Billing &amp; Payments.
+        Your services are already approved. Add your card once and we start all of them
+        {portFee ? ", including the one-time number port fee" : ""}. After that, payments are
+        automatic. Change your card any time from Billing &amp; Payments.
       </p>
       <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-100/90">
         {items.map((item) => (
@@ -96,8 +96,8 @@ export function PaymentSetupBanner({
         </div>
       ) : (
         <p className="mt-4 text-sm text-amber-200/90">
-          Add a card on your VoIP or monitoring plan first. The port fee is charged on that same
-          card.
+          Add a card on one of your services first
+          {portFee ? ". The port fee is charged on that same card" : ""}.
         </p>
       )}
     </div>

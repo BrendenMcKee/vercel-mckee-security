@@ -21,7 +21,7 @@ import { siteConfig } from "@/lib/site-config";
 const createClientSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(100),
   lastName: z.string().trim().min(1, "Last name is required").max(100),
-  email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address"))]),
+  email: z.string().trim().toLowerCase().min(1, "Email is required").pipe(z.email("Enter a valid email address")),
   address: z.string().trim().max(300),
   phone: z.string().trim().max(40),
   monitoringTier: z.enum(["", "landline", "cellular", "cellular_tc", "cellular_tc_home"]),
@@ -366,7 +366,7 @@ const updateProfileSchema = z.object({
   profileId: z.uuid(),
   firstName: z.string().trim().min(1, "First name is required").max(100),
   lastName: z.string().trim().min(1, "Last name is required").max(100),
-  email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address"))]),
+  email: z.string().trim().toLowerCase().min(1, "Email is required").pipe(z.email("Enter a valid email address")),
   address: z.string().trim().max(300),
   phone: z.string().trim().max(40),
 });
@@ -500,7 +500,9 @@ function namesMatch(a: string, b: string): boolean {
  *   not just in the browser;
  * - any live card subscriptions are cancelled in Stripe first, so a deleted
  *   client can never keep getting charged. If Stripe refuses, nothing is
- *   deleted.
+ *   deleted. The Stripe customer is kept (invoices stay in Stripe); a later
+ *   portal client with the same email reuses that customer instead of
+ *   creating a duplicate.
  */
 export async function deleteClientAction(input: {
   profileId: string;
@@ -518,7 +520,7 @@ export async function deleteClientAction(input: {
   const supabase = await createPortalServerClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, user_id, first_name, last_name")
+    .select("id, role, user_id, first_name, last_name, stripe_customer_id")
     .eq("id", profileId)
     .maybeSingle();
 
@@ -545,27 +547,39 @@ export async function deleteClientAction(input: {
     .map((s) => s.stripe_subscription_id)
     .filter((id): id is string => Boolean(id));
 
-  if (subscriptionIds.length > 0) {
-    if (!isStripeConfigured()) {
+  if (subscriptionIds.length > 0 || profile.stripe_customer_id) {
+    if (subscriptionIds.length > 0 && !isStripeConfigured()) {
       return {
         ok: false,
         error: "This client has automatic card payments but Stripe is not configured on the server. Nothing was deleted.",
       };
     }
-    try {
-      const stripe = getStripeClient();
-      for (const subscriptionId of subscriptionIds) {
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        if (subscription.status !== "canceled") {
-          await stripe.subscriptions.cancel(subscriptionId, { prorate: false });
+    if (isStripeConfigured()) {
+      try {
+        const stripe = getStripeClient();
+        for (const subscriptionId of subscriptionIds) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          if (subscription.status !== "canceled") {
+            await stripe.subscriptions.cancel(subscriptionId, { prorate: false });
+          }
         }
+        // Keep the Stripe customer. Invoices and receipts stay in Stripe. A
+        // later portal client with the same email reuses this customer.
+        if (profile.stripe_customer_id) {
+          await stripe.customers.update(profile.stripe_customer_id, {
+            metadata: {
+              profile_id: profile.id,
+              portal_deleted_at: new Date().toISOString(),
+            },
+          });
+        }
+      } catch (error) {
+        console.error("[portal] deleteClient Stripe cancel failed:", error);
+        return {
+          ok: false,
+          error: "Could not stop the client's automatic card payments in Stripe, so nothing was deleted. Try again or check the Stripe dashboard.",
+        };
       }
-    } catch (error) {
-      console.error("[portal] deleteClient Stripe cancel failed:", error);
-      return {
-        ok: false,
-        error: "Could not stop the client's automatic card payments in Stripe, so nothing was deleted. Try again or check the Stripe dashboard.",
-      };
     }
   }
 

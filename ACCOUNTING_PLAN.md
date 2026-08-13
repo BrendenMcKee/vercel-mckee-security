@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-13 (VoIP catalog prices resolve in Stripe by marker, no Vercel price-ID paste; Hold billing kept as a real pause, distinct from Cancel)
+**Last updated:** 2026-08-13 (Stripe customers are reused by email after a portal delete; invoices stay in Stripe)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -77,7 +77,7 @@ Yes. For every billable service (monitoring and VoIP), an admin change on a cust
 | **Hold billing** (Pause) | Stripe **keeps** the subscription and stops charging. Restart later and they do not enter their card again. Use this for a temporary hold (seasonal, "sort payment, then resume"). Not the same as Cancel. On e-transfer / cheque / cash, Hold just stops reminders. |
 | Restart | If they were on Hold, Stripe starts charging the same card again. If they were Cancelled and the period has already ended, they set up card payments again. |
 | Switch them from card to e-transfer / cheque / cash | Stripe is **cancelled immediately**. They are paid through the current period; after that you collect by hand. Different from Cancel service. |
-| Delete the client | Every live Stripe subscription is cancelled immediately, then the portal row is erased. |
+| Delete the client | Every live Stripe subscription is cancelled immediately, then the portal row is erased. The Stripe customer is kept so invoices stay in Stripe. Recreating the same email reuses that customer instead of making a duplicate. |
 
 If they are on the manual rail (no card on file), Cancel / Pause / Restart only change the portal status. There is nothing in Stripe to update.
 
