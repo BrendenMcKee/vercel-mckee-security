@@ -1269,10 +1269,9 @@ function CallerIdCard({
 }
 
 // ---------------------------------------------------------------------------
-// Devices card (stakeholder round 3): an open equipment list. Accounts start
-// with no devices; admins add whatever they want replacement reminders for,
-// with a custom name and a per-device replacement interval. Renames keep the
-// alert guard; a new date or interval re-arms it (R14). Clients see the list
+// Devices card: accounts start with no devices; admins add from the preset
+// list so replacement reminders start on day one. Renames keep the alert
+// guard; a new date or interval re-arms it (R14). Clients see the list
 // read-only on their dashboard.
 // ---------------------------------------------------------------------------
 
@@ -1368,11 +1367,15 @@ function DeviceRow({ device }: { device: Tables<"devices"> }) {
         <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
           <label className="flex min-w-0 flex-col gap-1.5 text-xs text-white/60 sm:min-w-[10rem] sm:flex-1">
             Device name
-            <input
+            <DeviceNameSelect
               value={label}
-              maxLength={80}
-              onChange={(e) => setLabel(e.target.value)}
-              className={adminInputClass}
+              onChange={(next, preset) => {
+                setLabel(next);
+                if (preset) {
+                  setCategory(preset.category);
+                  setYears(String(preset.years));
+                }
+              }}
             />
           </label>
           <label className="flex min-w-0 flex-col gap-1.5 text-xs text-white/60">

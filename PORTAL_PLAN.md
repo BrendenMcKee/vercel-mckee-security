@@ -393,13 +393,13 @@ Integrity CHECK: `changed_via = 'client_dashboard' OR (authorized_via IS NOT NUL
 |--------|------|-------------|
 | `id` | uuid | PK |
 | `profile_id` | uuid | FK profiles, not null |
-| `label` | text | not null, 1..80 chars (CHECK) — free-text device name |
+| `label` | text | not null, 1..80 chars (CHECK) — name from the admin `DEVICE_PRESETS` list |
 | `category` | text | not null, default `'other'`, CHECK in (`system_battery`, `device_battery`, `detector`, `wireless_device`, `other`) — fixed set for filtering (R35) |
 | `lifetime_years` | integer | not null, 1..50 (CHECK) — per-device replacement interval |
 | `installed_on` | date | not null |
 | `expiry_alerted_at` | timestamptz | nullable, cleared on `installed_on`/`lifetime_years` change (R14); renames keep it |
 
-Expiry is computed, not stored: `installed_on + lifetime_years`. Accounts start with zero devices; admins add whatever they want reminders for (the old `device_type` enum and its unique pair constraint were dropped in migration `20260706210000`; `category` added in `20260706233000`). The name stays free text; only the category is constrained, so "7Ah Security System Battery - Garage Panel" still filters under System Battery.
+Expiry is computed, not stored: `installed_on + lifetime_years`. Accounts start with zero devices; admins add from `DEVICE_PRESETS` (the old `device_type` enum and its unique pair constraint were dropped in migration `20260706210000`; `category` added in `20260706233000`). Names are a closed list so the Devices tab can filter without seven spellings of the same battery; new types are added to the preset list.
 
 **`sites`** (Phase 6A; one row per physical install location)
 

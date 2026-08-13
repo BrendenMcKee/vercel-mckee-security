@@ -7,10 +7,9 @@ import { DEVICE_CATEGORIES } from "@/lib/portal/devices";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 
 // ---------------------------------------------------------------------------
-// Device tracking (stakeholder round 3): accounts start with no devices and
-// admins add whatever equipment they want replacement reminders for, with a
-// custom name and a per-device replacement interval. Clients see the list
-// read-only; every write here is admin-only via RLS.
+// Device tracking: accounts start with no devices and admins add from
+// DEVICE_PRESETS so replacement reminders start on day one. Clients see
+// the list read-only; every write here is admin-only via RLS.
 // ---------------------------------------------------------------------------
 
 export type DeviceActionResult = { ok: true } | { ok: false; error: string };

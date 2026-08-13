@@ -1,9 +1,10 @@
-// Devices are an open, admin-managed equipment list (stakeholder round 3):
-// each device has a custom name and its own replacement interval in years.
-// Round 4 added fixed categories so expiring equipment can be filtered by
-// kind (all smoke detectors, all system batteries) while names stay free
-// text. Expiry is always computed from installed_on + lifetime_years,
-// never stored.
+// Devices are an admin-managed equipment list (stakeholder round 3):
+// each device has a name from DEVICE_PRESETS and its own replacement
+// interval in years. Round 4 added fixed categories so expiring equipment
+// can be filtered by kind (all smoke detectors, all system batteries).
+// New device types are added to the preset list rather than typed as
+// one-off names. Expiry is always computed from installed_on +
+// lifetime_years, never stored.
 
 export const DEVICE_CATEGORIES = [
   "system_battery",
@@ -23,7 +24,7 @@ export const DEVICE_CATEGORY_LABELS: Record<DeviceCategory, string> = {
   other: "Other",
 };
 
-/** Quick-add suggestions for the admin form; free text is equally valid. */
+/** Closed list of device names the admin can assign. */
 export const DEVICE_PRESETS: { label: string; category: DeviceCategory; years: number }[] = [
   { label: "4Ah Security System Battery", category: "system_battery", years: 5 },
   { label: "7Ah Security System Battery", category: "system_battery", years: 5 },
