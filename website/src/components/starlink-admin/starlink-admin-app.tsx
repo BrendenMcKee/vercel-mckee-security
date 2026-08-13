@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Bell,
   CalendarDays,
   CircleDollarSign,
   ListChecks,
@@ -15,22 +16,28 @@ import {
 import type { RentalWithUnit, Unit, UnitCost } from "@/lib/starlink/types";
 import { fetchOverview } from "@/lib/starlink/client-api";
 import { todayIsoToronto } from "@/lib/starlink/dates";
+import {
+  buildOutstandingGroups,
+  outstandingBookingCount,
+} from "@/lib/starlink/outstanding";
 import { cn } from "@/lib/utils";
 import { StarlinkStatsBar } from "./stats-bar";
 import { ScheduleView } from "./schedule-view";
 import { RentalsTable } from "./rentals-table";
 import { FleetManager } from "./fleet-manager";
 import { ProfitView } from "./profit-view";
+import { AlertsView } from "./alerts-view";
 import { RentalModal } from "./rental-modal";
 import { Toast, type ToastState } from "./toast";
 
-type View = "schedule" | "rentals" | "fleet" | "profit";
+type View = "schedule" | "rentals" | "fleet" | "profit" | "alerts";
 
 const TABS: { id: View; label: string; icon: typeof CalendarDays }[] = [
   { id: "schedule", label: "Schedule", icon: CalendarDays },
   { id: "rentals", label: "Rentals", icon: ListChecks },
   { id: "fleet", label: "Fleet", icon: Settings2 },
   { id: "profit", label: "Profit", icon: CircleDollarSign },
+  { id: "alerts", label: "Alerts", icon: Bell },
 ];
 
 export function StarlinkAdminApp() {
@@ -48,6 +55,12 @@ export function StarlinkAdminApp() {
   const [modalRental, setModalRental] = useState<RentalWithUnit | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const deepLinkHandled = useRef(false);
+
+  const alertGroups = useMemo(
+    () => buildOutstandingGroups(rentals, todayIso),
+    [rentals, todayIso],
+  );
+  const alertCount = outstandingBookingCount(alertGroups);
 
   const refresh = useCallback(async () => {
     try {
@@ -171,7 +184,7 @@ export function StarlinkAdminApp() {
             <StarlinkStatsBar rentals={rentals} todayIso={todayIso} />
           </div>
 
-          <nav className="mb-5 flex gap-1 rounded-xl border border-white/10 bg-surface/40 p-1">
+          <nav className="no-scrollbar mb-5 flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-surface/40 p-1">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const active = view === tab.id;
@@ -181,7 +194,7 @@ export function StarlinkAdminApp() {
                   type="button"
                   onClick={() => setView(tab.id)}
                   className={cn(
-                    "flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors sm:min-h-0 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-sm",
+                    "flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-2 text-[11px] font-semibold transition-colors sm:min-h-0 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-sm",
                     active
                       ? "bg-primary text-white"
                       : "text-white/65 hover:bg-white/5 hover:text-white",
@@ -189,7 +202,22 @@ export function StarlinkAdminApp() {
                   aria-current={active ? "page" : undefined}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
-                  {tab.label}
+                  <span className="inline-flex items-center gap-1.5">
+                    {tab.label}
+                    {tab.id === "alerts" ? (
+                      <span
+                        className={cn(
+                          "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums",
+                          alertCount > 0
+                            ? "bg-red-500 text-white"
+                            : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40",
+                        )}
+                        aria-label={`${alertCount} open alerts`}
+                      >
+                        {alertCount}
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
               );
             })}
@@ -228,6 +256,9 @@ export function StarlinkAdminApp() {
               onError={handleError}
               onSuccess={handleSuccess}
             />
+          ) : null}
+          {view === "alerts" ? (
+            <AlertsView groups={alertGroups} onSelectRental={openRental} />
           ) : null}
         </>
       )}

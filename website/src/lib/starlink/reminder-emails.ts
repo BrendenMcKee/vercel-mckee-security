@@ -10,7 +10,14 @@ import { siteConfig } from "@/lib/site-config";
 import { balanceDue, isPaidInFull } from "@/lib/starlink/billing";
 import { daysBetweenInclusive } from "@/lib/starlink/dates";
 import { formatCurrency, formatDateMedium } from "@/lib/starlink/format";
+import type {
+  ActionPriority,
+  RentalActionGroup,
+  RentalActionItem,
+} from "@/lib/starlink/outstanding";
 import type { RentalWithUnit } from "@/lib/starlink/types";
+
+export type { ActionPriority, RentalActionGroup, RentalActionItem };
 
 /**
  * Internal reminder emails for the Starlink rental system. These go to whoever
@@ -296,34 +303,6 @@ export async function sendDepositOverdueReminder(
 // ---------------------------------------------------------------------------
 // Daily "action needed" digest
 // ---------------------------------------------------------------------------
-
-/**
- * How loudly a group asks to be dealt with. This drives the order of the
- * digest, the colour of the band above each section, and which action leads the
- * subject line, so that the email can be triaged without being read.
- */
-export type ActionPriority = "urgent" | "today" | "soon";
-
-export type RentalActionItem = {
-  rentalId: string;
-  customerName: string;
-  detail: string;
-  /** Per-booking urgency, e.g. "3 days overdue". Not every item has one. */
-  flag?: string;
-};
-
-export type RentalActionGroup = {
-  /** Imperative and countable: "Send 2 deposits back", not "Deposits". */
-  action: string;
-  /** One glyph, so the eye can find the section without reading it. */
-  icon: string;
-  priority: ActionPriority;
-  /** Plain English: what doing this actually involves, including what to tick. */
-  instruction: string;
-  /** Subject-line fragment, e.g. "2 deposits to send back". */
-  summary: string;
-  items: RentalActionItem[];
-};
 
 const PRIORITY_META: Record<
   ActionPriority,

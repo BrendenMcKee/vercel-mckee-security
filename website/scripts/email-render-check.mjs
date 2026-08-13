@@ -58,6 +58,7 @@ const rental = {
 // ---------------------------------------------------------------------------
 
 const { buildDigestGroups } = await import("@/lib/starlink/reminders.ts");
+const { buildOutstandingGroups } = await import("@/lib/starlink/outstanding.ts");
 
 const TODAY = "2026-08-09";
 const day = (offset) =>
@@ -196,6 +197,107 @@ for (const { what, rental, section, priority, flag } of cases) {
           groups.map((g) => `${g.action} (${g.priority}, "${g.items[0]?.flag}")`).join(" | ") ||
           "no sections"
         }`,
+  );
+}
+
+{
+  const pickupToday = booking({
+    status: "confirmed",
+    pickup_date: TODAY,
+    return_date: day(7),
+    deposit_returned: true,
+  });
+  const digest = buildDigestGroups([pickupToday], TODAY);
+  const outstanding = buildOutstandingGroups([pickupToday], TODAY);
+  check(
+    !digest.some((g) => g.id === "pickup_today"),
+    "a successful pickup-today is not in the digest (that email already went)",
+  );
+  check(
+    outstanding.some((g) => g.id === "pickup_today"),
+    "the Alerts tab still lists pickups today so the kit gets set aside",
+  );
+}
+
+{
+  const upcomingUnpaid = booking({
+    status: "confirmed",
+    pickup_date: day(2),
+    return_date: day(9),
+    amount_received: null,
+    deposit_returned: true,
+  });
+  const digest = buildDigestGroups([upcomingUnpaid], TODAY);
+  const outstanding = buildOutstandingGroups([upcomingUnpaid], TODAY);
+  check(
+    !digest.some((g) => g.id === "payment_before_pickup"),
+    "upcoming unpaid pickups are a one-shot email, not a digest section",
+  );
+  check(
+    outstanding.some((g) => g.id === "payment_before_pickup"),
+    "the Alerts tab lists unpaid bookings in the two-day pickup window",
+  );
+}
+
+{
+  const settled = booking({ deposit_returned: true, amount_received: 200 });
+  check(
+    buildOutstandingGroups([settled], TODAY).length === 0,
+    "a fully settled booking does not appear on the Alerts tab",
+  );
+}
+
+{
+  const sameDayRequest = booking({
+    status: "requested",
+    unit_id: null,
+    unit: null,
+    pickup_date: TODAY,
+    return_date: day(7),
+    quoted_price: null,
+    amount_received: null,
+    deposit_amount: null,
+    deposit_received: false,
+    deposit_returned: false,
+    created_at: `${TODAY}T14:00:00.000Z`,
+  });
+  const digest = buildDigestGroups([sameDayRequest], TODAY);
+  check(
+    digest.some((g) => g.id === "stale_requests"),
+    "a website request that picks up today is chased immediately, not after a day's grace",
+  );
+}
+
+{
+  const unpaidPickupToday = booking({
+    status: "confirmed",
+    pickup_date: TODAY,
+    return_date: day(7),
+    amount_received: null,
+    deposit_returned: true,
+  });
+  const outstanding = buildOutstandingGroups([unpaidPickupToday], TODAY);
+  check(
+    outstanding.some((g) => g.id === "pickup_today"),
+    "an unpaid pickup today still appears as a pickup to get ready",
+  );
+  check(
+    !outstanding.some((g) => g.id === "unpaid"),
+    "that same booking is not also listed under Check payment",
+  );
+  const pickup = outstanding.find((g) => g.id === "pickup_today")?.items[0];
+  check(pickup?.flag === "today · unpaid", "the pickup card itself says it is unpaid");
+}
+
+{
+  const ancient = booking({
+    return_date: day(-200),
+    pickup_date: day(-210),
+    deposit_returned: false,
+  });
+  check(
+    buildOutstandingGroups([ancient], TODAY).length === 0,
+    "a finished booking older than 120 days does not sit on the Alerts tab forever",
   );
 }
 
