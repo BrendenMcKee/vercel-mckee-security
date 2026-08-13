@@ -124,7 +124,7 @@ export function ClientSettingsForm({
         icon="settings"
         tone="billing"
         title="Password"
-        description="Enter your current password, then choose a new one. A stolen session is not enough to take over the account."
+        description="Enter your current password, then choose a new one."
       >
         <form onSubmit={savePassword} className="space-y-4 border-t border-white/10 pt-5">
           {passwordNotice && (
