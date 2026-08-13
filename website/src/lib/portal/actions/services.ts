@@ -18,7 +18,7 @@ import {
 } from "@/lib/portal/billing";
 import { getStripeClient, isStripeConfigured, priceForVoipAmount, priceIdFor } from "@/lib/portal/stripe";
 
-export type ServiceActionResult = { ok: true } | { ok: false; error: string };
+export type ServiceActionResult = { ok: true; message?: string } | { ok: false; error: string };
 
 const assignSchema = z.object({
   profileId: z.uuid(),
@@ -154,10 +154,13 @@ export async function updateServiceTierAction(input: {
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, service_type, number_count, seat_count, stripe_subscription_id")
+    .select("id, service_type, status, number_count, seat_count, stripe_subscription_id")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
+  if (service.status === "cancelled") {
+    return { ok: false, error: "Restart this service before changing the plan. A cancelled service is not billed." };
+  }
 
   if (!SERVICE_TIERS[service.service_type].includes(tier)) {
     return { ok: false, error: "That tier does not exist for this service." };
@@ -255,10 +258,13 @@ export async function updateVoipConfigAction(input: {
   const supabase = await createPortalServerClient();
   const { data: service } = await supabase
     .from("services")
-    .select("id, service_type, tier, stripe_subscription_id")
+    .select("id, service_type, status, tier, stripe_subscription_id")
     .eq("id", serviceId)
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
+  if (service.status === "cancelled") {
+    return { ok: false, error: "Restart this service before changing numbers or seats." };
+  }
   if (!isVoipService(service.service_type)) {
     return { ok: false, error: "Only VoIP services have numbers and seats." };
   }
@@ -333,18 +339,35 @@ export async function updateServiceStatusAction(input: {
     .maybeSingle();
   if (!service) return { ok: false, error: "Service not found." };
 
+  let paidThrough: string | null = null;
+  let endedSubscription = false;
   if (service.stripe_subscription_id && status !== "unpaid") {
     if (!isStripeConfigured()) {
       return { ok: false, error: "This service has a Stripe subscription but Stripe is not configured on the server." };
     }
     try {
       const stripe = getStripeClient();
+      const subscription = await stripe.subscriptions.retrieve(service.stripe_subscription_id);
+      const end = subscription.items.data[0]?.current_period_end;
+      paidThrough = end ? new Date(end * 1000).toISOString().slice(0, 10) : null;
       if (status === "cancelled") {
-        await stripe.subscriptions.update(service.stripe_subscription_id, { cancel_at_period_end: true });
+        if (subscription.status !== "canceled") {
+          await stripe.subscriptions.update(service.stripe_subscription_id, { cancel_at_period_end: true });
+        }
       } else if (status === "paused") {
+        if (subscription.status === "canceled") {
+          return {
+            ok: false,
+            error: "The Stripe subscription has already ended. Restart first, then have the client set up card payments again.",
+          };
+        }
         await stripe.subscriptions.update(service.stripe_subscription_id, {
           pause_collection: { behavior: "void" },
         });
+      } else if (subscription.status === "canceled") {
+        // Period already ended; Stripe will not accept updates. Drop the
+        // stale id so the client can start a new Checkout session.
+        endedSubscription = true;
       } else {
         await stripe.subscriptions.update(service.stripe_subscription_id, {
           cancel_at_period_end: false,
@@ -359,7 +382,10 @@ export async function updateServiceStatusAction(input: {
 
   const { data: updated, error } = await supabase
     .from("services")
-    .update({ status })
+    .update({
+      status,
+      ...(endedSubscription ? { stripe_subscription_id: null } : {}),
+    })
     .eq("id", serviceId)
     .select("id")
     .maybeSingle();
@@ -370,5 +396,17 @@ export async function updateServiceStatusAction(input: {
   }
 
   revalidatePath("/admin-dashboard", "layout");
-  return { ok: true };
+  let message: string | undefined;
+  if (status === "cancelled" && service.stripe_subscription_id) {
+    message = paidThrough
+      ? `Cancelled. Automatic card payments stop after ${paidThrough}; they stay paid through that date.`
+      : "Cancelled. Automatic card payments will stop at the end of the current period.";
+  } else if (status === "paused" && service.stripe_subscription_id) {
+    message = "Paused. Stripe will not charge the card until you restart.";
+  } else if (status === "active" && endedSubscription) {
+    message = "Restarted. The previous card subscription has ended; the client can set up automatic payments again.";
+  } else if (status === "active" && service.stripe_subscription_id) {
+    message = "Restarted. Automatic card payments will continue in Stripe.";
+  }
+  return { ok: true, message };
 }

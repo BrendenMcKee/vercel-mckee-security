@@ -796,8 +796,16 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
 
   function changeStatus(status: "active" | "paused" | "cancelled") {
     if (status === "cancelled") {
-      // Destructive admin action: explicit confirm (handover 14.2).
-      const confirmed = window.confirm(`Cancel ${serviceLabel} for this client?`);
+      const cardNote = service.stripe_subscription_id
+        ? " They stay paid through the current period. Stripe stops charging at the end of that period (not immediately)."
+        : "";
+      const confirmed = window.confirm(`Cancel ${serviceLabel} for this client?${cardNote}`);
+      if (!confirmed) return;
+    }
+    if (status === "paused" && service.stripe_subscription_id) {
+      const confirmed = window.confirm(
+        `Pause ${serviceLabel}? Stripe will not charge the card until you restart. The subscription stays in Stripe.`,
+      );
       if (!confirmed) return;
     }
     setNotice(null);
@@ -805,7 +813,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       const result = await updateServiceStatusAction({ serviceId: service.id, status });
       setNotice(
         result.ok
-          ? { kind: "ok", text: `${serviceLabel} is now ${status}.` }
+          ? { kind: "ok", text: result.message ?? `${serviceLabel} is now ${status}.` }
           : { kind: "error", text: result.error },
       );
     });
@@ -908,9 +916,9 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
           Plan
           <select
             value={service.tier}
-            disabled={pending}
+            disabled={pending || service.status === "cancelled"}
             onChange={(e) => changeTier(e.target.value)}
-            className={`${adminSelectClass} max-w-full`}
+            className={`${adminSelectClass} max-w-full disabled:opacity-40`}
             aria-label={`${serviceLabel} plan`}
           >
             {SERVICE_TIERS[service.service_type].map((tier) => (
@@ -929,8 +937,9 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                 min={1}
                 max={100}
                 value={numbers}
+                disabled={service.status === "cancelled"}
                 onChange={(e) => setNumbers(e.target.value)}
-                className={`${adminInputClass} sm:w-24`}
+                className={`${adminInputClass} sm:w-24 disabled:opacity-40`}
               />
             </label>
             <label className="flex min-w-0 flex-col gap-1.5 text-sm text-white/80">
@@ -939,7 +948,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                 type="number"
                 min={1}
                 max={100}
-                disabled={service.tier === "residential"}
+                disabled={service.tier === "residential" || service.status === "cancelled"}
                 value={service.tier === "residential" ? "1" : seats}
                 onChange={(e) => setSeats(e.target.value)}
                 className={`${adminInputClass} sm:w-24 disabled:opacity-40`}
@@ -952,8 +961,9 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
                 min={0}
                 max={Number.parseInt(numbers, 10) || service.number_count}
                 value={ports}
+                disabled={service.status === "cancelled"}
                 onChange={(e) => setPorts(e.target.value)}
-                className={`${adminInputClass} sm:w-24`}
+                className={`${adminInputClass} sm:w-24 disabled:opacity-40`}
               />
             </label>
             {(numbers !== String(service.number_count) ||

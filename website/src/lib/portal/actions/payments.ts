@@ -514,7 +514,14 @@ export async function chargeVoipPortFee(input: {
     };
   }
 
-  if (service.billing_method === "stripe" && isStripeConfigured()) {
+  if (service.billing_method === "stripe") {
+    if (!isStripeConfigured()) {
+      await markPortFeeCharged(supabase, service.id, nextChargedCount, service.port_fee_charged_count);
+      return {
+        ok: false,
+        error: "This service is on card payments but Stripe is not configured. Record the port fee on the manual rail, or configure Stripe first.",
+      };
+    }
     const client = service.profiles;
     const customerId = client?.stripe_customer_id;
     const portPrice = voipNumberPortPriceId();

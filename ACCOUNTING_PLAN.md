@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-13 (VoIP 3.12 rate card, plus audit hardening: port fee charged once, VoIP always monthly, ports cannot exceed numbers)
+**Last updated:** 2026-08-13 (VoIP 3.12 rate card, plus two audits: port fee charged once / VoIP always monthly, then Stripe cancel-and-change sync so Cancel/Pause cannot flip back to Active)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -64,6 +64,24 @@ Residential has no seat add-on at all. The additional-number rate is the same on
 - Internal cost (BrightPBX, never shown to a client): $5.95 per user seat per month. Number (DID) cost is unconfirmed and treated as $0.00 until BrightPBX answers. There is no per-client floor.
 
 In the portal, Commercial is the display name for the `professional` plan. Stripe catalog prices are the two bases; a system above the base uses one matching monthly price on the same product. The Number Port Fee is its own one-time Stripe price.
+
+### Cancelling or changing a service also updates Stripe
+
+Yes. For every billable service (monitoring and VoIP), an admin change on a customer who pays by card is applied to **that customer's Stripe subscription**, not just the portal row. Stripe is updated first; if Stripe refuses, the portal is left unchanged.
+
+| What you do in the portal | What happens in Stripe |
+|---|---|
+| Change the plan (monitoring tier, or VoIP Residential / Commercial) | The subscription price is swapped. The new rate is on the **next** invoice. Nobody is charged a mid-cycle difference. |
+| Change VoIP numbers or seats | Same price swap at the new monthly total. Ports do not change the subscription; they only affect the one-time port fee. |
+| **Cancel** the service | Stripe is told to stop at the **end of the current period**. They stay paid through that date. The portal shows Cancelled immediately. This is not an immediate cut-off. |
+| Pause | Stripe stops charging the card until you Restart. The subscription stays in Stripe. |
+| Restart | Stripe starts charging again (and cancels any pending end-of-period stop). |
+| Switch them from card to e-transfer / cheque / cash | Stripe is **cancelled immediately**. They are paid through the current period; after that you collect by hand. Different from Cancel service. |
+| Delete the client | Every live Stripe subscription is cancelled immediately, then the portal row is erased. |
+
+If they are on the manual rail (no card on file), Cancel / Pause / Restart only change the portal status. There is nothing in Stripe to update.
+
+A cancelled service must be Restarted before you can change the plan or VoIP coverage. That keeps a stopped Stripe subscription from being quietly repriced.
 
 ---
 

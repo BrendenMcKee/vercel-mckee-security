@@ -128,6 +128,26 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
+  const { data: existing } = await admin
+    .from("services")
+    .select("id, status")
+    .eq("id", serviceId)
+    .maybeSingle();
+  if (!existing) return;
+
+  // A stale Checkout session must not revive a cancelled or paused service,
+  // and must not leave a new Stripe subscription running.
+  if (existing.status === "cancelled" || existing.status === "paused") {
+    if (subscriptionId) {
+      try {
+        await getStripeClient().subscriptions.cancel(subscriptionId, { prorate: false });
+      } catch (error) {
+        console.error("[portal] stale checkout subscription cancel failed:", error);
+      }
+    }
+    return;
+  }
+
   const { error } = await admin
     .from("services")
     .update({
@@ -202,6 +222,16 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       .eq("id", metaServiceId)
       .maybeSingle();
     if (!byMeta) return;
+    // Same stale-checkout guard as checkout.session.completed: do not attach
+    // a new subscription to a cancelled or paused service.
+    if (byMeta.status === "cancelled" || byMeta.status === "paused") {
+      try {
+        await getStripeClient().subscriptions.cancel(subscriptionId, { prorate: false });
+      } catch (error) {
+        console.error("[portal] stale invoice.paid subscription cancel failed:", error);
+      }
+      return;
+    }
     service = byMeta;
     await admin
       .from("services")
@@ -232,7 +262,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   if (!service) return;
 
   const updates: {
-    status?: "active" | "unpaid" | "cancelled";
+    status?: "active" | "paused" | "unpaid" | "cancelled";
     tier?: string;
     next_due_on?: string | null;
     monthly_amount_cents?: number;
@@ -244,13 +274,14 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     updates.next_due_on = periodEnd;
   }
 
-  // Status sync: Stripe is the source of truth for autopay services.
-  if (subscription.status === "active" && service.status !== "active") {
-    updates.status = "active";
-  } else if ((subscription.status === "past_due" || subscription.status === "unpaid") && service.status === "active") {
-    updates.status = "unpaid";
-  } else if (subscription.status === "canceled" && service.status !== "cancelled") {
-    updates.status = "cancelled";
+  // Status sync. Stripe still reports `active` while cancel_at_period_end
+  // or pause_collection is set, so those flags must win. Otherwise a Cancel
+  // or Pause in the portal gets flipped back to Active by this webhook.
+  const mapped = portalStatusFromStripe(subscription);
+  if (mapped && mapped !== service.status) {
+    if (!(service.status === "cancelled" && mapped === "unpaid")) {
+      updates.status = mapped;
+    }
   }
 
   // Tier sync when the plan was changed in Stripe (admin plan changes flow
@@ -285,6 +316,18 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const { error } = await admin.from("services").update(updates).eq("id", service.id);
     if (error) throw error;
   }
+}
+
+/** Portal status implied by a live Stripe subscription. */
+function portalStatusFromStripe(
+  subscription: Stripe.Subscription,
+): "active" | "paused" | "cancelled" | "unpaid" | null {
+  if (subscription.status === "canceled") return "cancelled";
+  if (subscription.status === "past_due" || subscription.status === "unpaid") return "unpaid";
+  if (subscription.pause_collection) return "paused";
+  if (subscription.cancel_at_period_end) return "cancelled";
+  if (subscription.status === "active" || subscription.status === "trialing") return "active";
+  return null;
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
