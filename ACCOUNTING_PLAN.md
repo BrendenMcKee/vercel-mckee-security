@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-13 (Stripe customers are reused by email after a portal delete; invoices stay in Stripe)
+**Last updated:** 2026-08-13 (Phase 8 tests on a named copy of the live QuickBooks file; TSheets stays on live; MCP is cloud-only)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -18,7 +18,7 @@ The customer portal handles everything customers and admins touch day to day: ac
 
 **QuickBooks Desktop (unchanged).** The official financial record. It keeps working exactly as it does now. The bookkeeper can keep doing anything they do today; the automation works around them, not instead of them.
 
-**The bridge (to be built, Phase 8A).** A small Windows program installed on the office computer that runs QuickBooks. It is the only new thing that lives in the office. It calls out to the portal's servers over the internet, asks "anything for me to do?", does the work inside QuickBooks, and reports back. Important properties:
+**The bridge (to be built, Phase 8A).** A small Windows program installed on the office computer that runs QuickBooks. It is the only new thing that lives in the office. It is **not** the AI assistant and it is **not** installed as a Web Connector app (TSheets already uses Web Connector on the live file). It calls out to the portal's servers over the internet, asks "anything for me to do?", does the work inside **one named company file**, and reports back. Until go-live that file is a copy of the books, not the live file. Important properties:
 
 - It only makes outbound connections. Nothing on the office network is opened up to the internet. This is the same trust model already used by the camera gateways.
 - If the computer is off, nothing breaks. Work queues up in the cloud and the bridge catches up the next time the computer is on. The portal and website never depend on the office PC being awake.
@@ -28,7 +28,7 @@ The customer portal handles everything customers and admins touch day to day: ac
 
 **The task queue (Phase 8B).** A to-do list in the cloud that is the only way anything gets written into QuickBooks. Every entry says exactly what to do ("record a $419.33 payment from Jane Smith"), carries a fingerprint so the same payment can never be posted twice even if a glitch replays it, and moves through checked states: pending, approved, posted, or needs review. Anything that fails or looks ambiguous parks in "needs review" on the admin Accounting tab with a plain explanation and suggested fixes.
 
-**The AI accounting assistant (Phase 8D, the MCP server).** Once the plumbing above is trusted, staff can ask questions in plain English from Cursor: "who owes us money?", "what did monitoring bring in last quarter?", "draft a collection email for overdue accounts". It answers from the mirrors, so it works even when the office PC is off. It is rolled out in three deliberate stages: read-only questions first, then drafting (drafts post nothing), then payment posting that still requires admin approval in the portal. It can never void, delete, journal, or touch payroll or closed periods. Those operations simply do not exist in its vocabulary.
+**The AI accounting assistant (Phase 8D, the MCP server).** This is a later cloud service, not a program on the QuickBooks PC. Once the plumbing above is trusted, staff can ask questions in plain English from Cursor: "who owes us money?", "what did monitoring bring in last quarter?", "draft a collection email for overdue accounts". It answers from the mirrors, so it works even when the office PC is off. It is rolled out in three deliberate stages: read-only questions first, then drafting (drafts post nothing), then payment posting that still requires admin approval in the portal. It can never void, delete, journal, or touch payroll or closed periods. Those operations simply do not exist in its vocabulary.
 
 ### How VoIP is billed (the live rate card)
 
@@ -175,10 +175,11 @@ Everyone imported starts on the legacy rail (cash, cheque, e-transfer), because 
 ## 9. The build order
 
 - **Already done (2026-07-18, rate card updated 2026-08-13): VoIP in the portal.** Before any accounting automation is built, the VoIP service was fully implemented on the website and in Stripe, the same way monitoring was. The live model is the 3.12 rate card above (one monthly figure per system, port fee one-time). This was deliberate: the accounting rail below is being designed against the complete service catalog, not retrofitted for VoIP later.
-- **8A: Bridge and mirrors.** Install the bridge, mirror QuickBooks into the cloud (read-only), build the linking and bulk-import screens, run the import. Built and tested against a QuickBooks *sample* company file first; the real books are not touched.
-- **8B: The task queue.** The to-do list, the state machine, the approval screens, the Accounting tab. Still against the sample file.
-- **8C: Payments post to the books.** The bookkeeper mapping session happens (monitoring and VoIP income both mapped), the bridge points at the real company file, both payment rails start posting automatically, history is backfilled, and the reverse sync (QuickBooks to portal) plus the duplicate-entry guard go live. Stripe's switch from test mode to live mode ideally lands here, so the first real card payment posts to the books automatically.
-- **8D: The AI assistant.** Read-only questions first, sign-off, then drafting, sign-off, then approval-gated posting.
+- **File hygiene first (before any install).** Label the live company file (leave its filename as TSheets already knows it). Restore a backup as a separately named **portal-test copy**. Confirm TSheets / Web Connector still syncs only on live. QuickBooks can open only one file at a time, so opening the copy pauses TSheets until live is reopened.
+- **8A: Bridge and mirrors.** Install the bridge pointed at the **copy**. Mirror that file into the cloud (read-only), build the linking and bulk-import screens, run the import against real customer history. The live books are not opened by the bridge.
+- **8B: The task queue.** The to-do list, the state machine, the approval screens, the Accounting tab. Test posting into the **copy** only. Those test postings are never replayed onto the live file.
+- **8C: Payments post to the books.** The bookkeeper mapping session happens (monitoring and VoIP income both mapped), the bridge is flipped to the live company file, both payment rails start posting automatically, history is backfilled, and the reverse sync (QuickBooks to portal) plus the duplicate-entry guard go live. Stripe's switch from test mode to live mode ideally lands here, so the first real card payment posts to the books automatically.
+- **8D: The AI assistant (cloud).** Read-only questions first, sign-off, then drafting, sign-off, then approval-gated posting. Still not installed on the QuickBooks PC.
 
 Each stage has a test gate that must pass before the next begins, and the stakeholder checkpoints are built into the checklist in `PORTAL_PLAN.md` Section 10.
 
@@ -186,40 +187,44 @@ Each stage has a test gate that must pass before the next begins, and the stakeh
 
 ## 10. What we need from you to build this
 
-Audited 2026-08-13 against every stakeholder checkpoint in the `PORTAL_PLAN.md` Phase 8 and Phase 9 checklists (including R49/D15/D16), so this list is the complete set. In rough order of when each is needed:
+Audited 2026-08-13 against `PORTAL_PLAN.md` Phase 8 / 9.5 (including R49/D15/D16 and the new R51/D17 company-file rule), so this list is the complete set. In rough order of when each is needed.
 
-**To start 8A (needed first; items 1 and 2 are the only blockers today):**
+**Before anything is installed on the QuickBooks PC (the only real blockers today):**
 
 1. **Which computer runs QuickBooks Desktop.** Confirm the office PC that has the company file, that we can install the bridge on it, and how regularly it can stay powered on (always-on is ideal but not required; the queue tolerates downtime). We will also need a way to do the install: remote access or an on-site session.
 2. **The exact QuickBooks Desktop version.** Press F2 inside QuickBooks and read off the product line (Pro/Premier/Enterprise), the year, the release (for example "R16"), and confirm it is the Canadian edition. The connector SDK needs QuickBooks Canada 2023 R16 or newer (or 2024 R18+). If the install is older, a QuickBooks update comes first.
-3. **One-time permission inside QuickBooks.** When the bridge first connects, QuickBooks pops up an "allow this application?" prompt that an admin user must approve (ideally "even when QuickBooks is not running"). Just be aware this moment is coming during the install session.
+3. **Company file hygiene (do this before the install session).** Inventory every company file on that PC. Leave the **live** filename exactly as it is today: TSheets / QuickBooks Time already talks to that path through Web Connector, and renaming live can break time sync. Then:
+   - With live open, create a complete local backup.
+   - Restore that backup as a **new** file in a **different folder**, named so nobody can mistake it (for example `McKee Security PORTAL-TEST do-not-invoice.qbw`).
+   - Open the copy and change its Company Name so the QuickBooks title bar says PORTAL TEST.
+   - Close the copy, reopen live, and confirm TSheets still syncs.
+   - Never add TSheets, payroll, or any Web Connector app to the copy.
+   - Write down both full file paths and send them over.
+   QuickBooks can open only one file at a time. While we have the copy open to test, TSheets will pause until live is reopened. We will keep those sessions short or after hours.
+4. **One-time permission inside QuickBooks.** When the bridge first connects (to the **copy**), QuickBooks pops up an "allow this application?" prompt that an admin user must approve (ideally "even when QuickBooks is not running"). The same prompt happens again at 8C when we point the bridge at live. Just be aware those two moments are coming.
 
-**For the bulk import (during 8A):**
+**For the bulk import (during 8A, against the copy):**
 
-4. **The shape of the customer list.** Roughly how many active monitoring customers, whether each client is one QuickBooks customer record (or whether some are split into jobs/sub-customers or duplicated), and any known messes worth flagging up front.
-5. **The monitoring item names.** What the line items on a typical monitoring invoice are called in QuickBooks (for example "Annual Monitoring - Cellular"). The billed amount is the primary tier signal, but these names are the confirmation, so an accurate list makes the import review mostly pre-correct.
-6. **The Lanvac contact-list export.** Ask Lanvac for a bulk export of every account's caller ID list: names, phone numbers, passcodes, and call order. Whatever format they can provide decides whether we import it automatically or enter contacts by hand, so even a "here's what they can give us" answer moves this forward.
-7. **A few sample to-do entries.** Copy the text of three or four typical device/battery entries from the QuickBooks company to-do list (exact wording and dates). The import parses those notes into draft device records, and real samples are how we make the parser match how they were actually written.
-8. **A review pass on the import itself.** When the import screen is ready, you (or whoever knows the accounts best) spot-check the drafted tiers, amounts, **monitoring start dates** (the inferred first-invoice dates, especially on long-standing accounts), due dates, contacts, and devices before committing. Budget an hour or two; this is the human gate that makes the seeding trustworthy. When you later type a customer in by hand, enter that same start date — not the invitation or activation date.
+5. **The shape of the customer list.** Roughly how many active monitoring customers, whether each client is one QuickBooks customer record (or whether some are split into jobs/sub-customers or duplicated), and any known messes worth flagging up front.
+6. **The monitoring item names.** What the line items on a typical monitoring invoice are called in QuickBooks (for example "Annual Monitoring - Cellular"). The billed amount is the primary tier signal, but these names are the confirmation, so an accurate list makes the import review mostly pre-correct.
+7. **The Lanvac contact-list export.** Ask Lanvac for a bulk export of every account's caller ID list: names, phone numbers, passcodes, and call order. Whatever format they can provide decides whether we import it automatically or enter contacts by hand, so even a "here's what they can give us" answer moves this forward.
+8. **A few sample to-do entries.** Copy the text of three or four typical device/battery entries from the QuickBooks company to-do list (exact wording and dates). The import parses those notes into draft device records, and real samples are how we make the parser match how they were actually written.
+9. **A review pass on the import itself.** When the import screen is ready, you (or whoever knows the accounts best) spot-check the drafted tiers, amounts, **monitoring start dates** (the inferred first-invoice dates, especially on long-standing accounts), due dates, contacts, and devices before committing. Budget an hour or two; this is the human gate that makes the seeding trustworthy. When you later type a customer in by hand, enter that same start date — not the invitation or activation date. Importing from the copy is safe: backup/restore keeps the same customer IDs, so those links still match the live file later.
 
-**For VoIP (the portal rate card is live; base Stripe prices are already in Vercel):**
+**For VoIP (the portal rate card is live; catalog prices resolve themselves in Stripe):**
 
-9. **The two VoIP customers, entered by hand.** You chose to do this yourself **when Stripe goes live** (with 8C): create the residential customer and the commercial customer via the normal create-client form, each with their real number count, seat count (commercial only), any numbers being ported, and true next payment date. During 8A they get linked to their QuickBooks customer records like everyone else.
-10. **The VoIP item names in QuickBooks.** What the line items on the two customers' VoIP invoices are called today (the VoIP equivalent of item 5). This is how the automation posts VoIP revenue against the right items instead of monitoring ones. Confirm whether the port fee uses a separate QuickBooks item.
-11. **BrightPBX DID (number) cost, when they confirm it.** Seat cost is already $5.95 per user per month. DID cost is treated as $0.00 and flagged unconfirmed. This is internal margin only and never appears on a client document. Nothing is blocked on it. VoIP Stripe prices (including the port fee) are found by marker; you do not paste those IDs into Vercel.
+10. **The two VoIP customers, entered by hand.** You chose to do this yourself **when Stripe goes live** (with 8C): create the residential customer and the commercial customer via the normal create-client form, each with their real number count, seat count (commercial only), any numbers being ported, and true next payment date. During 8A they get linked to their QuickBooks customer records like everyone else.
+11. **The VoIP item names in QuickBooks.** What the line items on the two customers' VoIP invoices are called today (the VoIP equivalent of item 6). This is how the automation posts VoIP revenue against the right items instead of monitoring ones. Confirm whether the port fee uses a separate QuickBooks item.
+12. **BrightPBX DID (number) cost, when they confirm it.** Seat cost is already $5.95 per user per month. DID cost is treated as $0.00 and flagged unconfirmed. This is internal margin only and never appears on a client document. Nothing is blocked on it. VoIP Stripe prices (including the port fee) are found by marker; you do not paste those IDs into Vercel.
 
 **Before 8C (posting to the real books):**
 
-12. **A session with the bookkeeper.** One sitting to agree the account mapping: which income accounts monitoring and VoIP each land in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
-13. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode monitoring prices in Vercel, the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). VoIP live prices are found or created by marker when the live key is in place (re-run `stripe-voip-setup.mjs` if you want them created ahead of the first checkout). Your part is approving the switch and updating the Vercel secret/webhook/monitoring prices. This is also the moment you enter the two VoIP customers (item 9).
-
-**Nice to have:**
-
-14. **A recent backup copy of the company file.** Development runs against a QuickBooks sample company, but a backup copy lets us rehearse the bulk import and the backfill against realistic data before doing it for real.
+13. **A session with the bookkeeper.** One sitting to agree the account mapping: which income accounts monitoring and VoIP each land in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
+14. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode monitoring prices in Vercel, the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). VoIP live prices are found or created by marker when the live key is in place (re-run `stripe-voip-setup.mjs` if you want them created ahead of the first checkout). Your part is approving the switch and updating the Vercel secret/webhook/monitoring prices. This is also the moment you enter the two VoIP customers (item 10).
 
 **Before any monitoring profitability view (not needed to start 8A, and not needed to post payments in 8C):**
 
 15. **The day each monitoring customer first started being monitored.** The import will guess this from their earliest monitoring invoice; you confirm it on the review screen. For anyone you type in by hand, enter it on the create-client form. Invitation and activation dates stay on the client page as portal-access history — they are not a substitute.
 16. **What it costs McKee per monitored client, for each current tier** (Telephone Land Line, Cellular Communicator, Cellular + Total Connect, Cellular + Total Connect + Home Automation). This is the monitoring-station / communicator cost you pay, not the retail price the customer pays. Same idea as the Starlink Profit tab's monthly kit costs: dated rates so a later change does not rewrite past years. We cannot build a trustworthy year-over-year monitoring P&L without this. Do not invent numbers to unblock posting — posting does not wait on it.
 
-Everything else in Phase 8 is built and tested on our side without needing anything from you; these sixteen items are the complete list of stakeholder inputs, and only items 1 and 2 block starting Phase 8A today.
+Everything else in Phase 8 is built and tested on our side. These sixteen items are the complete list of stakeholder inputs. **Items 1, 2, and 3 block the Windows install.** Cloud work (database tables, Accounting tab, import screens) can start as soon as you want; it does not touch QuickBooks.

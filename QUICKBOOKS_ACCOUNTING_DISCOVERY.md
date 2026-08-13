@@ -4,9 +4,9 @@
 **Purpose:** Preserve detailed accounting integration research on file and align it with McKee's **actual platform** (Next.js portal, Supabase, Vercel, optional Cloud Run, Stripe, MCP/agent workflows).  
 **Companion document:** [`PRODUCT_HANDOVER.md`](./PRODUCT_HANDOVER.md) — [Section 23](./PRODUCT_HANDOVER.md#23-quickbooks-integration--portal-scope--future-roadmap) defines **what is in scope for the current portal build** vs this document's **full future vision**.
 
-**Document type:** Research archive and long-term architectural overview — **not** the current portal implementation spec. The **natural-language accounting agent and full MCP tool suite** described here are projected as a **separate future product**. The current portal handover targets core services first (Sections 1–22); optional QuickBooks **plumbing** (bridge, queue, payment posting) is follow-on Scope B in Section 23.
+**Document type:** Research archive and long-term architectural overview — **not** the current portal implementation spec. If this file disagrees with `PORTAL_PLAN.md` Section 9.5 or `ACCOUNTING_PLAN.md`, those two win. Phase 8 is Track 1 work (R37). The MCP server is cloud-only (8D). The local bridge uses the Desktop SDK, not Web Connector (TSheets already uses Web Connector on the live company file). 8A/8B run against a named copy of the live file (R51 / 9.5.7), never the live books.
 
-**Last updated:** July 2026
+**Last updated:** 2026-08-13 (authority pointer + company-file / TSheets note; research body otherwise July 2026)
 
 ---
 
