@@ -1,6 +1,6 @@
 import "server-only";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
-import { intervalMonths, PAYMENT_INSTRUCTIONS } from "@/lib/portal/billing";
+import { invoiceSendCents, PAYMENT_INSTRUCTIONS } from "@/lib/portal/billing";
 import {
   sendCollectionsDigest,
   sendManualPaymentReminder,
@@ -51,7 +51,7 @@ export async function runPaymentDueJob(): Promise<PaymentDueSummary> {
     const overdue = service.next_due_on < today;
     const invoiceCents =
       service.monthly_amount_cents != null
-        ? service.monthly_amount_cents * intervalMonths(service.billing_interval)
+        ? invoiceSendCents(service.monthly_amount_cents, service.billing_interval)
         : null;
 
     digest.push({

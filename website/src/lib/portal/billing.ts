@@ -165,6 +165,16 @@ export function intervalMonths(interval: BillingInterval): number {
   return interval === "annual" ? 12 : 1;
 }
 
+/** Pre-tax invoice for one cycle (monthly rate x 1 or x 12). */
+export function invoicePreTaxCents(monthlyCents: number, interval: BillingInterval): number {
+  return monthlyCents * intervalMonths(interval);
+}
+
+/** Exact dollars a manual payer should send: one invoice plus 13% HST. */
+export function invoiceSendCents(monthlyCents: number, interval: BillingInterval): number {
+  return withHstCents(invoicePreTaxCents(monthlyCents, interval));
+}
+
 /** Monitoring is always annual; VoIP is always monthly. Other types stay free. */
 export function lockedBillingInterval(serviceType: string): BillingInterval | null {
   if (serviceType === "monitoring") return "annual";
@@ -194,7 +204,7 @@ export function addMonths(isoDate: string, months: number): string {
  * clients pay. Used verbatim in the dashboard banner and reminder emails.
  */
 export const PAYMENT_INSTRUCTIONS =
-  "Send an Interac e-Transfer to info@mckeesecurity.ca with your name in the message, " +
+  "Send an Interac e-Transfer for the exact amount shown (includes HST) to dennis@mckeesecurity.ca with your name in the message, " +
   "or call (705) 457-2156 to arrange payment by cheque or cash.";
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {

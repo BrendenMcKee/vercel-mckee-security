@@ -40,6 +40,7 @@ import {
   daysUntil,
   formatCents,
   intervalMonths,
+  invoiceSendCents,
   lockedBillingInterval,
   todayIsoDate,
   tierOptionLabel,
@@ -695,7 +696,7 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
   // interval, pre-tax); the admin adjusts for tax or partial payments.
   const [payAmount, setPayAmount] = useState(
     service.monthly_amount_cents != null
-      ? ((service.monthly_amount_cents * intervalMonths(lockedCycle ?? service.billing_interval)) / 100).toFixed(2)
+      ? (invoiceSendCents(service.monthly_amount_cents, lockedCycle ?? service.billing_interval) / 100).toFixed(2)
       : "",
   );
   const [payMethod, setPayMethod] = useState<PaymentMethod>("etransfer");

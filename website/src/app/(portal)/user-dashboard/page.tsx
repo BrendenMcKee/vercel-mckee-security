@@ -12,6 +12,8 @@ import {
   PAYMENT_METHOD_LABELS,
   formatCents,
   intervalMonths,
+  invoicePreTaxCents,
+  invoiceSendCents,
   voipCoverageLabel,
   voipUnchargedPorts,
   type PaymentMethod,
@@ -289,11 +291,11 @@ export default async function UserDashboardPage({
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-amber-200/90">
               <p>
                 {service.monthly_amount_cents
-                  ? `Amount due: ${formatCents(service.monthly_amount_cents * intervalMonths(service.billing_interval))} plus tax${
+                  ? `Send exactly ${formatCents(invoiceSendCents(service.monthly_amount_cents, service.billing_interval))} (includes 13% HST)${service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""}. That is ${formatCents(invoicePreTaxCents(service.monthly_amount_cents, service.billing_interval))} before tax${
                       service.billing_interval === "annual"
                         ? ` (${formatCents(service.monthly_amount_cents)}/month, invoiced annually)`
-                        : ""
-                    }${service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""}.`
+                        : " per month"
+                    }.`
                   : "A payment is due on this service."}
               </p>
               <p>{PAYMENT_INSTRUCTIONS}</p>
@@ -342,11 +344,28 @@ export default async function UserDashboardPage({
               </p>
               {monitoring.monthly_amount_cents != null && (
                 <p className="mt-2 text-[15px] text-white/55">
-                  <span className="font-semibold text-white/80">
-                    {formatCents(monitoring.monthly_amount_cents)}
-                  </span>
-                  /month plus tax
-                  {monitoring.billing_interval === "annual" && ", invoiced annually"}
+                  {monitoring.billing_method === "manual" ? (
+                    <>
+                      <span className="font-semibold text-white/80">
+                        {formatCents(monitoring.monthly_amount_cents)}
+                      </span>
+                      /month before tax, invoiced annually. Send{" "}
+                      <span className="font-semibold text-white/80">
+                        {formatCents(
+                          invoiceSendCents(monitoring.monthly_amount_cents, monitoring.billing_interval),
+                        )}
+                      </span>{" "}
+                      (includes 13% HST)
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-white/80">
+                        {formatCents(monitoring.monthly_amount_cents)}
+                      </span>
+                      /month plus HST
+                      {monitoring.billing_interval === "annual" && ", invoiced annually"}
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -381,15 +400,36 @@ export default async function UserDashboardPage({
               </p>
               {voip.monthly_amount_cents != null && (
                 <p className="mt-2 text-[15px] text-white/55">
-                  <span className="font-semibold text-white/80">
-                    {formatCents(voip.monthly_amount_cents)}
-                  </span>
-                  /month plus tax
-                  {` for ${voipCoverageLabel({
-                    tier: voip.tier,
-                    numberCount: voip.number_count,
-                    seatCount: voip.seat_count,
-                  })}`}
+                  {voip.billing_method === "manual" ? (
+                    <>
+                      <span className="font-semibold text-white/80">
+                        {formatCents(voip.monthly_amount_cents)}
+                      </span>
+                      /month before tax
+                      {` for ${voipCoverageLabel({
+                        tier: voip.tier,
+                        numberCount: voip.number_count,
+                        seatCount: voip.seat_count,
+                      })}`}
+                      . Send{" "}
+                      <span className="font-semibold text-white/80">
+                        {formatCents(invoiceSendCents(voip.monthly_amount_cents, voip.billing_interval))}
+                      </span>{" "}
+                      (includes 13% HST)
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-white/80">
+                        {formatCents(voip.monthly_amount_cents)}
+                      </span>
+                      /month plus HST
+                      {` for ${voipCoverageLabel({
+                        tier: voip.tier,
+                        numberCount: voip.number_count,
+                        seatCount: voip.seat_count,
+                      })}`}
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -471,11 +511,29 @@ export default async function UserDashboardPage({
                     </div>
                     {invoiceCents != null && (
                       <div className="flex items-baseline justify-between gap-4">
-                        <dt className="shrink-0 text-white/45">Amount</dt>
+                        <dt className="shrink-0 text-white/45">
+                          {service.billing_method === "manual" ? "Send this amount" : "Amount"}
+                        </dt>
                         <dd className="text-right tabular-nums text-white/85">
-                          <span className="font-semibold text-white">{formatCents(invoiceCents)}</span>
-                          {" "}plus tax
-                          {service.billing_interval === "annual" ? " per year" : " per month"}
+                          {service.billing_method === "manual" && service.monthly_amount_cents != null ? (
+                            <>
+                              <span className="font-semibold text-white">
+                                {formatCents(
+                                  invoiceSendCents(service.monthly_amount_cents, service.billing_interval),
+                                )}
+                              </span>
+                              <span className="block text-xs font-normal text-white/50">
+                                includes 13% HST. {formatCents(invoiceCents)} before tax
+                                {service.billing_interval === "annual" ? " per year" : " per month"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-semibold text-white">{formatCents(invoiceCents)}</span>
+                              {" "}plus HST
+                              {service.billing_interval === "annual" ? " per year" : " per month"}
+                            </>
+                          )}
                         </dd>
                       </div>
                     )}
@@ -761,8 +819,10 @@ function ClientAlertsPanel({
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-amber-200/90">
               <p>
                 {service.monthly_amount_cents
-                  ? `Amount due: ${formatCents(service.monthly_amount_cents * intervalMonths(service.billing_interval))} plus tax${
-                      service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""
+                  ? `Send exactly ${formatCents(invoiceSendCents(service.monthly_amount_cents, service.billing_interval))} (includes 13% HST)${service.next_due_on ? `, due ${formatDate(service.next_due_on)}` : ""}. That is ${formatCents(invoicePreTaxCents(service.monthly_amount_cents, service.billing_interval))} before tax${
+                      service.billing_interval === "annual"
+                        ? ` (${formatCents(service.monthly_amount_cents)}/month, invoiced annually)`
+                        : " per month"
                     }.`
                   : "A payment is due on this service."}
               </p>

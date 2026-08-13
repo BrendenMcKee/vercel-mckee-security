@@ -336,7 +336,7 @@ export async function sendManualPaymentReminder({
   const fields: EmailField[] = [
     {
       label: overdue ? "Overdue payment" : "Upcoming payment",
-      value: `Hi ${firstName},\n\nYour ${service} payment of ${dollars(amountCents)} ${overdue ? "was due" : "is due"} on ${dueOn}.`,
+      value: `Hi ${firstName},\n\nSend exactly ${dollars(amountCents)} (includes 13% HST). Your ${service} payment ${overdue ? "was due" : "is due"} on ${dueOn}.`,
       highlight: overdue,
     },
     { label: "How to pay", value: paymentInstructions },
