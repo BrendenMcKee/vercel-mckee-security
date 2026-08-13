@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-07-18 (revised for the VoIP phone service, which is now live in the portal)
+**Last updated:** 2026-08-13 (monitoring start dates on import/create, and per-tier monitoring cost before any profitability view)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -64,16 +64,17 @@ Today, monitoring and VoIP bills are created in QuickBooks and emailed to custom
 Before customers are invited to anything, the portal is seeded from QuickBooks so both systems agree completely:
 
 1. The bridge mirrors the full customer list and invoice history to the cloud.
-2. An "Import from QuickBooks" screen builds a draft for every active monitoring customer: name and email from QuickBooks, plus a best guess at their monitoring tier, annual amount, and next due date, read from their actual invoice history.
+2. An "Import from QuickBooks" screen builds a draft for every active monitoring customer: name and email from QuickBooks, plus a best guess at their monitoring tier, annual amount, **the day they first started monitoring** (taken from their earliest monitoring invoice — not the day we later invite them to the portal), and next due date, read from their actual invoice history.
 3. **The tier guess works from the price first.** The four monitoring tiers bill at four different annual amounts, so the dollars on a customer's last invoice identify their tier almost perfectly; the invoice line-item names confirm it. A customer whose billed amount matches no current tier price (an old grandfathered rate) is flagged for a closer look, and the import keeps the amount they actually pay. **Nobody's price changes because of the import.** Moving someone from an old rate to current pricing is always a deliberate decision, never a side effect.
 4. **A human reviews every row before anything is created.** The guesses only pre-fill the screen; the admin confirms or corrects each customer, then commits.
-5. Committing creates each customer in the portal, already linked to their QuickBooks record, on the legacy payment rail with their true amount and due date. **No emails are sent by the import.** Running the import again is safe; already-imported customers are skipped, so duplicates are impossible.
+5. Committing creates each customer in the portal, already linked to their QuickBooks record, on the legacy payment rail with their true amount, monitoring start date, and due date. **No emails are sent by the import.** Running the import again is safe; already-imported customers are skipped, so duplicates are impossible.
 
 **The import also brings in more than billing:**
 
 - **Alarm contact lists (caller ID) come from Lanvac.** The monitoring station holds the real contact lists and passcodes, so we request a full export from Lanvac. If they can give us a usable file, a one-time importer loads each customer's contacts and passcodes into the portal quietly (no emails go out during seeding); if not, contacts are entered by hand per customer. When each customer later activates their account, the invitation asks them to review their alarm contact list, so first login doubles as the check that the imported list is right.
 - **Device and battery records come from the QuickBooks to-do list**, where they are tracked today. The bridge reads the to-do list along with everything else, and the import turns those notes into draft device entries (what it is, which customer, when it was installed or is due) for the same review screen. Since to-do notes are freeform text, the drafts are suggestions to confirm, not automatic truth, and we will calibrate against a few real sample entries first.
-- **A per-customer migration checklist** shows exactly where each imported customer stands: imported, alarm contacts entered, devices entered, invited, activated. Whether something is "done or not" is always visible on their page and filterable on the Billing tab; it never depends on anyone's memory.
+- **A per-customer migration checklist** shows exactly where each imported customer stands: imported, monitoring start date confirmed, alarm contacts entered, devices entered, invited, activated. Whether something is "done or not" is always visible on their page and filterable on the Billing tab; it never depends on anyone's memory.
+- **Invitation date and activation date are not the monitoring start date.** Those two dates only tell us when they were invited to the portal and when they first signed in. A customer who has been monitored for years still needs the original start day on file, so later year-over-year monitoring profitability can look at real history, not just the portal era. The same date is required when you type a customer in by hand.
 
 **VoIP customers are not part of the bulk import.** There are exactly two today (one residential, one commercial on the Business plan), so the import machinery is deliberately not extended to them. You will enter both by hand through the normal create-client form (you chose to do this when Stripe goes live), with their real plan, line count, amount, and next due date, and then link each to their QuickBooks customer record with the same one-click linking screen the monitoring import uses. From that moment their payments flow through every story in Section 3 like anyone else's.
 
@@ -132,7 +133,7 @@ Each stage has a test gate that must pass before the next begins, and the stakeh
 
 ## 10. What we need from you to build this
 
-Audited 2026-07-18 against every stakeholder checkpoint in the `PORTAL_PLAN.md` Phase 8 and Phase 9 checklists, so this list is the complete set. In rough order of when each is needed:
+Audited 2026-08-13 against every stakeholder checkpoint in the `PORTAL_PLAN.md` Phase 8 and Phase 9 checklists (including R49/D15/D16), so this list is the complete set. In rough order of when each is needed:
 
 **To start 8A (needed first; items 1 and 2 are the only blockers today):**
 
@@ -146,7 +147,7 @@ Audited 2026-07-18 against every stakeholder checkpoint in the `PORTAL_PLAN.md` 
 5. **The monitoring item names.** What the line items on a typical monitoring invoice are called in QuickBooks (for example "Annual Monitoring - Cellular"). The billed amount is the primary tier signal, but these names are the confirmation, so an accurate list makes the import review mostly pre-correct.
 6. **The Lanvac contact-list export.** Ask Lanvac for a bulk export of every account's caller ID list: names, phone numbers, passcodes, and call order. Whatever format they can provide decides whether we import it automatically or enter contacts by hand, so even a "here's what they can give us" answer moves this forward.
 7. **A few sample to-do entries.** Copy the text of three or four typical device/battery entries from the QuickBooks company to-do list (exact wording and dates). The import parses those notes into draft device records, and real samples are how we make the parser match how they were actually written.
-8. **A review pass on the import itself.** When the import screen is ready, you (or whoever knows the accounts best) spot-check the drafted tiers, amounts, due dates, contacts, and devices before committing. Budget an hour or two; this is the human gate that makes the seeding trustworthy.
+8. **A review pass on the import itself.** When the import screen is ready, you (or whoever knows the accounts best) spot-check the drafted tiers, amounts, **monitoring start dates** (the inferred first-invoice dates, especially on long-standing accounts), due dates, contacts, and devices before committing. Budget an hour or two; this is the human gate that makes the seeding trustworthy. When you later type a customer in by hand, enter that same start date — not the invitation or activation date.
 
 **For VoIP (the portal side is already live; env vars are already in Vercel):**
 
@@ -163,4 +164,9 @@ Audited 2026-07-18 against every stakeholder checkpoint in the `PORTAL_PLAN.md` 
 
 14. **A recent backup copy of the company file.** Development runs against a QuickBooks sample company, but a backup copy lets us rehearse the bulk import and the backfill against realistic data before doing it for real.
 
-Everything else in Phase 8 is built and tested on our side without needing anything from you; these fourteen items are the complete list of stakeholder inputs, and only items 1 and 2 block starting Phase 8A today.
+**Before any monitoring profitability view (not needed to start 8A, and not needed to post payments in 8C):**
+
+15. **The day each monitoring customer first started being monitored.** The import will guess this from their earliest monitoring invoice; you confirm it on the review screen. For anyone you type in by hand, enter it on the create-client form. Invitation and activation dates stay on the client page as portal-access history — they are not a substitute.
+16. **What it costs McKee per monitored client, for each current tier** (Telephone Land Line, Cellular Communicator, Cellular + Total Connect, Cellular + Total Connect + Home Automation). This is the monitoring-station / communicator cost you pay, not the retail price the customer pays. Same idea as the Starlink Profit tab's monthly kit costs: dated rates so a later change does not rewrite past years. We cannot build a trustworthy year-over-year monitoring P&L without this. Do not invent numbers to unblock posting — posting does not wait on it.
+
+Everything else in Phase 8 is built and tested on our side without needing anything from you; these sixteen items are the complete list of stakeholder inputs, and only items 1 and 2 block starting Phase 8A today.
