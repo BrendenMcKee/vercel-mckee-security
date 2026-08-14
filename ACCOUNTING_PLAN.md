@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-13 (Phase 8 tests on a named copy of the live QuickBooks file; TSheets stays on live; MCP is cloud-only)
+**Last updated:** 2026-08-14 (gather workbook is `ACCOUNTING_GATHER.md`; fill that before any Phase 8 cloud or bridge work)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -129,7 +129,7 @@ Before customers are invited to anything, the portal is seeded from QuickBooks s
 - **A per-customer migration checklist** shows exactly where each imported customer stands: imported, monitoring start date confirmed, alarm contacts entered, devices entered, invited, activated. Whether something is "done or not" is always visible on their page and filterable on the Billing tab; it never depends on anyone's memory.
 - **Invitation date and activation date are not the monitoring start date.** Those two dates only tell us when they were invited to the portal and when they first signed in. A customer who has been monitored for years still needs the original start day on file, so later year-over-year monitoring profitability can look at real history, not just the portal era. The same date is required when you type a customer in by hand.
 
-**VoIP customers are not part of the bulk import.** There are exactly two today (one residential, one commercial), so the import machinery is deliberately not extended to them. You will enter both by hand through the normal create-client form (you chose to do this when Stripe goes live), with their real plan, number count, seat count, any numbers being ported, amount, and next due date, and then link each to their QuickBooks customer record with the same one-click linking screen the monitoring import uses. From that moment their payments flow through every story in Section 3 like anyone else's. A later port-fee payment is a one-time amount and must not be treated as a monthly renewal.
+**VoIP customers are not part of the bulk import.** There are four today, still a small enough set that the import machinery is not extended to them. You will enter each by hand through the normal create-client form (you chose to do this when Stripe goes live), with their real plan, number count, seat count, any numbers being ported, amount, and next due date, and then link each to their QuickBooks customer record with the same one-click linking screen the monitoring import uses. From that moment their payments flow through every story in Section 3 like anyone else's. A later port-fee payment is a one-time amount and must not be treated as a monthly renewal.
 
 The result: the admin Billing tab shows the entire business's real renewal calendar from day one, before a single customer has touched the portal. Reminders, the collections board, and the books all agree from the start.
 
@@ -187,7 +187,9 @@ Each stage has a test gate that must pass before the next begins, and the stakeh
 
 ## 10. What we need from you to build this
 
-Audited 2026-08-13 against `PORTAL_PLAN.md` Phase 8 / 9.5 (including R49/D15/D16 and the new R51/D17 company-file rule), so this list is the complete set. In rough order of when each is needed.
+**Do `ACCOUNTING_GATHER.md` first.** It is the short action list: screenshots, four real invoices, five bookkeeper answers. Do not start Phase 8 cloud posting code or the Windows bridge until that pack is in. This section is the same inputs in build order.
+
+Audited 2026-08-14 against `PORTAL_PLAN.md` Phase 8 / 9.5 (including R49/D15/D16 and the R51/D17 company-file rule). In rough order of when each is needed.
 
 **Before anything is installed on the QuickBooks PC (the only real blockers today):**
 
@@ -213,14 +215,14 @@ Audited 2026-08-13 against `PORTAL_PLAN.md` Phase 8 / 9.5 (including R49/D15/D16
 
 **For VoIP (the portal rate card is live; catalog prices resolve themselves in Stripe):**
 
-10. **The two VoIP customers, entered by hand.** You chose to do this yourself **when Stripe goes live** (with 8C): create the residential customer and the commercial customer via the normal create-client form, each with their real number count, seat count (commercial only), any numbers being ported, and true next payment date. During 8A they get linked to their QuickBooks customer records like everyone else.
-11. **The VoIP item names in QuickBooks.** What the line items on the two customers' VoIP invoices are called today (the VoIP equivalent of item 6). This is how the automation posts VoIP revenue against the right items instead of monitoring ones. Confirm whether the port fee uses a separate QuickBooks item.
+10. **The four VoIP customers, entered by hand.** You chose to do this yourself **when Stripe goes live** (with 8C): create each via the normal create-client form, with their real plan, number count, seat count (commercial only), any numbers being ported, and true next payment date. During 8A they get linked to their QuickBooks customer records like everyone else.
+11. **The VoIP item names in QuickBooks.** Today's invoices will not match the portal (one monthly line, own income account, separate port fee). Do not rename a shared item to fix that; renaming in Desktop rewrites history. Create new Service items in live (`VoIP - Residential`, `VoIP - Commercial`, `VoIP - Number Port Fee` on a `VoIP Income` account, tax code H), leave old invoices alone, then make the test copy. Exact steps are in `ACCOUNTING_GATHER.md` section 2.
 12. **BrightPBX DID (number) cost, when they confirm it.** Seat cost is already $5.95 per user per month. DID cost is treated as $0.00 and flagged unconfirmed. This is internal margin only and never appears on a client document. Nothing is blocked on it. VoIP Stripe prices (including the port fee) are found by marker; you do not paste those IDs into Vercel.
 
 **Before 8C (posting to the real books):**
 
 13. **A session with the bookkeeper.** One sitting to agree the account mapping: which income accounts monitoring and VoIP each land in, how Stripe fees are recorded, how HST is handled, which bank/clearing accounts payments deposit to, and the sales-receipt versus invoice-plus-payment choice from Section 4. Their answers become the posting rules; nothing touches the live file before this.
-14. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode monitoring prices in Vercel, the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). VoIP live prices are found or created by marker when the live key is in place (re-run `stripe-voip-setup.mjs` if you want them created ahead of the first checkout). Your part is approving the switch and updating the Vercel secret/webhook/monitoring prices. This is also the moment you enter the two VoIP customers (item 10).
+14. **The Stripe go-live package.** 8C is when test mode should switch to live mode so the first real card payment posts to the books. That needs: live-mode monitoring prices in Vercel, the live webhook registered, and a permanent restricted live key in Vercel replacing the CLI session key (which expires 2026-10-03). VoIP live prices are found or created by marker when the live key is in place (re-run `stripe-voip-setup.mjs` if you want them created ahead of the first checkout). Your part is approving the switch and updating the Vercel secret/webhook/monitoring prices. This is also the moment you enter the four VoIP customers (item 10).
 
 **Before any monitoring profitability view (not needed to start 8A, and not needed to post payments in 8C):**
 
