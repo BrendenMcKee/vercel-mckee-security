@@ -52,7 +52,7 @@ Source: Windows About (2026-08-15) and F2 (2026-08-15).
 | Payment templates | 24 |
 | Payroll items | 46 |
 | Payroll schedules | 1 |
-| To Do notes | **841** (need 3–4 device/battery samples; this is a large import source) |
+| To Do notes | **841** (samples below; one-time import into portal devices at 8A, then the portal owns the list) |
 | Job types | 2 |
 | Sales reps / price levels / billing rate levels | 0 |
 | Attribute definitions | 35 |
@@ -251,7 +251,7 @@ Company > To Do List. 841 notes; first screen is enough to calibrate a parser. P
 - `Polonsky Mike 3A HW smokes & 3 CO detectors 2034... Please call in June to set up an appointment.` (2019-03-12)
 - `GILLIES 3 wireless house smokes 2020 1 wireless smoke 2027 in garage.... Called customer on Feb 1st 2024 about expired smoke detectors, he said he would take the risk.` (due 2020-07-08)
 
-Do not need a full To Do export to start. Request one later only if we build the device importer.
+Decision (2026-08-15): we will import these at 8A. The bridge reads the full list; no manual export now. After review, portal `devices` is the system of record. QuickBooks To Dos are not kept in sync.
 
 ---
 
@@ -261,9 +261,3 @@ Do not need a full To Do export to start. Request one later only if we build the
 |-------|--------|
 | Call-list export | Received 2026-08-14 from Stephanos Georgoudes |
 | API | Offered; details not in this file yet (do not update plans until the contract is in) |
-
----
-
-## To Do samples
-
-Not yet.

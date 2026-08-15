@@ -43,7 +43,7 @@ Required before any integration starts:
 - [ ] Live reopened, TSheets still syncs
 - [ ] Full paths of live and PORTAL-TEST files
 - [x] Lanvac call-list export received (2026-08-14, Stephanos)
-- [x] To Do samples (first screen of the list; smoke/battery wording). Full export only if we build the device importer.
+- [x] To Do samples (first screen of the list; smoke/battery wording). We will import these into portal devices at 8A. Full list comes through the bridge then, not this sitting. After import the portal owns the list; QuickBooks To Dos are not kept in sync.
 
 Later, before the portal-test copy is opened (written into the plans; not this sitting):
 
@@ -134,7 +134,7 @@ Do not wait for QuickBooks. A partial export is enough to test the import and se
 
 Ask Lanvac for a bulk copy of what is already on file. Email draft below.
 
-Also copy 3–4 device/battery To Do notes from QuickBooks (exact wording and dates).
+Device/battery To Do samples are already in `ACCOUNTING_GATHER_DATA.md`. The full 841 notes are a one-time import into portal devices when the 8A seed runs (AI draft + confidence + human review of low-confidence rows). After that, the portal is the managed list; stop using QuickBooks To Dos for new battery/smoke tracking. Do not export the full list for the bookkeeper sitting.
 
 When the import screen is ready: spot-check tiers, amounts, start dates, due dates, contacts, and devices (~1 hour). Confirm the real monitoring start date, not the invitation date.
 
