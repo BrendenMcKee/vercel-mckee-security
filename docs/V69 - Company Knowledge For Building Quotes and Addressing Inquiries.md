@@ -2,8 +2,8 @@
 
 ## SECTION 1: VERSION HEADER
 
-**Version:** V64  
-**Date:** August 6, 2026  
+**Version:** V69  
+**Date:** August 15, 2026  
 **Status:** All pricing is resolved and locked with ONE exception, noted below. If a genuinely new ambiguity is discovered during quoting, flag it to Brenden rather than guessing.
 
 **The one open item: Section 3.9, UniFi Door Access Control.** No client price is anchored in that section. The figures it carries are stale distributor references and are not quotable. Any door access job requires prices to be derived and confirmed with Brenden before the quote is finalised, and then written into that section as an anchored table. Every other section of this catalog is quotable as written.
@@ -70,7 +70,7 @@ ProSeries panels are generally avoided (Section 8); quote only when a job specif
 | --- | --- |
 | 4G/LTE Cellular Communicator | $264.99 |
 | Cellular Communication Antenna | $49.99 |
-| 7847i Internet Communication Module (IP path for no-cellular sites; separate product from the cellular communicator) | $249.99 |
+| IP-COM Advanced Modular Internet Communicator, Internet Only (IP path for no-cellular sites; separate product from the cellular communicator; replaces the discontinued 7847i) | $249.99 |
 
 **Power and Expansion**
 | Item | Price |
@@ -90,7 +90,7 @@ ProSeries panels are generally avoided (Section 8); quote only when a job specif
 | --- | --- |
 | Wireless Door/Window Contact (5816 class) | $64.99 |
 | Wireless Motion Sensor | $94.99 |
-| Wireless Smoke/Heat/Low Temp Combo | $124.99 |
+| Wireless Smoke, Heat & Low Temperature Detector (Honeywell Home 5800SMOKEV, multi-criteria; see the ruling below) | $124.99 (INTERNAL COST: $86.05) |
 | Wireless Carbon Monoxide Detector | $124.99 |
 | Wireless Temperature & Flood Sensor (Honeywell Home 5821; a self-contained wireless device) | $94.99 LOCKED |
 | Wireless Water Alarm | $39.99 |
@@ -112,6 +112,12 @@ ProSeries panels are generally avoided (Section 8); quote only when a job specif
 **Wireless overhead door devices: the tilt sensor is the default (ruled by Brenden McKee August 6, 2026, Don Skewis quote session).** On any wireless build, an overhead door is covered by the Wireless Overhead Door Tilt Sensor. It is a single self-contained device that mounts to the door panel, which makes it materially faster and more straightforward for a technician to install than the 958 plus 5816 assembly, and it needs no separate transmitter, no track-mounted magnet and no alignment. Quote the tilt sensor unless a job gives a specific reason not to.
 
 The Wireless Overhead Door Contact (958 plus 5816) is RETAINED as a secondary option and is still quoted as ONE line item, never broken into components. Reach for it only where the door or the opening genuinely will not take a tilt sensor. The wired overhead door contact and the wired garage tilt sensor are unchanged and remain the right parts on a wired run.
+
+**This device is the Honeywell Home 5800SMOKEV and it detects smoke, heat, rate-of-rise and low temperature (ruled by Brenden McKee August 13, 2026, Mark Southey quote session).** This supersedes and reverses the August 7, 2026 entry that stated the device has no heat element. That entry was wrong. The 5800SMOKEV is a multi-criteria photoelectric detector certified to UL 268 7th edition and ULC S529, and it replaces the older 5808W3 and 5806W3 in the Honeywell 5800 line. It carries a built-in sounder, runs on a CR123A lithium cell, and uses drift compensation and smoothing algorithms to suppress nuisance alarms.
+
+**The part number is recorded here deliberately.** This catalog line previously carried no part number, which is how it came to be described as smoke-only and then reversed twice inside a week. Any future change to this entry names the part it applies to.
+
+In client-facing documents it is named "Wireless Smoke, Heat & Low Temperature Detector". Heat detection may be stated in a quote, an email, and an insurance certificate description, because the device genuinely provides it. Rate-of-rise is a heat detection method rather than a separate feature and is not listed separately to a client. There is no longer any need to source a separate heat detector for a job that calls for one, since this device covers it.
 
 **The 5821 replaces the old wireless flood method (ruled by Brenden McKee August 6, 2026, Don Skewis quote session).** Wireless water and temperature detection is the Honeywell Home 5821 Wireless Temperature Sensor and Flood Detector, a self-contained wireless device. McKee NO LONGER wires a flood probe into a 5816 transmitter to make a wired sensor wireless; that method is retired and is not quoted. The 5821 covers both flood and temperature in one device. The Wireless Water Alarm remains a separate, cheaper spot-detection product and the Wired Flood Sensor is unchanged for hardwired runs.
 
@@ -800,7 +806,9 @@ Payment splits must sum exactly to the total; recompute math independently from 
 
 ### 5.2 Monitoring Rules
 
-Tier NUMBERS never appear in any client-facing document. Describe the service by name and coverage (for example, "24/7 cellular monitoring with Total Connect 2.0") with the rate, per the Section 3.2 catalog. Z-Wave locks and thermostats always pair with the home automation monitoring level, never the standard Total Connect level. Camera-only quotes contain NO monitoring section and no monitoring cost anywhere. Security quotes place annual monitoring in the Project Overview on its own line below Total Cost, label bolded, amount not bolded. Takeover quotes for clients already monitored with McKee: the monitoring line reads "(HST Included, unchanged and not included in the total above)" and payment splits exclude monitoring. Cancellation language: 30 days written notice, remainder of the year refunded. An insurance certificate is provided on completion.
+Tier NUMBERS never appear in any client-facing document. Describe the service by name and coverage (for example, "24/7 cellular monitoring with Total Connect 2.0") with the rate, per the Section 3.2 catalog. Z-Wave locks and thermostats always pair with the home automation monitoring level, never the standard Total Connect level. Camera-only quotes contain NO monitoring section and no monitoring cost anywhere. Security quotes place annual monitoring in the Project Overview on its own line below Total Cost, label bolded, amount not bolded. Takeover quotes for clients already monitored with McKee: the monitoring line reads "(HST Included, unchanged and not included in the total above)" and payment splits exclude monitoring. Cancellation language: 30 days written notice, remainder of the year refunded.
+
+**The insurance certificate goes to the CLIENT, never to the insurer (ruled by Brenden McKee August 7, 2026, Don Skewis quote session).** On completion McKee issues the certificate to the client and the client forwards it to their own insurance provider themselves. McKee does NOT ask the client for the name of their insurer, does NOT make the certificate out to a named insurer, and does NOT contact, correspond with, or submit anything to an insurance company on a client's behalf. Never write any variation of "send us the name of your provider and we will issue it to them directly" into a quote, an email, or any other client-facing document. The client's relationship with their insurer is theirs to manage and stepping into it puts McKee in the middle of a policy file we have no standing in and no visibility of. Say what we do and stop there: the certificate is provided on completion. Use the approved wording in Section 9.1 verbatim and do not extend past it.
 
 ### 5.3 Contractor and Designer Routing
 
@@ -906,7 +914,23 @@ Estimate protocol: any price not present in Section 3 or Section 4 is flagged as
 
 ### 5.5 Email Rules
 
-When a quote is attached, the email body contains no pricing and no heavy technical detail; reference the attached PDF by its exact filename, formatted per the attachment reference rule below. Keep emails brief and professional, full sentences, no em dashes. First person ("I") when Brenden met the client personally; "we" for company-level actions. Descriptive subject lines that include the service type. Cedar Winds projects: email Cedar Winds only, never the end client. Pricing appears in an email body only in the rare case where no quote is attached.
+When a quote is attached, the email body contains no pricing and no heavy technical detail; reference the attached PDF by its exact filename, formatted per the attachment reference rule below. Keep emails brief and professional, full sentences, no em dashes. First person ("I") when Brenden met the client personally; "we" for company-level actions. Subject lines follow the exact convention below. Cedar Winds projects: email Cedar Winds only, never the end client. Pricing appears in an email body only in the rare case where no quote is attached.
+
+**Email subject line convention (ruled by Brenden McKee August 9, 2026, Don Skewis quote session).** Every email carrying a quote uses this exact shape:
+
+McKee Security: (Quote) {Service Types}
+
+The company name leads, the document type sits in parentheses, and the core services the quote actually prices follow. A single-service quote:
+
+McKee Security: (Quote) Security
+
+A quote spanning several services:
+
+McKee Security: (Quote) Security, Camera Surveillance, Starlink, & Networking
+
+Services are named with McKee's own service names (Security, Camera Surveillance, Networking, Starlink, Audio & Video, VoIP, Cellular Signal Boosting), separated by commas with an ampersand before the last one. List only what the quote actually prices, in the order the sections appear in the document. The subject carries NO client name, NO address and NO project location: it describes the document, and the recipient is already in the To field. This is a separate convention from the chat naming rule in Section 5.3 and from the exported PDF filename below, and one is never substituted for another. A descriptive subject that merely mentions the service type is NOT sufficient; the shape above is the standard and it is reproduced exactly.
+
+NOT YET RULED, raise with Brenden rather than guessing: whether a revised quote carries its version in the subject the way the exported filename does, and whether non-quote emails such as an invoice or a service follow-up swap the document type inside the parentheses.
 
 **Exported PDF filename convention (ruled by Brenden McKee July 29, 2026, Janet Barkwell session; version prefix added by Brenden McKee August 5, 2026, John Currie session).** Every client-facing document exported for attachment carries the document type in parentheses at the front. The FIRST quote issued to a client is named with no version prefix:
 
@@ -962,16 +986,16 @@ Templates list COMPONENTS ONLY. Zero prices, zero totals: every price comes from
 Vista 20P panel, 6160RF keypad (built-in receiver; NEVER add a 5881ENH alongside it), 4G/LTE cellular communicator with antenna, 16.5VAC transformer, 4-Amp battery, wireless door contacts per scope, wireless motion(s) per scope, indoor siren and yard sign (ALWAYS, per the mandatory inclusion rule in Section 5.4). Variant: Vista 21iP when the IP-capable panel is specifically wanted. Optional: Tuxedo Touch in place of or alongside the 6160RF; 5828 secondary wireless keypad with its R300-12033 transformer.
 
 **7.2 Cottage Security with Environmental Protection**
-Template 7.1 plus wireless smoke/heat/low temp combo(s), 5821 wireless temperature and flood sensor(s) or water alarm(s), wireless CO detector, low temperature coverage sized to the mechanical spaces. For IP-communicated variants see 7.4.
+Template 7.1 plus wireless smoke, heat and low temperature detector(s), 5821 wireless temperature and flood sensor(s) or water alarm(s), wireless CO detector, low temperature coverage sized to the mechanical spaces. For IP-communicated variants see 7.4.
 
 **7.3 Garage or Outbuilding Security Extension**
 Attached or near garage on a 20P: 4219 zone expander, wired contacts, wired motion, wired overhead door contact or tilt sensor, keypad cable run. Larger or commercial variant: 128BPT panel with 4208U expansion. Detached beyond wired reach: wireless overhead door tilt sensor per overhead door as standard (958 plus 5816 contact only where a door will not take a tilt sensor, one line item), wireless contacts and motion, 5800RP repeater with its 300-07753 transformer only where range testing demands it (ICF exterior walls alone do not justify a repeater, Section 8).
 
 **7.4 IP-Monitored Security (no cellular path, Starlink sites)**
-Template 7.1 or 7.2 with the 7847i internet communication module replacing the cellular communicator, PLUS battery backup sized per the Section 3.19 tier table, backing the panel and the Starlink modem and network gear together (Section 8 rule), plus UPS installation and configuration labour per unit. Tier selection on these builds: the whole point of the backup is that the monitoring path survives the outage, so a Tier 1 lithium unit is the default recommendation and a Tier 2 lead-acid UPS is the budget fallback, not the standard. Size the unit to the measured load and the runtime the client actually wants using the Section 3.19 runtime method; a second unit is required at any second building that carries part of the communication path, such as a remote gateway or a fiber link endpoint.
+Template 7.1 or 7.2 with the IP-COM internet communication module replacing the cellular communicator, PLUS battery backup sized per the Section 3.19 tier table, backing the panel and the Starlink modem and network gear together (Section 8 rule), plus UPS installation and configuration labour per unit. Tier selection on these builds: the whole point of the backup is that the monitoring path survives the outage, so a Tier 1 lithium unit is the default recommendation and a Tier 2 lead-acid UPS is the budget fallback, not the standard. Size the unit to the measured load and the runtime the client actually wants using the Section 3.19 runtime method; a second unit is required at any second building that carries part of the communication path, such as a remote gateway or a fiber link endpoint.
 
 **7.5 Panel Takeover with Monitoring**
-Panel inspection and reprogramming, 4G/LTE communicator with antenna (or 7847i per site), battery replacement per condition, monitoring activation, insurance certificate. Takeover monitoring language per Section 5.2.
+Panel inspection and reprogramming, 4G/LTE communicator with antenna (or IP-COM per site), battery replacement per condition, monitoring activation, insurance certificate. Takeover monitoring language per Section 5.2.
 
 **7.6 Camera System, 4 / 8 / 16 Channel**
 Line item order on the quote: NVR first, then cameras, then junction boxes and accessories, then installation labour (ruled July 22, 2026). Cameras from the Section 3.3 tier per scope (white or -BK housing per the site), junction boxes equal to camera count MINUS doorbell cameras, matching non-IQ NVR with included drive (4ch/3TB, 8ch/6TB, 16ch/12TB), Cat6 runs and wiring labour, UniEase and EZ Station 3.0 configuration. Optional: UNV doorbell with ED-R1 chime, 4TB drive upcharge, battery backup for the head-end per the Section 3.19 tier table.
@@ -1019,9 +1043,9 @@ The 6160RF keypad contains a built-in wireless receiver (the integrated 5881ENH)
 
 Vista 20P is the default and strongly preferred over ProSeries. Field experience with ProSeries includes power-outage recovery failures (systems fail to come back online without manual reset), general reliability concerns, and service complexity; backup generators only partially mitigate. When ProSeries is unavoidable, the PROTAKEOVER module lets a ProSeries panel receive legacy 5800-series wireless devices, and customers are told the limitations up front. 5800-series sensors pair with Vista panels (15P/20P/21iP/128BPT); ProSIX sensors pair with ProSeries only.
 
-All new communicators are 4G/LTE (3G is sunset). The 7847i provides the IP path for sites without cellular service. ICF or concrete construction applies to EXTERIOR walls only; interior wireless sensors do not need a 5800RP repeater on that basis alone; add repeaters only when range testing demands it.
+All new communicators are 4G/LTE (3G is sunset). The IP-COM Advanced Modular Internet Communicator provides the IP path for sites without cellular service. It replaces the discontinued 7847i and is a straight substitution on any build that previously called for one; it is Ethernet only, is powered off the control panel, and carries CAN/ULC-S304 and CAN/ULC-S545 listings, so nothing changes on the Lanvac side. Two things DO change in the field. Panel revision is now a constraint: the modular communicators require a Vista 15P or 20P at software revision 9.12 or higher, a 21iP at 3.13 or higher, and a 128BPT at 10.0 or higher, so an older board on a takeover needs its chip confirmed before an IP-COM is quoted or ordered. Programming moves to AlarmNet 360 web or mobile; the 7720P and AlarmNet Direct workflow does not apply, and the technician needs AlarmNet 360 access on site. ICF or concrete construction applies to EXTERIOR walls only; interior wireless sensors do not need a 5800RP repeater on that basis alone; add repeaters only when range testing demands it.
 
-IP-monitored systems (7847i over Starlink or landline internet) REQUIRE battery backup on the security panel and the Starlink modem and network gear together, so monitoring communication survives power outages. The requirement is the protection, not a specific model: size it from the Section 3.19 tier table against the measured load and the runtime the site needs. A Tier 1 lithium unit is the default on IP-monitored, Starlink-dependent, remote or seasonally unoccupied sites, because a Tier 2 lead-acid UPS buys roughly 1 to 3 hours on that load while a 1024Wh lithium unit buys 8 to 21, and on an unoccupied property an outage that outlasts the backup means the system goes silent with nobody there to notice. Camera and network head-ends get the larger unit where post-outage recovery matters; single remote access points get the compact unit. Where the communication path spans two buildings, every building carrying part of that path needs its own backup.
+IP-monitored systems (IP-COM over Starlink or landline internet) REQUIRE battery backup on the security panel and the Starlink modem and network gear together, so monitoring communication survives power outages. The requirement is the protection, not a specific model: size it from the Section 3.19 tier table against the measured load and the runtime the site needs. A Tier 1 lithium unit is the default on IP-monitored, Starlink-dependent, remote or seasonally unoccupied sites, because a Tier 2 lead-acid UPS buys roughly 1 to 3 hours on that load while a 1024Wh lithium unit buys 8 to 21, and on an unoccupied property an outage that outlasts the backup means the system goes silent with nobody there to notice. Camera and network head-ends get the larger unit where post-outage recovery matters; single remote access points get the compact unit. Where the communication path spans two buildings, every building carrying part of that path needs its own backup.
 
 Warranty statements: Honeywell/Resideo security hardware carries a 2-year manufacturer warranty. McKee provides a 1-year installation and workmanship warranty on labour. (Do not claim longer Resideo terms; the old "up to 5 years" marketing language is retired as unverifiable.)
 
@@ -1151,7 +1175,9 @@ Monitoring pitch (no tier numbers): "Your system is monitored 24/7 by our ULC-li
 
 Total Connect 2.0: "The Total Connect 2.0 app puts your entire system in your pocket: arm and disarm from anywhere, real-time alerts the moment anything happens, live system status, and control of compatible smart devices such as locks and thermostats."
 
-Insurance: "Most home insurance providers offer discounts of 5-20% for professionally monitored systems, which often offsets a large portion of the monitoring cost. We provide an insurance certificate on completion."
+Insurance: "Most home insurance providers offer discounts of 5-20% for professionally monitored systems, which often offsets a large portion of the monitoring cost. We provide an insurance certificate on completion that you can submit to your insurance provider."
+
+That wording is the END of what we say about insurance. Do NOT append anything offering to deal with the insurer for the client, and do NOT ask who the client is insured with. The certificate is handed to the client and the client takes it from there, per the rule in Section 5.2.
 
 Cellular vs landline: "We strongly recommend cellular monitoring. 4G/LTE communication cannot be disabled by cutting a phone line, and it is what enables the Total Connect 2.0 app."
 

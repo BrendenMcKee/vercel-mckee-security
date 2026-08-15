@@ -146,7 +146,7 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | D14 | Enter the two existing VoIP customers | Stripe go-live / 8C | **Resolved on pricing (R50, 2026-08-13):** the 3.12 rate card is the live model (base + additional numbers + commercial seats, one monthly figure, port fee one-time). Remaining **[HUMAN]**: enter the two existing VoIP customers by hand (one residential, one commercial) with their real number count, seat count, port count, amount, and next due date when Stripe goes live. Link both to QuickBooks in Phase 8A. BrightPBX DID cost stays $0.00 flagged until confirmed (internal only) |
 | D15 | Monitoring `started_on` for every monitoring client | Before customer input / 8A seed | **[HUMAN]** When creating or importing a monitoring client, the day they first started monitoring must be entered (or confirmed from the seed's inferred first-invoice date). Invitation and activation dates are not a substitute. Needed so later year-over-year monitoring profitability has a real history, not a portal-era history |
 | D16 | Cost per monitored client, by tier | Before any monitoring P&L / before treating Phase 8 as "profitability-complete" | **[HUMAN]** Gather the real cost McKee pays per monitoring client for each current tier (`landline`, `cellular`, `cellular_tc`, `cellular_tc_home`) — typically the monitoring-station / communicator cost, not the retail price. Same pattern as Starlink `unit_costs` (dated rates, history preserved). Posting payments to QuickBooks (8C) does not need this; a monitoring profit view does. Do not invent numbers |
-| D17 | Live vs portal-test company files + TSheets | Before any bridge install (8A) | **[HUMAN]** Inventory every `.qbw` on the QuickBooks PC. Leave the live filename exactly as TSheets / Web Connector already knows it (renaming live can break time sync). Restore a backup as a new file with an unmistakable name (e.g. `McKee Security PORTAL-TEST do-not-invoice.qbw`) in a different folder. Change the copy's Company Name so the title bar cannot be mistaken for live. Confirm TSheets is authorized only on live. Record both full paths. See 9.5.7 |
+| D17 | Live vs portal-test company files + TSheets | Before any bridge install (8A) | **[HUMAN]** Inventory every `.qbw` on the QuickBooks PC. Live file (2026-08-15): `C:\Users\Public\Documents\Intuit\QuickBooks\Company Files\McKee Security July 14.QBW` on DennisPC. TSheets Web Connector is the only app; it auto-runs every 60 minutes; authenticate returns an empty company-file path, so it uses **whichever file is open**, not a pinned path. A restore copy carries the TSheets FileID, so an open PORTAL-TEST file can receive a TSheets sync. Before any copy-open session: archive the retired `McKee Security` file so it cannot be opened by accident; uncheck TSheets Auto-Run (or Exit Web Connector) while the copy is open; reopen live and restore Auto-Run. Optional later rename of July 14 is safe only after the old file is archived and only the live file is opened afterward. Record both full paths. See 9.5.7 |
 
 ---
 
@@ -1050,23 +1050,25 @@ Two programs, two files, one PC. Do not conflate them.
 
 **QuickBooks Desktop can have only one company file open at a time.** While the portal-test copy is open, the live file is closed and TSheets / QuickBooks Time cannot sync. Keep copy-open sessions short or after hours, then reopen live and confirm TSheets is healthy.
 
-**Do not rename the live `.qbw` if TSheets already knows that path.** Renaming live is how time sync breaks. Leave the live filename alone. Make the copy unmistakable instead.
+**TSheets is not pinned to a file path (discovered 2026-08-15).** Web Connector 34, app "QuickBooks Time (formerly TSheets) for McKee Security", auto-run every 60 minutes, last sync green. The TSheets SOAP `authenticate` return leaves the company-file slot empty, which means "use the file that is currently open." We cannot change that from the Web Connector window; Intuit's TSheets server decides it. That is a normal TSheets setup, not a misconfiguration. The safer local setup is operational, not a different connector: only one live `.qbw` where people can open it, and TSheets Auto-Run off whenever a non-live file is open.
+
+**Do not rename the live `.qbw` during the gather sitting.** A later rename of `McKee Security July 14.QBW` is optional hygiene (the title bar already says McKee Security & Audio Systems). Because TSheets follows the open file, rename does not require retargeting a stored path. It does require: archive the retired `McKee Security` file first, open only the renamed live file afterward, and watch one TSheets cycle go green. Make the portal-test copy unmistakable and keep it in a different folder.
 
 **How to make the copy (human, before the bridge is installed):**
 
-1. Inventory every `.qbw` on the PC. Write down the live file's full path. That path is the one TSheets / Web Connector already uses.
+1. Inventory every `.qbw` on the PC. Live path: `C:\Users\Public\Documents\Intuit\QuickBooks\Company Files\McKee Security July 14.QBW`. Archive the retired `McKee Security` company file (and its `.ND` / `.TLG`) so TSheets cannot sync into it if someone opens it.
 2. With the live file open: File > Back Up Company > Create Local Backup (complete backup). Confirm it finished.
 3. Close QuickBooks. File > Open or Restore Company > Restore a backup copy > Local backup. Save it in a **different folder** with an unmistakable name, for example `C:\QB-Companies\McKee-PORTAL-TEST\McKee Security PORTAL-TEST do-not-invoice.qbw`.
 4. Open the copy. Company > Company Information: change the company name so the title bar says PORTAL TEST. Do not email, do not invoice, do not add payroll or TSheets to this file.
-5. Close the copy. Reopen the live file. Confirm TSheets / Web Connector still syncs. Confirm the copy is not the default "last opened" surprise.
+5. Close the copy. Reopen the live file. Turn TSheets Auto-Run back on. Confirm a sync goes green. Confirm the copy is not the default "last opened" surprise.
 6. Record both full paths. Those become `qb_bridges.expected_company_file` (sandbox first, live only at 8C).
 
 **TSheets / QuickBooks Time:**
 
-- TSheets uses Intuit's **Web Connector** against the live file. That stays as it is.
-- Our bridge uses the **Desktop SDK**, not Web Connector. We do not add a second Web Connector application and we do not share TSheets' connector slot.
-- Never authorize TSheets, payroll, or any Web Connector app against the portal-test copy.
-- If someone opens the copy during the day, TSheets will pause until live is reopened. That is expected, not a defect.
+- TSheets uses Intuit's **Web Connector** (only app in the list). Our bridge uses the **Desktop SDK**, not Web Connector. We do not add a second Web Connector application.
+- TSheets follows the **open** company file. A backup/restore copy can still look like the same TSheets company (FileID survives restore). Do not rely on "TSheets will pause." While the portal-test copy is open: uncheck Auto-Run or Exit Web Connector, then restore it when live is open again. Keep those sessions short or after hours.
+- Never add TSheets, payroll, or any Web Connector app to the copy on purpose. The inherited FileID is why Auto-Run must be off anyway.
+- Pinning TSheets to a hardcoded `.qbw` path is not something we set in the Web Connector UI (the TSheets server returns the empty path). Do not chase that before 8A. Hygiene + Auto-Run discipline is the control.
 
 **Why the copy is better than the Intuit sample company:** the sample has fake customers. The copy has the real customer list, invoice history, item names, and to-do wording, so the bulk import, tier inference, and device-draft parser can be rehearsed against real data without touching the live books.
 

@@ -1,10 +1,63 @@
 # Accounting gather
 
-Do these in order. Send each pack when it is done. When 1 and 2 are in, we can start the integration.
+Tick a box when that item is in. **No further integration (bridge, posting code, or cloud queue) until every required box below is checked.** Answers and screenshots-as-text live in `ACCOUNTING_GATHER_DATA.md`. Later items (Stripe go-live, profitability) are tracked but do not block the start of Phase 8 once the required list is complete.
 
-Portal truth: monitoring is annual, VoIP is monthly, one line each, plus 13% HST. Clients send the after-HST amount to `dennis@mckeesecurity.ca`. The books must match that. There are **four** VoIP customers; enter them by hand later, same as before.
+Portal truth: monitoring is annual, VoIP is monthly, one line each, plus 13% HST. Clients send the after-HST amount to `dennis@mckeesecurity.ca`. The books must match that. VoIP live today: Pirocchi (wrong annual memorized), Haliburton Auto (install only), Currie (install/upgrade, no monthly). Vision Care is pipeline only. Enter live ones by hand later.
 
 VoIP is not booked correctly today. **Create new items. Do not rename** the item those customers sit on. In QuickBooks Desktop a rename rewrites every old invoice that used that item.
+
+## Status
+
+**Next:** Steps 2 and 3 are done. Remaining required items are the bookkeeper sitting (invoice vs sales receipt, keep 4000 vs split income, Stripe/*Stripe/CIBC, payment methods, HST exceptions, class `Monitoring` / `VOIP`) plus a rough active-monitoring count. Do not create the extra VoIP items or the test copy until that sitting.
+
+Required before any integration starts:
+
+- [x] Which QuickBooks PC (`DennisPC`, Windows 11 Home 25H2)
+- [x] Remote access: Parsec. Brenden, Andi, Dennis, Brenda.
+- [x] Stays on after hours (usually on; sometimes off; queue covers downtime)
+- [x] F2: QuickBooks Desktop Pro 2024 R21P 64-bit (meets 2024 R18+; Canadian file lineage)
+- [x] File is local on DennisPC (`…\Company Files\McKee Security July 14.QBW`; hosting = local files only)
+- [x] Accountant's Copy outstanding? **No.** Title bar is normal (`McKee Security & Audio Systems - QuickBooks Desktop Pro (multi-user) (Admin(ServerDB))`). No "Accountant's Copy exists" banner.
+- [x] Current monitoring sale PDF (`monitoring-current.pdf` ACM-DESIGNS, $39.95 × 12, item `Annual Monitoring`, class `Monitoring`, HST extra)
+- [x] Old-rate / odd monitoring (screenshots): $39.99 and item `Semi-Annual` used for a full year
+- [x] VoIP sales: no monthly subscription invoices. Pirocchi has a stale **annual** memorized `$4,057.22`. Auto and Currie have install/monitoring only. Vision Care is quote-only.
+- [x] Mixed VoIP + install (HALIBURTON AUTO REPAIR #31303: VoIP install `Product Sale`, no monthly line)
+- [x] Item List (Type + Account): `Annual Monitoring` and `VoIP Phone Service` both → 4000 · Product Sales
+- [x] Chart of Accounts: 1000 CIBC, 1200 AR, 1499 Undeposited Funds, 2300 HST, 4000/4100 income, `*Stripe` Bank
+- [x] Memorized Transaction List (top + bottom): annual invoices at after-HST tier totals
+- [ ] Active monitoring count + known duplicates / jobs
+- [x] VoIP names: Pirocchi (residential), Halliburton Auto Repair (commercial 1+1), Mr. J. Currie (residential), Vision Care pipeline (commercial 2+1, `$64.98`)
+- [ ] HST exceptions (or "none")
+- [ ] Bookkeeper: invoice-then-payment vs sales receipt
+- [ ] Bookkeeper: monitoring item(s) and income account
+- [ ] Bookkeeper: amounts before tax vs tax included
+- [ ] Bookkeeper: Stripe clearing, fees, and bank accounts (created if missing)
+- [ ] Bookkeeper: e-transfer / cheque / cash deposit-to and payment methods (`e-Transfer` and `Stripe` created if missing)
+- [ ] Bookkeeper: Classes (or "none")
+- [x] Bookkeeper: QuickBooks Admin user name (`Admin(ServerDB)` on the login dialog)
+- [ ] Live items created: `VoIP - Residential`, `VoIP - Commercial`, `VoIP - Number Port Fee` on `VoIP Income`, tax H
+- [ ] Screenshot of those three new Item List rows
+- [ ] Inventory of every `.qbw` on the PC (Intuit Company Files folder is mapped; whole-disk search not done)
+- [x] Web Connector: TSheets only; healthy; uses the **open** company file (not a pinned path)
+- [ ] PORTAL-TEST copy made after the new VoIP items (different folder, title bar says PORTAL TEST, no TSheets)
+- [ ] Live reopened, TSheets still syncs
+- [ ] Full paths of live and PORTAL-TEST files
+- [x] Lanvac call-list export received (2026-08-14, Stephanos)
+- [x] To Do samples (first screen of the list; smoke/battery wording). Full export only if we build the device importer.
+
+Later, before the portal-test copy is opened (written into the plans; not this sitting):
+
+- [ ] Archive the retired `McKee Security` company file so TSheets cannot sync into it
+- [ ] Optional: rename `McKee Security July 14.QBW` to a clear live name, then confirm one TSheets sync
+- [ ] While any non-live file is open: TSheets Auto-Run off (or Web Connector exited)
+
+Later (do not block the start once the required list is complete):
+
+- [ ] Live Stripe key, webhook, and monitoring prices in Vercel
+- [ ] Four VoIP customers entered in the portal and linked to QB
+- [ ] Bookkeeper inspected the first live card post
+- [ ] BrightPBX DID cost (optional; margin only)
+- [ ] Station cost per monitoring tier (optional; profitability later)
 
 ---
 
