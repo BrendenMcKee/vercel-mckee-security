@@ -33,7 +33,7 @@ export function LanvacCitySelect({
           </option>
         ))}
       </optgroup>
-      <optgroup label="All Lanvac cities">
+      <optgroup label="Other Ontario cities">
         {other.map((city) => (
           <option key={`o-${city}`} value={city}>
             {city}

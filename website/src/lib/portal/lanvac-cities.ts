@@ -4021,15 +4021,23 @@ export function isLanvacDirectoryCity(city: string): boolean {
   return city.trim() in LANVAC_EMERGENCY_NUMBERS;
 }
 
+/** McKee only monitors in Ontario. Official keys end in `- ON` / `- On`. */
+export function isOntarioLanvacCity(city: string): boolean {
+  return /[-,\s](ON|On|Ontario)$/i.test(city.trim());
+}
+
 export function lanvacCitySelectOptions(current?: string | null): {
   frequent: string[];
   other: string[];
   extra: string | null;
 } {
-  const extra = current?.trim() && !(current.trim() in LANVAC_EMERGENCY_NUMBERS) ? current.trim() : null;
+  const trimmed = current?.trim() ?? "";
+  const ontario = LANVAC_DISPATCH_CITIES.filter(isOntarioLanvacCity);
+  const extra =
+    trimmed && !FREQUENT.has(trimmed) && !ontario.includes(trimmed) ? trimmed : null;
   return {
     frequent: [...LANVAC_DISPATCH_CITIES_FREQUENT],
-    other: LANVAC_DISPATCH_CITIES.filter((city) => !FREQUENT.has(city)),
+    other: ontario.filter((city) => !FREQUENT.has(city)),
     extra,
   };
 }

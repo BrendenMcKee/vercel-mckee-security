@@ -8,7 +8,7 @@ VoIP is not booked correctly today. **Create new items. Do not rename** the item
 
 ## Status
 
-**Next:** Required gather list is complete. Live file is `McKee Security Live.QBW`. Phase 8 starts against the PORTAL-TEST copy. Move leftover `July 14` sidecars into `Archive_Old` (QuickBooks closed). Do not delete `McKee Security Live.*`.
+**Next:** Gather is complete. Pre-API portal station work is complete (CODE + Ontario dispatch city, required for monitoring; client emergency-numbers readout; Vercel env set; writes not on). Next session starts Phase 8A against the PORTAL-TEST copy. Do not start the Lanvac `fullupdate` write until you say go. Move leftover `July 14` sidecars into `Archive_Old` (QuickBooks closed). Do not delete `McKee Security Live.*`.
 
 Required before any integration starts:
 
@@ -155,7 +155,7 @@ The Admin user (`Admin(ServerDB)`) must later approve the bridge ("even when Qui
 
 ## 4. Start now, in parallel — Lanvac call lists
 
-Full Excel export is in hand (dealer 10638). Seed people rows plus each account's CODE and the mapped live-directory city (no client emails during import). Excel aliases like `HALIBURTON` are not valid write keys. Do not import police/fire/ambulance as contacts. After cutover, a list save still emails McKee and the customer. The save also writes the people list to Lanvac (`POST /api/EmergencyContact/fullupdate` with `usePoliceNumbers: true` and that CITY). If the API call fails, the emails still go out and RDP is the fallback. API contract is ingested; write-tested on `O5985`. No keys in git. The portal now stores `lanvac_account_code` and `lanvac_city` (required when monitoring is assigned; city must be a live directory string). Vercel env is set. The API write itself is later.
+Full Excel export is in hand (dealer 10638). Seed people rows plus each account's CODE and the mapped live-directory city (no client emails during import). Excel aliases like `HALIBURTON` are not valid write keys. Do not import police/fire/ambulance as contacts. After cutover, a list save still emails McKee and the customer. The save also writes the people list to Lanvac (`POST /api/EmergencyContact/fullupdate` with `usePoliceNumbers: true` and that CITY). If the API call fails, the emails still go out and RDP is the fallback. API contract is ingested; write-tested on `O5985`. No keys in git. The portal now stores `lanvac_account_code` and `lanvac_city` (required when monitoring is assigned; city must be an official Ontario directory string). Admin dropdown is Ontario only, McKee-frequency first. Clients see police/fire/ambulance for that city below the people list. Vercel env is set. The API write itself is later.
 
 Device/battery To Do samples are already in `ACCOUNTING_GATHER_DATA.md`. The full 841 notes are a one-time import into portal devices when the 8A seed runs (AI draft + confidence + human review of low-confidence rows). After that, the portal is the managed list; stop using QuickBooks To Dos for new battery/smoke tracking. Do not export the full list for the bookkeeper sitting.
 

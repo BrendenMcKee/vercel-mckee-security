@@ -9,7 +9,7 @@
  * dealer password. Setting the env does not turn on writes.
  */
 
-import { isLanvacDirectoryCity } from "@/lib/portal/lanvac-cities";
+import { isLanvacDirectoryCity, isOntarioLanvacCity } from "@/lib/portal/lanvac-cities";
 
 export const LANVAC_ACCOUNT_CODE_PATTERN = /^[0-9A-Za-z]{1,2}[0-9A-Fa-f]{4}$/;
 export const LANVAC_ACCOUNT_CODE_MAX = 6;
@@ -65,8 +65,8 @@ export function parseLanvacCity(
   if (value.length > LANVAC_CITY_MAX) {
     return { ok: false, error: `Dispatch city is too long (${LANVAC_CITY_MAX} max).` };
   }
-  if (!isLanvacDirectoryCity(value)) {
-    return { ok: false, error: "Pick a dispatch city from the Lanvac list." };
+  if (!isLanvacDirectoryCity(value) || !isOntarioLanvacCity(value)) {
+    return { ok: false, error: "Pick an Ontario dispatch city from the Lanvac list." };
   }
   return { ok: true, value };
 }
