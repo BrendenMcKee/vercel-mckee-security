@@ -89,7 +89,8 @@ function normalizeList(raw: { phone: string; label: string; passcode: string }[]
   for (const [index, entry] of raw.entries()) {
     const parsed = contactSchema.safeParse(entry);
     if (!parsed.success) {
-      return { error: parsed.error.issues[0]?.message ?? "Invalid contact." };
+      const name = entry.label?.trim() || `contact #${index + 1}`;
+      return { error: `${name}: ${parsed.error.issues[0]?.message ?? "Invalid contact."}` };
     }
     const phone = normalizePhone(parsed.data.phone);
     if (!phone) {

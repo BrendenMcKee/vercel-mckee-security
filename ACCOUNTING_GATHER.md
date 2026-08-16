@@ -55,6 +55,7 @@ Later, before the portal-test copy is opened (written into the plans; not this s
 Later (do not block the start once the required list is complete):
 
 - [x] Lanvac API contract ingested (2026-08-16). OpenAPI at `https://lanvac.mobi:8843/swagger/v1/swagger.json`. Auth is dealer `10638` + WinLinks password in every JSON body (no API key). Account key is export `CODE`. Write is `POST /api/EmergencyContact/fullupdate`. Emails stay; RDP is fallback. No keys in git.
+- [ ] Lanvac credentials in Vercel (`LANVAC_API_BASE`, `LANVAC_DEALER_ACCOUNT`, `LANVAC_DEALER_PASSWORD`). Server-only. Does not turn on writes.
 - [ ] Live Stripe key, webhook, and monitoring prices in Vercel
 - [ ] Four VoIP customers entered in the portal and linked to QB
 - [ ] Bookkeeper inspected the first live card post

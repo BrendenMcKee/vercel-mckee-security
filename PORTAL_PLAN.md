@@ -1360,6 +1360,9 @@ Sub-phases gate independently. 8A and 8B build against the **portal-test copy** 
 | `FOOTAGE_AWS_ACCESS_KEY_ID`, `FOOTAGE_AWS_SECRET_ACCESS_KEY`, `FOOTAGE_AWS_REGION`, `FOOTAGE_BUCKET` | Vercel only | 6B (read/list/restore-only credential, 9.3) |
 | `CRON_SECRET` | Vercel only | 7 — set 2026-07-06 (production + `.env.local`); Vercel cron sends it automatically as the bearer token |
 | `MCP_SERVER_SECRET` | Vercel only | 8D (bearer auth for `/api/mcp`; per-staff keys if the team grows) |
+| `LANVAC_API_BASE` | Vercel only | D13 — `https://lanvac.mobi:8843`. Server-only. Not set yet. |
+| `LANVAC_DEALER_ACCOUNT` | Vercel only | D13 — `10638`. Server-only. Not set yet. |
+| `LANVAC_DEALER_PASSWORD` | Vercel only | D13 — WinLinks dealer password. Sensitive. Server-only. Not set yet. Add in the Vercel dashboard (Production; Preview if you test deploys). Never git, never `NEXT_PUBLIC_`. |
 
 Phase 8 bridge credentials are **not** Vercel env vars: each bridge holds its own secret locally (hash in `qb_bridges.secret_hash`), same model as the camera gateways.
 
@@ -1375,6 +1378,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-16 | **Lanvac station UI audited.** Save refreshes the admin page so CODE/city do not look stale. Account codes uppercase as typed. Create-client allows the same phone twice (matches the editor). Named validation errors on list save. Vercel env names recorded; credentials not set yet. |
 | 2026-08-16 | **Portal station fields aligned with Lanvac (D13).** People list stays people-only. New `profiles.lanvac_account_code` and `profiles.lanvac_city` (admin Monitoring station card + create-client). Clients see a read-only city line. Name max 30 and passcode max 21 match Lanvac `name` / `PW:`+`note`. API write is still later. |
 | 2026-08-16 | **Lanvac `fullupdate` write-tested on `O5985` (D13).** Auth is dealer `10638` + WinLinks password. Write is `POST /api/EmergencyContact/fullupdate` with `usePoliceNumbers: true`, `policeNumbersCity` (Excel CITY), and people + end marker only in `contactList`. Police/fire/ambulance are station-owned. Passcode lives in `note` (`PW:…`). GET cannot be tried in Swagger (GET + body). List restored after the test. |
 | 2026-08-16 | **GL mapping locked without a bookkeeper sitting (D12).** Portal-collected payments post as sales receipts on 4000. Classes: `Security - Monitoring`, `Security - Installation`, `VoIP - Subscription`, `VoIP - Installation` (no new income accounts; tiers stay in the portal). Customer paid invoice is portal + Stripe, never a QuickBooks email. Card: `*Stripe` then CIBC net + 5800 fee. E-transfer/cheque: `Electronic Funds Transfer` / `Cheque` to 1499 Undeposited Funds, then Make Deposit. HST 13% exclusive. Named command `sales_receipt.create`. Lanvac: full Excel in hand; list save keeps both emails and writes their API (RDP fallback). Remaining in live: rename/create those classes and the three VoIP items. |

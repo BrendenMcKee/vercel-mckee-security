@@ -16,6 +16,7 @@ import {
 import { DEVICE_CATEGORIES } from "@/lib/portal/devices";
 import { normalizePhone } from "@/lib/portal/phone";
 import {
+  LANVAC_ACCOUNT_CODE_MAX,
   LANVAC_CITY_MAX,
   LANVAC_CONTACT_NAME_MAX,
   LANVAC_PASSCODE_MAX,
@@ -40,7 +41,7 @@ const createClientSchema = z.object({
   // Stakeholder 2026-07-06: billing is chosen at creation. Autopay is the
   // default; the client is asked for their card as part of activation.
   billingMethod: z.enum(["stripe", "manual"]),
-  lanvacAccountCode: z.string().trim().max(6),
+  lanvacAccountCode: z.string().trim().max(LANVAC_ACCOUNT_CODE_MAX),
   lanvacCity: z.string().trim().max(LANVAC_CITY_MAX),
 });
 
@@ -129,7 +130,7 @@ export async function createClientAction(
   const seedContacts: { phone: string; label: string; passcode: string }[] = [];
   const seedDevices: z.infer<typeof createDeviceDraftSchema>[] = [];
   if (monitoringTier) {
-    const seenPhones = new Set<string>();
+    const seenIdentities = new Set<string>();
     for (const rawContact of extras.contacts ?? []) {
       const parsedContact = createContactDraftSchema.safeParse(rawContact);
       if (!parsedContact.success) {
@@ -139,13 +140,14 @@ export async function createClientAction(
       if (!phone) {
         return { ok: false, error: `"${parsedContact.data.phone}" is not a valid North American phone number.` };
       }
-      if (seenPhones.has(phone)) {
-        return { ok: false, error: "The same phone number cannot appear twice on the alarm contact list." };
+      const identity = `${phone}|${parsedContact.data.label}|${parsedContact.data.passcode}`;
+      if (seenIdentities.has(identity)) {
+        return { ok: false, error: `${parsedContact.data.label} with that number and passcode is already on the list.` };
       }
-      if (seenPhones.size >= 15) {
+      if (seenIdentities.size >= 15) {
         return { ok: false, error: "The alarm contact list is capped at 15 people." };
       }
-      seenPhones.add(phone);
+      seenIdentities.add(identity);
       seedContacts.push({
         phone,
         label: parsedContact.data.label,
@@ -463,7 +465,7 @@ export async function updateClientProfileAction(
 
 const updateLanvacSchema = z.object({
   profileId: z.uuid(),
-  lanvacAccountCode: z.string().trim().max(6),
+  lanvacAccountCode: z.string().trim().max(LANVAC_ACCOUNT_CODE_MAX),
   lanvacCity: z.string().trim().max(LANVAC_CITY_MAX),
 });
 
@@ -520,6 +522,7 @@ export async function updateClientLanvacAction(input: {
   }
 
   revalidatePath("/admin-dashboard", "layout");
+  revalidatePath("/user-dashboard", "layout");
   return { ok: true };
 }
 

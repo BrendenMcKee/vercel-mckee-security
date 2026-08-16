@@ -308,4 +308,5 @@ Decision (2026-08-15): we will import these at 8A. The bridge reads the full lis
 | IP / rate limits | No allowlist block from this PC. Rate limits unknown. Vercel egress is a later risk. |
 | Later (not now) | `/api/Account` GET works (same body auth). `/api/Historic`, `/api/EmergencyContact/emergencynumbers`, Zone, OnTest. |
 | Portal mapping | People → `caller_id_contacts`. CODE → `profiles.lanvac_account_code`. CITY → `profiles.lanvac_city` (exact spelling; 103 variants in the export). Police/fire/ambulance are not stored as contacts. `sort_order` → `E1`/`E2`/… at API write. Passcode → `note` `PW:…`. |
+| Vercel env (not set yet) | `LANVAC_API_BASE`, `LANVAC_DEALER_ACCOUNT` (`10638`), `LANVAC_DEALER_PASSWORD` (WinLinks). Server-only. Adding them does not turn on writes. |
 | CITY spellings | Do not clean. `Haliburton - On`, `HALIBURTON`, and `HALIBURTON ON` are different Lanvac keys. |

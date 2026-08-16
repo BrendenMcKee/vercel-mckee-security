@@ -2,9 +2,14 @@
  * Lanvac station fields and people-list limits.
  * Police / fire / ambulance are not portal contacts. They are written later
  * via usePoliceNumbers + this city. People map to E1/E2/… from sort_order.
+ *
+ * Later API write (not wired yet) reads server-only Vercel env:
+ * LANVAC_API_BASE, LANVAC_DEALER_ACCOUNT, LANVAC_DEALER_PASSWORD.
+ * Never NEXT_PUBLIC_. Password is the WinLinks dealer password.
  */
 
 export const LANVAC_ACCOUNT_CODE_PATTERN = /^[0-9A-Za-z]{1,2}[0-9A-Fa-f]{4}$/;
+export const LANVAC_ACCOUNT_CODE_MAX = 6;
 export const LANVAC_CITY_MAX = 240;
 /** Lanvac `name` max. */
 export const LANVAC_CONTACT_NAME_MAX = 30;
@@ -21,7 +26,7 @@ export function parseLanvacAccountCode(
   if (!LANVAC_ACCOUNT_CODE_PATTERN.test(value)) {
     return {
       ok: false,
-      error: "Lanvac account must be 5 or 6 characters, like O5985. Include the leading letter.",
+      error: "Lanvac account must be 5 or 6 characters, like O5985. Include the leading O when the export has one.",
     };
   }
   return { ok: true, value };

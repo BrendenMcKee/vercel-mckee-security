@@ -9,7 +9,7 @@ import {
   resendInviteAction,
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
-import { LANVAC_CONTACT_NAME_MAX, LANVAC_PASSCODE_MAX } from "@/lib/portal/lanvac";
+import { LANVAC_ACCOUNT_CODE_MAX, LANVAC_CITY_MAX, LANVAC_CONTACT_NAME_MAX, LANVAC_PASSCODE_MAX } from "@/lib/portal/lanvac";
 import {
   CLOUD_BACKUP_PLANNED_RETENTION_COPY,
   SERVICE_THEME,
@@ -591,9 +591,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 Lanvac account
                 <input
                   value={form.lanvacAccountCode}
-                  onChange={(e) => set("lanvacAccountCode", e.target.value)}
+                  onChange={(e) => set("lanvacAccountCode", e.target.value.toUpperCase())}
                   placeholder="O5985"
-                  maxLength={6}
+                  maxLength={LANVAC_ACCOUNT_CODE_MAX}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
                   className={adminInputClass}
                 />
                 <span className="text-xs text-white/40">
@@ -606,7 +609,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   value={form.lanvacCity}
                   onChange={(e) => set("lanvacCity", e.target.value)}
                   placeholder="Haliburton - On"
-                  maxLength={240}
+                  maxLength={LANVAC_CITY_MAX}
                   className={adminInputClass}
                 />
                 <span className="text-xs text-white/40">

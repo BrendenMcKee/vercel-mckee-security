@@ -64,6 +64,7 @@ import {
 } from "@/lib/portal/devices";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor, type CallerIdContact } from "@/components/portal/caller-id-editor";
+import { LANVAC_ACCOUNT_CODE_MAX, LANVAC_CITY_MAX } from "@/lib/portal/lanvac";
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
 
@@ -1544,6 +1545,7 @@ function HistoryDiffList({
 }
 
 function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     lanvacAccountCode: client.lanvac_account_code ?? "",
@@ -1551,6 +1553,13 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
   });
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
+
+  function resetForm() {
+    setForm({
+      lanvacAccountCode: client.lanvac_account_code ?? "",
+      lanvacCity: client.lanvac_city ?? "",
+    });
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1567,6 +1576,7 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
       }
       setEditing(false);
       setNotice({ kind: "ok", text: "Monitoring station saved." });
+      router.refresh();
     });
   }
 
@@ -1577,6 +1587,7 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
         <button
           type="button"
           onClick={() => {
+            if (editing) resetForm();
             setEditing((v) => !v);
             setNotice(null);
           }}
@@ -1598,9 +1609,12 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
               Lanvac account
               <input
                 value={form.lanvacAccountCode}
-                onChange={(e) => setForm((f) => ({ ...f, lanvacAccountCode: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, lanvacAccountCode: e.target.value.toUpperCase() }))}
                 placeholder="O5985"
-                maxLength={6}
+                maxLength={LANVAC_ACCOUNT_CODE_MAX}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
                 className={adminInputClass}
               />
             </label>
@@ -1610,7 +1624,7 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
                 value={form.lanvacCity}
                 onChange={(e) => setForm((f) => ({ ...f, lanvacCity: e.target.value }))}
                 placeholder="Haliburton - On"
-                maxLength={240}
+                maxLength={LANVAC_CITY_MAX}
                 className={adminInputClass}
               />
             </label>
