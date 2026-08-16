@@ -8,7 +8,7 @@ VoIP is not booked correctly today. **Create new items. Do not rename** the item
 
 ## Status
 
-**Next:** Steps 2 and 3 are done. Remaining required items are the bookkeeper sitting (invoice vs sales receipt, keep 4000 vs split income, Stripe/*Stripe/CIBC, payment methods, HST exceptions, class `Monitoring` / `VOIP`) plus a rough active-monitoring count. Do not create the extra VoIP items or the test copy until that sitting.
+**Next:** Required gather list is complete. Live file is `McKee Security Live.QBW`. Phase 8 starts against the PORTAL-TEST copy. Move leftover `July 14` sidecars into `Archive_Old` (QuickBooks closed). Do not delete `McKee Security Live.*`.
 
 Required before any integration starts:
 
@@ -16,7 +16,7 @@ Required before any integration starts:
 - [x] Remote access: Parsec. Brenden, Andi, Dennis, Brenda.
 - [x] Stays on after hours (usually on; sometimes off; queue covers downtime)
 - [x] F2: QuickBooks Desktop Pro 2024 R21P 64-bit (meets 2024 R18+; Canadian file lineage)
-- [x] File is local on DennisPC (`…\Company Files\McKee Security July 14.QBW`; hosting = local files only)
+- [x] File is local on DennisPC (`…\Company Files\McKee Security Live.QBW`; hosting = local files only)
 - [x] Accountant's Copy outstanding? **No.** Title bar is normal (`McKee Security & Audio Systems - QuickBooks Desktop Pro (multi-user) (Admin(ServerDB))`). No "Accountant's Copy exists" banner.
 - [x] Current monitoring sale PDF (`monitoring-current.pdf` ACM-DESIGNS, $39.95 × 12, item `Annual Monitoring`, class `Monitoring`, HST extra)
 - [x] Old-rate / odd monitoring (screenshots): $39.99 and item `Semi-Annual` used for a full year
@@ -25,39 +25,58 @@ Required before any integration starts:
 - [x] Item List (Type + Account): `Annual Monitoring` and `VoIP Phone Service` both → 4000 · Product Sales
 - [x] Chart of Accounts: 1000 CIBC, 1200 AR, 1499 Undeposited Funds, 2300 HST, 4000/4100 income, `*Stripe` Bank
 - [x] Memorized Transaction List (top + bottom): annual invoices at after-HST tier totals
-- [ ] Active monitoring count + known duplicates / jobs
+- [x] Active monitoring count: **650** memorized invoices at the four after-HST tiers; **725** unique annual-invoice names; 3 customers with two memorized invoices. Plus 9 at `$677.32` (`$49.95`/mo) and ~70 bundle/odd amounts. Sales-by-item PDF was only 1–16 Aug 2026, not a year count.
 - [x] VoIP names: Pirocchi (residential), Halliburton Auto Repair (commercial 1+1), Mr. J. Currie (residential), Vision Care pipeline (commercial 2+1, `$64.98`)
-- [ ] HST exceptions (or "none")
-- [ ] Bookkeeper: invoice-then-payment vs sales receipt
-- [ ] Bookkeeper: monitoring item(s) and income account
-- [ ] Bookkeeper: amounts before tax vs tax included
-- [ ] Bookkeeper: Stripe clearing, fees, and bank accounts (created if missing)
-- [ ] Bookkeeper: e-transfer / cheque / cash deposit-to and payment methods (`e-Transfer` and `Stripe` created if missing)
-- [ ] Bookkeeper: Classes (or "none")
+- [x] HST exceptions: none for portal billing (always pre-tax + 13%). Reopen only if a tax-exempt customer appears.
+- [x] Posting model: **sales receipt when the portal has collected the money** (card or recorded e-transfer/cheque/cash). Customer "paid invoice" is portal + Stripe, never a QuickBooks email.
+- [x] Monitoring item / income: keep `Annual Monitoring` → **4000 · Product Sales**. Distinguish services with **classes**, not a new income account.
+- [x] Amounts: pre-tax × qty, then HST 13% (already how invoices and the portal work).
+- [x] Stripe path: card sale to `*Stripe` (gross + HST), payout net to **1000 CIBC**, actual Stripe fee to **5800**. Do not book the bank deposit as income. Do not use the 2% Credit Card Fee item on portal posts.
+- [x] E-transfer / cheque: payment methods `Electronic Funds Transfer` and `Cheque`; both Deposit To **1499 · Undeposited Funds** (KILBURN GREG 2025-06-18; HIGHLANDS OUTDOOR 2024-07-17). Portal card uses `Stripe`. Do not create `e-Transfer`.
+- [x] Classes (names locked): `Security - Monitoring` (dash rename of today's `Security Monitoring`), `Security - Installation` (rename of `Security`), `VoIP - Installation`, `VoIP - Subscription`. No four-tier monitoring split.
+- [x] Classes created in live 2026-08-16, dash-format confirmed: `Security - Monitoring`, `Security - Installation`, `VoIP - Installation`, `VoIP - Subscription`.
 - [x] Bookkeeper: QuickBooks Admin user name (`Admin(ServerDB)` on the login dialog)
-- [ ] Live items created: `VoIP - Residential`, `VoIP - Commercial`, `VoIP - Number Port Fee` on `VoIP Income`, tax H
-- [ ] Screenshot of those three new Item List rows
-- [ ] Inventory of every `.qbw` on the PC (Intuit Company Files folder is mapped; whole-disk search not done)
+- [x] Live items created: `VoIP - Residential`, `VoIP - Commercial`, `VoIP - Number Port Fee` on **4000 · Product Sales**, price `$0`, tax **HST 13%** exclusive (file default; same outcome as code H). `VoIP Phone Service` inactive.
+- [x] Screenshot of those three new Item List rows
+- [x] Inventory of `.qbw` files (Windows Home search `*.qbw`, 2026-08-16): only the Intuit Company Files folder. Live `McKee Security July 14` (334,260 KB) and retired `McKee Security` (309,724 KB, 2025-07-14). Explorer listed July 14 twice (same size, same folder; one file).
 - [x] Web Connector: TSheets only; healthy; uses the **open** company file (not a pinned path)
-- [ ] PORTAL-TEST copy made after the new VoIP items (different folder, title bar says PORTAL TEST, no TSheets)
-- [ ] Live reopened, TSheets still syncs
-- [ ] Full paths of live and PORTAL-TEST files
-- [x] Lanvac call-list export received (2026-08-14, Stephanos)
+- [x] PORTAL-TEST copy: `C:\Users\Public\Documents\Intuit\QuickBooks\PORTAL-TEST\McKee Security PORTAL-TEST do-not-invoice.QBW` (different folder, ~334 MB, 2026-08-16)
+- [x] Live reopened, TSheets still syncs (Auto-Run on, 60 min, last result Complete)
+- [x] Full paths of live and PORTAL-TEST files (below)
+- [x] Lanvac call-list export received (full Excel in hand; 2026-08-14 Stephanos, confirmed complete 2026-08-16)
 - [x] To Do samples (first screen of the list; smoke/battery wording). We will import these into portal devices at 8A. Full list comes through the bridge then, not this sitting. After import the portal owns the list; QuickBooks To Dos are not kept in sync.
 
 Later, before the portal-test copy is opened (written into the plans; not this sitting):
 
-- [ ] Archive the retired `McKee Security` company file so TSheets cannot sync into it
-- [ ] Optional: rename `McKee Security July 14.QBW` to a clear live name, then confirm one TSheets sync
-- [ ] While any non-live file is open: TSheets Auto-Run off (or Web Connector exited)
+- [x] Archive the retired `McKee Security` company file (2026-08-16, `Company Files\Archive_Old`, 309,724 KB, plus Restored_* folders and MAIN FILES sidecars). Live July 14 and ADR left in place.
+- [x] Renamed live file to `McKee Security Live.QBW` (2026-08-16); TSheets sync still Complete. Leftover `July 14` sidecars can go in `Archive_Old`.
+- [x] While any non-live file is open: TSheets Auto-Run off (done for the 2026-08-16 copy sitting; keep doing this every time)
 
 Later (do not block the start once the required list is complete):
 
+- [ ] Lanvac API contract ingested into the plan (auth, account key, write endpoint). No keys in git. Emails stay; API write on save; RDP is fallback. Does not block QuickBooks work.
 - [ ] Live Stripe key, webhook, and monitoring prices in Vercel
 - [ ] Four VoIP customers entered in the portal and linked to QB
 - [ ] Bookkeeper inspected the first live card post
 - [ ] BrightPBX DID cost (optional; margin only)
 - [ ] Station cost per monitoring tier (optional; profitability later)
+
+---
+
+## Do this in live QuickBooks (before the test copy)
+
+**Done 2026-08-16.** Class names and VoIP items are in live. Tax is HST 13% exclusive. Section 3 is a later sitting.
+
+**Classes** — Lists → Class List:
+
+1. Rename `Monitoring` → `Security Monitoring` (done). Then rename that to `Security - Monitoring`.
+2. Rename `VOIP` → `VoIP - Installation` (done).
+3. New class: `VoIP - Subscription` (done).
+4. Rename `Security` → `Security - Installation`.
+
+Do not split monitoring into four tier classes. Do not re-edit old invoices one by one. Screenshot the Class List.
+
+**Items** — then section 2 below. Screenshot the three new Item List rows.
 
 ---
 
@@ -85,29 +104,29 @@ Later (do not block the start once the required list is complete):
 - The four VoIP customers' exact QuickBooks names, residential vs commercial
 - Anyone who should not be charged 13% HST (or "none")
 
-**Bookkeeper answers** (exact names)
+**Bookkeeper answers** (locked 2026-08-16)
 
-1. Invoice then payment, or sales receipt when paid?
-2. Which monitoring item(s) and income account do we keep? One name per tier if they already exist. Do not rename a shared item.
-3. Amounts before tax, or tax included?
-4. Card: gross to a Stripe clearing account, fees to an expense account, net payout to the bank. Create those accounts if missing.
-5. E-transfer / cheque / cash: which bank or Undeposited Funds, and which payment-method names exist? Create `e-Transfer` and `Stripe` if missing.
-6. Classes on sales? If yes, which for monitoring and VoIP?
-7. Who is the QuickBooks Admin (clicks Allow on the bridge)?
+1. Sales receipt when the portal has collected the money. Customer invoice is portal + Stripe.
+2. Keep `Annual Monitoring` → 4000. Classes distinguish services. Do not rename `Annual Monitoring`.
+3. Pre-tax × qty, then HST 13%.
+4. Card: gross + HST to `*Stripe`, fees to 5800, net to 1000 CIBC. E-transfer / cheque: Deposit To **1499 · Undeposited Funds**, then Make Deposit to CIBC as you do today.
+5. Payment methods: `Electronic Funds Transfer`, `Cheque`, `Stripe`. Do not create `e-Transfer`.
+6. Classes: `Security - Monitoring`, `Security - Installation`, `VoIP - Installation`, `VoIP - Subscription`.
+7. Admin user: `Admin(ServerDB)`.
 
 ---
 
-## 2. Bookkeeper — fix VoIP in live (before the test copy)
+## 2. Fix VoIP items in live (before the test copy)
 
 Lists only. No invoices, no emails.
 
-Create if missing, Service type, tax code **H**, income account **`VoIP Income`** (create the account if missing):
+Create if missing, Service type, tax code **H**, income account **4000 · Product Sales** (same as `Annual Monitoring`; classes distinguish the service, so do not add a VoIP Income account):
 
 - `VoIP - Residential`
 - `VoIP - Commercial`
 - `VoIP - Number Port Fee`
 
-Price can stay 0. One line per sale. Do not add per-phone items. Do not edit old invoices onto these. Point any memorized VoIP template at the new item, or turn it off.
+Price can stay 0. One line per sale. Do **not** create items for extra seats or extra numbers. Those are already inside the one monthly total (residential or commercial). Port fee stays its own item because it is one-time; quantity on that line is how many numbers were ported. Do not edit old invoices onto these. After the three exist, make `VoIP Phone Service` **inactive** (do not delete). Point any memorized VoIP template at the new item, or turn it off. Hardware installs keep item `Product Sale` + class `VoIP - Installation`. Portal monthly uses class `VoIP - Subscription`. Portal monitoring uses class `Security - Monitoring`. Security installs use `Security - Installation`.
 
 Screenshot the three new Item List rows (name, type, account, tax) and send it.
 
@@ -115,24 +134,26 @@ Screenshot the three new Item List rows (name, type, account, tax) and send it.
 
 ## 3. Then make the test copy
 
-1. List every `.qbw` on the PC. Leave the live filename alone.
-2. Backup live. Restore in a **different folder** as e.g. `McKee Security PORTAL-TEST do-not-invoice.qbw`.
-3. Open the copy, set Company Name so the title bar says PORTAL TEST. No TSheets, no email, no invoices on the copy.
-4. Reopen live, confirm TSheets still syncs. Send both full paths.
+Do this as its own sitting. After hours or a short window. **One company file open at a time.** TSheets follows whichever file is open.
 
-One file open at a time. Copy-open pauses TSheets; keep it short or after hours.
+1. Close QuickBooks.
+2. **Archive the retired file first** (QuickBooks closed). In `C:\Users\Public\Documents\Intuit\QuickBooks\Company Files`, make an `Archive` folder. **Move** (do not delete) the old `McKee Security` company file and its `.ND` / `.TLG`, plus `McKee Security MAIN FILES QB.*`. Leave `McKee Security July 14.QBW` and its sidecars. Leave `QuickBooksAutoDataRecovery`.
+3. Optional: Windows search `*.qbw` on the whole PC. Send the list of paths. Leave the live filename alone for now.
+4. **Turn TSheets Auto-Run off** (or Exit Web Connector) before any non-live file is opened.
+5. Open **only** the live July 14 file. File → Backup Company → Create Local Backup. Save the backup somewhere that is not the live folder.
+6. Restore that backup into a **different folder** (not Company Files), named e.g. `McKee Security PORTAL-TEST do-not-invoice.qbw`.
+7. Open **only** the copy. Company → My Company / Company Information: set the company name so the title bar says **PORTAL TEST**. Confirm the three VoIP items and the three classes are on the copy. Do not send invoices. Do not add TSheets to the copy.
+8. Close the copy. Open live July 14. Turn TSheets Auto-Run back on. Watch one sync go green. Send both full paths.
 
-The Admin from step 1 must approve the bridge ("even when QuickBooks is not running") on the copy, and again on live later.
+Do not rename `McKee Security July 14.QBW` in this sitting. That is optional later, and only after the old file is already in Archive.
+
+The Admin user (`Admin(ServerDB)`) must later approve the bridge ("even when QuickBooks is not running") on the copy, and again on live. Not this sitting.
 
 ---
 
 ## 4. Start now, in parallel — Lanvac call lists
 
-McKee already updates call lists in Lanvac's software over remote desktop. That does not change. The website is our own record: customers can edit their list, both sides get an email, and staff still log into Lanvac and type the change. We never email Lanvac to update a list.
-
-Do not wait for QuickBooks. A partial export is enough to test the import and see who is still missing before cutover. Missing lists at launch are fine; we enter those by hand (or copy them from the remote desktop, one account at a time).
-
-Ask Lanvac for a bulk copy of what is already on file. Email draft below.
+Full Excel export is in hand. Seed the portal from that file (no client emails during import). After cutover, a list save still emails McKee and the customer (audit trail, unchanged). The save also writes the list to Lanvac over their API so staff do not RDP in to retype it. If the API call fails, the emails still go out and RDP is the fallback. Ingest their API docs into the plan before building that write (no keys in git).
 
 Device/battery To Do samples are already in `ACCOUNTING_GATHER_DATA.md`. The full 841 notes are a one-time import into portal devices when the 8A seed runs (AI draft + confidence + human review of low-confidence rows). After that, the portal is the managed list; stop using QuickBooks To Dos for new battery/smoke tracking. Do not export the full list for the bookkeeper sitting.
 
@@ -194,7 +215,7 @@ Then a short sitting with you to answer:
 - Do we use Classes on sales?
 - Who is the QuickBooks Admin user?
 
-VoIP is not set up as its own items today. After that sitting, please create three new Service items in live (do not rename an existing item; that rewrites history): VoIP - Residential, VoIP - Commercial, VoIP - Number Port Fee, all on a new VoIP Income account, tax code H. Leave old invoices alone. Screenshot the three new rows.
+VoIP items are created in live after the payment-method lookup: VoIP - Residential, VoIP - Commercial, VoIP - Number Port Fee, all on 4000 · Product Sales, tax code H. Then make VoIP Phone Service inactive. Leave old invoices alone. Screenshot the three new rows.
 
 Do not rename the live company file. TSheets uses that path. Do not put the file in OneDrive.
 
