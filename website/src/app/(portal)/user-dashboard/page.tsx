@@ -551,32 +551,21 @@ export default async function UserDashboardPage({
           description="Who the monitoring station calls, in order, when your alarm goes off"
         >
           <div className="border-t border-white/10 pt-5">
-            <div className="max-w-3xl space-y-3 text-sm leading-relaxed text-white/55">
-              <p>
-                When your alarm goes off, the monitoring station works down this
-                list from #1 to the last person. They call everyone, in that
-                order. Each person has a passcode they give the station to
-                confirm who they are.
-              </p>
-              <p>
-                Police, fire, and ambulance are dispatched for your area by the
-                station. They are not on this list and you cannot edit them.
-                The numbers below are what the station uses for your dispatch
-                city.
-              </p>
+            <p className="max-w-3xl text-sm leading-relaxed text-white/55">
+              When your alarm goes off, the monitoring station works down this
+              list from #1 to the last person. Each person has a passcode they
+              give the station to confirm who they are. Add or remove people and
+              save. McKee Security is notified automatically and updates the
+              station.
+            </p>
+            <div className="mt-5">
+              <CallerIdEditor variant="client" initialContacts={contactsResult.data} />
             </div>
-            <div className="mt-5 rounded-xl border border-white/10 bg-background p-4">
+            <div className="mt-6 border-t border-white/10 pt-5">
               <LanvacEmergencyReadout
                 city={profile.lanvac_city}
                 numbers={lanvacEmergencyNumbers(profile.lanvac_city)}
               />
-            </div>
-            <p className="mt-5 text-sm leading-relaxed text-white/55">
-              Add or remove people and save. McKee Security is notified
-              automatically and updates the station.
-            </p>
-            <div className="mt-5">
-              <CallerIdEditor variant="client" initialContacts={contactsResult.data} />
             </div>
           </div>
         </PortalCard>
