@@ -830,7 +830,6 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   police, fire, or ambulance here. Those come from the dispatch city. You can
                   finish this later on the client page.
                 </p>
-                </p>
                 {draftContacts.length > 0 && (
                   <ul className="space-y-2">
                     {draftContacts.map((contact, index) => (
