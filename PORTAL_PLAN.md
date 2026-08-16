@@ -324,7 +324,7 @@ VoIP prices live in `billing.ts` (`VOIP_MONTHLY_CENTS` is the base; `voipMonthly
 | `phone` | text | nullable; NANP E.164 when set. Client-editable in Settings; admin create/edit |
 | `address` | text | nullable; labeled **Service address** in both portals |
 | `lanvac_account_code` | text | nullable; unique when set. Lanvac account CODE (`O5985`). Pattern `^[0-9A-Za-z]{1,2}[0-9A-Fa-f]{4}$`. Admin-only. Required later for API writes. |
-| `lanvac_city` | text | nullable; 1..240. Exact Lanvac CITY string for `policeNumbersCity` (e.g. `Haliburton - On`). Admin-only. Police/fire/ambulance stay station-owned. |
+| `lanvac_city` | text | nullable; 1..240. Exact Lanvac CITY string for `policeNumbersCity` (e.g. `Haliburton - On`). Admin-only dropdown from the export spellings (`lanvac-cities.ts`). New accounts use the preferred group. Police/fire/ambulance stay station-owned. |
 | `role` | user_role | not null default `'client'` |
 | `status` | profile_status | not null default `'pending'` |
 | `stripe_customer_id` | text | nullable, unique when set (Phase 5) |
@@ -1378,6 +1378,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-16 | **Dispatch city is an admin dropdown** of the exact Lanvac export spellings, with a preferred group for new accounts. Service address stays one free-text line and is not used for police/fire/ambulance. |
 | 2026-08-16 | **Lanvac station UI audited.** Save refreshes the admin page so CODE/city do not look stale. Account codes uppercase as typed. Create-client allows the same phone twice (matches the editor). Named validation errors on list save. Vercel env names recorded; credentials not set yet. |
 | 2026-08-16 | **Portal station fields aligned with Lanvac (D13).** People list stays people-only. New `profiles.lanvac_account_code` and `profiles.lanvac_city` (admin Monitoring station card + create-client). Clients see a read-only city line. Name max 30 and passcode max 21 match Lanvac `name` / `PW:`+`note`. API write is still later. |
 | 2026-08-16 | **Lanvac `fullupdate` write-tested on `O5985` (D13).** Auth is dealer `10638` + WinLinks password. Write is `POST /api/EmergencyContact/fullupdate` with `usePoliceNumbers: true`, `policeNumbersCity` (Excel CITY), and people + end marker only in `contactList`. Police/fire/ambulance are station-owned. Passcode lives in `note` (`PW:…`). GET cannot be tried in Swagger (GET + body). List restored after the test. |

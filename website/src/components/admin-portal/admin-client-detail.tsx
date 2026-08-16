@@ -64,7 +64,8 @@ import {
 } from "@/lib/portal/devices";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor, type CallerIdContact } from "@/components/portal/caller-id-editor";
-import { LANVAC_ACCOUNT_CODE_MAX, LANVAC_CITY_MAX } from "@/lib/portal/lanvac";
+import { LANVAC_ACCOUNT_CODE_MAX } from "@/lib/portal/lanvac";
+import { LanvacCitySelect } from "@/components/admin-portal/lanvac-city-select";
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
 
@@ -1620,17 +1621,14 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
             </label>
             <label className="flex flex-col gap-1.5 text-sm text-white/80">
               Dispatch city
-              <input
+              <LanvacCitySelect
                 value={form.lanvacCity}
-                onChange={(e) => setForm((f) => ({ ...f, lanvacCity: e.target.value }))}
-                placeholder="Haliburton - On"
-                maxLength={LANVAC_CITY_MAX}
-                className={adminInputClass}
+                onChange={(city) => setForm((f) => ({ ...f, lanvacCity: city }))}
               />
             </label>
             <p className="text-xs text-white/40 sm:col-span-2">
-              Use the exact city spelling from the Lanvac export. The same town
-              appears more than one way in their file.
+              Pick the exact Lanvac spelling. For a new customer use the first
+              group. Imported accounts keep the spelling from the export.
             </p>
             <div className="sm:col-span-2">
               <button

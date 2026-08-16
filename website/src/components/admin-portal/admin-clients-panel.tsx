@@ -9,7 +9,8 @@ import {
   resendInviteAction,
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
-import { LANVAC_ACCOUNT_CODE_MAX, LANVAC_CITY_MAX, LANVAC_CONTACT_NAME_MAX, LANVAC_PASSCODE_MAX } from "@/lib/portal/lanvac";
+import { LANVAC_ACCOUNT_CODE_MAX, LANVAC_CONTACT_NAME_MAX, LANVAC_PASSCODE_MAX } from "@/lib/portal/lanvac";
+import { LanvacCitySelect } from "@/components/admin-portal/lanvac-city-select";
 import {
   CLOUD_BACKUP_PLANNED_RETENTION_COPY,
   SERVICE_THEME,
@@ -605,15 +606,14 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
                 Dispatch city
-                <input
+                <LanvacCitySelect
                   value={form.lanvacCity}
-                  onChange={(e) => set("lanvacCity", e.target.value)}
-                  placeholder="Haliburton - On"
-                  maxLength={LANVAC_CITY_MAX}
-                  className={adminInputClass}
+                  onChange={(city) => set("lanvacCity", city)}
                 />
                 <span className="text-xs text-white/40">
-                  Exact city spelling from the Lanvac export. Police, fire, and ambulance come from this, not the people list.
+                  Pick the exact Lanvac spelling. For a new customer use the first group
+                  (Haliburton - On is the one we tested). Police, fire, and ambulance come
+                  from this, not the service address.
                 </span>
               </label>
             </div>
