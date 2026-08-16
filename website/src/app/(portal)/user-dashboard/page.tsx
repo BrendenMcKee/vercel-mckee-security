@@ -557,11 +557,14 @@ export default async function UserDashboardPage({
                 confirm who they are.
               </p>
               <p>
-                If no one on the list answers, the station dispatches the
-                appropriate authorities.
+                Police, fire, and ambulance are dispatched for your area by the
+                station. They are not on this list.
+                {profile.lanvac_city
+                  ? ` Emergency services for ${profile.lanvac_city} are on file.`
+                  : ""}
               </p>
               <p>
-                Add or remove contacts and save. McKee Security is notified
+                Add or remove people and save. McKee Security is notified
                 automatically and updates the station.
               </p>
             </div>

@@ -326,6 +326,8 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          lanvac_account_code: string | null
+          lanvac_city: string | null
           password_set_at: string | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -341,6 +343,8 @@ export type Database = {
           first_name: string
           id?: string
           last_name: string
+          lanvac_account_code?: string | null
+          lanvac_city?: string | null
           password_set_at?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -356,6 +360,8 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          lanvac_account_code?: string | null
+          lanvac_city?: string | null
           password_set_at?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]

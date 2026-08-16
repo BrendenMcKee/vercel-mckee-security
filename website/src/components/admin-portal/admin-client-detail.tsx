@@ -8,6 +8,7 @@ import {
   resendInviteAction,
   setClientStatusAction,
   updateClientProfileAction,
+  updateClientLanvacAction,
 } from "@/lib/portal/actions/clients";
 import {
   assignServiceAction,
@@ -1542,6 +1543,108 @@ function HistoryDiffList({
   );
 }
 
+function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    lanvacAccountCode: client.lanvac_account_code ?? "",
+    lanvacCity: client.lanvac_city ?? "",
+  });
+  const [notice, setNotice] = useState<Notice>(null);
+  const [pending, startTransition] = useTransition();
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNotice(null);
+    startTransition(async () => {
+      const result = await updateClientLanvacAction({
+        profileId: client.id,
+        lanvacAccountCode: form.lanvacAccountCode,
+        lanvacCity: form.lanvacCity,
+      });
+      if (!result.ok) {
+        setNotice({ kind: "error", text: result.error });
+        return;
+      }
+      setEditing(false);
+      setNotice({ kind: "ok", text: "Monitoring station saved." });
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-white">Monitoring station</h2>
+        <button
+          type="button"
+          onClick={() => {
+            setEditing((v) => !v);
+            setNotice(null);
+          }}
+          className={buttonSecondary}
+        >
+          {editing ? "Cancel" : "Edit"}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-white/40">
+        Lanvac account and the city they use for police, fire, and ambulance.
+        Those numbers stay at the station. The people list is the next card.
+      </p>
+
+      <div className="mt-4 space-y-3">
+        <NoticeBanner notice={notice} />
+        {editing ? (
+          <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              Lanvac account
+              <input
+                value={form.lanvacAccountCode}
+                onChange={(e) => setForm((f) => ({ ...f, lanvacAccountCode: e.target.value }))}
+                placeholder="O5985"
+                maxLength={6}
+                className={adminInputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              Dispatch city
+              <input
+                value={form.lanvacCity}
+                onChange={(e) => setForm((f) => ({ ...f, lanvacCity: e.target.value }))}
+                placeholder="Haliburton - On"
+                maxLength={240}
+                className={adminInputClass}
+              />
+            </label>
+            <p className="text-xs text-white/40 sm:col-span-2">
+              Use the exact city spelling from the Lanvac export. The same town
+              appears more than one way in their file.
+            </p>
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                disabled={pending}
+                className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
+              >
+                {pending ? "Saving..." : "Save station"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-xs uppercase tracking-widest text-white/40">Lanvac account</dt>
+              <dd className="mt-1 text-white/80">{client.lanvac_account_code ?? "Not on file"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-widest text-white/40">Dispatch city</dt>
+              <dd className="mt-1 text-white/80">{client.lanvac_city ?? "Not on file"}</dd>
+            </div>
+          </dl>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CallerIdCard({
   client,
   contacts,
@@ -1562,9 +1665,11 @@ function CallerIdCard({
         </button>
       </div>
       <p className="mt-1 text-xs text-white/40">
-        Changes here are made on the client&apos;s behalf. You must record how
-        they authorized it and why; the history below is permanent and the
-        client is automatically emailed exactly what changed.
+        People the station should call, in order. Do not add police, fire, or
+        ambulance here. Those come from the dispatch city on the Monitoring
+        station card. Changes here are made on the client&apos;s behalf. You
+        must record how they authorized it and why; the history below is
+        permanent and the client is automatically emailed exactly what changed.
       </p>
 
       <div className="mt-5">
@@ -1939,6 +2044,10 @@ export function AdminClientDetail({
 }) {
   const showCallerId =
     hasCurrentMonitoring(client.services) || callerIdContacts.length > 0 || callerIdChanges.length > 0;
+  const showStation =
+    hasCurrentMonitoring(client.services) ||
+    Boolean(client.lanvac_account_code || client.lanvac_city) ||
+    showCallerId;
   const showDevices = hasCurrentMonitoring(client.services) || devices.length > 0;
 
   return (
@@ -1950,6 +2059,7 @@ export function AdminClientDetail({
         cardPayments={cardPayments}
         cloudBackupInterest={cloudBackupInterest}
       />
+      {showStation && <MonitoringStationCard client={client} />}
       {showCallerId && (
         <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
       )}

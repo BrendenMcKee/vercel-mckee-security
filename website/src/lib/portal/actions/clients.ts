@@ -15,6 +15,13 @@ import {
 } from "@/lib/portal/service-labels";
 import { DEVICE_CATEGORIES } from "@/lib/portal/devices";
 import { normalizePhone } from "@/lib/portal/phone";
+import {
+  LANVAC_CITY_MAX,
+  LANVAC_CONTACT_NAME_MAX,
+  LANVAC_PASSCODE_MAX,
+  parseLanvacAccountCode,
+  parseLanvacCity,
+} from "@/lib/portal/lanvac";
 import { getStripeClient, isStripeConfigured } from "@/lib/portal/stripe";
 import { siteConfig } from "@/lib/site-config";
 
@@ -33,14 +40,16 @@ const createClientSchema = z.object({
   // Stakeholder 2026-07-06: billing is chosen at creation. Autopay is the
   // default; the client is asked for their card as part of activation.
   billingMethod: z.enum(["stripe", "manual"]),
+  lanvacAccountCode: z.string().trim().max(6),
+  lanvacCity: z.string().trim().max(LANVAC_CITY_MAX),
 });
 
 export type CreateClientInput = z.infer<typeof createClientSchema>;
 
 const createContactDraftSchema = z.object({
-  label: z.string().trim().min(1).max(80),
+  label: z.string().trim().min(1).max(LANVAC_CONTACT_NAME_MAX),
   phone: z.string().trim().min(1),
-  passcode: z.string().trim().min(1).max(40),
+  passcode: z.string().trim().min(1).max(LANVAC_PASSCODE_MAX),
 });
 
 const createDeviceDraftSchema = z.object({
@@ -92,8 +101,13 @@ export async function createClientAction(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { firstName, lastName, email, address, phone, monitoringTier, cloudTier, voipTier, voipNumbers, voipSeats, voipPorts, billingMethod } =
+  const { firstName, lastName, email, address, phone, monitoringTier, cloudTier, voipTier, voipNumbers, voipSeats, voipPorts, billingMethod, lanvacAccountCode, lanvacCity } =
     parsed.data;
+
+  const parsedCode = parseLanvacAccountCode(lanvacAccountCode);
+  if (!parsedCode.ok) return { ok: false, error: parsedCode.error };
+  const parsedCity = parseLanvacCity(lanvacCity);
+  if (!parsedCity.ok) return { ok: false, error: parsedCity.error };
 
   let storedPhone: string | null = null;
   if (phone) {
@@ -173,12 +187,24 @@ export async function createClientAction(
     return { ok: false, error: "Could not create the client. Please try again." };
   }
 
-  if (storedPhone) {
-    const { error: phoneError } = await supabase
+  const seedWarnings: string[] = [];
+  if (storedPhone || parsedCode.value || parsedCity.value) {
+    const { error: extrasError } = await supabase
       .from("profiles")
-      .update({ phone: storedPhone })
+      .update({
+        ...(storedPhone ? { phone: storedPhone } : {}),
+        ...(parsedCode.value ? { lanvac_account_code: parsedCode.value } : {}),
+        ...(parsedCity.value ? { lanvac_city: parsedCity.value } : {}),
+      })
       .eq("id", profileId);
-    if (phoneError) console.error("[portal] createClient phone set failed:", phoneError);
+    if (extrasError) {
+      console.error("[portal] createClient profile extras failed:", extrasError);
+      seedWarnings.push(
+        extrasError.code === "23505"
+          ? "The client was created, but that Lanvac account code is already on another client. Set it on the client page."
+          : "The client was created, but the Lanvac account or city could not be saved. Set it on the client page.",
+      );
+    }
   }
 
   // The RPC created the services on the default (manual) rail; apply the
@@ -221,7 +247,6 @@ export async function createClientAction(
     if (priceError) console.error(`[portal] ${prefill.serviceType} price prefill failed:`, priceError);
   }
 
-  const seedWarnings: string[] = [];
   if (seedContacts.length > 0) {
     const { error: contactError } = await supabase.from("caller_id_contacts").insert(
       seedContacts.map((contact, index) => ({
@@ -430,6 +455,68 @@ export async function updateClientProfileAction(
     }
     console.error("[portal] updateClientProfile failed:", error);
     return { ok: false, error: "Could not save the changes. Please try again." };
+  }
+
+  revalidatePath("/admin-dashboard", "layout");
+  return { ok: true };
+}
+
+const updateLanvacSchema = z.object({
+  profileId: z.uuid(),
+  lanvacAccountCode: z.string().trim().max(6),
+  lanvacCity: z.string().trim().max(LANVAC_CITY_MAX),
+});
+
+export type UpdateClientLanvacResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Admin sets the Lanvac account CODE and dispatch city. Police / fire /
+ * ambulance stay station-owned; this city is what a later API write sends.
+ */
+export async function updateClientLanvacAction(input: {
+  profileId: string;
+  lanvacAccountCode: string;
+  lanvacCity: string;
+}): Promise<UpdateClientLanvacResult> {
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
+
+  const parsed = updateLanvacSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const parsedCode = parseLanvacAccountCode(parsed.data.lanvacAccountCode);
+  if (!parsedCode.ok) return { ok: false, error: parsedCode.error };
+  const parsedCity = parseLanvacCity(parsed.data.lanvacCity);
+  if (!parsedCity.ok) return { ok: false, error: parsedCity.error };
+
+  const supabase = await createPortalServerClient();
+  const { data: target } = await supabase
+    .from("profiles")
+    .select("id, role")
+    .eq("id", parsed.data.profileId)
+    .maybeSingle();
+  if (!target) return { ok: false, error: "Client not found." };
+  if (target.role !== "client") {
+    return { ok: false, error: "Only client profiles can be edited here." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      lanvac_account_code: parsedCode.value,
+      lanvac_city: parsedCity.value,
+    })
+    .eq("id", parsed.data.profileId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, error: "Another client already uses that Lanvac account code." };
+    }
+    if (error.code === "23514") {
+      return { ok: false, error: "That Lanvac account or city is not a valid station value." };
+    }
+    console.error("[portal] updateClientLanvac failed:", error);
+    return { ok: false, error: "Could not save the station fields. Please try again." };
   }
 
   revalidatePath("/admin-dashboard", "layout");

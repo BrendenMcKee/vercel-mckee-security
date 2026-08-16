@@ -39,6 +39,10 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Lanvac call-list export (PII / passcodes). Keep local only.
+*Customer User List Report.xls
+*Customer User List Report.xlsx
+
 # Cursor
 .cursor/
 

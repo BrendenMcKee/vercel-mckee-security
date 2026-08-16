@@ -243,7 +243,7 @@ export async function sendCallerIdAdminAlert({
   const onlyOrder = added.length === 0 && removed.length === 0 && reordered.length > 0;
   const meta = {
     title: onlyOrder ? "Caller ID Call Order Changed" : "Caller ID List Changed",
-    inboxLabel: "Update Lanvac to match the new list and call order",
+    inboxLabel: "Update the Lanvac people list and call order (not police/fire/ambulance)",
   };
 
   const fields: EmailField[] = [
@@ -263,7 +263,7 @@ export async function sendCallerIdAdminAlert({
   }
   fields.push({
     label: "Update the monitoring station",
-    value: "Apply this entire list to the Lanvac call list, then archive this email as the record.",
+    value: "Apply these people to the Lanvac call list. Leave police, fire, and ambulance as they are. Then archive this email as the record.",
     href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
     cta: true,
     buttonLabel: "Open Client Detail",

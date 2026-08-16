@@ -54,7 +54,7 @@ Later, before the portal-test copy is opened (written into the plans; not this s
 
 Later (do not block the start once the required list is complete):
 
-- [ ] Lanvac API contract ingested into the plan (auth, account key, write endpoint). No keys in git. Emails stay; API write on save; RDP is fallback. Does not block QuickBooks work.
+- [x] Lanvac API contract ingested (2026-08-16). OpenAPI at `https://lanvac.mobi:8843/swagger/v1/swagger.json`. Auth is dealer `10638` + WinLinks password in every JSON body (no API key). Account key is export `CODE`. Write is `POST /api/EmergencyContact/fullupdate`. Emails stay; RDP is fallback. No keys in git.
 - [ ] Live Stripe key, webhook, and monitoring prices in Vercel
 - [ ] Four VoIP customers entered in the portal and linked to QB
 - [ ] Bookkeeper inspected the first live card post
@@ -153,7 +153,7 @@ The Admin user (`Admin(ServerDB)`) must later approve the bridge ("even when Qui
 
 ## 4. Start now, in parallel — Lanvac call lists
 
-Full Excel export is in hand. Seed the portal from that file (no client emails during import). After cutover, a list save still emails McKee and the customer (audit trail, unchanged). The save also writes the list to Lanvac over their API so staff do not RDP in to retype it. If the API call fails, the emails still go out and RDP is the fallback. Ingest their API docs into the plan before building that write (no keys in git).
+Full Excel export is in hand (dealer 10638). Seed people rows plus each account's CODE and exact CITY (no client emails during import). Do not import police/fire/ambulance as contacts. After cutover, a list save still emails McKee and the customer. The save also writes the people list to Lanvac (`POST /api/EmergencyContact/fullupdate` with `usePoliceNumbers: true` and that CITY). If the API call fails, the emails still go out and RDP is the fallback. API contract is ingested; write-tested on `O5985`. No keys in git. The portal now stores `lanvac_account_code` and `lanvac_city`; the API write itself is later.
 
 Device/battery To Do samples are already in `ACCOUNTING_GATHER_DATA.md`. The full 841 notes are a one-time import into portal devices when the 8A seed runs (AI draft + confidence + human review of low-confidence rows). After that, the portal is the managed list; stop using QuickBooks To Dos for new battery/smoke tracking. Do not export the full list for the bookkeeper sitting.
 

@@ -11,6 +11,7 @@ import {
   CALLER_ID_CLIENT_COOLDOWN_SECONDS,
   callerIdWaitMessage,
 } from "@/lib/portal/caller-id-wait";
+import { LANVAC_CONTACT_NAME_MAX, LANVAC_PASSCODE_MAX } from "@/lib/portal/lanvac";
 
 export type CallerIdContact = {
   id: string;
@@ -106,6 +107,10 @@ export function CallerIdEditor({
       setNotice({ kind: "error", text: "Add the person's name first." });
       return;
     }
+    if (label.length > LANVAC_CONTACT_NAME_MAX) {
+      setNotice({ kind: "error", text: `Name is too long (${LANVAC_CONTACT_NAME_MAX} max).` });
+      return;
+    }
     const phone = normalizePhone(newPhone);
     if (!phone) {
       setNotice({ kind: "error", text: `"${newPhone}" is not a valid North American phone number.` });
@@ -117,6 +122,10 @@ export function CallerIdEditor({
         kind: "error",
         text: "Add this person's passcode. It's the word they give the monitoring station to confirm who they are.",
       });
+      return;
+    }
+    if (passcode.length > LANVAC_PASSCODE_MAX) {
+      setNotice({ kind: "error", text: `Passcode is too long (${LANVAC_PASSCODE_MAX} max).` });
       return;
     }
     if (contacts.some((c) => contactKey(c) === `${phone}|${label}|${passcode}`)) {
@@ -297,9 +306,10 @@ export function CallerIdEditor({
     <div className="space-y-4">
       {contacts.length === 0 ? (
         <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-200">
-          No contacts on the list. The monitoring station needs at least one
-          person to call when the alarm goes off. If nobody answers, they
-          dispatch the appropriate authorities.
+          No people on the list. The monitoring station needs at least one
+          person to call when the alarm goes off. Police, fire, and ambulance
+          are dispatched separately for the site&apos;s city. They are not
+          added here.
         </p>
       ) : (
         <div className="space-y-2">
@@ -364,7 +374,7 @@ export function CallerIdEditor({
                         <input
                           aria-label={`Passcode for ${contact.label}`}
                           placeholder="Add passcode"
-                          maxLength={40}
+                          maxLength={LANVAC_PASSCODE_MAX}
                           value={contact.passcode ?? ""}
                           onChange={(e) => setPasscode(contact.id, e.target.value)}
                           className={`${inputClass} !py-1 w-36`}
@@ -394,7 +404,7 @@ export function CallerIdEditor({
             Name / relation
             <input
               placeholder="e.g. Sarah (daughter)"
-              maxLength={80}
+              maxLength={LANVAC_CONTACT_NAME_MAX}
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               className={inputClass}
@@ -414,7 +424,7 @@ export function CallerIdEditor({
             Passcode
             <input
               placeholder="Their verification word"
-              maxLength={40}
+              maxLength={LANVAC_PASSCODE_MAX}
               value={newPasscode}
               onChange={(e) => setNewPasscode(e.target.value)}
               className={inputClass}

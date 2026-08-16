@@ -9,6 +9,7 @@ import {
   resendInviteAction,
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
+import { LANVAC_CONTACT_NAME_MAX, LANVAC_PASSCODE_MAX } from "@/lib/portal/lanvac";
 import {
   CLOUD_BACKUP_PLANNED_RETENTION_COPY,
   SERVICE_THEME,
@@ -68,6 +69,8 @@ const EMPTY_FORM: CreateClientInput = {
   voipSeats: 1,
   voipPorts: 0,
   billingMethod: "stripe",
+  lanvacAccountCode: "",
+  lanvacCity: "",
 };
 
 const PAGE_SIZE = 25;
@@ -229,6 +232,14 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         kind: "error",
         text: "Each alarm contact needs a name, a valid phone number, and their passcode.",
       });
+      return;
+    }
+    if (label.length > LANVAC_CONTACT_NAME_MAX) {
+      setNotice({ kind: "error", text: `Contact name is too long (${LANVAC_CONTACT_NAME_MAX} max).` });
+      return;
+    }
+    if (passcode.length > LANVAC_PASSCODE_MAX) {
+      setNotice({ kind: "error", text: `Passcode is too long (${LANVAC_PASSCODE_MAX} max).` });
       return;
     }
     if (draftContacts.length >= 15) {
@@ -576,6 +587,32 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   Optional here. The site we monitor or install at. Stripe does not need it; the client can add it in Settings.
                 </span>
               </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Lanvac account
+                <input
+                  value={form.lanvacAccountCode}
+                  onChange={(e) => set("lanvacAccountCode", e.target.value)}
+                  placeholder="O5985"
+                  maxLength={6}
+                  className={adminInputClass}
+                />
+                <span className="text-xs text-white/40">
+                  Optional. The CODE from the station export, including the leading letter.
+                </span>
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                Dispatch city
+                <input
+                  value={form.lanvacCity}
+                  onChange={(e) => set("lanvacCity", e.target.value)}
+                  placeholder="Haliburton - On"
+                  maxLength={240}
+                  className={adminInputClass}
+                />
+                <span className="text-xs text-white/40">
+                  Exact city spelling from the Lanvac export. Police, fire, and ambulance come from this, not the people list.
+                </span>
+              </label>
             </div>
           </fieldset>
 
@@ -786,9 +823,10 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   Alarm contact list
                 </legend>
                 <p className="text-xs text-white/45">
-                  Optional now. Add the people the monitoring station should call. You can finish
-                  this later on the client page. The client can also add their own contacts through
-                  their client portal if you would rather they do it themselves.
+                  Optional now. Add the people the monitoring station should call. Do not add
+                  police, fire, or ambulance here. Those come from the dispatch city. You can
+                  finish this later on the client page.
+                </p>
                 </p>
                 {draftContacts.length > 0 && (
                   <ul className="space-y-2">
@@ -820,6 +858,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                       value={contactDraft.label}
                       onChange={(e) => setContactDraft((prev) => ({ ...prev, label: e.target.value }))}
                       placeholder="e.g. Sarah (daughter)"
+                      maxLength={LANVAC_CONTACT_NAME_MAX}
                       className={adminInputClass}
                     />
                   </label>
@@ -838,6 +877,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                       value={contactDraft.passcode}
                       onChange={(e) => setContactDraft((prev) => ({ ...prev, passcode: e.target.value }))}
                       placeholder="Their verification word"
+                      maxLength={LANVAC_PASSCODE_MAX}
                       className={adminInputClass}
                     />
                   </label>

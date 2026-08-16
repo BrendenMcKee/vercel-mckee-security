@@ -293,5 +293,19 @@ Decision (2026-08-15): we will import these at 8A. The bridge reads the full lis
 
 | Field | Value |
 |-------|--------|
-| Call-list export | Full Excel in hand (received 2026-08-14 from Stephanos Georgoudes; confirmed complete 2026-08-16). Not pasted here. |
-| API | Exists; docs received. Write the portal list to Lanvac on save so staff do not RDP to retype. Emails to McKee and the customer stay. RDP is fallback if the API call fails. Ingest the contract (auth, account key, write shape) before building. No API keys in this file. |
+| Call-list export | `10638 Customer User List Report.xls` (dealer 10638). Gitignored. Sheet LANVAC, 12 columns: CODE, NAME, ADDRESS, POSTAL CODE, CITY, PHONE, CALL-LIST, USER, PASS #, CONTACT NAME, TELEPHONE #, Intersection/Fax. ~704 unique CODEs. Not pasted here. |
+| API base | `https://lanvac.mobi:8843` |
+| Spec | OpenAPI 3.0.1 `https://lanvac.mobi:8843/swagger/v1/swagger.json` (Swagger UI `/swagger/index.html`) |
+| Auth | No API key. Every JSON body includes `dealerIdentity.dealerAccount` (`10638`) and `dealerIdentity.password` (same as WinLinks). Confirmed 2026-08-16: correct password returns 200; wrong password returns 401. Adrien unlocked 10638 on 2026-08-14. Password not stored in git. |
+| Account key | `account` = export `CODE`, including the leading `O` (almost all codes are `O` + 4 hex digits). `5985` is 400; `O5985` is 200. |
+| Read call list | `GET /api/EmergencyContact` with JSON body `{ dealerIdentity, account }`. Swagger UI / browser `fetch` cannot send this (GET + body). Use curl, Python, or our server. |
+| List shape | Almost every CODE starts with `POL` police/fire/ambulance, then people (`E1`/`E2`/…), then a `<<<` end marker. Empty slots are kept. Excel matches this. ~689/704 codes have POL in slot 2; ~692/704 end with the marker. |
+| Passcode | Lives in `note` as `PW:…`, not in `password`. `password` is empty on people rows. The end marker uses `password` `------`. |
+| Write call list | `POST /api/EmergencyContact/fullupdate`. Required: `policeNumbersCity` (Excel `CITY`, e.g. `Haliburton - On`) whenever police numbers are used. Proven 2026-08-16 on `O5985`: `{ usePoliceNumbers: true, policeNumbersCity, contactList }` where `contactList` is `[empty, people in call order, empties, end marker]`. The API writes slot 1 empty, slots 2–4 from the city directory, then `contactList` from slot 5. Do **not** put `POL` rows in `contactList` (duplicates). Do **not** echo a GET list back with `usePoliceNumbers: false` (prepends 5 empty slots). |
+| `userName` | Lanvac short code (max 3): `POL`, `E1`, `<<<`. Not the display name. Empty on unused slots. |
+| `positionInList` | Single-row PUT/POST/DELETE min 5 (cannot edit police slots 2–4 that way). PUT on slot 8 returned 200 and did change a note. Prefer `fullupdate`. |
+| Test account | `O5985` (McKee). Also `O4964`, `O6550`. Restored 2026-08-16 after write tests: people + end marker match the export; police rows are the directory form (`POLICE DEP.` + city in note) with the same Haliburton numbers. |
+| IP / rate limits | No allowlist block from this PC. Rate limits unknown. Vercel egress is a later risk. |
+| Later (not now) | `/api/Account` GET works (same body auth). `/api/Historic`, `/api/EmergencyContact/emergencynumbers`, Zone, OnTest. |
+| Portal mapping | People → `caller_id_contacts`. CODE → `profiles.lanvac_account_code`. CITY → `profiles.lanvac_city` (exact spelling; 103 variants in the export). Police/fire/ambulance are not stored as contacts. `sort_order` → `E1`/`E2`/… at API write. Passcode → `note` `PW:…`. |
+| CITY spellings | Do not clean. `Haliburton - On`, `HALIBURTON`, and `HALIBURTON ON` are different Lanvac keys. |

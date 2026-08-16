@@ -15,6 +15,7 @@ import {
   CALLER_ID_CLIENT_COOLDOWN_SECONDS,
   callerIdWaitMessage,
 } from "@/lib/portal/caller-id-wait";
+import { LANVAC_CONTACT_NAME_MAX, LANVAC_PASSCODE_MAX } from "@/lib/portal/lanvac";
 
 /** D6/Q16 defaults (pending stakeholder confirmation): 1..15 contacts. */
 const MIN_CONTACTS = 1;
@@ -22,13 +23,17 @@ const MAX_CONTACTS = 15;
 
 const contactSchema = z.object({
   phone: z.string().trim().min(1, "Phone number is required"),
-  label: z.string().trim().min(1, "Name is required").max(80, "Name is too long (80 max)"),
+  label: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(LANVAC_CONTACT_NAME_MAX, `Name is too long (${LANVAC_CONTACT_NAME_MAX} max)`),
   // The word this person gives the monitoring station to prove who they are.
   passcode: z
     .string()
     .trim()
     .min(1, "Each contact needs their passcode. It's how the monitoring station verifies them.")
-    .max(40, "Passcode is too long (40 max)"),
+    .max(LANVAC_PASSCODE_MAX, `Passcode is too long (${LANVAC_PASSCODE_MAX} max)`),
 });
 
 const AUTHORIZED_VIA = ["client_email", "client_verbal", "client_in_person", "mckee_initiated"] as const;
