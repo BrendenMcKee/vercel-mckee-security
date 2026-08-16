@@ -64,8 +64,10 @@ import {
 } from "@/lib/portal/devices";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge, ServiceStatusBadge } from "@/components/admin-portal/ui";
 import { CallerIdEditor, type CallerIdContact } from "@/components/portal/caller-id-editor";
-import { LANVAC_ACCOUNT_CODE_MAX } from "@/lib/portal/lanvac";
+import { LANVAC_ACCOUNT_CODE_INPUT_MAX, normalizeLanvacAccountInput } from "@/lib/portal/lanvac";
+import { guessLanvacCityFromAddress, lanvacEmergencyNumbers } from "@/lib/portal/lanvac-cities";
 import { LanvacCitySelect } from "@/components/admin-portal/lanvac-city-select";
+import { LanvacEmergencyReadout } from "@/components/portal/lanvac-emergency-readout";
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
 
@@ -314,6 +316,12 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   const [assignNumbers, setAssignNumbers] = useState("1");
   const [assignSeats, setAssignSeats] = useState("1");
   const [assignPorts, setAssignPorts] = useState("0");
+  const [assignLanvacCode, setAssignLanvacCode] = useState(client.lanvac_account_code ?? "");
+  const [assignLanvacCity, setAssignLanvacCity] = useState(
+    client.lanvac_city ?? guessLanvacCityFromAddress(client.address ?? "") ?? "",
+  );
+  const [assignCityLocked, setAssignCityLocked] = useState(Boolean(client.lanvac_city));
+  const needsStation = assignType === "monitoring";
 
   const unassignedTypes = (Object.keys(SERVICE_TIERS) as ServiceType[]).filter(
     (type) =>
@@ -342,6 +350,13 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
       setNotice({ kind: "error", text: "Numbers being ported cannot exceed the numbers on the system." });
       return;
     }
+    if (needsStation && (!assignLanvacCode.trim() || !assignLanvacCity.trim())) {
+      setNotice({
+        kind: "error",
+        text: "Security monitoring needs a Lanvac account number and a dispatch city.",
+      });
+      return;
+    }
     setNotice(null);
     startTransition(async () => {
       const result = await assignServiceAction({
@@ -351,6 +366,9 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
         numberCount,
         seatCount,
         portCount: Number.isFinite(portCount) ? Math.max(0, portCount) : 0,
+        ...(needsStation
+          ? { lanvacAccountCode: assignLanvacCode, lanvacCity: assignLanvacCity }
+          : {}),
       });
       if (!result.ok) {
         setNotice({ kind: "error", text: result.error });
@@ -377,8 +395,13 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
           <select
             value={assignType}
             onChange={(e) => {
-              setAssignType(e.target.value as ServiceType | "");
+              const type = e.target.value as ServiceType | "";
+              setAssignType(type);
               setAssignTier("");
+              if (type === "monitoring" && !assignCityLocked) {
+                const guessed = guessLanvacCityFromAddress(client.address ?? "");
+                if (guessed) setAssignLanvacCity(guessed);
+              }
             }}
             className={`${adminSelectClass} max-w-full`}
           >
@@ -458,6 +481,41 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
         >
           {pending ? "Adding..." : "Add Service"}
         </button>
+        {needsStation && (
+          <div className="grid w-full gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              Lanvac account number *
+              <input
+                required
+                value={assignLanvacCode}
+                onChange={(e) => setAssignLanvacCode(normalizeLanvacAccountInput(e.target.value))}
+                placeholder="O5985"
+                maxLength={LANVAC_ACCOUNT_CODE_INPUT_MAX}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                className={adminInputClass}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm text-white/80">
+              Dispatch city *
+              <LanvacCitySelect
+                required
+                value={assignLanvacCity}
+                onChange={(city) => {
+                  setAssignLanvacCity(city);
+                  setAssignCityLocked(Boolean(city));
+                }}
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <LanvacEmergencyReadout
+                city={assignLanvacCity}
+                numbers={lanvacEmergencyNumbers(assignLanvacCity)}
+              />
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );
@@ -1547,6 +1605,7 @@ function HistoryDiffList({
 
 function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
   const router = useRouter();
+  const hasMonitoring = hasCurrentMonitoring(client.services);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     lanvacAccountCode: client.lanvac_account_code ?? "",
@@ -1554,11 +1613,15 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
   });
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
+  const displayCity = editing ? form.lanvacCity : (client.lanvac_city ?? "");
+  const missingStation =
+    hasMonitoring && (!client.lanvac_account_code || !client.lanvac_city);
 
   function resetForm() {
     setForm({
       lanvacAccountCode: client.lanvac_account_code ?? "",
-      lanvacCity: client.lanvac_city ?? "",
+      lanvacCity:
+        client.lanvac_city ?? guessLanvacCityFromAddress(client.address ?? "") ?? "",
     });
   }
 
@@ -1588,7 +1651,7 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
         <button
           type="button"
           onClick={() => {
-            if (editing) resetForm();
+            resetForm();
             setEditing((v) => !v);
             setNotice(null);
           }}
@@ -1598,38 +1661,61 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
         </button>
       </div>
       <p className="mt-1 text-xs text-white/40">
-        Lanvac account and the city they use for police, fire, and ambulance.
-        Those numbers stay at the station. The people list is the next card.
+        Lanvac account number and the city they use for police, fire, and
+        ambulance. Those numbers stay at the station. The people list is the
+        next card.
       </p>
+      {missingStation && (
+        <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+          Required for this monitoring account: set the Lanvac account number
+          and dispatch city.
+        </p>
+      )}
 
       <div className="mt-4 space-y-3">
         <NoticeBanner notice={notice} />
         {editing ? (
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5 text-sm text-white/80">
-              Lanvac account
+              Lanvac account number {hasMonitoring ? "*" : ""}
               <input
+                required={hasMonitoring}
                 value={form.lanvacAccountCode}
-                onChange={(e) => setForm((f) => ({ ...f, lanvacAccountCode: e.target.value.toUpperCase() }))}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    lanvacAccountCode: normalizeLanvacAccountInput(e.target.value),
+                  }))
+                }
                 placeholder="O5985"
-                maxLength={LANVAC_ACCOUNT_CODE_MAX}
+                maxLength={LANVAC_ACCOUNT_CODE_INPUT_MAX}
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
                 className={adminInputClass}
               />
+              <span className="text-xs text-white/40">
+                Station CODE. O-5985 or 5985 both become O5985.
+              </span>
             </label>
             <label className="flex flex-col gap-1.5 text-sm text-white/80">
-              Dispatch city
+              Dispatch city {hasMonitoring ? "*" : ""}
               <LanvacCitySelect
+                required={hasMonitoring}
                 value={form.lanvacCity}
                 onChange={(city) => setForm((f) => ({ ...f, lanvacCity: city }))}
               />
+              <span className="text-xs text-white/40">
+                Exact Lanvac spelling. Guessed from the service address when
+                empty. Change it if the guess is wrong.
+              </span>
             </label>
-            <p className="text-xs text-white/40 sm:col-span-2">
-              Pick the exact Lanvac spelling. For a new customer use the first
-              group. Imported accounts keep the spelling from the export.
-            </p>
+            <div className="sm:col-span-2 rounded-xl border border-white/10 bg-background p-4">
+              <LanvacEmergencyReadout
+                city={displayCity}
+                numbers={lanvacEmergencyNumbers(displayCity)}
+              />
+            </div>
             <div className="sm:col-span-2">
               <button
                 type="submit"
@@ -1641,16 +1727,24 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
             </div>
           </form>
         ) : (
-          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-xs uppercase tracking-widest text-white/40">Lanvac account</dt>
-              <dd className="mt-1 text-white/80">{client.lanvac_account_code ?? "Not on file"}</dd>
+          <div className="space-y-4">
+            <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs uppercase tracking-widest text-white/40">Lanvac account number</dt>
+                <dd className="mt-1 text-white/80">{client.lanvac_account_code ?? "Not on file"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-widest text-white/40">Dispatch city</dt>
+                <dd className="mt-1 text-white/80">{client.lanvac_city ?? "Not on file"}</dd>
+              </div>
+            </dl>
+            <div className="rounded-xl border border-white/10 bg-background p-4">
+              <LanvacEmergencyReadout
+                city={client.lanvac_city}
+                numbers={lanvacEmergencyNumbers(client.lanvac_city)}
+              />
             </div>
-            <div>
-              <dt className="text-xs uppercase tracking-widest text-white/40">Dispatch city</dt>
-              <dd className="mt-1 text-white/80">{client.lanvac_city ?? "Not on file"}</dd>
-            </div>
-          </dl>
+          </div>
         )}
       </div>
     </div>

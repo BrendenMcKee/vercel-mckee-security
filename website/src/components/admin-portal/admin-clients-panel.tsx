@@ -9,8 +9,15 @@ import {
   resendInviteAction,
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
-import { LANVAC_ACCOUNT_CODE_MAX, LANVAC_CONTACT_NAME_MAX, LANVAC_PASSCODE_MAX } from "@/lib/portal/lanvac";
+import {
+  LANVAC_ACCOUNT_CODE_INPUT_MAX,
+  LANVAC_CONTACT_NAME_MAX,
+  LANVAC_PASSCODE_MAX,
+  normalizeLanvacAccountInput,
+} from "@/lib/portal/lanvac";
+import { guessLanvacCityFromAddress, lanvacEmergencyNumbers } from "@/lib/portal/lanvac-cities";
 import { LanvacCitySelect } from "@/components/admin-portal/lanvac-city-select";
+import { LanvacEmergencyReadout } from "@/components/portal/lanvac-emergency-readout";
 import {
   CLOUD_BACKUP_PLANNED_RETENTION_COPY,
   SERVICE_THEME,
@@ -143,6 +150,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
     installedOn: "",
     years: "5",
   });
+  const [cityLocked, setCityLocked] = useState(false);
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string; link?: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [resendingId, setResendingId] = useState<string | null>(null);
@@ -207,8 +215,19 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
   }
 
   function set<K extends keyof CreateClientInput>(key: K, value: CreateClientInput[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "monitoringTier" && !value) {
+        next.lanvacAccountCode = "";
+        next.lanvacCity = "";
+      }
+      if ((key === "address" || (key === "monitoringTier" && value)) && !cityLocked) {
+        next.lanvacCity = guessLanvacCityFromAddress(next.address) ?? "";
+      }
+      return next;
+    });
     if (key === "monitoringTier" && !value) {
+      setCityLocked(false);
       setDraftContacts([]);
       setContactDraft({ label: "", phone: "", passcode: "" });
       setDraftDevices([]);
@@ -218,6 +237,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
 
   function resetCreateForm() {
     setForm(EMPTY_FORM);
+    setCityLocked(false);
     setDraftContacts([]);
     setContactDraft({ label: "", phone: "", passcode: "" });
     setDraftDevices([]);
@@ -274,9 +294,17 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
     setNotice(null);
   }
 
-  function submitCreate(event: React.FormEvent<HTMLFormElement>) {
+    function submitCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(null);
+
+    if (form.monitoringTier && (!form.lanvacAccountCode.trim() || !form.lanvacCity.trim())) {
+      setNotice({
+        kind: "error",
+        text: "Security monitoring needs a Lanvac account number and a dispatch city.",
+      });
+      return;
+    }
 
     let contacts = draftContacts;
     const pendingLabel = contactDraft.label.trim();
@@ -421,6 +449,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         <button
           type="button"
           onClick={() => {
+            if (!showForm) resetCreateForm();
             setShowForm((v) => !v);
             setNotice(null);
           }}
@@ -430,74 +459,76 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         </button>
       </div>
 
-      <div className="space-y-3">
-        <input
-          type="search"
-          placeholder="Search name or email..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(0);
-          }}
-          className={`${adminInputClass} w-full sm:max-w-sm`}
-        />
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <select
-            value={statusFilter}
+      {!showForm && (
+        <div className="space-y-3">
+          <input
+            type="search"
+            placeholder="Search name or email..."
+            value={search}
             onChange={(e) => {
-              setStatusFilter(e.target.value as typeof statusFilter);
+              setSearch(e.target.value);
               setPage(0);
             }}
-            className={`${selectClass} max-w-full`}
-            aria-label="Filter by status"
-          >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="disabled">Disabled</option>
-          </select>
-          <select
-            value={serviceFilter}
-            onChange={(e) => {
-              setServiceFilter(e.target.value as typeof serviceFilter);
-              setTierFilter("");
-              setPage(0);
-            }}
-            className={`${selectClass} max-w-full`}
-            aria-label="Filter by service"
-          >
-            <option value="">All services</option>
-            <option value="monitoring">{SERVICE_TYPE_LABELS.monitoring}</option>
-            <option value="voip">{SERVICE_TYPE_LABELS.voip}</option>
-            <option value="cloud_backup" disabled={!CLOUD_BACKUP_AVAILABLE}>
-              {SERVICE_TYPE_LABELS.cloud_backup}
-              {!CLOUD_BACKUP_AVAILABLE ? " (In Development)" : ""}
-            </option>
-            <option value="none">No services</option>
-          </select>
-          {serviceFilter !== "none" && (
+            className={`${adminInputClass} w-full sm:max-w-sm`}
+          />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <select
-              value={tierFilter}
+              value={statusFilter}
               onChange={(e) => {
-                setTierFilter(e.target.value);
+                setStatusFilter(e.target.value as typeof statusFilter);
                 setPage(0);
               }}
               className={`${selectClass} max-w-full`}
-              aria-label="Filter by tier"
+              aria-label="Filter by status"
             >
-              <option value="">All tiers</option>
-              {tierOptions.map((tier) => (
-                <option key={tier} value={tier}>
-                  {tierLabel(tier)}
-                </option>
-              ))}
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="disabled">Disabled</option>
             </select>
-          )}
-          <span className="text-xs text-white/40">
-            {filtered.length} of {clients.length}
-          </span>
+            <select
+              value={serviceFilter}
+              onChange={(e) => {
+                setServiceFilter(e.target.value as typeof serviceFilter);
+                setTierFilter("");
+                setPage(0);
+              }}
+              className={`${selectClass} max-w-full`}
+              aria-label="Filter by service"
+            >
+              <option value="">All services</option>
+              <option value="monitoring">{SERVICE_TYPE_LABELS.monitoring}</option>
+              <option value="voip">{SERVICE_TYPE_LABELS.voip}</option>
+              <option value="cloud_backup" disabled={!CLOUD_BACKUP_AVAILABLE}>
+                {SERVICE_TYPE_LABELS.cloud_backup}
+                {!CLOUD_BACKUP_AVAILABLE ? " (In Development)" : ""}
+              </option>
+              <option value="none">No services</option>
+            </select>
+            {serviceFilter !== "none" && (
+              <select
+                value={tierFilter}
+                onChange={(e) => {
+                  setTierFilter(e.target.value);
+                  setPage(0);
+                }}
+                className={`${selectClass} max-w-full`}
+                aria-label="Filter by tier"
+              >
+                <option value="">All tiers</option>
+                {tierOptions.map((tier) => (
+                  <option key={tier} value={tier}>
+                    {tierLabel(tier)}
+                  </option>
+                ))}
+              </select>
+            )}
+            <span className="text-xs text-white/40">
+              {filtered.length} of {clients.length}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {notice && (
         <div
@@ -585,35 +616,9 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   className={adminInputClass}
                 />
                 <span className="text-xs text-white/40">
-                  Optional here. The site we monitor or install at. Stripe does not need it; the client can add it in Settings.
-                </span>
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Lanvac account
-                <input
-                  value={form.lanvacAccountCode}
-                  onChange={(e) => set("lanvacAccountCode", e.target.value.toUpperCase())}
-                  placeholder="O5985"
-                  maxLength={LANVAC_ACCOUNT_CODE_MAX}
-                  autoCapitalize="characters"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  className={adminInputClass}
-                />
-                <span className="text-xs text-white/40">
-                  Optional. The CODE from the station export, including the leading letter.
-                </span>
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Dispatch city
-                <LanvacCitySelect
-                  value={form.lanvacCity}
-                  onChange={(city) => set("lanvacCity", city)}
-                />
-                <span className="text-xs text-white/40">
-                  Pick the exact Lanvac spelling. For a new customer use the first group
-                  (Haliburton - On is the one we tested). Police, fire, and ambulance come
-                  from this, not the service address.
+                  Optional here. The site we monitor or install at. If you type a town we
+                  serve, dispatch city is guessed when you add monitoring. You can still
+                  change it. The client can add the address in Settings.
                 </span>
               </label>
             </div>
@@ -650,6 +655,47 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                     ))}
                   </select>
                 </label>
+                {form.monitoringTier && (
+                  <div className="space-y-3 border-t border-white/10 pt-3">
+                    <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                      Lanvac account number *
+                      <input
+                        required
+                        value={form.lanvacAccountCode}
+                        onChange={(e) => set("lanvacAccountCode", normalizeLanvacAccountInput(e.target.value))}
+                        placeholder="O5985"
+                        maxLength={LANVAC_ACCOUNT_CODE_INPUT_MAX}
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className={adminInputClass}
+                      />
+                      <span className="text-xs text-white/40">
+                        Station CODE. O-5985 or 5985 both become O5985.
+                      </span>
+                    </label>
+                    <label className="flex flex-col gap-1.5 text-sm text-white/80">
+                      Dispatch city *
+                      <LanvacCitySelect
+                        required
+                        value={form.lanvacCity}
+                        onChange={(city) => {
+                          set("lanvacCity", city);
+                          setCityLocked(Boolean(city));
+                        }}
+                      />
+                      <span className="text-xs text-white/40">
+                        Exact Lanvac spelling. Guessed from the service address when we
+                        can; change it if the guess is wrong. Police, fire, and ambulance
+                        come from this city.
+                      </span>
+                    </label>
+                    <LanvacEmergencyReadout
+                      city={form.lanvacCity}
+                      numbers={lanvacEmergencyNumbers(form.lanvacCity)}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className={`space-y-3 rounded-xl border bg-black/20 p-4 ${SERVICE_THEME.voip.card}`}>
@@ -1022,6 +1068,8 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         </form>
       )}
 
+      {!showForm && (
+      <>
       {/* Mobile: stacked cards. A six-column table can't work at 390px. */}
       <div className="space-y-3 md:hidden">
         {pageRows.length === 0 && (
@@ -1249,6 +1297,8 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             Next
           </button>
         </div>
+      )}
+      </>
       )}
     </div>
   );

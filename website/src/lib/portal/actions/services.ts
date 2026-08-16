@@ -17,6 +17,12 @@ import {
   voipInvoiceDescription,
 } from "@/lib/portal/billing";
 import { getStripeClient, isStripeConfigured, priceForVoipAmount, priceIdFor } from "@/lib/portal/stripe";
+import {
+  LANVAC_ACCOUNT_CODE_INPUT_MAX,
+  LANVAC_CITY_MAX,
+  parseLanvacAccountCode,
+  parseLanvacCity,
+} from "@/lib/portal/lanvac";
 
 export type ServiceActionResult = { ok: true; message?: string } | { ok: false; error: string };
 
@@ -27,6 +33,8 @@ const assignSchema = z.object({
   numberCount: z.number().int().min(1).max(100).optional(),
   seatCount: z.number().int().min(1).max(100).optional(),
   portCount: z.number().int().min(0).max(100).optional(),
+  lanvacAccountCode: z.string().trim().max(LANVAC_ACCOUNT_CODE_INPUT_MAX).optional(),
+  lanvacCity: z.string().trim().max(LANVAC_CITY_MAX).optional(),
 });
 
 async function syncVoipStripePrice(input: {
@@ -79,6 +87,8 @@ export async function assignServiceAction(input: {
   numberCount?: number;
   seatCount?: number;
   portCount?: number;
+  lanvacAccountCode?: string;
+  lanvacCity?: string;
 }): Promise<ServiceActionResult> {
   if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
@@ -109,6 +119,44 @@ export async function assignServiceAction(input: {
   });
 
   const supabase = await createPortalServerClient();
+
+  if (serviceType === "monitoring") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("lanvac_account_code, lanvac_city")
+      .eq("id", profileId)
+      .maybeSingle();
+    const parsedCode = parseLanvacAccountCode(
+      parsed.data.lanvacAccountCode || profile?.lanvac_account_code || "",
+      { required: true },
+    );
+    if (!parsedCode.ok) return { ok: false, error: parsedCode.error };
+    const parsedCity = parseLanvacCity(
+      parsed.data.lanvacCity || profile?.lanvac_city || "",
+      { required: true },
+    );
+    if (!parsedCity.ok) return { ok: false, error: parsedCity.error };
+    if (
+      parsedCode.value !== profile?.lanvac_account_code ||
+      parsedCity.value !== profile?.lanvac_city
+    ) {
+      const { error: stationError } = await supabase
+        .from("profiles")
+        .update({
+          lanvac_account_code: parsedCode.value,
+          lanvac_city: parsedCity.value,
+        })
+        .eq("id", profileId);
+      if (stationError) {
+        if (stationError.code === "23505") {
+          return { ok: false, error: "Another client already uses that Lanvac account code." };
+        }
+        console.error("[portal] assignService station save failed:", stationError);
+        return { ok: false, error: "Could not save the Lanvac account or dispatch city." };
+      }
+    }
+  }
+
   const { error } = await supabase.from("services").insert({
     profile_id: profileId,
     service_type: serviceType,

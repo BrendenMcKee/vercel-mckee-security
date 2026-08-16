@@ -25,6 +25,8 @@ import { PaymentSetupBanner } from "@/components/portal/payment-setup-banner";
 import { PortalCard } from "@/components/portal/portal-card";
 import { CloudBackupInterest } from "@/components/portal/cloud-backup-interest";
 import { ClientSettingsForm } from "@/components/portal/client-settings-form";
+import { LanvacEmergencyReadout } from "@/components/portal/lanvac-emergency-readout";
+import { lanvacEmergencyNumbers } from "@/lib/portal/lanvac-cities";
 
 export const metadata: Metadata = {
   title: "Manage Account",
@@ -558,16 +560,21 @@ export default async function UserDashboardPage({
               </p>
               <p>
                 Police, fire, and ambulance are dispatched for your area by the
-                station. They are not on this list.
-                {profile.lanvac_city
-                  ? ` Emergency services for ${profile.lanvac_city} are on file.`
-                  : ""}
-              </p>
-              <p>
-                Add or remove people and save. McKee Security is notified
-                automatically and updates the station.
+                station. They are not on this list and you cannot edit them.
+                The numbers below are what the station uses for your dispatch
+                city.
               </p>
             </div>
+            <div className="mt-5 rounded-xl border border-white/10 bg-background p-4">
+              <LanvacEmergencyReadout
+                city={profile.lanvac_city}
+                numbers={lanvacEmergencyNumbers(profile.lanvac_city)}
+              />
+            </div>
+            <p className="mt-5 text-sm leading-relaxed text-white/55">
+              Add or remove people and save. McKee Security is notified
+              automatically and updates the station.
+            </p>
             <div className="mt-5">
               <CallerIdEditor variant="client" initialContacts={contactsResult.data} />
             </div>

@@ -54,8 +54,9 @@ Later, before the portal-test copy is opened (written into the plans; not this s
 
 Later (do not block the start once the required list is complete):
 
-- [x] Lanvac API contract ingested (2026-08-16). OpenAPI at `https://lanvac.mobi:8843/swagger/v1/swagger.json`. Auth is dealer `10638` + WinLinks password in every JSON body (no API key). Account key is export `CODE`. Write is `POST /api/EmergencyContact/fullupdate`. Emails stay; RDP is fallback. No keys in git.
-- [ ] Lanvac credentials in Vercel (`LANVAC_API_BASE`, `LANVAC_DEALER_ACCOUNT`, `LANVAC_DEALER_PASSWORD`). Server-only. Does not turn on writes.
+- [x] Lanvac API contract ingested (2026-08-16). OpenAPI at `https://lanvac.mobi:8843/swagger/v1/swagger.json`. Auth is dealer `10638` + WinLinks password in every JSON body (no API key). Account key is export `CODE`. Write is `POST /api/EmergencyContact/fullupdate`. Official city is the live directory string (`GET /EmergencyContact/emergencynumbers`). Emails stay; RDP is fallback. No keys in git.
+- [x] Lanvac credentials in Vercel (`LANVAC_API_BASE`, `LANVAC_DEALER_ACCOUNT`, `LANVAC_DEALER_PASSWORD`). Set 2026-08-16. Server-only. Does not turn on writes.
+- [x] Thank-you email sent to Stephanos (`stephanos@lanvac.com`), cc Adrien (`adrien@prog1.ca`) (2026-08-16).
 - [ ] Live Stripe key, webhook, and monitoring prices in Vercel
 - [ ] Four VoIP customers entered in the portal and linked to QB
 - [ ] Bookkeeper inspected the first live card post
@@ -154,7 +155,7 @@ The Admin user (`Admin(ServerDB)`) must later approve the bridge ("even when Qui
 
 ## 4. Start now, in parallel — Lanvac call lists
 
-Full Excel export is in hand (dealer 10638). Seed people rows plus each account's CODE and exact CITY (no client emails during import). Do not import police/fire/ambulance as contacts. After cutover, a list save still emails McKee and the customer. The save also writes the people list to Lanvac (`POST /api/EmergencyContact/fullupdate` with `usePoliceNumbers: true` and that CITY). If the API call fails, the emails still go out and RDP is the fallback. API contract is ingested; write-tested on `O5985`. No keys in git. The portal now stores `lanvac_account_code` and `lanvac_city`; the API write itself is later.
+Full Excel export is in hand (dealer 10638). Seed people rows plus each account's CODE and the mapped live-directory city (no client emails during import). Excel aliases like `HALIBURTON` are not valid write keys. Do not import police/fire/ambulance as contacts. After cutover, a list save still emails McKee and the customer. The save also writes the people list to Lanvac (`POST /api/EmergencyContact/fullupdate` with `usePoliceNumbers: true` and that CITY). If the API call fails, the emails still go out and RDP is the fallback. API contract is ingested; write-tested on `O5985`. No keys in git. The portal now stores `lanvac_account_code` and `lanvac_city` (required when monitoring is assigned; city must be a live directory string). Vercel env is set. The API write itself is later.
 
 Device/battery To Do samples are already in `ACCOUNTING_GATHER_DATA.md`. The full 841 notes are a one-time import into portal devices when the 8A seed runs (AI draft + confidence + human review of low-confidence rows). After that, the portal is the managed list; stop using QuickBooks To Dos for new battery/smoke tracking. Do not export the full list for the bookkeeper sitting.
 

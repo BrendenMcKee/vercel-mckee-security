@@ -47,9 +47,9 @@ npm run dev    # http://localhost:3000
 | `STARLINK_REMINDER_EMAIL` | Optional. Who gets Starlink rental reminders (comma-separated). Defaults to `andi@mckeesecurity.ca`. See [../docs/STARLINK-RENTAL-REMINDERS.md](../docs/STARLINK-RENTAL-REMINDERS.md) |
 | `DATA_DROPS_PASSWORD` | Shared access password for the Data Drops pages |
 | `DATA_DROPS_API_URL` | Optional. Defaults to `https://app-mckeesecurity.ca/api` |
-| `LANVAC_API_BASE` | Later. `https://lanvac.mobi:8843`. Server-only. |
-| `LANVAC_DEALER_ACCOUNT` | Later. Dealer `10638`. Server-only. |
-| `LANVAC_DEALER_PASSWORD` | Later. WinLinks password. Sensitive, server-only, never `NEXT_PUBLIC_`. |
+| `LANVAC_API_BASE` | Set. `https://lanvac.mobi:8843`. Server-only. Does not turn on writes. |
+| `LANVAC_DEALER_ACCOUNT` | Set. Dealer `10638`. Server-only. |
+| `LANVAC_DEALER_PASSWORD` | Set. WinLinks password. Sensitive, server-only, never `NEXT_PUBLIC_`. |
 
 Portal / Stripe / cron variables are in [`../PORTAL_PLAN.md`](../PORTAL_PLAN.md) Section 12. Local portal work also needs the three Supabase keys in `.env.local`.
 

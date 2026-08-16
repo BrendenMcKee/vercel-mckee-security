@@ -16,7 +16,7 @@ import {
 import { DEVICE_CATEGORIES } from "@/lib/portal/devices";
 import { normalizePhone } from "@/lib/portal/phone";
 import {
-  LANVAC_ACCOUNT_CODE_MAX,
+  LANVAC_ACCOUNT_CODE_INPUT_MAX,
   LANVAC_CITY_MAX,
   LANVAC_CONTACT_NAME_MAX,
   LANVAC_PASSCODE_MAX,
@@ -41,7 +41,7 @@ const createClientSchema = z.object({
   // Stakeholder 2026-07-06: billing is chosen at creation. Autopay is the
   // default; the client is asked for their card as part of activation.
   billingMethod: z.enum(["stripe", "manual"]),
-  lanvacAccountCode: z.string().trim().max(LANVAC_ACCOUNT_CODE_MAX),
+  lanvacAccountCode: z.string().trim().max(LANVAC_ACCOUNT_CODE_INPUT_MAX),
   lanvacCity: z.string().trim().max(LANVAC_CITY_MAX),
 });
 
@@ -105,9 +105,10 @@ export async function createClientAction(
   const { firstName, lastName, email, address, phone, monitoringTier, cloudTier, voipTier, voipNumbers, voipSeats, voipPorts, billingMethod, lanvacAccountCode, lanvacCity } =
     parsed.data;
 
-  const parsedCode = parseLanvacAccountCode(lanvacAccountCode);
+  const needsStation = Boolean(monitoringTier);
+  const parsedCode = parseLanvacAccountCode(lanvacAccountCode, { required: needsStation });
   if (!parsedCode.ok) return { ok: false, error: parsedCode.error };
-  const parsedCity = parseLanvacCity(lanvacCity);
+  const parsedCity = parseLanvacCity(lanvacCity, { required: needsStation });
   if (!parsedCity.ok) return { ok: false, error: parsedCity.error };
 
   let storedPhone: string | null = null;
@@ -465,7 +466,7 @@ export async function updateClientProfileAction(
 
 const updateLanvacSchema = z.object({
   profileId: z.uuid(),
-  lanvacAccountCode: z.string().trim().max(LANVAC_ACCOUNT_CODE_MAX),
+  lanvacAccountCode: z.string().trim().max(LANVAC_ACCOUNT_CODE_INPUT_MAX),
   lanvacCity: z.string().trim().max(LANVAC_CITY_MAX),
 });
 
@@ -486,11 +487,6 @@ export async function updateClientLanvacAction(input: {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const parsedCode = parseLanvacAccountCode(parsed.data.lanvacAccountCode);
-  if (!parsedCode.ok) return { ok: false, error: parsedCode.error };
-  const parsedCity = parseLanvacCity(parsed.data.lanvacCity);
-  if (!parsedCity.ok) return { ok: false, error: parsedCity.error };
-
   const supabase = await createPortalServerClient();
   const { data: target } = await supabase
     .from("profiles")
@@ -501,6 +497,18 @@ export async function updateClientLanvacAction(input: {
   if (target.role !== "client") {
     return { ok: false, error: "Only client profiles can be edited here." };
   }
+
+  const { data: monitoring } = await supabase
+    .from("services")
+    .select("id")
+    .eq("profile_id", parsed.data.profileId)
+    .eq("service_type", "monitoring")
+    .maybeSingle();
+  const hasMonitoring = Boolean(monitoring);
+  const parsedCode = parseLanvacAccountCode(parsed.data.lanvacAccountCode, { required: hasMonitoring });
+  if (!parsedCode.ok) return { ok: false, error: parsedCode.error };
+  const parsedCity = parseLanvacCity(parsed.data.lanvacCity, { required: hasMonitoring });
+  if (!parsedCity.ok) return { ok: false, error: parsedCity.error };
 
   const { error } = await supabase
     .from("profiles")

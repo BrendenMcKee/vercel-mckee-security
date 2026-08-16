@@ -7,30 +7,33 @@ export function LanvacCitySelect({
   value,
   onChange,
   id,
+  required,
 }: {
   value: string;
   onChange: (city: string) => void;
   id?: string;
+  required?: boolean;
 }) {
-  const { preferred, other, extra } = lanvacCitySelectOptions(value);
+  const { frequent, other, extra } = lanvacCitySelectOptions(value);
 
   return (
     <select
       id={id}
+      required={required}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={adminSelectClass}
     >
-      <option value="">Not set</option>
-      {extra && <option value={extra}>{extra} (on this account)</option>}
-      <optgroup label="Use for new accounts">
-        {preferred.map((city) => (
-          <option key={`p-${city}`} value={city}>
+      <option value="">{required ? "Select a city…" : "Not set"}</option>
+      {extra && <option value={extra}>{extra} (on this account, not a Lanvac city)</option>}
+      <optgroup label="Most used (McKee accounts)">
+        {frequent.map((city) => (
+          <option key={`f-${city}`} value={city}>
             {city}
           </option>
         ))}
       </optgroup>
-      <optgroup label="Exact spellings already on file">
+      <optgroup label="All Lanvac cities">
         {other.map((city) => (
           <option key={`o-${city}`} value={city}>
             {city}
