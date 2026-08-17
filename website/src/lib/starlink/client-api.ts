@@ -1,4 +1,10 @@
-import type { RentalWithUnit, Unit, UnitCost } from "./types";
+import type {
+  AdSpendRate,
+  RentalRateTier,
+  RentalWithUnit,
+  Unit,
+  UnitCost,
+} from "./types";
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
   let data: unknown = null;
@@ -19,14 +25,23 @@ export async function fetchOverview(): Promise<{
   units: Unit[];
   rentals: RentalWithUnit[];
   costs: UnitCost[];
+  rates: RentalRateTier[];
+  adSpend: AdSpendRate[];
 }> {
   const res = await fetch("/api/starlink-admin/overview", { cache: "no-store" });
   const data = await jsonOrThrow<{
     units: Unit[];
     rentals: RentalWithUnit[];
     costs?: UnitCost[];
+    rates?: RentalRateTier[];
+    adSpend?: AdSpendRate[];
   }>(res);
-  return { ...data, costs: data.costs ?? [] };
+  return {
+    ...data,
+    costs: data.costs ?? [],
+    rates: data.rates ?? [],
+    adSpend: data.adSpend ?? [],
+  };
 }
 
 export async function createUnit(body: Record<string, unknown>): Promise<{ unit: Unit }> {
@@ -60,6 +75,29 @@ export async function upsertUnitCost(
   body: { monthly_cost: number; plan_name?: string | null; effective_from?: string },
 ): Promise<{ cost: UnitCost }> {
   const res = await fetch(`/api/starlink-admin/units/${unitId}/costs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function replaceRateTiers(
+  tiers: Array<{ min_days: number; max_days: number; amount: number }>,
+): Promise<{ rates: RentalRateTier[] }> {
+  const res = await fetch("/api/starlink-admin/rates", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tiers }),
+  });
+  return jsonOrThrow(res);
+}
+
+export async function upsertAdSpend(body: {
+  daily_cost: number;
+  effective_from?: string;
+}): Promise<{ rate: AdSpendRate }> {
+  const res = await fetch("/api/starlink-admin/ad-spend", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

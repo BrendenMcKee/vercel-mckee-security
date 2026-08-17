@@ -25,6 +25,7 @@ import {
   RENTAL_STATUSES,
   STATUS_META,
   STATUS_TONE_HEX,
+  type RentalRateTier,
   type RentalStatus,
   type RentalWithUnit,
   type Unit,
@@ -40,6 +41,10 @@ import {
   type ConflictCandidate,
 } from "@/lib/starlink/availability";
 import { daysBetweenInclusive } from "@/lib/starlink/dates";
+import {
+  DEFAULT_RATE_TIERS,
+  quoteForDays,
+} from "@/lib/starlink/pricing";
 import {
   balanceDue,
   DEFAULT_DEPOSIT_AMOUNT,
@@ -84,7 +89,23 @@ function n(value: number | null | undefined): string {
   return value === null || value === undefined ? "" : String(value);
 }
 
-function initialState(rental: RentalWithUnit | null): FormState {
+function quoteText(
+  pickup: string,
+  returnDate: string,
+  rates: RentalRateTier[],
+): string {
+  if (!pickup || !returnDate || returnDate < pickup) return "";
+  const quote = quoteForDays(
+    rates.length > 0 ? rates : DEFAULT_RATE_TIERS,
+    daysBetweenInclusive(pickup, returnDate),
+  );
+  return quote == null ? "" : String(quote);
+}
+
+function initialState(
+  rental: RentalWithUnit | null,
+  rates: RentalRateTier[],
+): FormState {
   return {
     customer_name: s(rental?.customer_name),
     customer_email: s(rental?.customer_email),
@@ -97,7 +118,10 @@ function initialState(rental: RentalWithUnit | null): FormState {
     pickup_date: s(rental?.pickup_date),
     pickup_time: s(rental?.pickup_time),
     return_date: s(rental?.return_date),
-    quoted_price: n(rental?.quoted_price),
+    quoted_price:
+      rental?.quoted_price != null
+        ? n(rental.quoted_price)
+        : quoteText(s(rental?.pickup_date), s(rental?.return_date), rates),
     paid: rental ? isPaidInFull(rental) : false,
     // Suggest the standard deposit until someone decides otherwise. Website
     // requests arrive with no deposit at all, so this covers those too; an
@@ -210,6 +234,7 @@ export function RentalModal({
   rental,
   units,
   rentals,
+  rates,
   onClose,
   onSaved,
   onError,
@@ -218,12 +243,18 @@ export function RentalModal({
   units: Unit[];
   /** Every booking, so the unit list can say what is free on these dates. */
   rentals: RentalWithUnit[];
+  rates: RentalRateTier[];
   onClose: () => void;
   onSaved: (message: string) => void;
   onError: (message: string) => void;
 }) {
   const isEdit = Boolean(rental);
-  const [form, setForm] = useState<FormState>(() => initialState(rental));
+  const [form, setForm] = useState<FormState>(() => initialState(rental, rates));
+  // A stored quote is theirs to keep. An empty price follows the rate card
+  // until someone types in the field.
+  const [priceTouched, setPriceTouched] = useState(
+    rental?.quoted_price != null,
+  );
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
@@ -263,6 +294,24 @@ export function RentalModal({
     if (form.return_date < form.pickup_date) return 0;
     return daysBetweenInclusive(form.pickup_date, form.return_date);
   }, [form.pickup_date, form.return_date]);
+
+  const baseQuote = useMemo(
+    () =>
+      days > 0
+        ? quoteForDays(rates.length > 0 ? rates : DEFAULT_RATE_TIERS, days)
+        : null,
+    [days, rates],
+  );
+
+  useEffect(() => {
+    if (priceTouched) return;
+    const next = baseQuote == null ? "" : String(baseQuote);
+    setForm((current) =>
+      current.quoted_price === next
+        ? current
+        : { ...current, quoted_price: next },
+    );
+  }, [baseQuote, priceTouched]);
 
   const priceInput = useMemo(
     () => parseMoneyInput(form.quoted_price),
@@ -731,7 +780,10 @@ export function RentalModal({
                   className={inputClass}
                   inputMode="decimal"
                   value={form.quoted_price}
-                  onChange={(e) => set("quoted_price", e.target.value)}
+                  onChange={(e) => {
+                    setPriceTouched(true);
+                    set("quoted_price", e.target.value);
+                  }}
                   placeholder="0.00"
                 />
               </Field>
@@ -754,6 +806,33 @@ export function RentalModal({
                 />
               </div>
             </div>
+            {days > 0 && baseQuote != null ? (
+              <p className="text-xs text-white/45">
+                Base rate for {days} day{days === 1 ? "" : "s"}:{" "}
+                {formatCurrency(baseQuote)} + HST
+                {price !== baseQuote ? (
+                  <>
+                    {" · "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPriceTouched(false);
+                        set("quoted_price", String(baseQuote));
+                      }}
+                      className="font-semibold text-white/70 underline decoration-white/30 hover:text-white"
+                    >
+                      Use base rate
+                    </button>
+                  </>
+                ) : (
+                  " · still editable"
+                )}
+              </p>
+            ) : days > 0 && baseQuote == null ? (
+              <p className="text-xs text-white/45">
+                No base rate for {days} days — enter a price.
+              </p>
+            ) : null}
             {price === 0 ? (
               <StateNote tone="neutral" icon={CircleSlash}>
                 No charge for this rental.

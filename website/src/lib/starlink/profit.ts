@@ -4,7 +4,9 @@
  * Revenue is rental money actually received (`amount_received`). Deposits are
  * never included: they are the customer's, and they go back. Cost is each
  * kit's Starlink subscription, stored as a monthly rate that can change over
- * time, spread across the days of the period being looked at.
+ * time, spread across the days of the period being looked at. Fleet advertising
+ * is a separate dated daily rate, split equally across kits that existed that
+ * day, so adding a kit or changing the Meta spend does not rewrite last month.
  *
  * A ten-day rental that straddles two months contributes to both, in
  * proportion. A kit that costs $200 in a 31-day month costs 200/31 per day.
@@ -22,7 +24,7 @@ import {
   startOfIsoWeek,
   startOfMonthIso,
 } from "./dates";
-import type { RentalWithUnit, Unit, UnitCost } from "./types";
+import type { AdSpendRate, RentalWithUnit, Unit, UnitCost } from "./types";
 
 export type ProfitGrain = "week" | "month" | "all";
 
@@ -42,6 +44,8 @@ export type UnitProfit = {
   upcomingCost: UnitCost | null;
   revenue: number;
   cost: number;
+  /** This kit's share of fleet ad spend in the period. */
+  adSpend: number;
   profit: number;
   /** Occupied days / days in the period, 0–1. */
   occupancy: number;
@@ -57,6 +61,7 @@ export type ProfitReport = {
   fleet: {
     revenue: number;
     cost: number;
+    adSpend: number;
     profit: number;
     occupancy: number;
     occupiedDays: number;
@@ -207,6 +212,96 @@ export function costsForUnit(all: UnitCost[], unitId: string): UnitCost[] {
     .sort((a, b) => a.effective_from.localeCompare(b.effective_from));
 }
 
+function sortedAdRates(rates: AdSpendRate[]): AdSpendRate[] {
+  return rates.slice().sort((a, b) => a.effective_from.localeCompare(b.effective_from));
+}
+
+/** Last ad rate whose `effective_from` is on or before `day`. */
+export function adSpendAsOf(rates: AdSpendRate[], day: string): AdSpendRate | null {
+  let current: AdSpendRate | null = null;
+  for (const row of sortedAdRates(rates)) {
+    if (row.effective_from > day) break;
+    current = row;
+  }
+  return current;
+}
+
+/** First ad rate that has not started yet as of `day`. */
+export function upcomingAdSpend(rates: AdSpendRate[], day: string): AdSpendRate | null {
+  return sortedAdRates(rates).find((row) => row.effective_from > day) ?? null;
+}
+
+function dailyAdCostOnDay(rates: AdSpendRate[], day: string): number {
+  const current = adSpendAsOf(rates, day);
+  return current ? asMoney(current.daily_cost) : 0;
+}
+
+function kitIdsOnDay(
+  units: Array<Pick<Unit, "id" | "created_at">>,
+  day: string,
+): string[] {
+  const ids: string[] = [];
+  for (const unit of units) {
+    const created = isoDateInToronto(unit.created_at);
+    if (created && created <= day) ids.push(unit.id);
+  }
+  return ids;
+}
+
+/**
+ * Fleet advertising cost for `period`, split equally across kits that
+ * existed on each day. A rate change and a new kit both become breakpoints
+ * so August at $2.50/day with two kits and August at $5/day with three kits
+ * can coexist. Days before the first kit existed are not charged — there
+ * was nothing to advertise.
+ */
+export function adSpendInPeriod(
+  rates: AdSpendRate[],
+  units: Array<Pick<Unit, "id" | "created_at">>,
+  period: ProfitPeriod,
+): { fleet: number; byUnit: Map<string, number> } {
+  const byUnit = new Map<string, number>();
+  for (const unit of units) byUnit.set(unit.id, 0);
+  if (rates.length === 0 || period.end < period.start) {
+    return { fleet: 0, byUnit };
+  }
+
+  const points = new Set<string>([period.start]);
+  for (const row of rates) {
+    if (row.effective_from > period.start && row.effective_from <= period.end) {
+      points.add(row.effective_from);
+    }
+  }
+  for (const unit of units) {
+    const created = isoDateInToronto(unit.created_at);
+    if (created && created > period.start && created <= period.end) {
+      points.add(created);
+    }
+  }
+
+  const starts = [...points].sort((a, b) => a.localeCompare(b));
+  let fleet = 0;
+  for (let i = 0; i < starts.length; i += 1) {
+    const sliceStart = starts[i];
+    const nextStart = i + 1 < starts.length ? starts[i + 1] : null;
+    const sliceEnd = nextStart ? addDaysIso(nextStart, -1) : period.end;
+    if (sliceEnd < sliceStart) continue;
+    const kits = kitIdsOnDay(units, sliceStart);
+    if (kits.length === 0) continue;
+    const daily = dailyAdCostOnDay(rates, sliceStart);
+    if (daily === 0) continue;
+    const days = daysBetweenInclusive(sliceStart, sliceEnd);
+    const sliceTotal = daily * days;
+    fleet += sliceTotal;
+    const share = sliceTotal / kits.length;
+    for (const id of kits) {
+      byUnit.set(id, (byUnit.get(id) ?? 0) + share);
+    }
+  }
+
+  return { fleet, byUnit };
+}
+
 export function periodForGrain(
   grain: ProfitGrain,
   anchorIso: string,
@@ -286,6 +381,7 @@ export function buildProfitReport(
   grain: ProfitGrain,
   anchorIso: string,
   todayIso: string,
+  adRates: AdSpendRate[] = [],
 ): ProfitReport {
   const allTime = allTimeBounds(units, rentals, todayIso);
   const period = periodForGrain(
@@ -301,6 +397,8 @@ export function buildProfitReport(
     if (list) list.push(row);
     else costsByUnit.set(row.unit_id, [row]);
   }
+
+  const ads = adSpendInPeriod(adRates, units, period);
 
   const unitRows: UnitProfit[] = units.map((unit) => {
     const unitCosts = costsByUnit.get(unit.id) ?? [];
@@ -320,6 +418,7 @@ export function buildProfitReport(
       inPeriod.reduce((sum, r) => sum + rentalRevenueInPeriod(r, period), 0),
     );
     const cost = roundCents(unitCostInPeriod(unitCosts, period, created));
+    const adSpend = roundCents(ads.byUnit.get(unit.id) ?? 0);
     const occupiedDays = occupiedDaysInPeriod(unitRentals, period);
     return {
       unitId: unit.id,
@@ -330,7 +429,8 @@ export function buildProfitReport(
       upcomingCost: upcomingCost(unitCosts, todayIso),
       revenue,
       cost,
-      profit: roundCents(revenue - cost),
+      adSpend,
+      profit: roundCents(revenue - cost - adSpend),
       occupancy: occupiedDays / periodDays,
       occupiedDays,
       periodDays,
@@ -357,6 +457,7 @@ export function buildProfitReport(
     unitRows.reduce((sum, row) => sum + row.revenue, 0) + unassignedRevenue,
   );
   const cost = roundCents(unitRows.reduce((sum, row) => sum + row.cost, 0));
+  const adSpend = roundCents(ads.fleet);
   const occupiedDays = unitRows.reduce((sum, row) => sum + row.occupiedDays, 0);
   // Fleet occupancy is occupied kit-days over available kit-days, not unique
   // calendar days — three kits out on the same day is three days of work.
@@ -369,7 +470,8 @@ export function buildProfitReport(
     fleet: {
       revenue,
       cost,
-      profit: roundCents(revenue - cost),
+      adSpend,
+      profit: roundCents(revenue - cost - adSpend),
       occupancy: occupiedDays / fleetPeriodDays,
       occupiedDays,
       periodDays: fleetPeriodDays,

@@ -12,7 +12,7 @@ export async function GET() {
   if (denied) return denied;
 
   const supabase = getSupabaseAdmin();
-  const [unitsRes, rentalsRes, costsRes] = await Promise.all([
+  const [unitsRes, rentalsRes, costsRes, ratesRes, adsRes] = await Promise.all([
     supabase.from("units").select("*").order("created_at", { ascending: true }),
     supabase
       .from("rentals")
@@ -20,6 +20,14 @@ export async function GET() {
       .order("pickup_date", { ascending: false }),
     supabase
       .from("unit_costs")
+      .select("*")
+      .order("effective_from", { ascending: true }),
+    supabase
+      .from("rental_rate_tiers")
+      .select("*")
+      .order("min_days", { ascending: true }),
+    supabase
+      .from("ad_spend_rates")
       .select("*")
       .order("effective_from", { ascending: true }),
   ]);
@@ -36,11 +44,19 @@ export async function GET() {
   if (costsRes.error) {
     console.error("[starlink] unit_costs lookup failed:", costsRes.error.message);
   }
+  if (ratesRes.error) {
+    console.error("[starlink] rental_rate_tiers lookup failed:", ratesRes.error.message);
+  }
+  if (adsRes.error) {
+    console.error("[starlink] ad_spend_rates lookup failed:", adsRes.error.message);
+  }
 
   const res = NextResponse.json({
     units: unitsRes.data ?? [],
     rentals: rentalsRes.data ?? [],
     costs: costsRes.error ? [] : (costsRes.data ?? []),
+    rates: ratesRes.error ? [] : (ratesRes.data ?? []),
+    adSpend: adsRes.error ? [] : (adsRes.data ?? []),
   });
   res.headers.set("Cache-Control", "no-store");
   return res;

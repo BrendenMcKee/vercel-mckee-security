@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidIsoDate } from "./dates";
+import { validateRateTiers } from "./pricing";
 import { RENTAL_SOURCES, RENTAL_STATUSES } from "./types";
 
 const isoDate = z
@@ -98,6 +99,36 @@ export const unitCostUpsertSchema = z.object({
   ),
 });
 
+export const adSpendUpsertSchema = z.object({
+  daily_cost: z.number().nonnegative().max(1_000_000),
+  /** First day this daily spend applies. Defaults to today on the server. */
+  effective_from: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    isoDate.optional(),
+  ),
+});
+
+const rateTierSchema = z.object({
+  min_days: z.number().int().min(1).max(3650),
+  max_days: z.number().int().min(1).max(3650),
+  amount: z.number().nonnegative().max(1_000_000),
+});
+
+export const rateTiersReplaceSchema = z
+  .object({
+    tiers: z.array(rateTierSchema).min(1).max(24),
+  })
+  .superRefine((data, ctx) => {
+    const invalid = validateRateTiers(data.tiers);
+    if (invalid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: invalid,
+        path: ["tiers"],
+      });
+    }
+  });
+
 export const availabilityQuerySchema = z
   .object({
     start: isoDate,
@@ -111,5 +142,7 @@ export const availabilityQuerySchema = z
 export type UnitCreateInput = z.infer<typeof unitCreateSchema>;
 export type UnitUpdateInput = z.infer<typeof unitUpdateSchema>;
 export type UnitCostUpsertInput = z.infer<typeof unitCostUpsertSchema>;
+export type AdSpendUpsertInput = z.infer<typeof adSpendUpsertSchema>;
+export type RateTiersReplaceInput = z.infer<typeof rateTiersReplaceSchema>;
 export type RentalCreateInput = z.infer<typeof rentalCreateSchema>;
 export type RentalUpdateInput = z.infer<typeof rentalUpdateSchema>;

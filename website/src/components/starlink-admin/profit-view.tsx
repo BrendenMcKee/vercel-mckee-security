@@ -6,12 +6,13 @@ import {
   ChevronRight,
   CircleDollarSign,
   Loader2,
+  Megaphone,
   TrendingDown,
   TrendingUp,
   Wallet,
 } from "lucide-react";
 import { parseMoneyInput } from "@/lib/starlink/billing";
-import { upsertUnitCost } from "@/lib/starlink/client-api";
+import { upsertAdSpend, upsertUnitCost } from "@/lib/starlink/client-api";
 import {
   addDaysIso,
   isValidIsoDate,
@@ -24,14 +25,21 @@ import {
   formatMonthYear,
 } from "@/lib/starlink/format";
 import {
+  adSpendAsOf,
   buildProfitReport,
   costAsOf,
   recentMonthAnchors,
+  upcomingAdSpend,
   upcomingCost,
   type ProfitGrain,
   type UnitProfit,
 } from "@/lib/starlink/profit";
-import type { RentalWithUnit, Unit, UnitCost } from "@/lib/starlink/types";
+import type {
+  AdSpendRate,
+  RentalWithUnit,
+  Unit,
+  UnitCost,
+} from "@/lib/starlink/types";
 import { cn } from "@/lib/utils";
 import { Field, inputClass, Section } from "./form-ui";
 
@@ -126,6 +134,7 @@ function MoneyStat({
 function FleetCard({
   revenue,
   cost,
+  adSpend,
   profit,
   occupancy,
   rentals,
@@ -134,6 +143,7 @@ function FleetCard({
 }: {
   revenue: number;
   cost: number;
+  adSpend: number;
   profit: number;
   occupancy: number;
   occupiedDays: number;
@@ -177,9 +187,10 @@ function FleetCard({
           <Icon className="h-5 w-5" />
         </span>
       </div>
-      <div className="mt-5 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 sm:grid-cols-3 sm:gap-6">
+      <div className="mt-5 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
         <MoneyStat label="Rental income" value={revenue} tone="text-emerald-200" />
         <MoneyStat label="Starlink cost" value={cost} tone="text-orange-200" />
+        <MoneyStat label="Ad spend" value={adSpend} tone="text-sky-200" />
         <MoneyStat label="Profit" value={profit} tone={profitTone(profit)} />
       </div>
       <p className="mt-4 text-sm text-white/60">
@@ -232,6 +243,7 @@ function UnitCard({ row }: { row: UnitProfit }) {
       <div className="mt-3 space-y-1.5">
         <MoneyRow label="Rental income" value={row.revenue} />
         <MoneyRow label="Starlink cost" value={row.cost} />
+        <MoneyRow label="Ad spend" value={row.adSpend} />
       </div>
       <p className="mt-3 text-sm text-white/60">
         {bookingLabel(row.rentals)} · {occupancyLabel(row.occupiedDays, row.periodDays)}
@@ -367,10 +379,122 @@ function CostEditor({
   );
 }
 
+function AdSpendEditor({
+  rates,
+  kitCount,
+  onSaved,
+  onError,
+}: {
+  rates: AdSpendRate[];
+  kitCount: number;
+  onSaved: (message: string) => Promise<void> | void;
+  onError: (message: string) => void;
+}) {
+  const current = adSpendAsOf(rates, todayIsoToronto());
+  const upcoming = upcomingAdSpend(rates, todayIsoToronto());
+  const [costText, setCostText] = useState(
+    current ? String(current.daily_cost) : "5",
+  );
+  const [from, setFrom] = useState(todayIsoToronto());
+  const [busy, setBusy] = useState(false);
+  const share =
+    current && kitCount > 0 ? current.daily_cost / kitCount : null;
+
+  async function save() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const parsed = parseMoneyInput(costText);
+      if (!parsed.ok || parsed.value == null) {
+        onError("Enter a daily ad spend, like 5 or 2.50.");
+        return;
+      }
+      if (!isValidIsoDate(from)) {
+        onError("Pick a real date this spend should start on.");
+        return;
+      }
+      await upsertAdSpend({
+        daily_cost: parsed.value,
+        effective_from: from,
+      });
+      await onSaved("Saved the advertising rate.");
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Could not save ad spend.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-surface/60 p-4">
+      {current ? (
+        <p className="mb-3 text-sm text-white/60">
+          Current: {formatCurrency(current.daily_cost)}/day since{" "}
+          {formatDateShort(current.effective_from)}
+          {share != null
+            ? ` · ${formatCurrency(share)} per kit today`
+            : ""}
+          {upcoming
+            ? ` · next: ${formatCurrency(upcoming.daily_cost)}/day from ${formatDateShort(upcoming.effective_from)}`
+            : ""}
+        </p>
+      ) : (
+        <p className="mb-3 text-sm text-amber-200/90">
+          No ad spend recorded yet — profit will not include advertising until
+          you save a daily rate.
+        </p>
+      )}
+      {rates.length > 0 ? (
+        <ul className="mb-3 space-y-1 text-sm text-white/50">
+          {rates
+            .slice()
+            .sort((a, b) => a.effective_from.localeCompare(b.effective_from))
+            .map((row) => (
+              <li key={row.id}>
+                {formatCurrency(row.daily_cost)}/day from{" "}
+                {formatDateShort(row.effective_from)}
+                {current?.id === row.id ? " · current" : ""}
+              </li>
+            ))}
+        </ul>
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Daily ad spend">
+          <input
+            value={costText}
+            onChange={(e) => setCostText(e.target.value)}
+            inputMode="decimal"
+            placeholder="5"
+            className={inputClass}
+          />
+        </Field>
+        <Field label="Effective from">
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+      </div>
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy}
+        className="mt-3 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-[var(--primary-hover)] disabled:opacity-50 sm:min-h-0 sm:w-auto"
+      >
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        Save ad spend
+      </button>
+    </div>
+  );
+}
+
 export function ProfitView({
   units,
   rentals,
   costs,
+  adSpend,
   todayIso,
   onChanged,
   onError,
@@ -379,6 +503,7 @@ export function ProfitView({
   units: Unit[];
   rentals: RentalWithUnit[];
   costs: UnitCost[];
+  adSpend: AdSpendRate[];
   todayIso: string;
   onChanged: () => Promise<void> | void;
   onError: (message: string) => void;
@@ -388,8 +513,9 @@ export function ProfitView({
   const [anchor, setAnchor] = useState(todayIso);
 
   const report = useMemo(
-    () => buildProfitReport(units, rentals, costs, grain, anchor, todayIso),
-    [units, rentals, costs, grain, anchor, todayIso],
+    () =>
+      buildProfitReport(units, rentals, costs, grain, anchor, todayIso, adSpend),
+    [units, rentals, costs, grain, anchor, todayIso, adSpend],
   );
 
   const months = useMemo(() => {
@@ -402,9 +528,10 @@ export function ProfitView({
         "month",
         monthAnchor,
         todayIso,
+        adSpend,
       ),
     }));
-  }, [units, rentals, costs, todayIso]);
+  }, [units, rentals, costs, adSpend, todayIso]);
 
   function goPrev() {
     setAnchor((current) =>
@@ -494,12 +621,13 @@ export function ProfitView({
 
       <Section icon={TrendingUp} title="Month by month">
         <div className="overflow-x-auto rounded-xl border border-white/10">
-          <table className="w-full min-w-[28rem] text-left text-sm">
+          <table className="w-full min-w-[34rem] text-left text-sm">
             <thead className="bg-white/[0.03] text-sm font-semibold text-white/60">
               <tr>
                 <th className="px-3 py-2.5">Month</th>
                 <th className="px-3 py-2.5 text-right">Income</th>
-                <th className="px-3 py-2.5 text-right">Cost</th>
+                <th className="px-3 py-2.5 text-right">Starlink</th>
+                <th className="px-3 py-2.5 text-right">Ads</th>
                 <th className="px-3 py-2.5 text-right">Profit</th>
               </tr>
             </thead>
@@ -534,6 +662,9 @@ export function ProfitView({
                     <td className="px-3 py-2.5 text-right tabular-nums text-white/80">
                       {formatCurrency(monthReport.fleet.cost)}
                     </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-white/80">
+                      {formatCurrency(monthReport.fleet.adSpend)}
+                    </td>
                     <td
                       className={cn(
                         "px-3 py-2.5 text-right font-semibold tabular-nums",
@@ -548,6 +679,25 @@ export function ProfitView({
             </tbody>
           </table>
         </div>
+      </Section>
+
+      <Section icon={Megaphone} title="Advertising spend">
+        <p className="text-sm text-white/55">
+          Daily Meta/Google spend for the rental programme, split equally
+          across kits that existed that day. Saving a new amount keeps the old
+          one on past days — $2.50 through 7 August and $5 from 8 August stay
+          on the books as they happened.
+        </p>
+        <AdSpendEditor
+          key={adSpend.map((row) => row.id).join(",")}
+          rates={adSpend}
+          kitCount={units.length}
+          onSaved={async (message) => {
+            onSuccess(message);
+            await onChanged();
+          }}
+          onError={onError}
+        />
       </Section>
 
       <Section icon={CircleDollarSign} title="What each kit costs us">

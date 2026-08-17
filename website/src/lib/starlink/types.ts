@@ -3,6 +3,8 @@ import type { Tables } from "./database.types";
 export type Unit = Tables<"units">;
 export type UnitCost = Tables<"unit_costs">;
 export type Rental = Tables<"rentals">;
+export type RentalRateTier = Tables<"rental_rate_tiers">;
+export type AdSpendRate = Tables<"ad_spend_rates">;
 
 export type RentalUnitSummary = Pick<Unit, "id" | "name" | "color" | "active">;
 export type RentalWithUnit = Rental & { unit: RentalUnitSummary | null };

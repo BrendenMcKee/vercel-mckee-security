@@ -13,7 +13,13 @@ import {
   Satellite,
   Settings2,
 } from "lucide-react";
-import type { RentalWithUnit, Unit, UnitCost } from "@/lib/starlink/types";
+import type {
+  AdSpendRate,
+  RentalRateTier,
+  RentalWithUnit,
+  Unit,
+  UnitCost,
+} from "@/lib/starlink/types";
 import { fetchOverview } from "@/lib/starlink/client-api";
 import { todayIsoToronto } from "@/lib/starlink/dates";
 import {
@@ -28,6 +34,7 @@ import { FleetManager } from "./fleet-manager";
 import { ProfitView } from "./profit-view";
 import { AlertsView } from "./alerts-view";
 import { RentalModal } from "./rental-modal";
+import { RateCardBar } from "./rate-card-editor";
 import { Toast, type ToastState } from "./toast";
 
 type View = "schedule" | "rentals" | "fleet" | "profit" | "alerts";
@@ -47,6 +54,8 @@ export function StarlinkAdminApp() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [rentals, setRentals] = useState<RentalWithUnit[]>([]);
   const [costs, setCosts] = useState<UnitCost[]>([]);
+  const [rates, setRates] = useState<RentalRateTier[]>([]);
+  const [adSpend, setAdSpend] = useState<AdSpendRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [view, setView] = useState<View>("schedule");
@@ -68,6 +77,8 @@ export function StarlinkAdminApp() {
       setUnits(data.units);
       setRentals(data.rentals);
       setCosts(data.costs);
+      setRates(data.rates);
+      setAdSpend(data.adSpend);
       setLoadError("");
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Could not load data.");
@@ -184,6 +195,17 @@ export function StarlinkAdminApp() {
             <StarlinkStatsBar rentals={rentals} todayIso={todayIso} />
           </div>
 
+          <div className="mb-5">
+            <RateCardBar
+              rates={rates}
+              onSaved={async (message) => {
+                handleSuccess(message);
+                await refresh();
+              }}
+              onError={handleError}
+            />
+          </div>
+
           <nav className="no-scrollbar mb-5 flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-surface/40 p-1">
             {TABS.map((tab) => {
               const Icon = tab.icon;
@@ -251,6 +273,7 @@ export function StarlinkAdminApp() {
               units={units}
               rentals={rentals}
               costs={costs}
+              adSpend={adSpend}
               todayIso={todayIso}
               onChanged={refresh}
               onError={handleError}
@@ -271,6 +294,7 @@ export function StarlinkAdminApp() {
           rental={modalRental}
           units={units}
           rentals={rentals}
+          rates={rates}
           onClose={closeModal}
           onSaved={handleSaved}
           onError={handleError}

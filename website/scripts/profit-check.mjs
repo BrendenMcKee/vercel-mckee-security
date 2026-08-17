@@ -5,6 +5,11 @@
 // Run: node --import ./scripts/register-ts-alias.mjs scripts/profit-check.mjs
 
 import { buildProfitReport } from "@/lib/starlink/profit.ts";
+import {
+  DEFAULT_RATE_TIERS,
+  quoteForDays,
+  validateRateTiers,
+} from "@/lib/starlink/pricing.ts";
 
 const failures = [];
 function check(ok, label, detail = "") {
@@ -367,6 +372,121 @@ console.log("\n=== profitability math");
     "a backdated rate does not bill days before the kit existed",
     `${report.units[0].cost} vs ${expected.toFixed(2)}`,
   );
+}
+
+console.log("\n=== base rental rates");
+
+{
+  check(quoteForDays(DEFAULT_RATE_TIERS, 1) === 150, "1 day is $150");
+  check(quoteForDays(DEFAULT_RATE_TIERS, 3) === 150, "3 days is $150");
+  check(quoteForDays(DEFAULT_RATE_TIERS, 4) === 200, "4 days is $200");
+  check(quoteForDays(DEFAULT_RATE_TIERS, 11) === 250, "11 days is $250 (8–11 band)");
+  check(quoteForDays(DEFAULT_RATE_TIERS, 12) === 300, "12 days is $300");
+  check(quoteForDays(DEFAULT_RATE_TIERS, 21) === 400, "21 days is $400");
+  check(quoteForDays(DEFAULT_RATE_TIERS, 30) === 500, "30 days is $500");
+  check(quoteForDays(DEFAULT_RATE_TIERS, 31) === null, "31 days has no band");
+  check(
+    validateRateTiers([
+      { min_days: 1, max_days: 3, amount: 150 },
+      { min_days: 3, max_days: 7, amount: 200 },
+    ]) !== null,
+    "overlapping day ranges are rejected",
+  );
+}
+
+console.log("\n=== advertising spend");
+
+const adRates = [
+  {
+    id: "ad-250",
+    daily_cost: 2.5,
+    effective_from: "2026-06-01",
+    created_at: "2026-06-01T00:00:00.000Z",
+  },
+  {
+    id: "ad-500",
+    daily_cost: 5,
+    effective_from: "2026-08-08",
+    created_at: "2026-08-08T00:00:00.000Z",
+  },
+];
+
+{
+  const report = buildProfitReport(
+    [unitA],
+    [rental()],
+    costs,
+    "month",
+    "2026-08-13",
+    "2026-08-13",
+    adRates,
+  );
+  // Aug 1–7 at $2.50, Aug 8–31 at $5. One kit takes the whole daily amount.
+  const expected = 7 * 2.5 + 24 * 5;
+  check(
+    close(report.fleet.adSpend, expected),
+    "August splits $2.50 through the 7th and $5 from the 8th",
+    `${report.fleet.adSpend} vs ${expected}`,
+  );
+  check(
+    close(report.units[0].adSpend, expected),
+    "a lone kit carries the whole daily spend",
+    `${report.units[0].adSpend}`,
+  );
+  check(
+    close(report.fleet.profit, 310 - 200 - expected),
+    "profit is income minus Starlink minus ads",
+    `${report.fleet.profit}`,
+  );
+}
+
+{
+  const report = buildProfitReport(
+    [unitA, unitB],
+    [],
+    costs,
+    "month",
+    "2026-07-15",
+    "2026-07-15",
+    adRates,
+  );
+  // July: $2.50/day. unitA existed all 31 days; unitB created Jul 7 Toronto
+  // (2026-07-08T00:10:04Z is still Jul 7 in Toronto).
+  const unitBCreated = "2026-07-07";
+  const daysBeforeB = 6; // Jul 1–6
+  const daysWithBoth = 31 - daysBeforeB;
+  const expectedFleet = 31 * 2.5;
+  const expectedA = daysBeforeB * 2.5 + daysWithBoth * (2.5 / 2);
+  const expectedB = daysWithBoth * (2.5 / 2);
+  check(
+    close(report.fleet.adSpend, expectedFleet),
+    "July ads are $2.50 every day",
+    `${report.fleet.adSpend} vs ${expectedFleet}`,
+  );
+  check(
+    close(report.units[0].adSpend, expectedA),
+    "the older kit carries solo days, then half",
+    `${report.units[0].adSpend} vs ${expectedA.toFixed(2)}`,
+  );
+  check(
+    close(report.units[1].adSpend, expectedB),
+    "a kit added mid-month only shares from its creation day",
+    `${report.units[1].adSpend} vs ${expectedB.toFixed(2)}`,
+  );
+  check(unitBCreated === "2026-07-07", "fixture: unit B created Jul 7 Toronto");
+}
+
+{
+  const report = buildProfitReport(
+    [unitA],
+    [rental()],
+    costs,
+    "month",
+    "2026-08-13",
+    "2026-08-13",
+  );
+  check(report.fleet.adSpend === 0, "missing ad rates do not invent spend");
+  check(close(report.fleet.profit, 110), "without ads, profit matches the old math");
 }
 
 console.log("\n----------------------------------------");

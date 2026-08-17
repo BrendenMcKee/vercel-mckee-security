@@ -402,6 +402,57 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_spend_rates: {
+        Row: {
+          created_at: string
+          daily_cost: number
+          effective_from: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_cost: number
+          effective_from: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          daily_cost?: number
+          effective_from?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      rental_rate_tiers: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          max_days: number
+          min_days: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          max_days: number
+          min_days: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          max_days?: number
+          min_days?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       unit_costs: {
         Row: {
           created_at: string

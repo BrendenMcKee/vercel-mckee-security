@@ -14,6 +14,7 @@ import {
 } from "@/lib/inquiry-dates";
 import { sendEmail } from "@/lib/email";
 import { siteConfig } from "@/lib/site-config";
+import { quoteForRentalDates } from "@/lib/starlink/quote-rental";
 import {
   getSupabaseAdmin,
   isSupabaseConfigured,
@@ -132,6 +133,7 @@ async function tryWriteRequestedRental(data: InquiryData): Promise<string | null
   if (!data.pickupDate || !data.returnDate) return null;
   try {
     const supabase = getSupabaseAdmin();
+    const quotedPrice = await quoteForRentalDates(data.pickupDate, data.returnDate);
 
     const { data: inserted, error } = await supabase
       .from("rentals")
@@ -146,6 +148,7 @@ async function tryWriteRequestedRental(data: InquiryData): Promise<string | null
         pickup_date: data.pickupDate,
         pickup_time: data.pickupTime ?? null,
         return_date: data.returnDate,
+        quoted_price: quotedPrice,
         comments: data.comments ?? null,
       })
       .select("id")
@@ -203,7 +206,7 @@ export async function POST(request: Request) {
             {
               label: "Admin action",
               value:
-                "Open this request in the admin portal to set pricing, confirm, and lock in the dates. Nothing is reserved until you confirm.",
+                "Open this request in the admin portal to confirm and lock in the dates. The rental price is pre-filled from the base rate and can still be edited. Nothing is reserved until you confirm.",
               href: adminUrl,
               buttonLabel: "Review & confirm rental",
               cta: true,

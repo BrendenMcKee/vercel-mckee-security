@@ -3,6 +3,7 @@ import { guardAdminApi, mapDbError } from "@/lib/starlink/admin-guard";
 import { getSupabaseAdmin } from "@/lib/starlink/supabase-admin";
 import { rentalCreateSchema } from "@/lib/starlink/schemas";
 import { resolveDepositReturnedAmount } from "@/lib/starlink/billing";
+import { quoteForRentalDates } from "@/lib/starlink/quote-rental";
 import type { TablesInsert } from "@/lib/starlink/database.types";
 
 export const runtime = "nodejs";
@@ -49,7 +50,9 @@ export async function POST(request: Request) {
     pickup_date: input.pickup_date,
     pickup_time: input.pickup_time ?? null,
     return_date: input.return_date,
-    quoted_price: input.quoted_price ?? null,
+    quoted_price:
+      input.quoted_price ??
+      (await quoteForRentalDates(input.pickup_date, input.return_date)),
     deposit_amount: depositAmount,
     deposit_received: depositReceived,
     deposit_received_at: depositReceived ? nowIso : null,
