@@ -606,9 +606,9 @@ Phase 8C reverse-sync deltas (9.5.5B, Migration 8C): `qb_txn_id` text nullable, 
 
 Mirrors are working copies, never the system of record: QuickBooks wins on conflict for posted financial data (handover 23.10); drift flags `needs_review` rather than overwriting. **8A writes nothing into QuickBooks.** No `qb_tasks` in the 8A migration.
 
-**`services.started_on`** is specified above (R49) but **was never migrated**. The 8A schema migration must add it. Create-client / add-service UI still has to collect it; the seed infers it from `qb_invoices.txn_date`.
+**`services.started_on`** shipped 2026-08-17 in `qb_bridge_foundation`. Create-client / add-service UI still has to collect it; the seed infers it from `qb_invoices.txn_date`.
 
-**8A first migration slice (do not apply until the stakeholder says go):** one SQL migration via `supabase migration new qb_bridge_foundation`, then apply to the hosted project. Tables: `qb_bridges`, `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos`. Alter: `services.started_on date`. RLS per 4.3 (`private.is_admin()` already exists): admin SELECT on all five; no client policies; no INSERT/UPDATE/DELETE for `authenticated` (bridge routes use service role). Unique index on `qb_customers.profile_id` where not null. Indexes on `customer_list_id`, `txn_date`, `is_active`. Then regenerate `database.types.ts`. **Not in this slice:** `/api/qb/*`, `qb-bridge/`, Accounting tab, import UI, Lanvac `fullupdate`, `qb_tasks`.
+**8A first migration slice (applied 2026-08-17 on hosted):** `supabase/migrations/20260817143230_qb_bridge_foundation.sql`. Tables: `qb_bridges`, `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos`. Alter: `services.started_on date`. RLS: admin SELECT on all five; no client policies; no INSERT/UPDATE/DELETE for `authenticated` (bridge routes use service role). Unique index on `qb_customers.profile_id` where not null. Types regenerated. **Still not built:** `/api/qb/*`, `qb-bridge/`, Accounting tab, import UI, Lanvac `fullupdate`, `qb_tasks`.
 
 ### 4.3 RLS policy matrix
 
@@ -1294,7 +1294,7 @@ Sub-phases gate independently. 8A and 8B build against the **portal-test copy** 
 
 - [x] **[HUMAN]** D17: company file hygiene (9.5.7). Live `…\Company Files\McKee Security Live.QBW`. PORTAL-TEST `…\PORTAL-TEST\McKee Security PORTAL-TEST do-not-invoice.QBW`. Retired file in Archive_Old. TSheets still syncs on live.
 - [x] **[HUMAN]** D12 (machine): DennisPC, Pro 2024 R21P, file local. Remaining at first Windows sitting: approve the bridge ("even when QuickBooks is not running") on PORTAL-TEST. Copy-open sessions: quit Web Connector
-- [ ] Migration 8A (first slice only, after stakeholder says go): `qb_bridges`, `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos`, plus `services.started_on` (specified R49, never shipped). RLS per 4.3. Regenerate `database.types.ts`. No routes, no Windows binary, no `qb_tasks` in this file
+- [x] Migration 8A first slice (2026-08-17): `qb_bridges`, `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos`, plus `services.started_on`. RLS admin SELECT only. `database.types.ts` regenerated. No routes, no Windows binary, no `qb_tasks` in this file
 - [ ] `/api/qb/poll`, `/api/qb/report`, `/api/qb/mirror` routes (per-bridge secret, SHA-256 hash server-side, same auth model as gateways and cron)
 - [ ] `qb-bridge/` v0 (C#/.NET Windows service): QB session management via Desktop SDK/qbXML (not Web Connector), CustomerQuery/InvoiceQuery/ReceivePaymentQuery against the **portal-test copy**, refuse to run if the open file ≠ `expected_company_file`, mirror push on an interval, service autostart + crash recovery, structured local logging
 - [ ] Admin Accounting tab v0: bridge health (last poll, last mirror, `sandbox`/`live`, expected vs reported company file + QB version sanity check) and mirror browser (customers, balances, open invoices)
@@ -1436,6 +1436,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-17 | **8A first slice applied on hosted.** `qb_bridge_foundation`: five mirror tables + `services.started_on`. Admin SELECT only; service role writes later. Security advisors clean on the new tables. Next: `/api/qb/*` + Windows bridge against PORTAL-TEST (quit Web Connector). Still no posting, no Lanvac write. |
 | 2026-08-17 | **8A schema audit (no SQL applied).** First migration slice locked: `qb_bridges` + customer/invoice/payment/todo mirrors + `services.started_on` (planned, never shipped). `qb_payments` added because reverse-sync and the gather both need Receive Payment history. Named writes narrowed to `customer.create\|update` and `sales_receipt.create` (no `invoice.create`). D12 classes/items/machine are done; remaining human is bridge Allow + first live card inspect. |
 | 2026-08-17 | **PORTAL-TEST testing rules confirmed.** Leftover `July 14` sidecars are in `Archive_Old`. While testing, quit Web Connector from the tray (not Auto-Run off). Every sitting: confirm the open file is PORTAL-TEST. Portal card customers pay plan + HST only; McKee absorbs the Stripe fee (5800). |
 | 2026-08-16 | **Pre-API portal + gather closed.** Station fields, Ontario-only city dropdown (~806), account-number normalize, required-when-monitoring, address guess, and client emergency-numbers block (below the people list) are shipped. Excel aliases will be mapped at seed. Vercel env set; thank-you email sent. Writes are not on. Next session: Phase 8A on PORTAL-TEST, then Lanvac Excel seed, then `fullupdate` when you say go. |

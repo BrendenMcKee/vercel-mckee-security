@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_spend_rates: {
+        Row: {
+          created_at: string
+          daily_cost: number
+          effective_from: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_cost: number
+          effective_from: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          daily_cost?: number
+          effective_from?: string
+          id?: string
+        }
+        Relationships: []
+      }
       billing_events: {
         Row: {
           created_at: string
@@ -318,60 +339,6 @@ export type Database = {
           },
         ]
       }
-      profiles: {
-        Row: {
-          address: string | null
-          created_at: string
-          email: string | null
-          first_name: string
-          id: string
-          last_name: string
-          lanvac_account_code: string | null
-          lanvac_city: string | null
-          password_set_at: string | null
-          phone: string | null
-          role: Database["public"]["Enums"]["user_role"]
-          status: Database["public"]["Enums"]["profile_status"]
-          stripe_customer_id: string | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string
-          email?: string | null
-          first_name: string
-          id?: string
-          last_name: string
-          lanvac_account_code?: string | null
-          lanvac_city?: string | null
-          password_set_at?: string | null
-          phone?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
-          status?: Database["public"]["Enums"]["profile_status"]
-          stripe_customer_id?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          address?: string | null
-          created_at?: string
-          email?: string | null
-          first_name?: string
-          id?: string
-          last_name?: string
-          lanvac_account_code?: string | null
-          lanvac_city?: string | null
-          password_set_at?: string | null
-          phone?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
-          status?: Database["public"]["Enums"]["profile_status"]
-          stripe_customer_id?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       portal_alerts: {
         Row: {
           context: Json
@@ -402,24 +369,266 @@ export type Database = {
         }
         Relationships: []
       }
-      ad_spend_rates: {
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          lanvac_account_code: string | null
+          lanvac_city: string | null
+          last_name: string
+          password_set_at: string | null
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["profile_status"]
+          stripe_customer_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          lanvac_account_code?: string | null
+          lanvac_city?: string | null
+          last_name: string
+          password_set_at?: string | null
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["profile_status"]
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          lanvac_account_code?: string | null
+          lanvac_city?: string | null
+          last_name?: string
+          password_set_at?: string | null
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["profile_status"]
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      qb_bridges: {
         Row: {
           created_at: string
-          daily_cost: number
-          effective_from: string
+          expected_company_file: string
           id: string
+          label: string
+          last_error: string | null
+          last_mirror_at: string | null
+          last_seen_at: string | null
+          mode: string
+          qb_company_file: string | null
+          qb_company_name: string | null
+          qb_version: string | null
+          secret_hash: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          daily_cost: number
-          effective_from: string
+          expected_company_file: string
           id?: string
+          label: string
+          last_error?: string | null
+          last_mirror_at?: string | null
+          last_seen_at?: string | null
+          mode?: string
+          qb_company_file?: string | null
+          qb_company_name?: string | null
+          qb_version?: string | null
+          secret_hash: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
-          daily_cost?: number
-          effective_from?: string
+          expected_company_file?: string
           id?: string
+          label?: string
+          last_error?: string | null
+          last_mirror_at?: string | null
+          last_seen_at?: string | null
+          mode?: string
+          qb_company_file?: string | null
+          qb_company_name?: string | null
+          qb_version?: string | null
+          secret_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      qb_customers: {
+        Row: {
+          balance_cents: number
+          company_name: string | null
+          edit_sequence: string
+          email: string | null
+          is_active: boolean
+          list_id: string
+          name: string
+          parent_list_id: string | null
+          phone: string | null
+          profile_id: string | null
+          synced_at: string
+        }
+        Insert: {
+          balance_cents?: number
+          company_name?: string | null
+          edit_sequence: string
+          email?: string | null
+          is_active?: boolean
+          list_id: string
+          name: string
+          parent_list_id?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          synced_at?: string
+        }
+        Update: {
+          balance_cents?: number
+          company_name?: string | null
+          edit_sequence?: string
+          email?: string | null
+          is_active?: boolean
+          list_id?: string
+          name?: string
+          parent_list_id?: string | null
+          phone?: string | null
+          profile_id?: string | null
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qb_customers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qb_invoices: {
+        Row: {
+          amount_cents: number
+          balance_cents: number
+          customer_list_id: string
+          due_on: string | null
+          edit_sequence: string
+          is_memorized: boolean
+          is_paid: boolean
+          line_items: Json
+          ref_number: string | null
+          subtotal_cents: number | null
+          synced_at: string
+          tax_cents: number | null
+          txn_date: string
+          txn_id: string
+        }
+        Insert: {
+          amount_cents: number
+          balance_cents?: number
+          customer_list_id: string
+          due_on?: string | null
+          edit_sequence: string
+          is_memorized?: boolean
+          is_paid?: boolean
+          line_items?: Json
+          ref_number?: string | null
+          subtotal_cents?: number | null
+          synced_at?: string
+          tax_cents?: number | null
+          txn_date: string
+          txn_id: string
+        }
+        Update: {
+          amount_cents?: number
+          balance_cents?: number
+          customer_list_id?: string
+          due_on?: string | null
+          edit_sequence?: string
+          is_memorized?: boolean
+          is_paid?: boolean
+          line_items?: Json
+          ref_number?: string | null
+          subtotal_cents?: number | null
+          synced_at?: string
+          tax_cents?: number | null
+          txn_date?: string
+          txn_id?: string
+        }
+        Relationships: []
+      }
+      qb_payments: {
+        Row: {
+          amount_cents: number
+          customer_list_id: string
+          deposit_account: string | null
+          edit_sequence: string
+          payment_method: string | null
+          ref_number: string | null
+          synced_at: string
+          txn_date: string
+          txn_id: string
+        }
+        Insert: {
+          amount_cents: number
+          customer_list_id: string
+          deposit_account?: string | null
+          edit_sequence: string
+          payment_method?: string | null
+          ref_number?: string | null
+          synced_at?: string
+          txn_date: string
+          txn_id: string
+        }
+        Update: {
+          amount_cents?: number
+          customer_list_id?: string
+          deposit_account?: string | null
+          edit_sequence?: string
+          payment_method?: string | null
+          ref_number?: string | null
+          synced_at?: string
+          txn_date?: string
+          txn_id?: string
+        }
+        Relationships: []
+      }
+      qb_todos: {
+        Row: {
+          is_done: boolean
+          notes: string
+          reminder_date: string | null
+          synced_at: string
+          todo_id: string
+        }
+        Insert: {
+          is_done?: boolean
+          notes: string
+          reminder_date?: string | null
+          synced_at?: string
+          todo_id: string
+        }
+        Update: {
+          is_done?: boolean
+          notes?: string
+          reminder_date?: string | null
+          synced_at?: string
+          todo_id?: string
         }
         Relationships: []
       }
@@ -452,41 +661,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      unit_costs: {
-        Row: {
-          created_at: string
-          effective_from: string
-          id: string
-          monthly_cost: number
-          plan_name: string | null
-          unit_id: string
-        }
-        Insert: {
-          created_at?: string
-          effective_from: string
-          id?: string
-          monthly_cost: number
-          plan_name?: string | null
-          unit_id: string
-        }
-        Update: {
-          created_at?: string
-          effective_from?: string
-          id?: string
-          monthly_cost?: number
-          plan_name?: string | null
-          unit_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "unit_costs_unit_id_fkey"
-            columns: ["unit_id"]
-            isOneToOne: false
-            referencedRelation: "units"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       rental_reminders: {
         Row: {
@@ -624,6 +798,7 @@ export type Database = {
           profile_id: string
           seat_count: number
           service_type: Database["public"]["Enums"]["service_type"]
+          started_on: string | null
           status: Database["public"]["Enums"]["service_status"]
           stripe_subscription_id: string | null
           tier: string
@@ -643,6 +818,7 @@ export type Database = {
           profile_id: string
           seat_count?: number
           service_type: Database["public"]["Enums"]["service_type"]
+          started_on?: string | null
           status?: Database["public"]["Enums"]["service_status"]
           stripe_subscription_id?: string | null
           tier: string
@@ -662,6 +838,7 @@ export type Database = {
           profile_id?: string
           seat_count?: number
           service_type?: Database["public"]["Enums"]["service_type"]
+          started_on?: string | null
           status?: Database["public"]["Enums"]["service_status"]
           stripe_subscription_id?: string | null
           tier?: string
@@ -673,6 +850,41 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unit_costs: {
+        Row: {
+          created_at: string
+          effective_from: string
+          id: string
+          monthly_cost: number
+          plan_name: string | null
+          unit_id: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from: string
+          id?: string
+          monthly_cost: number
+          plan_name?: string | null
+          unit_id: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          id?: string
+          monthly_cost?: number
+          plan_name?: string | null
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_costs_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
             referencedColumns: ["id"]
           },
         ]
@@ -726,16 +938,9 @@ export type Database = {
         }
         Returns: string
       }
-      cleanup_rate_limits: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      cleanup_rate_limits: { Args: never; Returns: number }
       consume_rate_limit: {
-        Args: {
-          p_key: string
-          p_max: number
-          p_window_seconds: number
-        }
+        Args: { p_key: string; p_max: number; p_window_seconds: number }
         Returns: boolean
       }
       save_caller_id_list: {
@@ -755,7 +960,11 @@ export type Database = {
       billing_method: "stripe" | "manual"
       cloud_tier: "7day" | "30day" | "90day"
       footage_status: "pending" | "processing" | "ready" | "failed" | "expired"
-      monitoring_tier: "landline" | "cellular" | "cellular_tc" | "cellular_tc_home"
+      monitoring_tier:
+        | "landline"
+        | "cellular"
+        | "cellular_tc"
+        | "cellular_tc_home"
       payment_method: "etransfer" | "cheque" | "cash" | "other"
       profile_status: "pending" | "active" | "disabled"
       service_status: "active" | "paused" | "cancelled" | "unpaid"
@@ -892,7 +1101,12 @@ export const Constants = {
       billing_method: ["stripe", "manual"],
       cloud_tier: ["7day", "30day", "90day"],
       footage_status: ["pending", "processing", "ready", "failed", "expired"],
-      monitoring_tier: ["landline", "cellular", "cellular_tc", "cellular_tc_home"],
+      monitoring_tier: [
+        "landline",
+        "cellular",
+        "cellular_tc",
+        "cellular_tc_home",
+      ],
       payment_method: ["etransfer", "cheque", "cash", "other"],
       profile_status: ["pending", "active", "disabled"],
       service_status: ["active", "paused", "cancelled", "unpaid"],

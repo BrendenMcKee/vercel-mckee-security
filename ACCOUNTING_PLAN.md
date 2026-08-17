@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-17 (8A schema audited; first migration not applied. PORTAL-TEST + quit Web Connector. Sales receipts on 4000 with classes. McKee absorbs Stripe fees.)
+**Last updated:** 2026-08-17 (8A first slice applied: mirror tables + `started_on`. No posting yet. PORTAL-TEST + quit Web Connector. Sales receipts on 4000 with classes. McKee absorbs Stripe fees.)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 

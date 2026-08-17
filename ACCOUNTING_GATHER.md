@@ -8,7 +8,7 @@ VoIP is not booked correctly today. **Create new items. Do not rename** the item
 
 ## Status
 
-**Next:** Gather is complete. 8A schema is audited (2026-08-17); no SQL applied yet. First slice when you say go: mirror tables + `services.started_on` only. Always confirm PORTAL-TEST is open and Web Connector is quit. Do not start the Lanvac `fullupdate` write until you say go. Do not delete `McKee Security Live.*`.
+**Next:** 8A first slice is on hosted (2026-08-17): empty mirror tables + `services.started_on`. Next sitting is the cloud poll/report/mirror routes and the Windows bridge against PORTAL-TEST. Always confirm PORTAL-TEST is open and Web Connector is quit. Do not start the Lanvac `fullupdate` write until you say go. Do not delete `McKee Security Live.*`.
 
 Required before any integration starts:
 
