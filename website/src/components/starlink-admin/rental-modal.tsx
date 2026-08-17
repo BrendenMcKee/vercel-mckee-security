@@ -775,7 +775,7 @@ export function RentalModal({
           {/* Money */}
           <Section icon={Receipt} title="Billing">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Rental price">
+              <Field label="Rental price (before HST)">
                 <input
                   className={inputClass}
                   inputMode="decimal"
@@ -784,7 +784,7 @@ export function RentalModal({
                     setPriceTouched(true);
                     set("quoted_price", e.target.value);
                   }}
-                  placeholder="0.00"
+                  placeholder="200"
                 />
               </Field>
               <div className="flex items-end">
@@ -801,7 +801,7 @@ export function RentalModal({
                   title={
                     canMarkPaid
                       ? undefined
-                      : "Enter the rental price before marking it paid."
+                      : "Enter the pre-tax rental price before marking it paid."
                   }
                 />
               </div>
@@ -830,7 +830,11 @@ export function RentalModal({
               </p>
             ) : days > 0 && baseQuote == null ? (
               <p className="text-xs text-white/45">
-                No base rate for {days} days — enter a price.
+                No base rate for {days} days — enter the pre-tax price.
+              </p>
+            ) : days === 0 ? (
+              <p className="text-xs text-white/45">
+                Enter the pre-tax rental price. HST is added when you invoice.
               </p>
             ) : null}
             {price === 0 ? (
@@ -839,8 +843,8 @@ export function RentalModal({
               </StateNote>
             ) : !canMarkPaid ? (
               <StateNote tone="neutral" icon={Info}>
-                What the customer is charged for the whole rental. Tick it off
-                once the payment lands.
+                Pre-tax price for the whole rental. HST is added when you
+                invoice. Tick it off once the payment lands.
               </StateNote>
             ) : paid ? (
               <StateNote tone="emerald" icon={CircleCheck}>
