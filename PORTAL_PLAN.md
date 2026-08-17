@@ -608,7 +608,7 @@ Mirrors are working copies, never the system of record: QuickBooks wins on confl
 
 **`services.started_on`** shipped 2026-08-17 in `qb_bridge_foundation`. Create-client / add-service UI still has to collect it; the seed infers it from `qb_invoices.txn_date`.
 
-**8A first migration slice (applied 2026-08-17 on hosted):** `supabase/migrations/20260817143230_qb_bridge_foundation.sql`. Tables: `qb_bridges`, `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos`. Alter: `services.started_on date`. RLS: admin SELECT on all five; no client policies; no INSERT/UPDATE/DELETE for `authenticated` (bridge routes use service role). Unique index on `qb_customers.profile_id` where not null. Types regenerated. **Still not built:** `/api/qb/*`, `qb-bridge/`, Accounting tab, import UI, Lanvac `fullupdate`, `qb_tasks`.
+**8A first migration slice (applied 2026-08-17 on hosted):** `supabase/migrations/20260817143259_qb_bridge_foundation.sql` (hosted version `20260817143259`). Tables: `qb_bridges`, `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos`. Alter: `services.started_on date`. RLS: admin SELECT on all five; no client policies; no INSERT/UPDATE/DELETE for `authenticated` (bridge routes use service role). Unique index on `qb_customers.profile_id` where not null. Types regenerated. **Still not built:** `/api/qb/*`, `qb-bridge/`, Accounting tab, import UI, Lanvac `fullupdate`, `qb_tasks`.
 
 ### 4.3 RLS policy matrix
 
@@ -1436,6 +1436,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-17 | **8A first slice audited against hosted.** Columns, CHECKs, FKs, unique `profile_id`, indexes, admin-only SELECT policies, `private.set_updated_at` trigger, and empty row counts all match 4.2/4.3. `qb_tasks` is absent. Not in Realtime. Security advisors have no findings on the new tables (unused-index INFO is expected on empty mirrors). No second DDL. Local filename aligned to hosted version `20260817143259`. Next: `/api/qb/*` then the Windows bridge on PORTAL-TEST. |
 | 2026-08-17 | **8A first slice applied on hosted.** `qb_bridge_foundation`: five mirror tables + `services.started_on`. Admin SELECT only; service role writes later. Security advisors clean on the new tables. Next: `/api/qb/*` + Windows bridge against PORTAL-TEST (quit Web Connector). Still no posting, no Lanvac write. |
 | 2026-08-17 | **8A schema audit (no SQL applied).** First migration slice locked: `qb_bridges` + customer/invoice/payment/todo mirrors + `services.started_on` (planned, never shipped). `qb_payments` added because reverse-sync and the gather both need Receive Payment history. Named writes narrowed to `customer.create\|update` and `sales_receipt.create` (no `invoice.create`). D12 classes/items/machine are done; remaining human is bridge Allow + first live card inspect. |
 | 2026-08-17 | **PORTAL-TEST testing rules confirmed.** Leftover `July 14` sidecars are in `Archive_Old`. While testing, quit Web Connector from the tray (not Auto-Run off). Every sitting: confirm the open file is PORTAL-TEST. Portal card customers pay plan + HST only; McKee absorbs the Stripe fee (5800). |
