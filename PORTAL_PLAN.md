@@ -1018,11 +1018,29 @@ Why the bridge must be local: the Intuit Desktop SDK is a Windows COM interface 
 | Component | Runs on | Notes |
 |-----------|---------|-------|
 | `qb_tasks` queue + `qb_customers`/`qb_invoices` mirrors + audit fields | Supabase | State machine per handover 23.3 (`pending -> validated -> ready_for_quickbooks -> in_progress -> posted_to_quickbooks / failed / needs_review / cancelled`); idempotency keys per 23.9 (`stripe_payment:{payment_intent_id}` etc.); RLS admin-only, service-role writes |
-| Bridge API routes (`/api/qb/poll`, `/api/qb/report`, `/api/qb/mirror`) | Vercel | Per-bridge secret (`Authorization: Bearer` + `X-QB-Bridge-Id`; SHA-256 in `qb_bridges.secret_hash`). **8A:** poll returns `tasks: []` and `mirror_wanted`; report stores heartbeat / `last_error` only (task results → 409 until 8B); mirror upserts customers/invoices/payments/todos and never writes `profile_id`. Wrong-file: live poll/mirror 409; sandbox poll `file_ok: false`; sandbox mirror 409. Register: `website/scripts/qb-bridge-register.mjs`. Check: `website/scripts/qb-bridge-check.mjs`. |
+| Bridge API routes (`/api/qb/poll`, `/api/qb/report`, `/api/qb/mirror`) | Vercel | See **9.5.2A**. Per-bridge secret, not a Vercel env var. **8A:** poll returns `tasks: []`; report is heartbeat-only; mirror upserts and never writes `profile_id`. |
 | Local bridge | Office QB PC (Windows service) | C#/.NET + Desktop SDK/qbXML. **Not Web Connector** (TSheets already owns that slot on the live file; 9.5.7). Validates payloads against **named commands only** (`sales_receipt.create`, `customer.query`...); syncs mirrors on an interval; never accepts free-form writes. Opens only `expected_company_file` |
 | Task enqueueing | Vercel (webhook + admin actions) | Stripe `invoice.paid` already lands in `billing_events`; Scope B adds an enqueue step mapping it to a `sales_receipt.create` task. `billing_events` retention means history can be backfilled from day one |
 | Admin Accounting tab | Portal admin dashboard | Sync status per payment, task queue with retry/cancel, `needs_review` resolution (handover 7.6) |
 | MCP server (Scope C) | Vercel (`/api/mcp`, streamable HTTP transport) with auth | Tools call the same cloud API; **read tools** hit mirrors (`search_customer`, `get_ar_aging_summary`), **draft tools** create reviewable drafts, **posting tools** enqueue tasks that require admin approval in the portal (permission tiers per handover 23.6). Destructive operations (void/delete, journal entries, chart of accounts) are never exposed |
+
+#### 9.5.2A Cloud route contract (8A, shipped 2026-08-17)
+
+The Windows bridge is not built yet. This is the contract it must speak. All three routes are `POST` only.
+
+**Auth.** `Authorization: Bearer <secret>` (scheme case-insensitive) and `X-QB-Bridge-Id: <uuid>`. Invalid UUID, missing headers, or a wrong secret are **401**. SHA-256 hex of the secret is stored in `qb_bridges.secret_hash`. Rate limit: 120 requests / 60s per bridge id (fail-open if the RPC errors).
+
+**Register.** `website/scripts/qb-bridge-register.mjs` creates or `--rotate`s the row labeled **Office QuickBooks PC** (not “the first row”, so a leftover `qb-bridge-check` fixture cannot be rotated). Prints the raw secret once. Not a Vercel env var. Check: `website/scripts/qb-bridge-check.mjs` against a running Next server.
+
+**Company file.** Compare is case, slash, wrapping-quote, and trailing-separator insensitive. Reported paths are stored with quotes stripped (original casing kept). `file_ok` on poll is `true` / `false` / `null` (`null` = no path reported yet). Live (and any mode other than `sandbox`) refuses poll/mirror on a missing or mismatched path (**409** `company_file_required` / `company_file_mismatch`). Sandbox poll with a wrong file is **200** + `file_ok: false` so the bridge can learn `expected_company_file`. Sandbox mirror with a wrong file is **409** so live data cannot fill the test mirrors. Report records whatever file is open (expected vs reported is an Accounting-tab display, not a write).
+
+**Bodies (camelCase JSON).**
+
+- Poll: optional `company_file`, `company_name`, `qb_version`, `error`. Response: `{ ok, file_ok, bridge: { id, label, mode, expected_company_file }, tasks: [], mirror_wanted: ["customers","invoices","payments","todos"] }`.
+- Report: same heartbeat fields. Non-empty `results` → **409** `task_queue_not_enabled` until 8B.
+- Mirror: `company_file` required. Optional arrays `customers`, `invoices`, `payments`, `todos` (max 400 each). Incremental upsert by PK; last-wins if a batch repeats a key; rows not in the batch are left in place. `profile_id` is never written. Payment `amount_cents` must be `> 0`. Empty `due_on` / `reminder_date` become null.
+
+**Not in 8A:** `qb_tasks`, `/api/qb/payments` (that path is 8C reverse-sync), Windows `qb-bridge/`, Accounting tab, Lanvac writes.
 
 #### 9.5.3 Execution strategy
 
@@ -1422,7 +1440,7 @@ Sub-phases gate independently. 8A and 8B build against the **portal-test copy** 
 | `LANVAC_DEALER_ACCOUNT` | Vercel only | D13 — **set 2026-08-16** (`10638`). Server-only. |
 | `LANVAC_DEALER_PASSWORD` | Vercel only | D13 — **set 2026-08-16**. WinLinks dealer password. Sensitive. Server-only. Never git, never `NEXT_PUBLIC_`. |
 
-Phase 8 bridge credentials are **not** Vercel env vars: each bridge holds its own secret locally (hash in `qb_bridges.secret_hash`), same model as the camera gateways.
+Phase 8 bridge credentials are **not** Vercel env vars: each bridge holds its own secret locally (hash in `qb_bridges.secret_hash`), same model as the camera gateways. Create or rotate the office row with `website/scripts/qb-bridge-register.mjs` (label `Office QuickBooks PC`). The raw secret is printed once and stored on DennisPC later.
 
 Phase 0 values (public-safe): `NEXT_PUBLIC_SUPABASE_URL=https://cxmydfhbclfwzboqibmo.supabase.co`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_4YC9QGFgdzv7GVReW5u3iA_EFKLH-LP`.
 
@@ -1436,6 +1454,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-17 | **8A cloud routes re-audited.** Quoted company paths are stripped before storage (compare already ignored quotes). Live missing-file `last_error` no longer says “mismatch”. Contract written as 9.5.2A for the Windows sitting. No second DDL. Next: `qb-bridge/` on PORTAL-TEST (quit Web Connector). |
 | 2026-08-17 | **8A cloud routes audited.** Invalid bridge id is 401 (not a UUID 500). Register targets the Office label so a leftover check row cannot be rotated. Company-file compare strips quotes. Non-sandbox modes fail closed. `file_ok` is true/false/null. Mirror batches are last-wins on PK. Next: Windows `qb-bridge/` on PORTAL-TEST (quit Web Connector). |
 | 2026-08-17 | **8A cloud routes.** `/api/qb/poll`, `/api/qb/report`, `/api/qb/mirror` authenticate with a per-bridge bearer secret (hash only in `qb_bridges`). Poll returns no write tasks. Report is heartbeat-only. Mirror upserts the four read-only snapshots and keeps `profile_id`. Wrong-file guard matches 9.5.7. Secret is created by `qb-bridge-register.mjs`, not a Vercel env var. Next: Windows `qb-bridge/` on PORTAL-TEST (quit Web Connector). |
 | 2026-08-17 | **8A first slice audited against hosted.** Columns, CHECKs, FKs, unique `profile_id`, indexes, admin-only SELECT policies, `private.set_updated_at` trigger, and empty row counts all match 4.2/4.3. `qb_tasks` is absent. Not in Realtime. Security advisors have no findings on the new tables (unused-index INFO is expected on empty mirrors). No second DDL. Local filename aligned to hosted version `20260817143259`. Next: `/api/qb/*` then the Windows bridge on PORTAL-TEST. |

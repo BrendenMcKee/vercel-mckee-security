@@ -1,6 +1,6 @@
 # How the Accounting System Will Work (Plain-Language Guide)
 
-**Last updated:** 2026-08-17 (8A cloud routes shipped. Empty mirrors until the Windows bridge runs. No posting. Next: `qb-bridge/` on PORTAL-TEST.)
+**Last updated:** 2026-08-17 (8A cloud routes shipped and re-audited. Empty mirrors until the Windows bridge runs. No posting. Next: `qb-bridge/` on PORTAL-TEST.)
 **Who this is for:** Anyone at McKee Security (including the bookkeeper) who wants to understand how the portal and QuickBooks Desktop will work together, without reading technical documents.
 **Technical companion:** `PORTAL_PLAN.md` Sections 9.5 and 9.6 and the Phase 8/9 checklists in Section 10 are the authoritative build spec. This document explains the same design in plain language. If the two ever disagree, `PORTAL_PLAN.md` wins.
 
@@ -24,7 +24,7 @@ The customer portal handles everything customers and admins touch day to day: ac
 - If the computer is off, nothing breaks. Work queues up in the cloud and the bridge catches up the next time the computer is on. The portal and website never depend on the office PC being awake.
 - It only accepts a short list of named operations (record a payment, create a customer, and so on). It can never be asked to do something open-ended to the books.
 
-**The mirrors (Phase 8A).** The bridge regularly copies a read-only snapshot of the QuickBooks customer list, invoices, receive-payments, and to-dos up to the portal's database. That means admins (and later the AI assistant) can look at "what do the books say?" from anywhere, any time, even when the office PC is off, without touching QuickBooks itself. Mirrors are a copy for reading; changing a mirror is impossible, and mirrors never overwrite portal data. The first 8A database slice creates those mirror tables only. It does not post, and it does not create unpaid invoices.
+**The mirrors (Phase 8A).** The bridge regularly copies a read-only snapshot of the QuickBooks customer list, invoices, receive-payments, and to-dos up to the portal's database. That means admins (and later the AI assistant) can look at "what do the books say?" from anywhere, any time, even when the office PC is off, without touching QuickBooks itself. Mirrors are a copy for reading; changing a mirror is impossible, and mirrors never overwrite portal data. The cloud routes that receive those snapshots (`/api/qb/poll`, `/api/qb/report`, `/api/qb/mirror`) are already live. They do not post, and they do not create unpaid invoices. The Windows program that talks to QuickBooks is the next sitting.
 
 **The task queue (Phase 8B).** A to-do list in the cloud that is the only way anything gets written into QuickBooks. Every entry says exactly what to do ("record a $419.33 payment from Jane Smith"), carries a fingerprint so the same payment can never be posted twice even if a glitch replays it, and moves through checked states: pending, approved, posted, or needs review. Anything that fails or looks ambiguous parks in "needs review" on the admin Accounting tab with a plain explanation and suggested fixes.
 

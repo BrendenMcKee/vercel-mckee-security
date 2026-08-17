@@ -89,6 +89,8 @@ Renamed 2026-08-16 from `McKee Security July 14.QBW`. Company title is still McK
 
 **TSheets does not pin a file path.** It uses whichever company file is open. After the copy sitting, live was reopened and Auto-Run is on (Complete). Confirmed practice 2026-08-17: quit Web Connector from the tray whenever PORTAL-TEST is open. Leftover `July 14` sidecars are in `Archive_Old`.
 
+**Cloud routes (2026-08-17):** `/api/qb/poll`, `/api/qb/report`, `/api/qb/mirror` are live. They do not talk to this PC. The sandbox `expected_company_file` is the PORTAL-TEST path above. Register the office row with `website/scripts/qb-bridge-register.mjs` (label `Office QuickBooks PC`) when a secret should exist. Contract: `PORTAL_PLAN.md` 9.5.2A.
+
 ---
 
 ## Web Connector / TSheets

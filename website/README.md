@@ -53,6 +53,8 @@ npm run dev    # http://localhost:3000
 
 Portal / Stripe / cron variables are in [`../PORTAL_PLAN.md`](../PORTAL_PLAN.md) Section 12. Local portal work also needs the three Supabase keys in `.env.local`.
 
+QuickBooks bridge secrets are **not** Vercel env vars. `/api/qb/poll`, `/api/qb/report`, and `/api/qb/mirror` authenticate with a per-bridge bearer secret (hash in `qb_bridges`). Create the sandbox row with `scripts/qb-bridge-register.mjs`. Contract: `PORTAL_PLAN.md` 9.5.2A.
+
 ## Agent note
 
 This project pins a future Next.js with breaking changes. See [`AGENTS.md`](./AGENTS.md):

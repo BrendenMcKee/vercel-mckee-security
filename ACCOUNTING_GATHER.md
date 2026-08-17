@@ -8,7 +8,7 @@ VoIP is not booked correctly today. **Create new items. Do not rename** the item
 
 ## Status
 
-**Next:** 8A cloud routes are in the website (`/api/qb/poll|report|mirror`). Create the sandbox bridge row with `website/scripts/qb-bridge-register.mjs` when you are ready to store a secret (not a Vercel env var). Next sitting is the Windows bridge on DennisPC against PORTAL-TEST. Always confirm PORTAL-TEST is open and Web Connector is quit. Do not start the Lanvac `fullupdate` write until you say go. Do not delete `McKee Security Live.*`.
+**Next:** 8A cloud routes are shipped and re-audited (`/api/qb/poll|report|mirror`; contract in `PORTAL_PLAN.md` 9.5.2A). Create the sandbox row with `website/scripts/qb-bridge-register.mjs` (label `Office QuickBooks PC`) when you are ready to store a secret — not a Vercel env var. Next sitting is the Windows bridge on DennisPC against PORTAL-TEST. Always confirm PORTAL-TEST is open and Web Connector is quit. Do not start the Lanvac `fullupdate` write until you say go. Do not delete `McKee Security Live.*`.
 
 Required before any integration starts:
 

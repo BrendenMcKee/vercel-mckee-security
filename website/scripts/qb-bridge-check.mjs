@@ -117,6 +117,16 @@ try {
   });
   const quotedJson = await quoted.json();
   check("poll accepts quoted company path", quoted.ok && quotedJson.file_ok === true, `status=${quoted.status}`);
+  const { data: storedFile } = await admin
+    .from("qb_bridges")
+    .select("qb_company_file")
+    .eq("id", bridgeId)
+    .single();
+  check(
+    "quoted company path is stored without quotes",
+    storedFile?.qb_company_file === expectedFile,
+    `stored=${storedFile?.qb_company_file}`,
+  );
 
   const livePoll = await fetch(`${baseUrl}/api/qb/poll`, {
     method: "POST",

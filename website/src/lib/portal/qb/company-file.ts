@@ -10,12 +10,16 @@ export const PORTAL_TEST_COMPANY_FILE =
 export const LIVE_COMPANY_FILE =
   "C:\\Users\\Public\\Documents\\Intuit\\QuickBooks\\Company Files\\McKee Security Live.QBW";
 
+/** Strip wrapping quotes; keep the caller's casing for storage / display. */
+export function displayCompanyFile(path: string | null | undefined): string | null {
+  if (!path?.trim()) return null;
+  const stripped = path.trim().replace(/^["']+|["']+$/g, "").trim();
+  return stripped || null;
+}
+
 /** Case, slash, quote, and trailing-separator insensitive compare. */
 export function normalizeCompanyFile(path: string): string {
-  return path
-    .trim()
-    .replace(/^["']+|["']+$/g, "")
-    .trim()
+  return (displayCompanyFile(path) ?? "")
     .replace(/\//g, "\\")
     .replace(/\\+$/g, "")
     .toLowerCase();

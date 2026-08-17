@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
-import { companyFilesMatch } from "@/lib/portal/qb/company-file";
+import { companyFilesMatch, displayCompanyFile } from "@/lib/portal/qb/company-file";
 import type { AuthorizedQbBridge } from "@/lib/portal/qb/auth";
 import type { QbHeartbeat } from "@/lib/portal/qb/schemas";
 
@@ -53,7 +53,9 @@ export async function stampBridgeSeen(
   const patch: Record<string, string | null> = {
     last_seen_at: new Date().toISOString(),
   };
-  if (heartbeat.company_file != null) patch.qb_company_file = heartbeat.company_file;
+  if (heartbeat.company_file != null) {
+    patch.qb_company_file = displayCompanyFile(heartbeat.company_file);
+  }
   if (heartbeat.company_name != null) patch.qb_company_name = heartbeat.company_name;
   if (heartbeat.qb_version != null) patch.qb_version = heartbeat.qb_version;
   if ("last_error" in extra) {

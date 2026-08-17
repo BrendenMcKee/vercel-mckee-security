@@ -45,7 +45,10 @@ export async function POST(request: Request) {
   if (!guard.ok) {
     try {
       await stampBridgeSeen(auth.bridge.id, heartbeat, {
-        last_error: mismatchErrorMessage(guard.expected, guard.reported),
+        last_error:
+          guard.error === "company_file_required"
+            ? `Live mode requires company_file. expected=${guard.expected}`
+            : mismatchErrorMessage(guard.expected, guard.reported),
       });
     } catch {
       // Still return the file refusal; heartbeat is best-effort here.
