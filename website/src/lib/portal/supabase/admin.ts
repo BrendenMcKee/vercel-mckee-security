@@ -10,6 +10,7 @@ import type { Database } from "@/lib/portal/database.types";
  * - auth.admin operations (activation user creation, admin seeding)
  * - invitation validation before a session exists
  * - Stripe webhook and cron contexts
+ * - QuickBooks bridge routes (`/api/qb/poll|report|mirror`)
  * - rate-limit RPC + portal_alerts writes (service-role-only surfaces)
  * - last caller-id change time (clients have no SELECT on caller_id_changes)
  * The Phase 7 security sweep greps for getPortalAdminClient and checks every

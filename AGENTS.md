@@ -16,7 +16,8 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
   pre-existing lint errors/warnings; a clean exit is not expected on an unmodified tree.
 - There is no automated test suite. `data-drops-aws-backend` has a placeholder `test` script, and
   `website/scripts/*-check.mjs` are ad-hoc manual check scripts, not a runner. Five are worth
-  re-running after UI or email changes:
+  re-running after UI or email changes; `qb-bridge-check.mjs` is the extra one after
+  QuickBooks cloud-route changes:
   - `mobile-audit.mjs` — both portals in a real browser at an iPhone viewport (needs seeded Supabase
     users). Flags horizontal overflow and screenshots every page.
   - `starlink-admin-ui-check.mjs` — the Starlink admin at 390/740x360/768/1024/1920 against a running
@@ -43,8 +44,12 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
     containers once), that the widget's rendered height still matches the space the component
     reserves for it, that the band collapses when Elfsight is blocked, and that the retired
     `/api/reviews` route is gone.
+  - `qb-bridge-check.mjs` — `/api/qb/poll|report|mirror` against a running dev server (needs
+    hosted or local Supabase). Creates a throwaway sandbox bridge, asserts auth, the
+    company-file guard, empty write tasks, heartbeat-only report, and a mirror upsert that
+    keeps `profile_id`. Does not talk to QuickBooks.
 
-  All four write screenshots to gitignored directories.
+  The UI/email checks write screenshots to gitignored directories.
 - Data Drops backend (`data-drops-aws-backend`, Express + MySQL): rarely run locally. The website's
   `/api/dd/*` proxy defaults to the live AWS API (`DATA_DROPS_API_URL`), so you do not need it for
   portal/marketing work. To run it you must supply a MySQL and `RDS_*` env vars; see its `README.md`.
