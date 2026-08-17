@@ -141,12 +141,12 @@ The account (490004615514, profile `eb-cli`) was fully audited and then cleaned 
 | D9 | Per-site capture tuning | Phase 6A | Default is continuous mainstream H.265 (R18). Per-camera knobs: bitrate cap pushed to the camera (U-code, target 2 to 3 Mbps for 4MP), motion-gated upload for constrained links or budget-sensitive clients. Confirm defaults against pilot bandwidth data |
 | D10 | Legacy AWS decommission | **Done 2026-07-04** | Executed with stakeholder approval: all six legacy EB applications deleted across both regions, orphaned S3 objects removed, stale security groups detached from RDS, Data Drops + RDS untouched and verified healthy (1.4). Remaining human items: rotate the exposed Gmail app password; remove stale DNS records for the deleted load balancer |
 | D11 | Manual payment instructions + reminder cadence | Phase 5 | **E-transfer address resolved 2026-08-13:** `dennis@mckeesecurity.ca` (`PAYMENT_INSTRUCTIONS` in `billing.ts`). First reminder 7 days before due; overdue stays on the admin digest until recorded. |
-| D12 | QuickBooks host machine + GL mapping | Phase 8A (machine), Phase 8C (mapping) | **Machine:** DennisPC, Pro 2024 R21P, live `McKee Security Live.QBW` (D17). **Mapping locked 2026-08-16:** portal-collected payments post as **sales receipts** (not unpaid invoices). Item `Annual Monitoring` and new VoIP items on **4000 · Product Sales**. Class `Security - Monitoring` or `VoIP - Subscription` on portal lines; installs use `Security - Installation` or `VoIP - Installation`. Card: Deposit To `*Stripe`, payout net to 1000 CIBC, fee to 5800. E-transfer/cheque: payment method `Electronic Funds Transfer` / `Cheque`, Deposit To **1499 · Undeposited Funds** (confirmed KILBURN GREG + HIGHLANDS OUTDOOR), then Make Deposit to CIBC. HST 13% exclusive. Remaining **[HUMAN]**: rename/create the three classes in live; create the three VoIP items; inspect the first live card sales receipt. |
+| D12 | QuickBooks host machine + GL mapping | Phase 8A (machine), Phase 8C (mapping) | **Machine done:** DennisPC, Pro 2024 R21P, live `McKee Security Live.QBW` (D17). **Mapping locked 2026-08-16:** portal-collected payments post as **sales receipts** (not unpaid invoices). Item `Annual Monitoring` and VoIP items on **4000 · Product Sales**. Class `Security - Monitoring` or `VoIP - Subscription` on portal lines; installs use `Security - Installation` or `VoIP - Installation`. Card: Deposit To `*Stripe`, payout net to 1000 CIBC, fee to 5800. **McKee absorbs the Stripe fee** (customers pay plan + 13% HST only). E-transfer/cheque: `Electronic Funds Transfer` / `Cheque` to **1499 · Undeposited Funds**, then Make Deposit to CIBC. Classes and the three VoIP items are **in live** (2026-08-16). Remaining **[HUMAN]**: approve the first bridge install; inspect the first live card sales receipt at 8C. |
 | D13 | Lanvac contact-list export + API + QB to-do device source | Phase 8A (seed), portal caller-ID save (API) | **Portal shape (2026-08-16):** people stay in `caller_id_contacts`. Police/fire/ambulance are **not** portal contacts. `profiles.lanvac_account_code` + `profiles.lanvac_city` are the station fields (admin Monitoring station card). Name app-max 30; passcode app-max 21 (`PW:` + word fits Lanvac note). **Export:** `10638 Customer User List Report.xls` (gitignored). ~704 CODEs. Excel CITY has many aliases (`HALIBURTON`, `HALIBURTON ON`); those are **not** valid write keys. Official city is the live directory string (`Haliburton - On`, `Minden - ON`). Seed people only; skip `POL` / `<<<` / empty; stamp CODE + mapped directory city on the profile. Passcode is Excel note `PW:…`. **API write later (proven on `O5985`):** `POST /api/EmergencyContact/fullupdate` with `usePoliceNumbers: true`, `policeNumbersCity` = `lanvac_city`, `contactList` = `[empty, people as E1/E2/…, empties, end marker]`. Do not send `POL` rows. Emails stay; RDP is fallback. Password in Vercel env, never git. **Devices:** QB To Do list is a one-time source; after 8A seed, portal `devices` wins. |
 | D14 | Enter the two existing VoIP customers | Stripe go-live / 8C | **Resolved on pricing (R50, 2026-08-13):** the 3.12 rate card is the live model (base + additional numbers + commercial seats, one monthly figure, port fee one-time). Remaining **[HUMAN]**: enter the two existing VoIP customers by hand (one residential, one commercial) with their real number count, seat count, port count, amount, and next due date when Stripe goes live. Link both to QuickBooks in Phase 8A. BrightPBX DID cost stays $0.00 flagged until confirmed (internal only) |
 | D15 | Monitoring `started_on` for every monitoring client | Before customer input / 8A seed | **[HUMAN]** When creating or importing a monitoring client, the day they first started monitoring must be entered (or confirmed from the seed's inferred first-invoice date). Invitation and activation dates are not a substitute. Needed so later year-over-year monitoring profitability has a real history, not a portal-era history |
 | D16 | Cost per monitored client, by tier | Before any monitoring P&L / before treating Phase 8 as "profitability-complete" | **[HUMAN]** Gather the real cost McKee pays per monitoring client for each current tier (`landline`, `cellular`, `cellular_tc`, `cellular_tc_home`) — typically the monitoring-station / communicator cost, not the retail price. Same pattern as Starlink `unit_costs` (dated rates, history preserved). Posting payments to QuickBooks (8C) does not need this; a monitoring profit view does. Do not invent numbers |
-| D17 | Live vs portal-test company files + TSheets | Before any bridge install (8A) | **Done 2026-08-16.** Live: `C:\Users\Public\Documents\Intuit\QuickBooks\Company Files\McKee Security Live.QBW` (renamed from July 14; TSheets still Complete). PORTAL-TEST: `C:\Users\Public\Documents\Intuit\QuickBooks\PORTAL-TEST\McKee Security PORTAL-TEST do-not-invoice.QBW`. Retired `McKee Security` is in `Company Files\Archive_Old`. TSheets is the only Web Connector app; Auto-Run 60 min; authenticate uses whichever file is open. Auto-Run off while the copy is open. See 9.5.7 |
+| D17 | Live vs portal-test company files + TSheets | Before any bridge install (8A) | **Done 2026-08-16 / 17.** Live: `C:\Users\Public\Documents\Intuit\QuickBooks\Company Files\McKee Security Live.QBW`. PORTAL-TEST: `C:\Users\Public\Documents\Intuit\QuickBooks\PORTAL-TEST\McKee Security PORTAL-TEST do-not-invoice.QBW`. Retired file and leftover `July 14` sidecars are in `Company Files\Archive_Old`. TSheets is the only Web Connector app and follows the **open** file. During PORTAL-TEST work: **quit Web Connector** from the tray (right-click → Quit). Do not rely on Auto-Run off. Remind the stakeholder every test sitting that the open file must be PORTAL-TEST. See 9.5.7 |
 
 ---
 
@@ -239,8 +239,8 @@ qb-bridge/                                      # NEW top-level app (Phase 8A), 
 └── src/                                        # C#/.NET worker service (Desktop SDK is native there)
     ├── Poller.cs                               # outbound HTTPS loop: claim ready tasks from /api/qb/poll (no inbound ports)
     ├── QbSession.cs                            # Desktop SDK session management (qbXML 17, company file open/close)
-    ├── Commands/                               # NAMED command handlers only (9.5): customer.query|create, sales_receipt.create, receive_payment.create, invoice.create|query
-    ├── MirrorSync.cs                           # interval read-only sync: customers, open invoices, balances -> /api/qb/mirror
+    ├── Commands/                               # NAMED writes only (9.5): customer.create|update, sales_receipt.create. Queries are mirror-only. Portal billing never uses invoice.create.
+    ├── MirrorSync.cs                           # interval read-only: customers, invoices, receive-payments, todos -> /api/qb/mirror
     └── Reporter.cs                             # TxnIDs/ListIDs/EditSequences/errors -> /api/qb/report
 ```
 
@@ -513,22 +513,25 @@ Phase 8C reverse-sync deltas (9.5.5B, Migration 8C): `qb_txn_id` text nullable, 
 
 | Column | Type | Constraints |
 |--------|------|-------------|
-| `id` | uuid | PK |
+| `id` | uuid | PK default `gen_random_uuid()` |
 | `label` | text | not null (e.g. "Office QuickBooks PC") |
-| `secret_hash` | text | not null (SHA-256 of the bridge API secret; same model as `gateways.secret_hash`) |
-| `mode` | text | not null default `'sandbox'`, CHECK in (`sandbox`, `live`). Sandbox is the portal-test copy. Live is the real books. Switching to `live` is an explicit 8C admin act after D12 mapping |
-| `expected_company_file` | text | not null (full path the bridge is allowed to open). The bridge refuses every write, and in `live` mode every poll, if the open file does not match |
-| `qb_company_file` | text | nullable (path last reported by the bridge; Accounting tab shows it next to expected) |
-| `qb_version` | text | nullable (reported QB Desktop Canada release, verified against SDK 17 support) |
-| `last_seen_at` | timestamptz | nullable (poll heartbeat; Accounting tab shows bridge health) |
-| `last_mirror_at` | timestamptz | nullable (when mirrors were last synced) |
+| `secret_hash` | text | not null (SHA-256 of the bridge API secret; same model as `gateways.secret_hash`). Never store the raw secret |
+| `mode` | text | not null default `'sandbox'`, CHECK in (`sandbox`, `live`). Sandbox = PORTAL-TEST copy only. Live = real books. Switching to `live` is an explicit 8C admin act |
+| `expected_company_file` | text | not null. First value: `C:\Users\Public\Documents\Intuit\QuickBooks\PORTAL-TEST\McKee Security PORTAL-TEST do-not-invoice.QBW`. The bridge refuses every write, and in `live` mode every poll, if the open file does not match |
+| `qb_company_file` | text | nullable (path last reported by the bridge) |
+| `qb_company_name` | text | nullable (title-bar company name last reported; Accounting tab must show PORTAL TEST vs live) |
+| `qb_version` | text | nullable (reported QB Desktop Canada release) |
+| `last_seen_at` | timestamptz | nullable (poll heartbeat) |
+| `last_mirror_at` | timestamptz | nullable |
+| `last_error` | text | nullable |
+| `created_at`, `updated_at` | timestamptz | not null default `now()` |
 
 **`qb_tasks`** (Phase 8B; the durable offline-safe queue, handover 23.3)
 
 | Column | Type | Constraints |
 |--------|------|-------------|
 | `id` | uuid | PK |
-| `task_type` | text | not null, CHECK in the named-command list (`customer.create`, `customer.update`, `sales_receipt.create`, `receive_payment.create`, `invoice.create`); growing this list is a migration, which is the point: no free-form writes ever |
+| `task_type` | text | not null, CHECK in (`customer.create`, `customer.update`, `sales_receipt.create`). Growing this list is a migration. **Portal billing writes only `sales_receipt.create`.** Do not add `invoice.create` (portal never creates unpaid QuickBooks invoices; the customer document is portal + Stripe). `receive_payment.create` is not in the first CHECK; add it later only if we must apply cash to leftover open AR, never for a portal renewal |
 | `status` | text | not null default `'pending'`, CHECK in (`pending`, `validated`, `ready_for_quickbooks`, `in_progress`, `posted_to_quickbooks`, `failed`, `needs_review`, `cancelled`) |
 | `idempotency_key` | text | not null, **unique** (e.g. `sales_receipt:stripe:{payment_intent_id}`, `sales_receipt:manual:{manual_payment_id}`); duplicate enqueue = conflict = safe no-op, mirroring `billing_events` |
 | `source_system` | text | not null, CHECK in (`stripe_webhook`, `manual_payment`, `admin_ui`, `mcp_agent`) |
@@ -542,15 +545,70 @@ Phase 8C reverse-sync deltas (9.5.5B, Migration 8C): `qb_txn_id` text nullable, 
 | `attempt_count` | integer | not null default 0; `last_error` text nullable |
 | `posted_at` | timestamptz | nullable |
 
-**`qb_customers`** / **`qb_invoices`** (Phase 8A; read-only mirrors so the portal and MCP tools answer questions while the office PC is off, handover 23.10)
+**`qb_customers`** (Phase 8A mirror; QuickBooks `CustomerQuery`)
 
-| Column | Type |
-|--------|------|
-| `qb_customers`: `list_id` text PK, `profile_id` uuid nullable FK (portal linkage, **unique when set**: one client, one QB customer; posting requires this link per 9.5.4), `name` text, `email` text, `balance_cents` integer, `edit_sequence` text, `synced_at` timestamptz |
-| `qb_invoices`: `txn_id` text PK, `customer_list_id` text, `ref_number` text, `amount_cents` integer, `balance_cents` integer, `due_on` date, `is_paid` boolean, `line_items` jsonb (item name + amount per line; feeds the 9.5.5A tier/amount inference), `edit_sequence` text, `synced_at` timestamptz |
-| `qb_todos`: `todo_id` text PK, `notes` text, `is_done` boolean, `reminder_date` date nullable, `synced_at` timestamptz (faithful one-way mirror of the QB company To Do list via `ToDoQuery`; one-time source for device/battery drafts in the 9.5.5A seed, R41. After seed, portal `devices` wins; this table is history, not an ongoing sync) |
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `list_id` | text | PK (QB ListID; survives backup/restore so copy links still match live at 8C) |
+| `edit_sequence` | text | not null |
+| `name` | text | not null (FullName, including job path if any) |
+| `company_name` | text | nullable |
+| `email` | text | nullable |
+| `phone` | text | nullable (raw QB phone; match via existing `normalizePhone`) |
+| `is_active` | boolean | not null default true |
+| `parent_list_id` | text | nullable (jobs / sub-customers; 3 names have two memorized invoices) |
+| `balance_cents` | integer | not null default 0 |
+| `profile_id` | uuid | nullable FK `profiles` **unique when set** (one portal client, one QB customer; posting requires this link) |
+| `synced_at` | timestamptz | not null |
 
-Mirrors are working copies, never the system of record: QuickBooks wins on conflict for posted financial data (handover 23.10); drift (file restored from backup, manual edits) flags `needs_review` rather than overwriting.
+**`qb_invoices`** (Phase 8A mirror; `InvoiceQuery`. Needed for seed tier / `started_on` / next due)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `txn_id` | text | PK |
+| `edit_sequence` | text | not null |
+| `customer_list_id` | text | not null (index; no FK to QB, the customer row may arrive later) |
+| `ref_number` | text | nullable |
+| `txn_date` | date | not null (`started_on` = earliest monitoring invoice date on that customer) |
+| `due_on` | date | nullable |
+| `amount_cents` | integer | not null (QB TxnAmount, typically **after tax**. Seed matches both net `$299.40/$419.40/$479.40/$539.40` and gross `×1.13`, e.g. `$338.32`) |
+| `subtotal_cents` | integer | nullable |
+| `tax_cents` | integer | nullable |
+| `balance_cents` | integer | not null default 0 |
+| `is_paid` | boolean | not null default false |
+| `is_memorized` | boolean | not null default false (when the query can tell) |
+| `line_items` | jsonb | not null default `[]`. Each element: `{ name, amount_cents, quantity, class, tax_code }`. Item name corroborates tier (`Annual Monitoring` vs `Semi-Annual` vs install `Product Sale`) |
+| `synced_at` | timestamptz | not null |
+
+**`qb_payments`** (Phase 8A mirror; `ReceivePaymentQuery`. Read-only in 8A. 8C reverse-sync uses this so a cheque typed in QuickBooks can land in the portal once)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `txn_id` | text | PK |
+| `edit_sequence` | text | not null |
+| `customer_list_id` | text | not null |
+| `txn_date` | date | not null |
+| `amount_cents` | integer | not null, CHECK `> 0` |
+| `payment_method` | text | nullable (live spellings: `Electronic Funds Transfer`, `Cheque`, `Stripe`, `Cash`, …) |
+| `ref_number` | text | nullable |
+| `deposit_account` | text | nullable (1499 vs `*Stripe` vs 1000) |
+| `synced_at` | timestamptz | not null |
+
+**`qb_todos`** (Phase 8A mirror; `ToDoQuery`. One-time device-draft source. After seed, portal `devices` wins; this table is history)
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `todo_id` | text | PK |
+| `notes` | text | not null (freeform: customer name + `No smokes` / `zone N smokes YYYY`) |
+| `is_done` | boolean | not null default false |
+| `reminder_date` | date | nullable |
+| `synced_at` | timestamptz | not null |
+
+Mirrors are working copies, never the system of record: QuickBooks wins on conflict for posted financial data (handover 23.10); drift flags `needs_review` rather than overwriting. **8A writes nothing into QuickBooks.** No `qb_tasks` in the 8A migration.
+
+**`services.started_on`** is specified above (R49) but **was never migrated**. The 8A schema migration must add it. Create-client / add-service UI still has to collect it; the seed infers it from `qb_invoices.txn_date`.
+
+**8A first migration slice (do not apply until the stakeholder says go):** one SQL migration via `supabase migration new qb_bridge_foundation`, then apply to the hosted project. Tables: `qb_bridges`, `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos`. Alter: `services.started_on date`. RLS per 4.3 (`private.is_admin()` already exists): admin SELECT on all five; no client policies; no INSERT/UPDATE/DELETE for `authenticated` (bridge routes use service role). Unique index on `qb_customers.profile_id` where not null. Indexes on `customer_list_id`, `txn_date`, `is_active`. Then regenerate `database.types.ts`. **Not in this slice:** `/api/qb/*`, `qb-bridge/`, Accounting tab, import UI, Lanvac `fullupdate`, `qb_tasks`.
 
 ### 4.3 RLS policy matrix
 
@@ -585,7 +643,7 @@ grant execute on function private.is_admin() to authenticated;
 | `manual_payments` | none | SELECT own (payment history on the client dashboard, stakeholder 2026-07-06) | SELECT/INSERT. No UPDATE/DELETE policies: append-only ledger, corrections are reversing entries |
 | `qb_bridges` | none | none | SELECT (bridge health on the Accounting tab). Writes service-role only (bridge API routes) |
 | `qb_tasks` | none | none (accounting data never reaches client sessions) | SELECT all + UPDATE limited to review actions (approve/retry/cancel via server actions). INSERT service-role only (webhook, record-payment action, MCP enqueue); execution stamps (`in_progress`, TxnIDs, errors) service-role via `/api/qb/report` |
-| `qb_customers`, `qb_invoices`, `qb_todos` | none | none | SELECT (mirror browser + MCP read tools run in admin context). Writes service-role only (`/api/qb/mirror`) |
+| `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos` | none | none | SELECT (mirror browser + MCP read tools run in admin context). Writes service-role only (`/api/qb/mirror`) |
 | `units`, `rentals` (existing) | none | **none, leave as-is** | none (Starlink admin uses service role) |
 
 Every policy is written with the `(select auth.uid())` wrapping pattern for performance. RLS penetration tests in Phase 1/7 verify this matrix exactly.
@@ -1068,7 +1126,7 @@ Two programs, two files, one PC. Do not conflate them.
 **TSheets / QuickBooks Time:**
 
 - TSheets uses Intuit's **Web Connector** (only app in the list). Our bridge uses the **Desktop SDK**, not Web Connector. We do not add a second Web Connector application.
-- TSheets follows the **open** company file. A backup/restore copy can still look like the same TSheets company (FileID survives restore). Do not rely on "TSheets will pause." While the portal-test copy is open: uncheck Auto-Run or Exit Web Connector, then restore it when live is open again. Keep those sessions short or after hours.
+- TSheets follows the **open** company file. A backup/restore copy can still look like the same TSheets company (FileID survives restore). Do not rely on "TSheets will pause." Confirmed practice (2026-08-17): while PORTAL-TEST is open, **quit Web Connector** from the tray (hidden icons → right-click → Quit) so it does not run at all. Start it again only after live is reopened. Keep those sessions short or after hours. Every test sitting: confirm the open file is PORTAL-TEST, not live.
 - Never add TSheets, payroll, or any Web Connector app to the copy on purpose. The inherited FileID is why Auto-Run must be off anyway.
 - Pinning TSheets to a hardcoded `.qbw` path is not something we set in the Web Connector UI (the TSheets server returns the empty path). Do not chase that before 8A. Hygiene + Auto-Run discipline is the control.
 
@@ -1235,8 +1293,8 @@ Sub-phases gate independently. 8A and 8B build against the **portal-test copy** 
 **8A: Bridge foundation + read-only mirrors**
 
 - [x] **[HUMAN]** D17: company file hygiene (9.5.7). Live `…\Company Files\McKee Security Live.QBW`. PORTAL-TEST `…\PORTAL-TEST\McKee Security PORTAL-TEST do-not-invoice.QBW`. Retired file in Archive_Old. TSheets still syncs on live.
-- [ ] **[HUMAN]** D12 (machine): confirm the canonical QuickBooks Desktop Canada PC (Q20) and its release (SDK 17 needs 2023 R16+ / 2024 R18+); approve the bridge install; decide how regularly the PC stays on. Copy-open sessions pause TSheets (only one file can be open)
-- [ ] Migration 8A: `qb_bridges` (incl. `mode` sandbox/live + `expected_company_file`), `qb_customers`, `qb_invoices`, `qb_todos` (+ RLS per 4.3: admin SELECT, service-role writes); regenerate `database.types.ts`
+- [x] **[HUMAN]** D12 (machine): DennisPC, Pro 2024 R21P, file local. Remaining at first Windows sitting: approve the bridge ("even when QuickBooks is not running") on PORTAL-TEST. Copy-open sessions: quit Web Connector
+- [ ] Migration 8A (first slice only, after stakeholder says go): `qb_bridges`, `qb_customers`, `qb_invoices`, `qb_payments`, `qb_todos`, plus `services.started_on` (specified R49, never shipped). RLS per 4.3. Regenerate `database.types.ts`. No routes, no Windows binary, no `qb_tasks` in this file
 - [ ] `/api/qb/poll`, `/api/qb/report`, `/api/qb/mirror` routes (per-bridge secret, SHA-256 hash server-side, same auth model as gateways and cron)
 - [ ] `qb-bridge/` v0 (C#/.NET Windows service): QB session management via Desktop SDK/qbXML (not Web Connector), CustomerQuery/InvoiceQuery/ReceivePaymentQuery against the **portal-test copy**, refuse to run if the open file ≠ `expected_company_file`, mirror push on an interval, service autostart + crash recovery, structured local logging
 - [ ] Admin Accounting tab v0: bridge health (last poll, last mirror, `sandbox`/`live`, expected vs reported company file + QB version sanity check) and mirror browser (customers, balances, open invoices)
@@ -1256,7 +1314,7 @@ Sub-phases gate independently. 8A and 8B build against the **portal-test copy** 
 
 - [ ] Migration 8B: `qb_tasks` (4.2: named-command CHECK, state-machine CHECK, unique idempotency key, approval fields, `profile_id on delete set null`)
 - [ ] `lib/portal/qb/tasks.ts`: state transitions, per-command payload validation, idempotent `enqueue` helpers (unique-key conflict = safe no-op)
-- [ ] Bridge executes named commands only: `customer.create`, `customer.update`, `sales_receipt.create`, `receive_payment.create`, `invoice.create`; persists ListIDs/TxnIDs/EditSequences; maps qbXML errors to `failed` vs `needs_review` (23.9: never guess, flag)
+- [ ] Bridge executes named commands only: `customer.create`, `customer.update`, `sales_receipt.create`; persists ListIDs/TxnIDs/EditSequences; maps qbXML errors to `failed` vs `needs_review` (23.9: never guess, flag). Portal renewals never call `invoice.create`
 - [ ] Accounting tab queue boards: pending / needs review / failed / posted; approve, retry, cancel server actions (`requireAdmin()`, RLS UPDATE limited to review fields); task detail view with payload and attempt history
 - [ ] Observability: task failures and bridge staleness (no poll within N hours while tasks are pending) land in `portal_alerts` like every other operational failure
 
@@ -1378,6 +1436,8 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-17 | **8A schema audit (no SQL applied).** First migration slice locked: `qb_bridges` + customer/invoice/payment/todo mirrors + `services.started_on` (planned, never shipped). `qb_payments` added because reverse-sync and the gather both need Receive Payment history. Named writes narrowed to `customer.create\|update` and `sales_receipt.create` (no `invoice.create`). D12 classes/items/machine are done; remaining human is bridge Allow + first live card inspect. |
+| 2026-08-17 | **PORTAL-TEST testing rules confirmed.** Leftover `July 14` sidecars are in `Archive_Old`. While testing, quit Web Connector from the tray (not Auto-Run off). Every sitting: confirm the open file is PORTAL-TEST. Portal card customers pay plan + HST only; McKee absorbs the Stripe fee (5800). |
 | 2026-08-16 | **Pre-API portal + gather closed.** Station fields, Ontario-only city dropdown (~806), account-number normalize, required-when-monitoring, address guess, and client emergency-numbers block (below the people list) are shipped. Excel aliases will be mapped at seed. Vercel env set; thank-you email sent. Writes are not on. Next session: Phase 8A on PORTAL-TEST, then Lanvac Excel seed, then `fullupdate` when you say go. |
 | 2026-08-16 | **Lanvac ops closed for gather.** Thank-you email sent to Stephanos (cc Adrien). The three server-only Vercel env vars are set (`LANVAC_API_BASE`, `LANVAC_DEALER_ACCOUNT`, `LANVAC_DEALER_PASSWORD`). They do not turn on writes. |
 | 2026-08-16 | **Dispatch city is the live Lanvac directory** (~3964 official strings, confirmed via `GET /emergencynumbers`). McKee-frequency first (`Haliburton - On` 294, `Minden - ON` 139, …). Account number + city are required when monitoring is selected; they appear under Plan. Account input normalizes `O-5985` / `5985` to `O5985`. Service address can guess the city; admin can override. Clients see read-only police/fire/ambulance for that city above the people list. |

@@ -8,7 +8,7 @@ VoIP is not booked correctly today. **Create new items. Do not rename** the item
 
 ## Status
 
-**Next:** Gather is complete. Pre-API portal station work is complete (CODE + Ontario dispatch city, required for monitoring; client emergency-numbers readout; Vercel env set; writes not on). Next session starts Phase 8A against the PORTAL-TEST copy. Do not start the Lanvac `fullupdate` write until you say go. Move leftover `July 14` sidecars into `Archive_Old` (QuickBooks closed). Do not delete `McKee Security Live.*`.
+**Next:** Gather is complete. 8A schema is audited (2026-08-17); no SQL applied yet. First slice when you say go: mirror tables + `services.started_on` only. Always confirm PORTAL-TEST is open and Web Connector is quit. Do not start the Lanvac `fullupdate` write until you say go. Do not delete `McKee Security Live.*`.
 
 Required before any integration starts:
 
@@ -31,7 +31,7 @@ Required before any integration starts:
 - [x] Posting model: **sales receipt when the portal has collected the money** (card or recorded e-transfer/cheque/cash). Customer "paid invoice" is portal + Stripe, never a QuickBooks email.
 - [x] Monitoring item / income: keep `Annual Monitoring` → **4000 · Product Sales**. Distinguish services with **classes**, not a new income account.
 - [x] Amounts: pre-tax × qty, then HST 13% (already how invoices and the portal work).
-- [x] Stripe path: card sale to `*Stripe` (gross + HST), payout net to **1000 CIBC**, actual Stripe fee to **5800**. Do not book the bank deposit as income. Do not use the 2% Credit Card Fee item on portal posts.
+- [x] Stripe path: card sale to `*Stripe` (gross + HST), payout net to **1000 CIBC**, actual Stripe fee to **5800**. **McKee absorbs the Stripe fee.** Portal customers pay the plan plus 13% HST only; there is no 2% surcharge on portal card payments. The QB `Credit Card Fee` (2%) item is for old invoice/in-person card sales, not the portal. Do not book the bank deposit as income.
 - [x] E-transfer / cheque: payment methods `Electronic Funds Transfer` and `Cheque`; both Deposit To **1499 · Undeposited Funds** (KILBURN GREG 2025-06-18; HIGHLANDS OUTDOOR 2024-07-17). Portal card uses `Stripe`. Do not create `e-Transfer`.
 - [x] Classes (names locked): `Security - Monitoring` (dash rename of today's `Security Monitoring`), `Security - Installation` (rename of `Security`), `VoIP - Installation`, `VoIP - Subscription`. No four-tier monitoring split.
 - [x] Classes created in live 2026-08-16, dash-format confirmed: `Security - Monitoring`, `Security - Installation`, `VoIP - Installation`, `VoIP - Subscription`.
@@ -49,8 +49,8 @@ Required before any integration starts:
 Later, before the portal-test copy is opened (written into the plans; not this sitting):
 
 - [x] Archive the retired `McKee Security` company file (2026-08-16, `Company Files\Archive_Old`, 309,724 KB, plus Restored_* folders and MAIN FILES sidecars). Live July 14 and ADR left in place.
-- [x] Renamed live file to `McKee Security Live.QBW` (2026-08-16); TSheets sync still Complete. Leftover `July 14` sidecars can go in `Archive_Old`.
-- [x] While any non-live file is open: TSheets Auto-Run off (done for the 2026-08-16 copy sitting; keep doing this every time)
+- [x] Renamed live file to `McKee Security Live.QBW` (2026-08-16); TSheets sync still Complete. Leftover `July 14` sidecars are in `Archive_Old` (confirmed 2026-08-17).
+- [x] While any non-live file is open: quit Web Connector from the tray (right-click → Quit) so TSheets cannot touch PORTAL-TEST. Confirmed practice 2026-08-17. Do not rely on Auto-Run off alone. When live is open again, start Web Connector so TSheets can sync.
 
 Later (do not block the start once the required list is complete):
 

@@ -87,7 +87,7 @@ Source: F2 Product Information (including scrolled List Information), 2026-08-15
 
 Renamed 2026-08-16 from `McKee Security July 14.QBW`. Company title is still McKee Security & Audio Systems. Leftover `July 14` `.ND` / `.TLG` / DSN / SearchIndex are orphans; move them to `Archive_Old` with QuickBooks closed. Do not delete `McKee Security Live.*`.
 
-**TSheets does not pin a file path.** It uses whichever company file is open. After the copy sitting, live was reopened and Auto-Run is on (Complete). Keep Auto-Run off whenever PORTAL-TEST is open.
+**TSheets does not pin a file path.** It uses whichever company file is open. After the copy sitting, live was reopened and Auto-Run is on (Complete). Confirmed practice 2026-08-17: quit Web Connector from the tray whenever PORTAL-TEST is open. Leftover `July 14` sidecars are in `Archive_Old`.
 
 ---
 
