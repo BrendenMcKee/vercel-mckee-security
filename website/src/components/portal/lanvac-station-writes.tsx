@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   deleteLanvacZoneAction,
   setLanvacAccountTestAction,
-  setLanvacZoneTestAction,
   upsertLanvacZoneAction,
 } from "@/lib/portal/actions/lanvac-station";
 import {
@@ -115,7 +114,7 @@ export function StationOnTestControls({
       <p className="text-sm text-white/50">
         {variant === "client"
           ? "This tells the station you are working on the system. It does not turn the alarm off."
-          : "Account-level test. Per-zone test is on each zone row."}
+          : "Puts the whole account on test. We do not put individual zones on test."}
       </p>
       {!writesLive && (
         <p className="text-sm text-white/45">{STATION_WRITES_NOT_LIVE}</p>
@@ -176,7 +175,6 @@ export function AdminZoneEditor({
     signalCode: "",
     restoreCode: "",
     reason: "",
-    minutes: LANVAC_ON_TEST_DEFAULT_MINUTES,
   });
 
   function openCreate() {
@@ -191,7 +189,6 @@ export function AdminZoneEditor({
       signalCode: "",
       restoreCode: "",
       reason: "",
-      minutes: LANVAC_ON_TEST_DEFAULT_MINUTES,
     });
     setNotice(null);
   }
@@ -208,7 +205,6 @@ export function AdminZoneEditor({
       signalCode: zone.write?.signalCode ?? "",
       restoreCode: zone.write?.restoreCode ?? "",
       reason: "",
-      minutes: LANVAC_ON_TEST_DEFAULT_MINUTES,
     });
     setNotice(null);
   }
@@ -261,38 +257,6 @@ export function AdminZoneEditor({
         return;
       }
       setEditing(null);
-      router.refresh();
-    });
-  }
-
-  function zoneTest(zone: LanvacStationZone, onTest: boolean) {
-    if (!writesLive) {
-      setNotice(STATION_WRITES_NOT_LIVE);
-      return;
-    }
-    if (zone.zoneNumber > 100) {
-      setNotice("Zones above 100 cannot be put on test.");
-      return;
-    }
-    if (
-      onTest &&
-      !window.confirm(`Put zone #${zone.zoneNumber} on test for ${form.minutes} minutes?`)
-    ) {
-      return;
-    }
-    if (!onTest && !window.confirm(`Take zone #${zone.zoneNumber} off test?`)) return;
-    setNotice(null);
-    startTransition(async () => {
-      const result = await setLanvacZoneTestAction({
-        profileId,
-        zoneNumber: zone.zoneNumber,
-        onTest,
-        minutes: onTest ? form.minutes : undefined,
-      });
-      if (!result.ok) {
-        setNotice(result.error);
-        return;
-      }
       router.refresh();
     });
   }
@@ -469,26 +433,6 @@ export function AdminZoneEditor({
                 <button type="button" onClick={() => remove(zone)} className={buttonClass}>
                   Delete
                 </button>
-                {zone.zoneNumber <= 100 && (
-                  <>
-                    <button
-                      type="button"
-                      disabled={!writesLive}
-                      onClick={() => zoneTest(zone, true)}
-                      className={buttonClass}
-                    >
-                      Zone on test
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!writesLive}
-                      onClick={() => zoneTest(zone, false)}
-                      className={buttonClass}
-                    >
-                      Zone off test
-                    </button>
-                  </>
-                )}
               </span>
             </li>
           );

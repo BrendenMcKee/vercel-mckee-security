@@ -4,6 +4,7 @@ import {
   LANVAC_WRITE_TEST_ACCOUNT,
   interpretLanvacZoneRead,
   lanvacWritesLive,
+  redactLanvacHistoricText,
 } from "@/lib/portal/lanvac-writes";
 
 /**
@@ -243,50 +244,21 @@ export async function putLanvacAccountOnTest(
 export async function putLanvacAccountOffTest(account: string): Promise<LanvacResult<null>> {
   const env = dealerEnv();
   if (!env.ok) return { ok: false, error: env.error, status: 0 };
-  const posted = await postJson("/api/Account/OffTest", {
+  const body = {
     dealerIdentity: dealerIdentity(env),
     account,
-  });
-  // Account GET has no on-test field. Already-off is 500.
-  if (!posted.ok && posted.status === 500) {
-    return { ok: true, data: null };
-  }
-  return writeResult(posted);
-}
-
-export async function putLanvacZoneOnTest(
-  account: string,
-  zoneNumber: number,
-  minutes: number,
-): Promise<LanvacResult<null>> {
-  const env = dealerEnv();
-  if (!env.ok) return { ok: false, error: env.error, status: 0 };
-  return writeResult(
-    await postJson("/api/Zone/OnTest", {
-      dealerIdentity: dealerIdentity(env),
-      account,
-      zone: zoneNumber,
-      testDurationInMinutes: minutes,
-    }),
-  );
-}
-
-export async function putLanvacZoneOffTest(
-  account: string,
-  zoneNumber: number,
-): Promise<LanvacResult<null>> {
-  const env = dealerEnv();
-  if (!env.ok) return { ok: false, error: env.error, status: 0 };
-  const posted = await postJson("/api/Zone/OffTest", {
-    dealerIdentity: dealerIdentity(env),
-    account,
-    zone: zoneNumber,
-  });
+  };
+  const posted = await postJson("/api/Account/OffTest", body);
   if (posted.ok) return { ok: true, data: null };
-  const listed = await fetchLanvacZones(account);
-  if (listed.ok) {
-    const zone = listed.data.find((row) => row.zoneNumber === zoneNumber);
-    if (!zone || !zone.onTest) return { ok: true, data: null };
+  // Immediate OffTest after OnTest can 500 while the account is still
+  // going on test. Already-off is also 500. Retry once, then accept 500.
+  if (posted.status === 500) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const retry = await postJson("/api/Account/OffTest", body);
+    if (retry.ok || retry.status === 500) {
+      return { ok: true, data: null };
+    }
+    return writeResult(retry);
   }
   return writeResult(posted);
 }
@@ -381,7 +353,7 @@ export async function fetchLanvacHistoric(
     const row = asRecord(item);
     if (!row) continue;
     rows.push({
-      description: asString(row.description).slice(0, 400),
+      description: redactLanvacHistoricText(asString(row.description)).slice(0, 400),
       signal: asString(row.signal).slice(0, 40),
       date: asString(row.date).slice(0, 40),
     });

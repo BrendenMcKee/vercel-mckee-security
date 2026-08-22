@@ -30,6 +30,13 @@ check(
   classifyLanvacSignal({ description: "[ON-TEST] begin", signal: "-X0076" }) === "on_test",
 );
 check(
+  "account stop testing is on-test",
+  classifyLanvacSignal({
+    description: "STOP TESTING BY MOBI DENNIS MCKEE",
+    signal: "-X0070",
+  }) === "on_test",
+);
+check(
   "mobi file viewed is ops",
   classifyLanvacSignal({
     description: "CUSTOMER FILE VIEWED BY MOBI DENNIS MCKEE",
@@ -70,6 +77,26 @@ check(
     lastSignalClass: "unknown",
     lastSignalAt: "2026-08-22T14:05:09.000Z",
   }).kind === "unknown",
+);
+check(
+  "on-test last signal is not green",
+  stationStatusChip({
+    isDisabled: false,
+    onTestUntil: null,
+    anyZoneOnTest: false,
+    lastSignalClass: "on_test",
+    lastSignalAt: "2026-08-22T14:05:09.000Z",
+  }).kind === "unknown",
+);
+check(
+  "restore last signal is green-leaning",
+  stationStatusChip({
+    isDisabled: false,
+    onTestUntil: null,
+    anyZoneOnTest: false,
+    lastSignalClass: "restore",
+    lastSignalAt: "2026-08-22T14:05:09.000Z",
+  }).kind === "ok",
 );
 check(
   "disabled wins",

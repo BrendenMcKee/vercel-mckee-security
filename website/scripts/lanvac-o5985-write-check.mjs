@@ -1,9 +1,9 @@
 // O5985 write probe (PORTAL_PLAN R54 / docs/LANVAC_STATION.md).
 // Run: node --env-file=.env.local scripts/lanvac-o5985-write-check.mjs
-// Snapshots first, then account OnTest/OffTest, zone 2 OnTest/OffTest,
-// throwaway zone 7 create/update/delete. Always restores the exact list.
-// GET onTest can lag; a trailing padded + on description means on test.
-// OffTest is 500 when already off. Do not PUT existing live zones.
+// Snapshots first, then account OnTest/OffTest only. McKee puts the whole
+// account on test, never a single zone. Zone/OnTest is not called.
+// INCLUDE_ZONE_WRITES=1 also creates/updates/deletes unused zone 7.
+// Always restores the exact list. Account OffTest is 500 when already off.
 // Never calls /api/Account/status or /api/Account/new.
 // Never logs the dealer password.
 
@@ -99,8 +99,14 @@ function sleep(ms) {
 
 async function accountOffTest() {
   const posted = await call("POST", "/api/Account/OffTest", identity());
-  if (posted.ok || posted.status === 500) {
-    return { ...posted, ok: true, extra: posted.ok ? null : "already off" };
+  if (posted.ok) return posted;
+  if (posted.status === 500) {
+    await sleep(1500);
+    const retry = await call("POST", "/api/Account/OffTest", identity());
+    if (retry.ok || retry.status === 500) {
+      return { ...retry, ok: true, extra: retry.ok ? "retry" : "already off" };
+    }
+    return retry;
   }
   return posted;
 }
@@ -184,33 +190,45 @@ try {
   });
   note("account OnTest 5 min", accountOn);
 
+  let mid = await listZones();
+  note("GET zones while account on test", {
+    ok: mid.ok && matchesRestore(mid.rows),
+    status: mid.status,
+    ms: mid.ms,
+    extra: `onTestAny=${mid.rows.some((row) => row.onTest)} marked=${mid.rows.filter((row) => row.marked).length}`,
+  });
+  if (mid.ok && mid.rows.some((row) => row.onTest)) {
+    await sleep(2000);
+    mid = await listZones();
+    note("GET zones after 2s", {
+      ok: mid.ok,
+      status: mid.status,
+      ms: mid.ms,
+      extra: `onTestAny=${mid.rows.some((row) => row.onTest)}`,
+    });
+  }
+
+  const historic = await call("POST", "/api/Historic", {
+    ...identity(),
+    currentPage: 1,
+    elementsPerPage: 8,
+  });
+  const historicRows = Array.isArray(historic.body) ? historic.body : [];
+  const historicSample = historicRows
+    .slice(0, 6)
+    .map((row) => `${row.signal} ${String(row.description ?? "").replace(/\S+@\S+/g, "[email]").slice(0, 50)}`)
+    .join(" | ");
+  note("Historic after account OnTest", {
+    ok: historic.ok,
+    status: historic.status,
+    ms: historic.ms,
+    extra: historicSample,
+  });
+
   const accountOff = await accountOffTest();
   note("account OffTest", accountOff);
 
-  const zoneOn = await call("POST", "/api/Zone/OnTest", {
-    ...identity(),
-    zone: 2,
-    testDurationInMinutes: 5,
-  });
-  note("zone 2 OnTest 5 min", zoneOn);
-
-  let mid = await listZones();
-  let zone2 = mid.rows.find((row) => row.zoneNumber === 2);
-  if (mid.ok && zone2 && !zone2.onTest) {
-    await sleep(2000);
-    mid = await listZones();
-    zone2 = mid.rows.find((row) => row.zoneNumber === 2);
-  }
-  note("zone 2 GET after OnTest", {
-    ok: mid.ok && zone2?.onTest === true,
-    status: mid.status,
-    ms: mid.ms,
-    extra: `onTest=${zone2?.onTest} marked=${zone2?.marked ?? false}`,
-  });
-
-  const zoneOff = await zoneOffTest(2);
-  note("zone 2 OffTest", zoneOff);
-
+  if (process.env.INCLUDE_ZONE_WRITES === "1") {
   const created = await call("POST", "/api/Zone/create", {
     ...identity(),
     zoneId: THROW_ZONE,
@@ -253,6 +271,7 @@ try {
 
   const deleted = await call("DELETE", "/api/Zone", { ...identity(), zoneId: THROW_ZONE });
   note("delete zone 7", deleted);
+  }
 } finally {
   const restored = await restore();
   const ok = restored.ok && matchesRestore(restored.rows);

@@ -788,8 +788,6 @@ export async function sendStationOnTestAdminAlert({
   clientEmail,
   profileId,
   changedBy,
-  scope,
-  zoneNumber,
   onTest,
   minutes,
   startedByClient,
@@ -798,13 +796,10 @@ export async function sendStationOnTestAdminAlert({
   clientEmail: string | null;
   profileId: string;
   changedBy: string;
-  scope: "account" | "zone";
-  zoneNumber: number | null;
   onTest: boolean;
   minutes: number | null;
   startedByClient: boolean;
 }): Promise<boolean> {
-  const target = scope === "zone" && zoneNumber != null ? `zone #${zoneNumber}` : "the whole account";
   const meta = {
     title: onTest ? "Station On Test" : "Station Off Test",
     inboxLabel: startedByClient ? "Client started or stopped a test" : "Staff on-test change",
@@ -815,8 +810,8 @@ export async function sendStationOnTestAdminAlert({
     {
       label: onTest ? "On test" : "Off test",
       value: onTest
-        ? `${target} for ${minutes ?? "?"} minutes`
-        : `${target} is back in service`,
+        ? `the whole account for ${minutes ?? "?"} minutes`
+        : "the whole account is back in service",
     },
     {
       label: "Open the station card",
@@ -828,8 +823,8 @@ export async function sendStationOnTestAdminAlert({
   ];
   return dispatchPortalEmail("Station on-test alert", {
     subject: onTest
-      ? `🧪 On test: ${target} (${clientName})`
-      : `🧪 Off test: ${target} (${clientName})`,
+      ? `🧪 On test: the whole account (${clientName})`
+      : `🧪 Off test: the whole account (${clientName})`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });

@@ -46,7 +46,7 @@ isProject: false
 
 # Multi-site accounts and extra logins
 
-Status: **planned, not built. Implement after R54** ([`LANVAC_STATION.md`](LANVAC_STATION.md)). Zones, Historic, panel, and on-test are per site (`profile_id`). Client on-test is Account admin only. Delete cascades `lanvac_*`. Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. **R53 is in `PORTAL_PLAN.md` as planned** (not shipped). Keep this file, R53, 9.5.4 / 9.5.5 / 9.5.5C, and [`PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same commit as each implementation slice.
+Status: **planned, not built. R54 is shipped.** Implement this next ([`LANVAC_STATION.md`](LANVAC_STATION.md)). Zones, Historic, panel, and **account** on-test are per site (`profile_id`). One CODE = one site. We never put a single zone on test. Client on-test is Account admin only. Delete cascades `lanvac_*` and does not wipe Lanvac. Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. **R53 is in `PORTAL_PLAN.md` as planned** (not shipped). Keep this file, R53, 9.5.4 / 9.5.5 / 9.5.5C, and [`PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same commit as each implementation slice.
 
 ## How it works today (why the county cannot log in once)
 
@@ -124,7 +124,7 @@ These are live paths that would break if we only added tables and a switcher.
 
 **10. Attach after import.** When McKee groups pending imported sites onto one account, **expire unused site invitations** on the attached rows so a later GO LIVE cannot send 40 activate-and-add-a-card emails. Invite the owner once.
 
-**11. Server actions must take a site id.** Caller ID, devices, billing, settings, and **R54 station actions** (zone pull, on-test) already take `profileId` from day one. After this change they must `can_access_profile` it. Never write the first site in `sites[]` by accident. Client on-test stays **Account admin only**. Members see the chip. On-test is per site (one CODE).
+**11. Server actions must take a site id.** Caller ID, devices, billing, settings, and **R54 station actions** (zone pull, **account** on-test) already take `profileId` from day one. After this change they must `can_access_profile` it. Never write the first site in `sites[]` by accident. Client on-test stays **Account admin only** and is always the whole CODE, never a single zone. Members see the chip. On-test is per site (one CODE).
 
 **12. Site cookie / `?site=`.** Only honor a site the member can access and that is not disabled. Otherwise first active site. A crafted id is not an IDOR.
 
@@ -324,9 +324,9 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 8. **Living CUA playbook.** Update [`docs/PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same slice as the UI it describes. After deploy, a computer-using agent runs that file (devtools on) and writes a findings report. **This is the last gate before the Windows MCP bridge and the real import.** Do not start either until the report is clean or every fail is accepted.
 9. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
 
-**Pacing (locked):** R54 read + O5985-gated writes shipped 2026-08-22. Confirm this file still matches (zones / Historic / on-test stay per-site), then implement **two slices at a time**, then stop for an end-to-end audit of what just landed. First stop: slices 1 and 2 (schema + `resolvePortalSession` / orphan / OAuth / cleanup / password). Do not start slice 3 until that audit is done. Same pattern for 3–4, 5–6, then CUA. Hosted has **staff and throwaway test clients only**.
+**Pacing (locked):** R54 is complete (read UI, O5985-gated zone writes, **account-only** on-test). This file matches: zones / Historic / account on-test stay per-site (`profile_id`). **Next implementation is slices 1 and 2** (schema + `resolvePortalSession` / orphan / OAuth / cleanup / password), then stop for an end-to-end audit. Do not start slice 3 until that audit is done. Same pattern for 3–4, 5–6, then CUA. Hosted has **staff and throwaway test clients only**.
 
-**Alignment:** 10/10 to implement R53 now that R54 writes are in. Station tables stay on `profile_id`; actions already take `profileId`; client on-test is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
+**Alignment:** 10/10 to implement R53. Station tables stay on `profile_id`; actions already take `profileId`; on-test is the whole CODE for that site, never a zone; client start/stop is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
 
 ## Already shipped (do not redo)
 

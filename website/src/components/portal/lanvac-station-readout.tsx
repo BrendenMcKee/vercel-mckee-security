@@ -178,7 +178,8 @@ export function LanvacStationReadout({
         <p className="text-xs font-bold uppercase tracking-widest text-white/40">Zones</p>
         <p className="mt-1 text-sm text-white/50">
           What the monitoring station has for this alarm. Batteries and smokes
-          you replace are on the equipment list.
+          you replace are on the equipment list. Putting the alarm on test is
+          the whole account, not one zone.
         </p>
         {zones.length === 0 ? (
           <p className="mt-3 text-sm text-white/45">
@@ -204,14 +205,7 @@ export function LanvacStationReadout({
                 {zones.map((zone) => (
                   <tr key={zone.zoneNumber} className="align-top text-white/80">
                     <td className="py-2.5 pr-3 tabular-nums">{zone.zoneNumber}</td>
-                    <td className="py-2.5 pr-3">
-                      {zone.description || "Not on file"}
-                      {zone.zoneNumber > 100 && (
-                        <span className="mt-1 block text-xs text-white/40">
-                          Cannot put this zone on test
-                        </span>
-                      )}
-                    </td>
+                    <td className="py-2.5 pr-3">{zone.description || "Not on file"}</td>
                     <td className="py-2.5 pr-3">{zone.zoneType || "Not on file"}</td>
                     <td className="py-2.5 pr-3">{zone.onTest ? "Yes" : "No"}</td>
                     <td className="py-2.5">{callListLabel(zone.useCallList)}</td>

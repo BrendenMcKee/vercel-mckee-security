@@ -1,6 +1,6 @@
 # Lanvac station layer
 
-Status: **read UI + O5985-gated writes / on-test shipped 2026-08-22.** Caller-ID `fullupdate` stays off until you say go. Do not fold this into multi-site (R53). [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) already treats zones / Historic / on-test as per-site (`profile_id`). Confirm that file still matches, then implement R53.
+Status: **read UI + O5985-gated writes / account on-test shipped 2026-08-22.** Caller-ID `fullupdate` stays off until you say go. [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) is confirmed: zones, Historic, and account on-test stay per site (`profile_id`). **Next implementation is R53.** Do not start R53 in this file.
 
 Re-pull: from `website/`, `node --env-file=.env.local scripts/lanvac-o5985-read.mjs`. Output is `website/.lanvac-o5985/` (gitignored, password stripped).
 
@@ -15,7 +15,7 @@ On every **current monitoring** site that has a Lanvac CODE:
 - Zone list: admin fetch / create / edit / delete. Client read-only (number, description, type, on-test, uses-call-list).
 - Historic signals: paged log for admin and client, color-coded, at the bottom of the security block. Not a live stream.
 - Panel type + a last-known status chip.
-- On/off test with a duration. Admin: account and per-zone. Client Account admin: **account-level only**.
+- On/off test with a duration. **Whole account only** (`Account/OnTest` / `OffTest`). Admin and client Account admin. We do not put a single zone on test. `Zone/OnTest` exists on Lanvac and is unused.
 
 Optional zone entry on create-client / add-monitoring. "Pull from Lanvac" when a CODE is typed. Never required. Import later GETs zones per CODE and stores them. Never auto-writes zones during import.
 
@@ -28,9 +28,9 @@ Base `https://lanvac.mobi:8843`. Auth is dealer `10638` + WinLinks password in t
 | `POST /api/Account` | `panelType`, `isDisabled`, name/address. No current-alarm field. No account-on-test field. |
 | `POST /api/Zone` | `zoneNumber`, `onTest`, `description`, `zoneType`. Write fields (delay, call list, extra phones, codes) are **not** on the list. `onTest` can lag. While a zone is on test the description is space-padded and ends with `+`; treat that as on test and strip it for display. |
 | `POST /api/Zone/create`, `PUT /api/Zone`, `DELETE /api/Zone` | Admin writes. Create `zoneId` 1-999. Zone create/update/delete take about **10s**; use a 20s timeout. Proven 2026-08-22 on unused zone 7: `BUR` create, description PUT, delete all 200. GET type after create is English `BURGLAR`. |
-| `POST /api/Zone/OnTest` / `OffTest` | Zone 1-100, 5-3600 minutes. Admin / future techs only. OnTest 200 is fast. Immediate GET may still say `onTest: false` with no `+`. OffTest is **500 if already off** (or if GET has not caught up). Treat 500 + re-GET not-on-test as success. |
-| `POST /api/Account/OnTest` / `OffTest` | 5-3600 minutes. Admin and client Account admin. Fast (~100ms). Account GET has **no** on-test field; our `on_test_until` is the SoR. OffTest is 500 if already off. |
-| `POST /api/Historic` | `{ description, signal, date }[]`. `currentPage`, `elementsPerPage`. **50 works** on `O5985`. Dates are `MM-DD-YYYY HH:mm:ss`. |
+| `POST /api/Zone/OnTest` / `OffTest` | Exists on Lanvac. **Do not call from the portal.** McKee always puts the whole account on test. |
+| `POST /api/Account/OnTest` / `OffTest` | **The only on-test path.** 5-3600 minutes. Admin and client Account admin. Fast (~100ms). Account GET has **no** on-test field; our `on_test_until` is the SoR. Zone GET does not flip `onTest` or add `+` while the account is on test. OffTest can 500 if called immediately after OnTest (retry once) or if already off. Historic begin is `[ON-TEST]` / `-X0076` email. |
+| `POST /api/Historic` | `{ description, signal, date }[]`. `currentPage`, `elementsPerPage`. **50 works** on `O5985`. Dates are `MM-DD-YYYY HH:mm:ss`. Emails in the description are redacted before we cache (clients SELECT this table). |
 
 **Never call:** `POST /api/Account/status` (disable), `POST /api/Account/new` (erase-existing defaults true), `Account/update` two-way address, `emergencynumbers` write.
 
@@ -41,9 +41,10 @@ Base `https://lanvac.mobi:8843`. Auth is dealer `10638` + WinLinks password in t
 Historic has no restore flag and no "in alarm now." The chip is last-known:
 
 1. Gray: `isDisabled`
-2. Blue: account or any zone on test (our `on_test_until` and/or zone `onTest`)
-3. Red / amber: classify the **most recent** Historic row from the `O5985` color map. Unknown = gray, not green
-4. Green: none of the above
+2. Blue: account on test (`on_test_until`) or a zone that Lanvac already marked `onTest` (read-only; we do not set that)
+3. Red: last Historic row is an alarm
+4. Green-leaning: last Historic row is a restore
+5. Gray: anything else (ops, on-test log, open/close, unknown). Empty log is gray, not green
 
 Copy: "Last signal" / "On test until …" / "Station disabled". Never "all clear" if the log is empty.
 
@@ -55,18 +56,18 @@ Copy: "Last signal" / "On test until …" / "Station disabled". Never "all clear
 | Restore / after alarm | `RESTORE` or `AFTER ALARM` or signal `406…` | Green-leaning gray (event, not "all clear") |
 | Communication / other restore | `350…`, text `RESTORE` / `COMMUNICATION RESTORE` | Gray |
 | Open / close | `401…` `OPENING`, `408…` `CLOSING` | Gray |
-| On test (log) | `ON-TEST` in the description, `-X0076` begin, `-X0030` account end email, `-X0043` zone end email | Blue only if our `on_test_until` is still in the future or a zone is on test. A March on-test email is history |
+| On test (log) | `ON-TEST` or `STOP TESTING` in the description first. Account begin can use `-X0070` with `[ON-TEST]` text (same signal as Mobi file viewed when the text is only `CUSTOMER FILE VIEWED`). Begin email `-X0076`. End is `STOP TESTING` plus `-X0030` email. `-X0043` is a leftover zone on-test email | Blue only if our `on_test_until` is still in the future. A March on-test email is history |
 | Station email / Mobi / phone | `-X0019`, `-X0071`, `-X0011`, `-X0070` (Mobi file viewed), `LanTEL`, `BUFF60`, `230…`, `285…` | Gray (ops, not an alarm) |
 
 Seen alarm example: signal `110011`, `ALARM((FIRE)) ZONE:001` and matching `RESTORE ZONE:001`.
 
-**Zone list types on GET are English labels, not the 3-char write enum.** Map before create/update: `FIRE` → `FIR`, `BURGLAR` → `BUR`, `LOW TEMPERATURE` → `LOW`. `CARBON MONOXIDE` write code (`CO*` / `CO1` / `CO2`) is **still unproven**. Create/update of that type is refused. On-test and delete are allowed.
+**Zone list types on GET are English labels, not the 3-char write enum.** Map before create/update: `FIRE` → `FIR`, `BURGLAR` → `BUR`, `LOW TEMPERATURE` → `LOW`. `CARBON MONOXIDE` write code (`CO*` / `CO1` / `CO2`) is **still unproven**. Create/update of that type is refused. Delete is allowed. We do not put a zone on test.
 
 **Do not PUT an existing live zone** unless `lanvac_zone_write` already has delay / call list / codes from a portal create. GET does not return those fields. Defaults (`delay = 1`, empty notify) would overwrite the station. Edit is disabled until write fields exist. Test create/update/delete only on unused numbers (7 and 8 on O5985).
 
 **`panelType` can be empty.** Show "Not on file". `isDisabled` is a real boolean (`false` on O5985). `language` was `en`. `accountType` can be empty.
 
-Warn if a zone number is above 100 (cannot OnTest).
+Zone numbers above 100 are fine to list. We never call Zone/OnTest.
 
 ## Access
 
@@ -77,7 +78,7 @@ Warn if a zone number is above 100 (cannot OnTest).
 - Every action takes `profileId` from day one. Today: session profile must match (or admin). After R53: `requireSelectedSite`.
 - Client SELECT only on cached rows. No client PostgREST write of `on_test`. On-test is a server action that talks to Lanvac, then updates our cache.
 - Client never sees delay, signal/restore codes, extra zone notify phones, or dealer fields. Those live on `lanvac_zone_write` (admin SELECT only, service-role writes).
-- Client on-test: account-level, Account admin only after R53 (today: the one login). Duration 15 / 30 / **60** / 120 or custom 5-3600. 120s cooldown. Staff email. Alerts badge while on test.
+- On-test is **the whole account only**, for staff and for the client Account admin (today: the one login). Duration 15 / 30 / **60** / 120 or custom 5-3600. Client 120s cooldown. Staff email. Alerts badge while on test. No per-zone on-test UI or action.
 - Admin zone delete / overwrite: confirm + short reason + staff email.
 - CODE change: drop or re-pull that profile's cached zones/signals.
 - Site delete later: cascade `lanvac_*`. Do not wipe Lanvac.
@@ -93,15 +94,15 @@ Tables keyed by `profile_id` only. One CODE = one site = one zone list. No count
 
 ## Persistence (shipped 2026-08-22)
 
-`lanvac_zones`, `lanvac_account_state`, `lanvac_signals` cache (Lanvac is SoR for history), append-only `lanvac_station_events`. Failed pull keeps last good rows and shows stale. Client SELECT own on zones/state/signals. Events are admin-only. No client INSERT/UPDATE/DELETE. All keyed by `profile_id`. Write-only zone fields live on `lanvac_zone_write`. Cache writes are `server-only` (`lanvac-station-store.ts`), not callable actions. Pulls claim an 8s cooldown so two tabs cannot wipe Historic at once. User-facing pull and write errors stay generic. Zone CRUD and on/off test are O5985-gated. Carbon monoxide type writes stay refused.
+`lanvac_zones`, `lanvac_account_state`, `lanvac_signals` cache (Lanvac is SoR for history), append-only `lanvac_station_events`. Failed pull keeps last good rows and shows stale. Client SELECT own on zones/state/signals. Events are admin-only. No client INSERT/UPDATE/DELETE. All keyed by `profile_id`. Write-only zone fields live on `lanvac_zone_write`. Cache writes are `server-only` (`lanvac-station-store.ts`), not callable actions. Pulls claim an 8s cooldown so two tabs cannot wipe Historic at once. User-facing pull and write errors stay generic. Zone CRUD and **account** on/off test are O5985-gated. Carbon monoxide type writes stay refused.
 
-A pull right after OnTest can still GET `onTest: false` with no `+`. Keep the cached flag if a matching `on_test` / `off_test` event for that zone is newer than 45s. Pull does **not** clear account `on_test_until` (Account GET has no on-test field).
+Pull does **not** clear account `on_test_until` (Account GET has no on-test field). That timestamp is the SoR for the blue chip. Zone `onTest` / trailing `+` stay a read-only display if Lanvac already marked a zone.
 
 ## Test protocol
 
-`O5985` only. Snapshot Account / Zone / Historic with the password stripped (`website/scripts/lanvac-o5985-read.mjs`). Restore the exact zone list after any write sitting. OnTest 5 minutes then OffTest. Never leave McKee on test. Never call `Account/status`. Do not PUT zones 1-6 or 9 (write fields unknown). Use unused 7 or 8 for create/update/delete. Write probe: `website/scripts/lanvac-o5985-write-check.mjs` (gitignored output).
+`O5985` only. Snapshot Account / Zone / Historic with the password stripped (`website/scripts/lanvac-o5985-read.mjs`). Restore the exact zone list after any write sitting. **Account** OnTest 5 minutes then OffTest. Never call `Zone/OnTest`. Never leave McKee on test. Never call `Account/status`. Do not PUT zones 1-6 or 9 (write fields unknown). Use unused 7 or 8 for create/update/delete only. Write probe: `website/scripts/lanvac-o5985-write-check.mjs` (account on-test by default; `INCLUDE_ZONE_WRITES=1` for unused zone 7).
 
-**Live write sitting 2026-08-22 (restored):** Account OnTest/OffTest 200. Zone 2 OnTest 200; immediate GET lagged; OffTest 500 until GET caught up. Zone 7 `BUR` create / PUT / delete 200 (~10.4s). Site restored to the table below, all `onTest: false`. Historic from that sitting includes `-X0076` / `-X0030` / `-X0043` (on-test) and `-X0070` (Mobi file viewed, ops).
+**Live write sitting 2026-08-22 (restored):** Account OnTest 200. Zone GET stayed off with no `+`. Immediate OffTest can 500 while Historic still has not caught up; retry OffTest is 200. Historic begin: `[ON-TEST]` on `-X0070` plus `-X0076` email. An earlier unused probe also hit Zone 2 OnTest (not a product path) and unused zone 7 `BUR` create / PUT / delete. Site restored to the table below, all `onTest: false`.
 
 **Restore list (pulled 2026-08-22, all `onTest: false`):**
 

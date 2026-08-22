@@ -10,6 +10,7 @@ const {
   mapZoneTypeToWrite,
   parseNotifyList,
   recentLanvacZoneTestIntent,
+  redactLanvacHistoricText,
   STATION_WRITES_NOT_LIVE,
 } = await import("@/lib/portal/lanvac-writes.ts");
 
@@ -56,6 +57,10 @@ check(
 check(
   "pull grace keeps recent on-test",
   applyOnTestPullGrace(false, "on") && !applyOnTestPullGrace(true, "off"),
+);
+check(
+  "historic email is redacted",
+  redactLanvacHistoricText("[E-MAIL] >> someone@example.com") === "[E-MAIL] >> [email]",
 );
 check(
   "recent zone on-test wins",

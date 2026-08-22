@@ -41,7 +41,13 @@ export function classifyLanvacSignal(input: {
     (description.includes("ALARM") && !isRestoreText);
 
   if (isAlarmText) return "alarm";
-  if (description.includes("ON-TEST") || ON_TEST_SIGNALS.has(signal)) return "on_test";
+  if (
+    description.includes("ON-TEST") ||
+    description.includes("STOP TESTING") ||
+    ON_TEST_SIGNALS.has(signal)
+  ) {
+    return "on_test";
+  }
   if (description.includes("COMMUNICATION RESTORE") || signal.startsWith("350")) {
     return "comm_restore";
   }
@@ -143,13 +149,10 @@ export function stationStatusChip(input: {
   if (input.lastSignalClass === "alarm") {
     return { kind: "alarm", label: "Last signal: alarm" };
   }
-  if (input.lastSignalClass === "unknown") {
-    return { kind: "unknown", label: "Last signal" };
-  }
   if (input.lastSignalClass === "restore") {
     return { kind: "ok", label: "Last signal: restore" };
   }
-  return { kind: "ok", label: "Last signal" };
+  return { kind: "unknown", label: "Last signal" };
 }
 
 export function signalRowTone(signalClass: LanvacSignalClass): string {

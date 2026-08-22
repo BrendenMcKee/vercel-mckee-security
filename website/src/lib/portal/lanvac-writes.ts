@@ -126,6 +126,11 @@ export function applyOnTestPullGrace(
   return incomingOnTest;
 }
 
+/** Historic rows can include a call-list email. Clients SELECT this cache. */
+export function redactLanvacHistoricText(value: string): string {
+  return value.replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[email]");
+}
+
 export function parseNotifyList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value

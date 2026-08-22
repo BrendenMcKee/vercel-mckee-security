@@ -357,8 +357,6 @@ export async function persistLanvacOnTest(input: {
   code: string;
   actorUserId: string | null;
   actorEmail: string | null;
-  scope: "account" | "zone";
-  zoneNumber: number | null;
   minutes: number | null;
   onTest: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -366,27 +364,15 @@ export async function persistLanvacOnTest(input: {
     return { ok: false, error: "The station cache is not configured." };
   }
   const admin = getPortalAdminClient();
-  if (input.scope === "account") {
-    const { error } = await admin.from("lanvac_account_state").upsert({
-      profile_id: input.profileId,
-      on_test_until: input.onTest && input.minutes
-        ? new Date(Date.now() + input.minutes * 60_000).toISOString()
-        : null,
-    });
-    if (error) {
-      console.error("[portal] station account on-test cache failed:", error);
-      return { ok: false, error: "Could not save the on-test state." };
-    }
-  } else if (input.zoneNumber != null) {
-    const { error } = await admin
-      .from("lanvac_zones")
-      .update({ on_test: input.onTest })
-      .eq("profile_id", input.profileId)
-      .eq("zone_number", input.zoneNumber);
-    if (error) {
-      console.error("[portal] station zone on-test cache failed:", error);
-      return { ok: false, error: "Could not save the on-test state." };
-    }
+  const { error } = await admin.from("lanvac_account_state").upsert({
+    profile_id: input.profileId,
+    on_test_until: input.onTest && input.minutes
+      ? new Date(Date.now() + input.minutes * 60_000).toISOString()
+      : null,
+  });
+  if (error) {
+    console.error("[portal] station account on-test cache failed:", error);
+    return { ok: false, error: "Could not save the on-test state." };
   }
   await admin.from("lanvac_station_events").insert({
     profile_id: input.profileId,
@@ -395,8 +381,7 @@ export async function persistLanvacOnTest(input: {
     actor_email: input.actorEmail,
     event_type: input.onTest ? "on_test" : "off_test",
     detail: {
-      scope: input.scope,
-      zoneNumber: input.zoneNumber,
+      scope: "account",
       minutes: input.minutes,
     },
   });

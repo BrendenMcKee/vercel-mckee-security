@@ -18,8 +18,6 @@ import {
   fetchLanvacZones,
   putLanvacAccountOffTest,
   putLanvacAccountOnTest,
-  putLanvacZoneOffTest,
-  putLanvacZoneOnTest,
   updateLanvacZone,
 } from "@/lib/portal/lanvac-api";
 import {
@@ -196,7 +194,7 @@ async function requireWriteAccess(
   const access = await requireStationAccess(profileId);
   if (!access.ok) return access;
   if (who === "admin" && access.actor.role !== "admin") {
-    return { ok: false, error: "Only staff can change zones or put a single zone on test." };
+    return { ok: false, error: "Only staff can change zones." };
   }
   if (!lanvacWritesLive(access.code)) {
     return { ok: false, error: STATION_WRITES_NOT_LIVE };
@@ -424,8 +422,6 @@ export async function setLanvacAccountTestAction(input: {
     code: access.code,
     actorUserId: access.actor.userId,
     actorEmail: access.actor.email,
-    scope: "account",
-    zoneNumber: null,
     minutes: parsed.data.minutes ?? null,
     onTest: parsed.data.onTest,
   });
@@ -437,65 +433,9 @@ export async function setLanvacAccountTestAction(input: {
     clientEmail: client.email,
     profileId: parsed.data.profileId,
     changedBy: access.actor.email ?? access.actor.role,
-    scope: "account",
-    zoneNumber: null,
     onTest: parsed.data.onTest,
     minutes: parsed.data.minutes ?? null,
     startedByClient: access.actor.role === "client",
-  });
-  revalidateStation();
-  return { ok: true };
-}
-
-export async function setLanvacZoneTestAction(input: {
-  profileId: string;
-  zoneNumber: number;
-  onTest: boolean;
-  minutes?: number;
-}): Promise<StationActionResult> {
-  const parsed = z
-    .object({
-      profileId: z.string().uuid(),
-      zoneNumber: z.number().int().min(1).max(100),
-      onTest: z.boolean(),
-      minutes: z.number().int().min(5).max(3600).optional(),
-    })
-    .safeParse(input);
-  if (!parsed.success) return { ok: false, error: "That zone cannot be put on test." };
-  if (parsed.data.onTest && parsed.data.minutes == null) {
-    return { ok: false, error: "Choose how long to stay on test." };
-  }
-  const access = await requireWriteAccess(parsed.data.profileId, "admin");
-  if (!access.ok) return access;
-
-  const written = parsed.data.onTest
-    ? await putLanvacZoneOnTest(access.code, parsed.data.zoneNumber, parsed.data.minutes!)
-    : await putLanvacZoneOffTest(access.code, parsed.data.zoneNumber);
-  if (!written.ok) return { ok: false, error: written.error };
-
-  const persisted = await persistLanvacOnTest({
-    profileId: parsed.data.profileId,
-    code: access.code,
-    actorUserId: access.actor.userId,
-    actorEmail: access.actor.email,
-    scope: "zone",
-    zoneNumber: parsed.data.zoneNumber,
-    minutes: parsed.data.minutes ?? null,
-    onTest: parsed.data.onTest,
-  });
-  if (!persisted.ok) return persisted;
-
-  const client = await loadClientName(parsed.data.profileId);
-  await sendStationOnTestAdminAlert({
-    clientName: client.name,
-    clientEmail: client.email,
-    profileId: parsed.data.profileId,
-    changedBy: access.actor.email ?? "staff",
-    scope: "zone",
-    zoneNumber: parsed.data.zoneNumber,
-    onTest: parsed.data.onTest,
-    minutes: parsed.data.minutes ?? null,
-    startedByClient: false,
   });
   revalidateStation();
   return { ok: true };
