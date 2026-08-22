@@ -19,6 +19,7 @@ import {
   daysSince,
   depositOwedSince,
   depositsAwaitingReturn,
+  isConfirmedPickupToday,
 } from "./outstanding";
 import {
   sendDepositOverdueReminder,
@@ -115,10 +116,8 @@ async function runOneShotReminders(
 
   let pickupToday = 0;
   const failedPickupsToday: RentalWithUnit[] = [];
-  for (const rental of rentals.filter(
-    (r) =>
-      (r.status === "confirmed" || r.status === "active") &&
-      r.pickup_date === today,
+  for (const rental of rentals.filter((r) =>
+    isConfirmedPickupToday(r, today),
   )) {
     const outcome = await deliver(rental, "pickup_today", rental.pickup_date, () =>
       sendPickupTodayReminder(rental),

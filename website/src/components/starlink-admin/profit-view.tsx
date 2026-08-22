@@ -689,7 +689,9 @@ export function ProfitView({
           on the books as they happened.
         </p>
         <AdSpendEditor
-          key={adSpend.map((row) => row.id).join(",")}
+          key={adSpend
+            .map((row) => `${row.id}:${row.daily_cost}:${row.effective_from}`)
+            .join("|")}
           rates={adSpend}
           kitCount={units.length}
           onSaved={async (message) => {
@@ -711,8 +713,8 @@ export function ProfitView({
             <CostEditor
               key={`${unit.id}:${costs
                 .filter((c) => c.unit_id === unit.id)
-                .map((c) => c.id)
-                .join(",")}`}
+                .map((c) => `${c.id}:${c.monthly_cost}:${c.plan_name}:${c.effective_from}`)
+                .join("|")}`}
               unit={unit}
               costs={costs}
               onSaved={async (message) => {

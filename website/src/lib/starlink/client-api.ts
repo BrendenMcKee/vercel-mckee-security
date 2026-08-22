@@ -6,6 +6,19 @@ import type {
   UnitCost,
 } from "./types";
 
+export class AdminRequestError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "AdminRequestError";
+    this.status = status;
+  }
+}
+
+export function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === "AbortError";
+}
+
 async function jsonOrThrow<T>(res: Response): Promise<T> {
   let data: unknown = null;
   try {
@@ -16,19 +29,41 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const message =
       (data as { error?: string } | null)?.error ?? "Request failed.";
-    throw new Error(message);
+    throw new AdminRequestError(message, res.status);
   }
   return data as T;
 }
 
-export async function fetchOverview(): Promise<{
+export type StarlinkOverview = {
   units: Unit[];
   rentals: RentalWithUnit[];
   costs: UnitCost[];
   rates: RentalRateTier[];
   adSpend: AdSpendRate[];
-}> {
-  const res = await fetch("/api/starlink-admin/overview", { cache: "no-store" });
+};
+
+/** Cheap identity of an overview payload, so a quiet poll can skip setState. */
+export function stampOverview(data: StarlinkOverview): string {
+  return [
+    data.rentals.map((r) => `${r.id}:${r.updated_at}`).join(),
+    data.units.map((u) => `${u.id}:${u.name}:${u.color}:${u.active}`).join(),
+    data.costs
+      .map((c) => `${c.id}:${c.monthly_cost}:${c.plan_name}:${c.effective_from}`)
+      .join(),
+    data.rates.map((r) => `${r.id}:${r.updated_at}`).join(),
+    data.adSpend
+      .map((a) => `${a.id}:${a.daily_cost}:${a.effective_from}`)
+      .join(),
+  ].join("|");
+}
+
+export async function fetchOverview(init?: {
+  signal?: AbortSignal;
+}): Promise<StarlinkOverview> {
+  const res = await fetch("/api/starlink-admin/overview", {
+    cache: "no-store",
+    signal: init?.signal,
+  });
   const data = await jsonOrThrow<{
     units: Unit[];
     rentals: RentalWithUnit[];

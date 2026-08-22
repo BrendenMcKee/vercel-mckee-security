@@ -290,6 +290,46 @@ for (const { what, rental, section, priority, flag } of cases) {
 }
 
 {
+  const alreadyOut = booking({
+    status: "active",
+    pickup_date: TODAY,
+    return_date: day(7),
+    amount_received: 200,
+    deposit_returned: true,
+  });
+  const outstanding = buildOutstandingGroups([alreadyOut], TODAY);
+  check(
+    !outstanding.some((g) => g.id === "pickup_today"),
+    "a kit marked Out no longer asks to be got ready for pickup",
+  );
+  check(
+    !buildDigestGroups([alreadyOut], TODAY, [alreadyOut]).some(
+      (g) => g.id === "pickup_today",
+    ),
+    "a stale failed-pickup list does not put an Out kit back on the digest",
+  );
+}
+
+{
+  const outUnpaid = booking({
+    status: "active",
+    pickup_date: TODAY,
+    return_date: day(7),
+    amount_received: null,
+    deposit_returned: true,
+  });
+  const outstanding = buildOutstandingGroups([outUnpaid], TODAY);
+  check(
+    !outstanding.some((g) => g.id === "pickup_today"),
+    "an unpaid Out booking is not still a pickup-today card",
+  );
+  check(
+    outstanding.some((g) => g.id === "unpaid"),
+    "an unpaid Out booking moves to Check payment",
+  );
+}
+
+{
   const ancient = booking({
     return_date: day(-200),
     pickup_date: day(-210),

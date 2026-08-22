@@ -221,7 +221,7 @@ export function FleetManager({
         <div className="space-y-2.5">
           {units.map((u) => (
             <UnitRow
-              key={u.id}
+              key={`${u.id}:${u.name}:${u.color}:${u.active}`}
               unit={u}
               onChanged={onChanged}
               onError={onError}

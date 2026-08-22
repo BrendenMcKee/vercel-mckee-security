@@ -20,7 +20,12 @@ import type {
   Unit,
   UnitCost,
 } from "@/lib/starlink/types";
-import { fetchOverview } from "@/lib/starlink/client-api";
+import {
+  AdminRequestError,
+  fetchOverview,
+  isAbortError,
+  stampOverview,
+} from "@/lib/starlink/client-api";
 import { todayIsoToronto } from "@/lib/starlink/dates";
 import {
   buildOutstandingGroups,
@@ -36,6 +41,7 @@ import { AlertsView } from "./alerts-view";
 import { RentalModal } from "./rental-modal";
 import { RateCardBar } from "./rate-card-editor";
 import { Toast, type ToastState } from "./toast";
+import { useLiveRefresh } from "./use-live-refresh";
 
 type View = "schedule" | "rentals" | "fleet" | "profit" | "alerts";
 
@@ -47,9 +53,12 @@ const TABS: { id: View; label: string; icon: typeof CalendarDays }[] = [
   { id: "alerts", label: "Alerts", icon: Bell },
 ];
 
+/** Ignore a background pull that lands on the heels of another fetch. */
+const LIVE_COALESCE_MS = 2_000;
+
 export function StarlinkAdminApp() {
   const router = useRouter();
-  const todayIso = todayIsoToronto();
+  const [todayIso, setTodayIso] = useState(todayIsoToronto);
 
   const [units, setUnits] = useState<Unit[]>([]);
   const [rentals, setRentals] = useState<RentalWithUnit[]>([]);
@@ -62,8 +71,14 @@ export function StarlinkAdminApp() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalRental, setModalRental] = useState<RentalWithUnit | null>(null);
+  const [modalEpoch, setModalEpoch] = useState(0);
   const [toast, setToast] = useState<ToastState>(null);
   const deepLinkHandled = useRef(false);
+  const refreshTicket = useRef(0);
+  const refreshStartedAt = useRef(0);
+  const overviewStamp = useRef("");
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   const alertGroups = useMemo(
     () => buildOutstandingGroups(rentals, todayIso),
@@ -71,25 +86,72 @@ export function StarlinkAdminApp() {
   );
   const alertCount = outstandingBookingCount(alertGroups);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (opts?: {
+    background?: boolean;
+    urgent?: boolean;
+  }) => {
+    const now = Date.now();
+    if (
+      opts?.background &&
+      !opts.urgent &&
+      refreshStartedAt.current > 0 &&
+      now - refreshStartedAt.current < LIVE_COALESCE_MS
+    ) {
+      return;
+    }
+    refreshStartedAt.current = now;
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+    const ticket = ++refreshTicket.current;
+
     try {
-      const data = await fetchOverview();
-      setUnits(data.units);
-      setRentals(data.rentals);
-      setCosts(data.costs);
-      setRates(data.rates);
-      setAdSpend(data.adSpend);
+      const data = await fetchOverview({ signal: ac.signal });
+      if (!mountedRef.current || ticket !== refreshTicket.current) return;
+      const nextDay = todayIsoToronto();
+      setTodayIso(nextDay);
+      const stamp = stampOverview(data);
+      if (stamp !== overviewStamp.current) {
+        overviewStamp.current = stamp;
+        setUnits(data.units);
+        setRentals(data.rentals);
+        setCosts(data.costs);
+        setRates(data.rates);
+        setAdSpend(data.adSpend);
+      }
       setLoadError("");
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Could not load data.");
+      if (!mountedRef.current || ticket !== refreshTicket.current) return;
+      if (isAbortError(err)) return;
+      if (err instanceof AdminRequestError && err.status === 401) {
+        router.refresh();
+        return;
+      }
+      // A background poll must not blank the page over a blip; keep last data.
+      if (!opts?.background) {
+        setLoadError(err instanceof Error ? err.message : "Could not load data.");
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && ticket === refreshTicket.current) {
+        setLoading(false);
+      }
     }
+  }, [router]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
+
+  useLiveRefresh(() => refresh({ background: true }), !loading && !loadError);
 
   // Deep link from the inquiry email: /starlink-admin?rental=<id> opens that
   // request straight away once data has loaded.
@@ -109,18 +171,32 @@ export function StarlinkAdminApp() {
 
   const openNew = () => {
     setModalRental(null);
+    setModalEpoch((n) => n + 1);
     setModalOpen(true);
   };
   const openRental = (rental: RentalWithUnit) => {
     setModalRental(rental);
+    setModalEpoch((n) => n + 1);
     setModalOpen(true);
   };
+  const showLatestRental = () => {
+    if (!modalRental) return;
+    const live = rentals.find((r) => r.id === modalRental.id);
+    if (!live) return;
+    setModalRental(live);
+    setModalEpoch((n) => n + 1);
+  };
   const closeModal = () => setModalOpen(false);
+
+  const pullLatest = useCallback(
+    () => refresh({ background: true, urgent: true }),
+    [refresh],
+  );
 
   const handleSaved = async (message: string) => {
     setModalOpen(false);
     setToast({ message, tone: "success" });
-    await refresh();
+    await pullLatest();
   };
   const handleSuccess = (message: string) => setToast({ message, tone: "success" });
   const handleError = (message: string) => setToast({ message, tone: "error" });
@@ -200,7 +276,7 @@ export function StarlinkAdminApp() {
               rates={rates}
               onSaved={async (message) => {
                 handleSuccess(message);
-                await refresh();
+                await pullLatest();
               }}
               onError={handleError}
             />
@@ -263,7 +339,7 @@ export function StarlinkAdminApp() {
           {view === "fleet" ? (
             <FleetManager
               units={units}
-              onChanged={refresh}
+              onChanged={pullLatest}
               onError={handleError}
               onSuccess={handleSuccess}
             />
@@ -275,7 +351,7 @@ export function StarlinkAdminApp() {
               costs={costs}
               adSpend={adSpend}
               todayIso={todayIso}
-              onChanged={refresh}
+              onChanged={pullLatest}
               onError={handleError}
               onSuccess={handleSuccess}
             />
@@ -289,14 +365,15 @@ export function StarlinkAdminApp() {
       {modalOpen ? (
         <RentalModal
           // Form state is seeded from the booking on mount, so a different
-          // booking has to be a different instance.
-          key={modalRental?.id ?? "new"}
+          // booking — or a reload of someone else's save — needs a new instance.
+          key={`${modalRental?.id ?? "new"}:${modalEpoch}`}
           rental={modalRental}
           units={units}
           rentals={rentals}
           rates={rates}
           onClose={closeModal}
           onSaved={handleSaved}
+          onShowLatest={showLatestRental}
           onError={handleError}
         />
       ) : null}

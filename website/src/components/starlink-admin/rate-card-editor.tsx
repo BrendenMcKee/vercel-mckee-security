@@ -259,7 +259,11 @@ export function RateCardBar({
       </div>
       {editing ? (
         <RateCardForm
-          key={rates.map((row) => row.id).join(",") || "defaults"}
+          key={
+            rates
+              .map((row) => `${row.id}:${row.updated_at}`)
+              .join("|") || "defaults"
+          }
           rates={rates}
           onSaved={async (message) => {
             await onSaved(message);

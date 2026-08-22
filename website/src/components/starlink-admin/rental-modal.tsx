@@ -237,6 +237,7 @@ export function RentalModal({
   rates,
   onClose,
   onSaved,
+  onShowLatest,
   onError,
 }: {
   rental: RentalWithUnit | null;
@@ -246,9 +247,18 @@ export function RentalModal({
   rates: RentalRateTier[];
   onClose: () => void;
   onSaved: (message: string) => void;
+  /** Remount with the copy someone else just saved. */
+  onShowLatest?: () => void;
   onError: (message: string) => void;
 }) {
   const isEdit = Boolean(rental);
+  const liveCopy = rental
+    ? rentals.find((r) => r.id === rental.id)
+    : undefined;
+  const remoteChanged = Boolean(
+    rental && liveCopy && liveCopy.updated_at !== rental.updated_at,
+  );
+  const remoteDeleted = Boolean(rental && !liveCopy);
   const [form, setForm] = useState<FormState>(() => initialState(rental, rates));
   // A stored quote is theirs to keep. An empty price follows the rate card
   // until someone types in the field.
@@ -630,6 +640,29 @@ export function RentalModal({
           data-modal-chrome="body"
           className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5"
         >
+          {remoteDeleted ? (
+            <StateNote tone="red" icon={CircleSlash}>
+              This booking was deleted in another tab. Close this window — saving
+              will not bring it back.
+            </StateNote>
+          ) : null}
+          {remoteChanged ? (
+            <StateNote tone="amber" icon={TriangleAlert}>
+              Someone else just saved this booking.{" "}
+              {onShowLatest ? (
+                <button
+                  type="button"
+                  className="font-semibold underline underline-offset-2 hover:text-amber-50"
+                  onClick={onShowLatest}
+                >
+                  Show their changes
+                </button>
+              ) : (
+                "Close and reopen to see them"
+              )}
+              . Saving now will be rejected so you do not overwrite them.
+            </StateNote>
+          ) : null}
           {/* Customer */}
           <Section icon={User} title="Customer">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

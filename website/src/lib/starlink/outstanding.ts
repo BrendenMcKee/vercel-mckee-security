@@ -156,6 +156,14 @@ function unitSuffix(rental: RentalWithUnit): string {
   return rental.unit ? rental.unit.name : "no unit assigned";
 }
 
+/** Confirmed and collecting today. Out means they already have the kit. */
+export function isConfirmedPickupToday(
+  rental: Pick<RentalWithUnit, "status" | "pickup_date">,
+  today: string,
+): boolean {
+  return rental.status === "confirmed" && rental.pickup_date === today;
+}
+
 /** Finished bookings where we took a deposit and still have it. */
 export function depositsAwaitingReturn(
   rentals: RentalWithUnit[],
@@ -191,11 +199,9 @@ function buildActionGroups(
   const requestCutoff = Date.now() - REQUEST_REPLY_GRACE_DAYS * 86_400_000;
   const paymentWindowEnd = addDaysIso(today, PAYMENT_LEAD_DAYS);
 
-  const pickupToday = rentals.filter(
-    (r) =>
-      (r.status === "confirmed" || r.status === "active") &&
-      r.pickup_date === today,
-  );
+  // Confirmed only. Out means the customer already has it, so "get the kit
+  // ready for pickup" is done. Unpaid Out bookings land under Check payment.
+  const pickupToday = rentals.filter((r) => isConfirmedPickupToday(r, today));
 
   const upcomingUnpaid = rentals.filter(
     (r) =>
@@ -229,9 +235,10 @@ function buildActionGroups(
       r.quoted_price != null &&
       r.quoted_price > 0 &&
       !isPaidInFull(r) &&
-      // Pickup today already has its own row on the Alerts tab; collecting
-      // payment is flagged on that card instead of listing the person twice.
-      !(options.includePickupToday && r.pickup_date === today),
+      // A confirmed pickup today already has its own row; collecting payment
+      // is flagged on that card instead of listing the person twice. Once the
+      // booking is Out, that row is gone and this group takes over.
+      !(options.includePickupToday && isConfirmedPickupToday(r, today)),
   );
 
   const noPrice = rentals.filter(
@@ -267,9 +274,13 @@ function buildActionGroups(
     (r) => r.pickup_date <= addDaysIso(today, UNIT_URGENT_WITHIN_DAYS),
   );
 
-  const pickupForDigest = options.includePickupToday
-    ? pickupToday
-    : (options.failedPickupsToday ?? []);
+  // Never list a kit that is already Out, even if a stale failed-email list
+  // still names it.
+  const pickupForDigest = (
+    options.includePickupToday
+      ? pickupToday
+      : (options.failedPickupsToday ?? [])
+  ).filter((r) => isConfirmedPickupToday(r, today));
   const pickupInstruction = options.includePickupToday
     ? "Check the kit over and set it aside before the customer arrives. Open the booking to mark it Out once they have it."
     : "The pickup reminder for these could not be delivered, so they are here instead. Check the kit over and set it aside before the customer arrives.";
