@@ -3,6 +3,7 @@
 Monorepo for [mckeesecurity.ca](https://mckeesecurity.ca): the Next.js marketing site, the customer and admin portals, Starlink rental admin, and the Data Drops backend.
 
 - **Portal (authoritative):** [`PORTAL_PLAN.md`](./PORTAL_PLAN.md) — client dashboard at `/user-dashboard` (Dashboard / Settings / Alerts), staff console at `/admin-dashboard`. Client-facing portal mail stays off until the Billing-tab `GO LIVE` flip (R52 / 9.5.5C). Plain-language accounting companion: [`ACCOUNTING_PLAN.md`](./ACCOUNTING_PLAN.md).
+- **Multi-site / extra logins (planned, not built):** [`docs/MULTI_SITE_ACCOUNTS.md`](./docs/MULTI_SITE_ACCOUNTS.md) — account + site + Account admin / Member. Required before county-style import.
 - **Requirements baseline (not the current UI spec):** [`PRODUCT_HANDOVER.md`](./PRODUCT_HANDOVER.md)
 - **Deployment and workflow:** [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)
 - **Data Drops architecture:** [`docs/DATA-DROPS.md`](./docs/DATA-DROPS.md)

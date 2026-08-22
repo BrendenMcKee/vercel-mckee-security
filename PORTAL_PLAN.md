@@ -14,6 +14,8 @@
 
 No em dashes anywhere in this project. Use periods, commas, or colons. Complete sentences in copy, commits, and documentation.
 
+**Multi-site accounts (planned, not built):** [`docs/MULTI_SITE_ACCOUNTS.md`](./docs/MULTI_SITE_ACCOUNTS.md). Do not import real clients until that work ships. R53 is added here when it does. Client mail stays off (R52 / 9.5.5C).
+
 ---
 
 ## 1. Current State Snapshot (verified 2026-07-04)
