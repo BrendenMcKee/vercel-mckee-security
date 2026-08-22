@@ -105,9 +105,11 @@ copy the link" when mail is live, or "held until go-live" while `portal_settings
 is false), `STRIPE_*` (billing/checkout disabled), and the Data Drops / Starlink admin password
 gates all degrade gracefully. Only Supabase is hard-required for the portal. Client-facing portal
 mail stays off until the Billing-tab `GO LIVE` flip (`PORTAL_PLAN.md` 9.5.5C). Do not enable it
-during import. Do not start the Windows QuickBooks bridge, a real client import, or Lanvac
-`fullupdate` until multi-site accounts (`docs/MULTI_SITE_ACCOUNTS.md`, R53) and the CUA
-playbook (`docs/PORTAL_CUA_TEST.md`) are done. Grouping sign-off is also a GO LIVE gate.
+during import. Next product work is the Lanvac station layer (`docs/LANVAC_STATION.md`, R54),
+then multi-site (`docs/MULTI_SITE_ACCOUNTS.md`, R53), then the CUA playbook
+(`docs/PORTAL_CUA_TEST.md`). Do not start the Windows QuickBooks bridge, a real client
+import, or Lanvac `fullupdate` until those are done. Station writes stay `O5985` until
+you say go. Grouping sign-off is also a GO LIVE gate.
 
 ### Next.js 16 note
 

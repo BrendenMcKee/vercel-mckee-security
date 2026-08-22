@@ -46,7 +46,7 @@ isProject: false
 
 # Multi-site accounts and extra logins
 
-Status: **planned, not built.** Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. **R53 is in `PORTAL_PLAN.md` as planned** (not shipped). Keep this file, R53, 9.5.4 / 9.5.5 / 9.5.5C, and [`PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same commit as each implementation slice.
+Status: **planned, not built. Implement after R54** ([`LANVAC_STATION.md`](LANVAC_STATION.md)). Zones, Historic, panel, and on-test are per site (`profile_id`). Client on-test is Account admin only. Delete cascades `lanvac_*`. Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. **R53 is in `PORTAL_PLAN.md` as planned** (not shipped). Keep this file, R53, 9.5.4 / 9.5.5 / 9.5.5C, and [`PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same commit as each implementation slice.
 
 ## How it works today (why the county cannot log in once)
 
@@ -54,7 +54,7 @@ A portal **client is one `profiles` row**. That row is also the login, the billi
 
 - One `user_id` (unique): one Google / password per client
 - One `email` (unique when set): a second property cannot reuse the county email
-- One `lanvac_account_code` (unique when set): one station CODE
+- One `lanvac_account_code` (unique when set): one station CODE. After R54, that CODE also owns one zone list, Historic pull, and on-test state (`profile_id` only).
 - [`unique (profile_id, service_type)`](website/src/lib/portal/database.types.ts): at most one monitoring and one VoIP on that row
 
 Caller ID, devices, and Stripe live on that same row. [`getAuthContext`](website/src/lib/portal/auth.ts) loads **one** profile by `user_id`. RLS everywhere is `p.user_id = auth.uid()`.
@@ -85,7 +85,7 @@ flowchart TD
 ```
 
 - **Account:** name, `auto_onboard`. One place to invite staff. A person may belong to more than one account (house + business). The switcher then lists sites grouped by account.
-- **Site (`profiles`):** address, Lanvac CODE/city, caller list, devices, services, per-site Stripe customer and due dates. One CODE = one site. VoIP belongs to that site.
+- **Site (`profiles`):** address, Lanvac CODE/city, caller list, **R54 zone list / Historic / on-test**, devices, services, per-site Stripe customer and due dates. One CODE = one site. VoIP belongs to that site. Station tables stay on `profile_id`. No county mega-form of all zones.
 - **Person on the account:** their own email and their own sign-in. They see **every site on that account** (per-site ACL can wait). Extra people do **not** get `profiles.user_id`. Access is membership, not “this user owns this row.”
 - **McKee staff** (`profiles.role = admin`) can always attach sites, invite, and revoke. They do **not** get a client account row.
 
@@ -105,7 +105,7 @@ These are live paths that would break if we only added tables and a switcher.
 
 **3. Delete site must not delete the county login.** [`deleteClientAction`](website/src/lib/portal/actions/clients.ts) deletes `auth.users` whenever `profile.user_id` is set, **before** the profile row. Deleting one school would lock every other county site, and a later profile-delete failure would leave a dead login. Rules:
 
-- Delete is **this site only** (services, caller ID, devices, that profile).
+- Delete is **this site only** (services, caller ID, devices, `lanvac_*` station rows, that profile). Do not call Lanvac delete-all.
 - Cancel Stripe subscriptions on **that** site only.
 - Delete the profile (and empty account if last site) **first**. Only then delete Auth, and only if that user has no remaining membership and no remaining `profiles.user_id`.
 - Confirm copy must say “this site” when the account has more than one site.
@@ -124,7 +124,7 @@ These are live paths that would break if we only added tables and a switcher.
 
 **10. Attach after import.** When McKee groups pending imported sites onto one account, **expire unused site invitations** on the attached rows so a later GO LIVE cannot send 40 activate-and-add-a-card emails. Invite the owner once.
 
-**11. Server actions must take a site id.** Caller ID, devices, billing, and settings already run in `requireUser()` against “the” profile. After this change they must accept the selected `profileId` (or read it from the request) and `can_access_profile` it. Never write the first site in `sites[]` by accident.
+**11. Server actions must take a site id.** Caller ID, devices, billing, settings, and **R54 station actions** (zone pull, on-test) already take `profileId` from day one. After this change they must `can_access_profile` it. Never write the first site in `sites[]` by accident. Client on-test stays **Account admin only**. Members see the chip. On-test is per site (one CODE).
 
 **12. Site cookie / `?site=`.** Only honor a site the member can access and that is not disabled. Otherwise first active site. A crafted id is not an IDOR.
 
@@ -324,9 +324,9 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 8. **Living CUA playbook.** Update [`docs/PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same slice as the UI it describes. After deploy, a computer-using agent runs that file (devtools on) and writes a findings report. **This is the last gate before the Windows MCP bridge and the real import.** Do not start either until the report is clean or every fail is accepted.
 9. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
 
-**Pacing (locked):** Hosted has **staff and throwaway test clients only**. No real customer login to preserve. Implement **two slices at a time**, then stop for an end-to-end audit of what just landed. First stop: slices 1 and 2 (schema + `resolvePortalSession` / orphan / OAuth / cleanup / password). Do not start slice 3 until that audit is done. Same pattern for 3–4, 5–6, then CUA.
+**Pacing (locked):** Do **not** start these R53 slices until R54 schema + read-only UI has shipped (or you override). Hosted has **staff and throwaway test clients only**. No real customer login to preserve. Implement **two slices at a time**, then stop for an end-to-end audit of what just landed. First stop: slices 1 and 2 (schema + `resolvePortalSession` / orphan / OAuth / cleanup / password). Do not start slice 3 until that audit is done. Same pattern for 3–4, 5–6, then CUA.
 
-**Alignment:** 10/10 we should proceed with slices 1–2 when asked. Execution risk on later slices stays; that is why we pause and audit instead of one-shotting.
+**Alignment:** 10/10 to implement R53 **after** R54 read UI. Station tables stay on `profile_id`; actions already take `profileId`; client on-test is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
 
 ## Already shipped (do not redo)
 

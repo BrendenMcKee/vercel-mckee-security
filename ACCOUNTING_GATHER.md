@@ -8,7 +8,7 @@ VoIP is not booked correctly today. **Create new items. Do not rename** the item
 
 ## Status
 
-**Next:** Client email is paused on hosted (`portal_settings.client_mail_enabled = false`). **Do not start the Windows bridge or a real import yet.** Next product work is multi-site accounts (`docs/MULTI_SITE_ACCOUNTS.md`, `PORTAL_PLAN.md` R53), then the CUA portal test (`docs/PORTAL_CUA_TEST.md`). After that: Windows bridge on DennisPC against PORTAL-TEST, then import with a human grouping pass, then `GO LIVE` only after grouping is signed off, the portal is trusted, and the bridge is on the live QuickBooks file. 8A cloud routes are shipped (`/api/qb/poll|report|mirror`; contract in `PORTAL_PLAN.md` 9.5.2A). Create the sandbox row with `website/scripts/qb-bridge-register.mjs` (label `Office QuickBooks PC`) when you are ready to store a secret — not a Vercel env var. Always confirm PORTAL-TEST is open and Web Connector is quit. Do not start the Lanvac `fullupdate` write until you say go. Do not delete `McKee Security Live.*`.
+**Next:** Client email is paused on hosted (`portal_settings.client_mail_enabled = false`). **Do not start the Windows bridge or a real import yet.** Next product work is the Lanvac station layer (`docs/LANVAC_STATION.md`, R54), then multi-site (`docs/MULTI_SITE_ACCOUNTS.md`, R53), then the CUA portal test (`docs/PORTAL_CUA_TEST.md`). After that: Windows bridge on DennisPC against PORTAL-TEST, then import with a human grouping pass, then `GO LIVE` only after grouping is signed off, the portal is trusted, and the bridge is on the live QuickBooks file. 8A cloud routes are shipped (`/api/qb/poll|report|mirror`; contract in `PORTAL_PLAN.md` 9.5.2A). Create the sandbox row with `website/scripts/qb-bridge-register.mjs` (label `Office QuickBooks PC`) when you are ready to store a secret — not a Vercel env var. Always confirm PORTAL-TEST is open and Web Connector is quit. Do not start the Lanvac `fullupdate` write until you say go. Do not delete `McKee Security Live.*`.
 
 Required before any integration starts:
 
@@ -184,7 +184,7 @@ When the import screen is ready: spot-check tiers, amounts, start dates, due dat
 - Put TSheets on the test copy
 - Keep QuickBooks emailing these customers once the portal sends that mail
 - Type `GO LIVE` on the Billing tab during import, before grouping is signed off, or before the bridge is on the live QuickBooks file
-- Start the Windows bridge or a real client import before multi-site (R53) and the CUA portal test
+- Start the Windows bridge or a real client import before the Lanvac station layer (R54), multi-site (R53), and the CUA portal test
 - Book only the Stripe bank deposit as income
 - Make the test copy before the new VoIP items exist in live
 

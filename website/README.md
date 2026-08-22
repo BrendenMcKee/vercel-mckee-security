@@ -11,9 +11,10 @@ alarm contacts, equipment), **Settings** (phone, service address, password;
 sign-in email is locked), and **Alerts**. The staff console is
 `/admin-dashboard` (Overview, Clients, Billing, Devices, Alerts). Client-facing
 portal mail (invites, reminders, receipts, caller-ID and device notices) stays
-off until the Billing-tab `GO LIVE` confirm (`PORTAL_PLAN.md` 9.5.5C). Multi-site
-accounts are planned (`../docs/MULTI_SITE_ACCOUNTS.md`, R53) and must ship, then
-pass [`../docs/PORTAL_CUA_TEST.md`](../docs/PORTAL_CUA_TEST.md), before the
+off until the Billing-tab `GO LIVE` confirm (`PORTAL_PLAN.md` 9.5.5C). Next
+planned work is the Lanvac station layer (`../docs/LANVAC_STATION.md`, R54),
+then multi-site (`../docs/MULTI_SITE_ACCOUNTS.md`, R53), then
+[`../docs/PORTAL_CUA_TEST.md`](../docs/PORTAL_CUA_TEST.md), before the
 Windows QuickBooks bridge or a real client import.
 
 ## Local development

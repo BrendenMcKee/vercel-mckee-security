@@ -15,6 +15,9 @@ dist/
 .env
 .env*.local
 
+# Lanvac O5985 read snapshots (no password, still station data)
+website/.lanvac-o5985/
+
 # Screenshots from the ad-hoc UI check scripts
 website/.mobile-audit/
 website/.starlink-ui-check/
