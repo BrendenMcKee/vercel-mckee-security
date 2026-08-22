@@ -184,15 +184,15 @@ Only if the operator marked a **disposable** second site on an account that has 
 
 If there is no disposable site, skip and say so.
 
-## Suite L. Station layer (read UI shipped; skip write steps until that sitting)
+## Suite L. Station layer (read + O5985-gated writes)
 
-Run this on a **monitoring test site** with a Lanvac CODE. Never put a real customer on test. Skip steps 3 and 4 until zone writes / on-test ship. Use `O5985` only if the brief is a write sitting.
+Run this on a **monitoring test site** with a Lanvac CODE. Never put a real customer on test. Use `O5985` only for a write sitting. Restore the zone table in [`LANVAC_STATION.md`](LANVAC_STATION.md) after any write.
 
 1. Single-site monitoring client, Dashboard: station block sits after the monitoring card and before caller ID. Historic is at the bottom of that block. Settings / Alerts do not grow a second zone editor.
 2. Client sees zone number, description, type, on-test, uses-call-list, panel type (or "Not on file"), last-known chip, Historic list. Client does **not** see delay, zone signal/restore codes, extra notify phones, or dealer fields. Historic signal codes stay on the staff card only.
-3. After writes ship: if station writes are not live, client has no working on-test control, or it returns a clear "not live" error. Do not leave a site on test. Until then, no on-test control is the pass.
+3. If the CODE is not `O5985`, client on-test returns "Station writes are not live on this account." If it is `O5985`, account-level on-test works and Alerts badges while on test. Do not leave a site on test.
 4. After R53: only the Account admin can start/stop **account-level** on-test. Member sees the chip and cannot start or stop. On-test is per site (Fire Hall must not mute Public Works). Skip until R53.
-5. Staff client detail: Monitoring station card shows panel, chip, zone table, Refresh now, Historic. Create-client does not require zones.
+5. Staff client detail: Monitoring station card shows panel, chip, zone table, Refresh now, Historic, zone write controls, and on-test. Create-client does not require zones. Carbon monoxide zones cannot change type. Pulled live zones show "write fields unknown" and cannot be edited until the portal has stored delay / call list from a create. OffTest can return 500 if already off; the UI should still succeed. A refresh right after OnTest must not clear the chip (GET lags).
 6. Isolation: site A zones / Historic must not appear as site B. Crafting another site's `profileId` on a station action must fail.
 7. Confirm you did not call Lanvac `Account/status` or `Account/new`. Confirm you did not type `GO LIVE`.
 

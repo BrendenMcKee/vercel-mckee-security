@@ -417,6 +417,44 @@ export type Database = {
           },
         ]
       }
+      lanvac_zone_write: {
+        Row: {
+          delay: number
+          notify_list: Json
+          profile_id: string
+          restore_code: string | null
+          signal_code: string | null
+          updated_at: string
+          zone_number: number
+        }
+        Insert: {
+          delay?: number
+          notify_list?: Json
+          profile_id: string
+          restore_code?: string | null
+          signal_code?: string | null
+          updated_at?: string
+          zone_number: number
+        }
+        Update: {
+          delay?: number
+          notify_list?: Json
+          profile_id?: string
+          restore_code?: string | null
+          signal_code?: string | null
+          updated_at?: string
+          zone_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lanvac_zone_write_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lanvac_zones: {
         Row: {
           description: string

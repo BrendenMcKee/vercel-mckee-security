@@ -12,8 +12,8 @@ sign-in email is locked), and **Alerts**. The staff console is
 `/admin-dashboard` (Overview, Clients, Billing, Devices, Alerts). Client-facing
 portal mail (invites, reminders, receipts, caller-ID and device notices) stays
 off until the Billing-tab `GO LIVE` confirm (`PORTAL_PLAN.md` 9.5.5C). R54
-read UI is shipped (`../docs/LANVAC_STATION.md`). Next is O5985-gated station
-writes / on-test, then multi-site (`../docs/MULTI_SITE_ACCOUNTS.md`, R53), then
+read UI and O5985-gated writes are shipped (`../docs/LANVAC_STATION.md`). Next
+is multi-site (`../docs/MULTI_SITE_ACCOUNTS.md`, R53), then
 [`../docs/PORTAL_CUA_TEST.md`](../docs/PORTAL_CUA_TEST.md), before the
 Windows QuickBooks bridge or a real client import.
 

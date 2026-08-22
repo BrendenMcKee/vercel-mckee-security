@@ -1623,11 +1623,13 @@ function HistoryDiffList({
 
 function MonitoringStationCard({
   client,
+  writesLive,
   stationState,
   stationZones,
   stationSignals,
 }: {
   client: AdminClientDetailRow;
+  writesLive: boolean;
   stationState: LanvacStationState | null;
   stationZones: LanvacStationZone[];
   stationSignals: LanvacStationSignal[];
@@ -1780,6 +1782,7 @@ function MonitoringStationCard({
               profileId={client.id}
               canRefresh
               variant="admin"
+              writesLive={writesLive}
               state={stationState}
               zones={stationZones}
               signals={stationSignals}
@@ -2179,6 +2182,7 @@ export function AdminClientDetail({
   manualPayments,
   cardPayments,
   cloudBackupInterest,
+  writesLive,
   stationState,
   stationZones,
   stationSignals,
@@ -2190,6 +2194,7 @@ export function AdminClientDetail({
   manualPayments: Tables<"manual_payments">[];
   cardPayments: CardPaymentEntry[];
   cloudBackupInterest: Tables<"cloud_backup_interest"> | null;
+  writesLive: boolean;
   stationState: LanvacStationState | null;
   stationZones: LanvacStationZone[];
   stationSignals: LanvacStationSignal[];
@@ -2214,6 +2219,7 @@ export function AdminClientDetail({
       {showStation && (
         <MonitoringStationCard
           client={client}
+          writesLive={writesLive}
           stationState={stationState}
           stationZones={stationZones}
           stationSignals={stationSignals}

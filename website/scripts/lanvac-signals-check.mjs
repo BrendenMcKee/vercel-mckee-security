@@ -27,7 +27,21 @@ check(
 );
 check(
   "on-test history",
-  classifyLanvacSignal({ description: "[ON-TEST] begin", signal: "-X0070" }) === "on_test",
+  classifyLanvacSignal({ description: "[ON-TEST] begin", signal: "-X0076" }) === "on_test",
+);
+check(
+  "mobi file viewed is ops",
+  classifyLanvacSignal({
+    description: "CUSTOMER FILE VIEWED BY MOBI DENNIS MCKEE",
+    signal: "-X0070",
+  }) === "ops",
+);
+check(
+  "zone on-test email",
+  classifyLanvacSignal({
+    description: "[E-MAIL] ZONE 2 ON-TEST END > SENT",
+    signal: "-X0043",
+  }) === "on_test",
 );
 check(
   "unknown stays unknown",

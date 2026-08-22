@@ -31,7 +31,8 @@ function contextSummary(context: Tables<"portal_alerts">["context"]): string | n
  */
 export async function AdminAlerts() {
   const supabase = await createPortalServerClient();
-  const [openResult, resolvedResult] = await Promise.all([
+  const nowIso = new Date().toISOString();
+  const [openResult, resolvedResult, onTestState, onTestZones] = await Promise.all([
     supabase
       .from("portal_alerts")
       .select("*")
@@ -43,18 +44,55 @@ export async function AdminAlerts() {
       .not("resolved_at", "is", null)
       .order("resolved_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("lanvac_account_state")
+      .select("profile_id, on_test_until")
+      .gt("on_test_until", nowIso),
+    supabase.from("lanvac_zones").select("profile_id, zone_number").eq("on_test", true),
   ]);
 
-  if (openResult.error || resolvedResult.error) {
-    console.error("[portal] alerts query failed:", openResult.error ?? resolvedResult.error);
+  if (openResult.error || resolvedResult.error || onTestState.error || onTestZones.error) {
+    console.error(
+      "[portal] alerts query failed:",
+      openResult.error ?? resolvedResult.error ?? onTestState.error ?? onTestZones.error,
+    );
     throw new Error("Alerts failed to load.");
   }
 
   const open = openResult.data ?? [];
   const resolved = resolvedResult.data ?? [];
+  const onTestIds = [
+    ...new Set([
+      ...(onTestState.data ?? []).map((row) => row.profile_id),
+      ...(onTestZones.data ?? []).map((row) => row.profile_id),
+    ]),
+  ];
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      {onTestIds.length > 0 && (
+        <section className="rounded-2xl border border-sky-500/25 bg-sky-500/5 p-4 sm:p-6">
+          <h2 className="text-lg font-bold text-sky-100">
+            Sites on test ({onTestIds.length})
+          </h2>
+          <p className="mt-1 text-sm text-white/50">
+            End the test from the client&apos;s Monitoring station card. Do not
+            leave McKee on test.
+          </p>
+          <ul className="mt-4 space-y-2">
+            {onTestIds.map((profileId) => (
+              <li key={profileId}>
+                <a
+                  href={`/admin-dashboard/clients/${profileId}`}
+                  className="text-sm font-bold text-sky-100 hover:text-white"
+                >
+                  Open site
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
         <h2 className="text-lg font-bold text-white">
           Open alerts {open.length > 0 && <span className="text-amber-300">({open.length})</span>}

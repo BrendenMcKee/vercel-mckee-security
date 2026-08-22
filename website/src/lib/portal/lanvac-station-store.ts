@@ -6,6 +6,11 @@ import {
   classifyLanvacSignal,
   parseLanvacHistoricDate,
 } from "@/lib/portal/lanvac-signals";
+import {
+  LANVAC_ON_TEST_PULL_GRACE_MS,
+  applyOnTestPullGrace,
+  recentLanvacZoneTestIntent,
+} from "@/lib/portal/lanvac-writes";
 
 /**
  * Service-role station cache writes. Not a server action. Call only from
@@ -156,13 +161,38 @@ export async function persistLanvacPull(
       }
     }
     if (input.zones.data.length > 0) {
+      const graceCutoff = new Date(Date.now() - LANVAC_ON_TEST_PULL_GRACE_MS).toISOString();
+      const { data: graceEvents, error: graceError } = await admin
+        .from("lanvac_station_events")
+        .select("created_at, event_type, detail")
+        .eq("profile_id", input.profileId)
+        .in("event_type", ["on_test", "off_test"])
+        .gte("created_at", graceCutoff);
+      if (graceError) {
+        console.error("[portal] station on-test pull grace failed:", graceError);
+      }
+      const intents = (graceEvents ?? []).map((row) => {
+        const detail =
+          row.detail && typeof row.detail === "object" && !Array.isArray(row.detail)
+            ? (row.detail as { scope?: unknown; zoneNumber?: unknown })
+            : {};
+        return {
+          createdAt: row.created_at,
+          eventType: row.event_type,
+          scope: typeof detail.scope === "string" ? detail.scope : null,
+          zoneNumber: typeof detail.zoneNumber === "number" ? detail.zoneNumber : null,
+        };
+      });
       const { error: upsertError } = await admin.from("lanvac_zones").upsert(
         input.zones.data.map((zone) => ({
           profile_id: input.profileId,
           zone_number: zone.zoneNumber,
           description: zone.description,
           zone_type: zone.zoneType,
-          on_test: zone.onTest,
+          on_test: applyOnTestPullGrace(
+            zone.onTest,
+            recentLanvacZoneTestIntent(intents, zone.zoneNumber),
+          ),
           last_synced_at: input.syncedAt,
         })),
         { onConflict: "profile_id,zone_number" },
@@ -223,4 +253,152 @@ export async function persistLanvacPull(
   }
 
   return failed.length > 0 ? { ok: false, error: publicError } : { ok: true };
+}
+
+export async function persistLanvacZoneCache(input: {
+  profileId: string;
+  code: string;
+  actorUserId: string | null;
+  actorEmail: string | null;
+  zoneNumber: number;
+  description: string;
+  zoneType: string;
+  useCallList: boolean;
+  delay: number;
+  notifyList: string[];
+  signalCode: string | null;
+  restoreCode: string | null;
+  reason: string;
+  action: "create" | "update";
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isPortalAdminConfigured()) {
+    return { ok: false, error: "The station cache is not configured." };
+  }
+  const admin = getPortalAdminClient();
+  const syncedAt = new Date().toISOString();
+  const { error: zoneError } = await admin.from("lanvac_zones").upsert(
+    {
+      profile_id: input.profileId,
+      zone_number: input.zoneNumber,
+      description: input.description,
+      zone_type: input.zoneType,
+      use_call_list: input.useCallList,
+      last_synced_at: syncedAt,
+    },
+    { onConflict: "profile_id,zone_number" },
+  );
+  if (zoneError) {
+    console.error("[portal] station zone write cache failed:", zoneError);
+    return { ok: false, error: "Could not save the station zone." };
+  }
+  const { error: writeError } = await admin.from("lanvac_zone_write").upsert({
+    profile_id: input.profileId,
+    zone_number: input.zoneNumber,
+    delay: input.delay,
+    notify_list: input.notifyList,
+    signal_code: input.signalCode,
+    restore_code: input.restoreCode,
+  });
+  if (writeError) {
+    console.error("[portal] station zone write fields failed:", writeError);
+    return { ok: false, error: "Could not save the station zone." };
+  }
+  await admin.from("lanvac_station_events").insert({
+    profile_id: input.profileId,
+    lanvac_account_code: input.code,
+    actor_user_id: input.actorUserId,
+    actor_email: input.actorEmail,
+    event_type: "zone_write",
+    detail: {
+      action: input.action,
+      zoneNumber: input.zoneNumber,
+      description: input.description,
+      zoneType: input.zoneType,
+      reason: input.reason,
+    },
+  });
+  return { ok: true };
+}
+
+export async function persistLanvacZoneDelete(input: {
+  profileId: string;
+  code: string;
+  actorUserId: string | null;
+  actorEmail: string | null;
+  zoneNumber: number;
+  reason: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isPortalAdminConfigured()) {
+    return { ok: false, error: "The station cache is not configured." };
+  }
+  const admin = getPortalAdminClient();
+  const { error } = await admin
+    .from("lanvac_zones")
+    .delete()
+    .eq("profile_id", input.profileId)
+    .eq("zone_number", input.zoneNumber);
+  if (error) {
+    console.error("[portal] station zone delete cache failed:", error);
+    return { ok: false, error: "Could not save the station zone." };
+  }
+  await admin.from("lanvac_station_events").insert({
+    profile_id: input.profileId,
+    lanvac_account_code: input.code,
+    actor_user_id: input.actorUserId,
+    actor_email: input.actorEmail,
+    event_type: "zone_write",
+    detail: { action: "delete", zoneNumber: input.zoneNumber, reason: input.reason },
+  });
+  return { ok: true };
+}
+
+export async function persistLanvacOnTest(input: {
+  profileId: string;
+  code: string;
+  actorUserId: string | null;
+  actorEmail: string | null;
+  scope: "account" | "zone";
+  zoneNumber: number | null;
+  minutes: number | null;
+  onTest: boolean;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isPortalAdminConfigured()) {
+    return { ok: false, error: "The station cache is not configured." };
+  }
+  const admin = getPortalAdminClient();
+  if (input.scope === "account") {
+    const { error } = await admin.from("lanvac_account_state").upsert({
+      profile_id: input.profileId,
+      on_test_until: input.onTest && input.minutes
+        ? new Date(Date.now() + input.minutes * 60_000).toISOString()
+        : null,
+    });
+    if (error) {
+      console.error("[portal] station account on-test cache failed:", error);
+      return { ok: false, error: "Could not save the on-test state." };
+    }
+  } else if (input.zoneNumber != null) {
+    const { error } = await admin
+      .from("lanvac_zones")
+      .update({ on_test: input.onTest })
+      .eq("profile_id", input.profileId)
+      .eq("zone_number", input.zoneNumber);
+    if (error) {
+      console.error("[portal] station zone on-test cache failed:", error);
+      return { ok: false, error: "Could not save the on-test state." };
+    }
+  }
+  await admin.from("lanvac_station_events").insert({
+    profile_id: input.profileId,
+    lanvac_account_code: input.code,
+    actor_user_id: input.actorUserId,
+    actor_email: input.actorEmail,
+    event_type: input.onTest ? "on_test" : "off_test",
+    detail: {
+      scope: input.scope,
+      zoneNumber: input.zoneNumber,
+      minutes: input.minutes,
+    },
+  });
+  return { ok: true };
 }

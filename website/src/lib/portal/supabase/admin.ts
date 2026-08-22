@@ -13,7 +13,7 @@ import type { Database } from "@/lib/portal/database.types";
  * - QuickBooks bridge routes (`/api/qb/poll|report|mirror`)
  * - rate-limit RPC + portal_alerts writes (service-role-only surfaces)
  * - last caller-id change time (clients have no SELECT on caller_id_changes)
- * - Lanvac station cache writes after a server pull (R54; lanvac-station-store)
+ * - Lanvac station cache writes after a server pull or O5985 write (R54; lanvac-station-store)
  * The Phase 7 security sweep greps for getPortalAdminClient and checks every
  * call site against this list.
  *

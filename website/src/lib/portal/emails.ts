@@ -736,3 +736,101 @@ export async function sendAccountChangeAdminAlert({
     html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
   });
 }
+
+export async function sendStationZoneWriteAdminAlert({
+  clientName,
+  clientEmail,
+  profileId,
+  changedBy,
+  action,
+  zoneNumber,
+  description,
+  zoneType,
+  reason,
+}: {
+  clientName: string;
+  clientEmail: string | null;
+  profileId: string;
+  changedBy: string;
+  action: "create" | "update" | "delete";
+  zoneNumber: number;
+  description: string;
+  zoneType: string;
+  reason: string;
+}): Promise<boolean> {
+  const verb = action === "create" ? "added" : action === "delete" ? "deleted" : "updated";
+  const meta = {
+    title: `Station Zone ${verb[0].toUpperCase()}${verb.slice(1)}`,
+    inboxLabel: "Lanvac zone write",
+  };
+  const fields: EmailField[] = [
+    { label: "Client", value: `${clientName}${clientEmail ? ` (${clientEmail})` : ""}`, highlight: true },
+    { label: "Changed by", value: changedBy },
+    { label: "Zone", value: `#${zoneNumber}${description ? ` ${description}` : ""}${zoneType ? ` (${zoneType})` : ""}` },
+    { label: "Reason", value: reason },
+    {
+      label: "Open the station card",
+      value: "Review the cached zone list. Restore O5985 if this was a test write.",
+      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
+      cta: true,
+      buttonLabel: "Open Client Detail",
+    },
+  ];
+  return dispatchPortalEmail("Station zone write alert", {
+    subject: `📡 Station zone ${verb}: #${zoneNumber} (${clientName})`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
+}
+
+export async function sendStationOnTestAdminAlert({
+  clientName,
+  clientEmail,
+  profileId,
+  changedBy,
+  scope,
+  zoneNumber,
+  onTest,
+  minutes,
+  startedByClient,
+}: {
+  clientName: string;
+  clientEmail: string | null;
+  profileId: string;
+  changedBy: string;
+  scope: "account" | "zone";
+  zoneNumber: number | null;
+  onTest: boolean;
+  minutes: number | null;
+  startedByClient: boolean;
+}): Promise<boolean> {
+  const target = scope === "zone" && zoneNumber != null ? `zone #${zoneNumber}` : "the whole account";
+  const meta = {
+    title: onTest ? "Station On Test" : "Station Off Test",
+    inboxLabel: startedByClient ? "Client started or stopped a test" : "Staff on-test change",
+  };
+  const fields: EmailField[] = [
+    { label: "Client", value: `${clientName}${clientEmail ? ` (${clientEmail})` : ""}`, highlight: true },
+    { label: "Changed by", value: changedBy },
+    {
+      label: onTest ? "On test" : "Off test",
+      value: onTest
+        ? `${target} for ${minutes ?? "?"} minutes`
+        : `${target} is back in service`,
+    },
+    {
+      label: "Open the station card",
+      value: "Confirm the site is not left on test.",
+      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
+      cta: true,
+      buttonLabel: "Open Client Detail",
+    },
+  ];
+  return dispatchPortalEmail("Station on-test alert", {
+    subject: onTest
+      ? `🧪 On test: ${target} (${clientName})`
+      : `🧪 Off test: ${target} (${clientName})`,
+    text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
+    html: buildBrandedEmailHtml(meta, fields, PORTAL_FOOTER_HTML),
+  });
+}

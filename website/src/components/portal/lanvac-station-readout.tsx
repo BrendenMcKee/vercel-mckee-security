@@ -9,6 +9,17 @@ import {
   stationStatusChip,
   type LanvacSignalClass,
 } from "@/lib/portal/lanvac-signals";
+import {
+  AdminZoneEditor,
+  StationOnTestControls,
+} from "@/components/portal/lanvac-station-writes";
+
+export type LanvacStationZoneWrite = {
+  delay: number;
+  notifyList: string[];
+  signalCode: string | null;
+  restoreCode: string | null;
+};
 
 export type LanvacStationZone = {
   zoneNumber: number;
@@ -16,6 +27,7 @@ export type LanvacStationZone = {
   zoneType: string;
   onTest: boolean;
   useCallList: boolean | null;
+  write?: LanvacStationZoneWrite | null;
 };
 
 export type LanvacStationSignal = {
@@ -58,6 +70,7 @@ export function LanvacStationReadout({
   profileId,
   canRefresh,
   variant,
+  writesLive,
   state,
   zones,
   signals,
@@ -65,6 +78,7 @@ export function LanvacStationReadout({
   profileId: string;
   canRefresh: boolean;
   variant: "admin" | "client";
+  writesLive: boolean;
   state: LanvacStationState | null;
   zones: LanvacStationZone[];
   signals: LanvacStationSignal[];
@@ -209,11 +223,16 @@ export function LanvacStationReadout({
         )}
       </div>
 
+      <StationOnTestControls
+        profileId={profileId}
+        variant={variant}
+        writesLive={writesLive}
+        onTestUntil={state?.onTestUntil ?? null}
+        anyZoneOnTest={zones.some((zone) => zone.onTest)}
+      />
+
       {variant === "admin" && (
-        <p className="text-xs leading-relaxed text-white/40">
-          Zone edits and on/off test are not live yet. Station writes stay off
-          until you say go.
-        </p>
+        <AdminZoneEditor profileId={profileId} writesLive={writesLive} zones={zones} />
       )}
 
       <div>

@@ -127,6 +127,11 @@ try {
     event_type: "pull",
     detail: { probe: true },
   });
+  await admin.from("lanvac_zone_write").insert({
+    profile_id: users[0].profileId,
+    zone_number: 1,
+    delay: 1,
+  });
   {
     const { data, error } = await clientA.from("lanvac_zones").select("zone_number, description");
     const onlyOwn =
@@ -166,6 +171,10 @@ try {
       .from("lanvac_zones")
       .select("delay, notify_list, signal_code, restore_code");
     check("user A cannot select zone write-only columns", Boolean(error), error?.message);
+  }
+  {
+    const { data, error } = await clientA.from("lanvac_zone_write").select("delay");
+    check("user A reads zero zone write rows", Boolean(error) || (data ?? []).length === 0, error?.message);
   }
 } finally {
   for (const u of created) {

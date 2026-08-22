@@ -16,8 +16,8 @@ export const LANVAC_SIGNAL_CLASSES = [
 
 export type LanvacSignalClass = (typeof LANVAC_SIGNAL_CLASSES)[number];
 
-const OPS_SIGNALS = new Set(["-X0019", "-X0071", "-X0011"]);
-const ON_TEST_SIGNALS = new Set(["-X0070", "-X0076", "-X0030"]);
+const OPS_SIGNALS = new Set(["-X0019", "-X0071", "-X0011", "-X0070"]);
+const ON_TEST_SIGNALS = new Set(["-X0076", "-X0030", "-X0043"]);
 
 export function asLanvacSignalClass(
   value: string | null | undefined,
@@ -41,7 +41,7 @@ export function classifyLanvacSignal(input: {
     (description.includes("ALARM") && !isRestoreText);
 
   if (isAlarmText) return "alarm";
-  if (description.includes("[ON-TEST]") || ON_TEST_SIGNALS.has(signal)) return "on_test";
+  if (description.includes("ON-TEST") || ON_TEST_SIGNALS.has(signal)) return "on_test";
   if (description.includes("COMMUNICATION RESTORE") || signal.startsWith("350")) {
     return "comm_restore";
   }

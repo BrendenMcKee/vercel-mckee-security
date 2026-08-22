@@ -29,6 +29,7 @@ import { LanvacEmergencyReadout } from "@/components/portal/lanvac-emergency-rea
 import { LanvacStationReadout } from "@/components/portal/lanvac-station-readout";
 import { lanvacEmergencyNumbers } from "@/lib/portal/lanvac-cities";
 import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
+import { isStationOnTest, lanvacWritesLive } from "@/lib/portal/lanvac-writes";
 
 export const metadata: Metadata = {
   title: "Manage Account",
@@ -261,8 +262,16 @@ export default async function UserDashboardPage({
     : stripePayables.length > 0 || outstandingPortFee
       ? 1
       : 0;
+  const stationOnTest = isStationOnTest({
+    onTestUntil: stationState?.onTestUntil,
+    anyZoneOnTest: stationZones.some((zone) => zone.onTest),
+  });
   const alertCount =
-    manualUnpaid + cardPaymentAlerts + (missingCallerId ? 1 : 0) + expiredDevices.length;
+    manualUnpaid +
+    cardPaymentAlerts +
+    (missingCallerId ? 1 : 0) +
+    expiredDevices.length +
+    (stationOnTest ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -311,6 +320,8 @@ export default async function UserDashboardPage({
           outstandingPortFee={outstandingPortFee}
           hasCardOnFile={hasCardOnFile}
           expiredDevices={expiredDevices}
+          stationOnTest={stationOnTest}
+          stationOnTestUntil={stationState?.onTestUntil ?? null}
         />
       ) : (
         <>
@@ -421,6 +432,7 @@ export default async function UserDashboardPage({
               profileId={profile.id}
               canRefresh={canRefreshStation}
               variant="client"
+              writesLive={lanvacWritesLive(profile.lanvac_account_code)}
               state={stationState}
               zones={stationZones}
               signals={stationSignals}
@@ -777,6 +789,8 @@ function ClientAlertsPanel({
   outstandingPortFee,
   hasCardOnFile,
   expiredDevices,
+  stationOnTest,
+  stationOnTestUntil,
 }: {
   unpaidServices: Array<{
     id: string;
@@ -808,13 +822,16 @@ function ClientAlertsPanel({
     installed_on: string;
     lifetime_years: number;
   }>;
+  stationOnTest: boolean;
+  stationOnTestUntil: string | null;
 }) {
   const clear =
     unpaidServices.length === 0 &&
     !missingCallerId &&
     cardSetupNeeded.length === 0 &&
     !outstandingPortFee &&
-    expiredDevices.length === 0;
+    expiredDevices.length === 0 &&
+    !stationOnTest;
 
   if (clear) {
     return (
@@ -849,6 +866,23 @@ function ClientAlertsPanel({
         portFee={outstandingPortFee}
         hasCardOnFile={hasCardOnFile}
       />
+      {stationOnTest && (
+        <div className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-4 sm:p-6">
+          <h2 className="text-lg font-bold text-sky-100">Alarm is on test</h2>
+          <p className="mt-3 text-sm leading-relaxed text-sky-100/90">
+            The monitoring station is not treating this site as a live alarm
+            {stationOnTestUntil
+              ? ` until ${new Date(stationOnTestUntil).toLocaleString("en-CA", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}`
+              : ""}
+            . End the test from the Dashboard when the work is done.
+          </p>
+        </div>
+      )}
       {missingCallerId && (
         <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 sm:p-6">
           <h2 className="text-lg font-bold text-amber-100">Alarm contact list needed</h2>

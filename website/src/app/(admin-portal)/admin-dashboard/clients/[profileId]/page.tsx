@@ -5,6 +5,7 @@ import { getAuthContext } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { AdminClientDetail } from "@/components/admin-portal/admin-client-detail";
 import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
+import { lanvacWritesLive, parseNotifyList } from "@/lib/portal/lanvac-writes";
 import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
@@ -64,6 +65,7 @@ export default async function AdminClientDetailPage({
     stationStateResult,
     stationZonesResult,
     stationSignalsResult,
+    stationWriteResult,
   ] = await Promise.all([
       supabase
         .from("caller_id_contacts")
@@ -117,6 +119,10 @@ export default async function AdminClientDetailPage({
         .select("occurred_at_text, signal, description, signal_class")
         .eq("profile_id", profileId)
         .order("sort_index"),
+      supabase
+        .from("lanvac_zone_write")
+        .select("zone_number, delay, notify_list, signal_code, restore_code")
+        .eq("profile_id", profileId),
     ]);
 
   const subError =
@@ -128,7 +134,8 @@ export default async function AdminClientDetailPage({
     cloudInterestResult.error ??
     stationStateResult.error ??
     stationZonesResult.error ??
-    stationSignalsResult.error;
+    stationSignalsResult.error ??
+    stationWriteResult.error;
   if (subError) {
     console.error("[portal] Admin client detail sub-queries failed:", subError);
     throw new Error("Client detail failed to load.");
@@ -176,13 +183,27 @@ export default async function AdminClientDetailPage({
                 }
               : null
           }
-          stationZones={(stationZonesResult.data ?? []).map((zone) => ({
-            zoneNumber: zone.zone_number,
-            description: zone.description,
-            zoneType: zone.zone_type,
-            onTest: zone.on_test,
-            useCallList: zone.use_call_list,
-          }))}
+          writesLive={lanvacWritesLive(client.lanvac_account_code)}
+          stationZones={(stationZonesResult.data ?? []).map((zone) => {
+            const write = (stationWriteResult.data ?? []).find(
+              (row) => row.zone_number === zone.zone_number,
+            );
+            return {
+              zoneNumber: zone.zone_number,
+              description: zone.description,
+              zoneType: zone.zone_type,
+              onTest: zone.on_test,
+              useCallList: zone.use_call_list,
+              write: write
+                ? {
+                    delay: write.delay,
+                    notifyList: parseNotifyList(write.notify_list),
+                    signalCode: write.signal_code,
+                    restoreCode: write.restore_code,
+                  }
+                : null,
+            };
+          })}
           stationSignals={(stationSignalsResult.data ?? []).map((row) => ({
             occurredAtText: row.occurred_at_text,
             signal: row.signal,

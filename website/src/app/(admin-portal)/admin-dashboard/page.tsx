@@ -50,13 +50,24 @@ export default async function AdminDashboardPage({
             : "overview";
 
   const supabase = await createPortalServerClient();
-  const [{ count: openAlerts }, settingsRes] = await Promise.all([
+  const nowIso = new Date().toISOString();
+  const [{ count: openAlerts }, settingsRes, onTestState, onTestZones] = await Promise.all([
     supabase
       .from("portal_alerts")
       .select("id", { count: "exact", head: true })
       .is("resolved_at", null),
     supabase.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle(),
+    supabase
+      .from("lanvac_account_state")
+      .select("profile_id")
+      .gt("on_test_until", nowIso),
+    supabase.from("lanvac_zones").select("profile_id").eq("on_test", true),
   ]);
+  const onTestSites = new Set([
+    ...(onTestState.data ?? []).map((row) => row.profile_id),
+    ...(onTestZones.data ?? []).map((row) => row.profile_id),
+  ]).size;
+  const alertBadge = (openAlerts ?? 0) + onTestSites;
   const clientMailEnabled = settingsRes.data?.client_mail_enabled === true;
 
   return (
@@ -95,13 +106,13 @@ export default async function AdminDashboardPage({
               {t.id === "alerts" && (
                 <span
                   className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
-                    (openAlerts ?? 0) > 0
+                    alertBadge > 0
                       ? "bg-red-500 text-white"
                       : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40"
                   }`}
-                  aria-label={`${openAlerts ?? 0} open alerts`}
+                  aria-label={`${alertBadge} open alerts`}
                 >
-                  {openAlerts ?? 0}
+                  {alertBadge}
                 </span>
               )}
             </span>
