@@ -1,11 +1,13 @@
 import "server-only";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { deviceExpiryDate, isDeviceExpired } from "@/lib/portal/devices";
+import { isClientMailEnabled } from "@/lib/portal/client-mail";
 import { sendDeviceExpiryAdminAlert, sendDeviceExpiryClientNotice } from "@/lib/portal/emails";
 
 export type DeviceExpirySummary = {
   expired: number;
   alerted: number;
+  clientMailPaused: boolean;
 };
 
 /**
@@ -14,9 +16,15 @@ export type DeviceExpirySummary = {
  * one admin alert + one client notice, then the guard is stamped. Changing
  * the install date or interval (a replacement) clears the guard for the next
  * cycle.
+ *
+ * Same rule as due_alerted_at (9.5.5C): do not stamp while the client
+ * notice still needs to go out. Stamping when only the admin alert
+ * succeeded would skip the client forever after GO LIVE. Staff may see
+ * the same admin alert again while mail is paused.
  */
 export async function runDeviceExpiryJob(): Promise<DeviceExpirySummary> {
   const admin = getPortalAdminClient();
+  const clientMailOn = await isClientMailEnabled();
 
   const { data: devices, error } = await admin
     .from("devices")
@@ -49,8 +57,9 @@ export async function runDeviceExpiryJob(): Promise<DeviceExpirySummary> {
       profileId: profile.id,
     });
 
-    if (profile.email) {
-      await sendDeviceExpiryClientNotice({
+    let clientDone = !profile.email;
+    if (profile.email && clientMailOn) {
+      clientDone = await sendDeviceExpiryClientNotice({
         to: profile.email,
         firstName: profile.first_name,
         deviceLabel,
@@ -58,9 +67,9 @@ export async function runDeviceExpiryJob(): Promise<DeviceExpirySummary> {
       });
     }
 
-    // Stamp only when the admin alert went out, so a failed send retries on
-    // the next run instead of silently losing the expiry event.
-    if (adminSent) {
+    // Stamp only when the admin alert went out and the client notice is
+    // done or not required. A paused client send must retry after GO LIVE.
+    if (adminSent && clientDone) {
       const { error: stampError } = await admin
         .from("devices")
         .update({ expiry_alerted_at: new Date().toISOString() })
@@ -73,5 +82,5 @@ export async function runDeviceExpiryJob(): Promise<DeviceExpirySummary> {
     }
   }
 
-  return { expired: expiredDevices.length, alerted };
+  return { expired: expiredDevices.length, alerted, clientMailPaused: !clientMailOn };
 }

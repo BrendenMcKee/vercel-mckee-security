@@ -9,10 +9,12 @@ const GO_LIVE_PROMPT = `Turn on client email?
 This emails real customers: invitations, payment reminders, payment receipts, caller-ID changes, and device-replacement notices.
 
 Only do this after:
-1. The client import is complete and spot-checked
-2. The portal is working the way you expect
-3. The QuickBooks bridge is on the live company file (McKee Security Live.QBW), not PORTAL-TEST
-4. You are ready for customers to hear from the portal
+1. Multi-site accounts have shipped and the CUA portal test is clean
+2. The client import is complete and spot-checked
+3. Organization grouping is signed off
+4. The portal is working the way you expect
+5. The QuickBooks bridge is on the live company file (McKee Security Live.QBW), not PORTAL-TEST
+6. You are ready for customers to hear from the portal
 
 To confirm, type: ${CLIENT_MAIL_GO_LIVE_PHRASE}`;
 
@@ -74,11 +76,13 @@ export function ClientMailGate({
       <p className={`mt-2 text-sm leading-relaxed ${enabled ? "text-emerald-100/90" : "text-amber-100/90"}`}>
         {enabled
           ? "Invitations, payment reminders, payment receipts, caller-ID notices, and device-replacement mail are sending to customers."
-          : "Import and testing stay silent to customers. Staff still get collections digests, card-failed alerts, and device-expiry alerts. Flip this only after the checklist below."}
+          : "Import and testing stay silent to customers. Staff still get collections digests, card-failed alerts, and device-expiry alerts. Do not flip before multi-site, the CUA test, the real import, and grouping sign-off."}
       </p>
       {!enabled && (
         <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-amber-50/90">
+          <li>Multi-site accounts have shipped and the CUA portal test is clean.</li>
           <li>Client import is complete and a sample of accounts is spot-checked.</li>
+          <li>Organization grouping is signed off on the grouping board.</li>
           <li>The portal is working the way you expect (billing, contacts, devices).</li>
           <li>The QuickBooks bridge is on the live company file, not PORTAL-TEST.</li>
           <li>You are ready for customers to receive portal email.</li>

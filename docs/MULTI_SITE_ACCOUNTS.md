@@ -39,14 +39,14 @@ todos:
     content: "Appoint account-admin queue, org account-admin setup email (also if a bill/invite goes out with no auth yet), Transfer account admin to an existing member"
     status: pending
   - id: checks-docs
-    content: "Update rls-pentest, rls-check, activation-check, cron-check; PORTAL_PLAN R53 + 9.5.4/9.5.5 import grouping gate + account-admin email; ACCOUNTING_PLAN; PRODUCT_HANDOVER admin two-flow"
+    content: "Update rls-pentest, rls-check, activation-check, cron-check when slices ship (R53 / 9.5.4 / 9.5.5 / ACCOUNTING_PLAN / handover already aligned as planned)"
     status: pending
 isProject: false
 ---
 
 # Multi-site accounts and extra logins
 
-Status: **planned, not built.** Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. PORTAL_PLAN R53 is written when this is implemented.
+Status: **planned, not built.** Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. **R53 is in `PORTAL_PLAN.md` as planned** (not shipped). Keep this file, R53, 9.5.4 / 9.5.5 / 9.5.5C, and [`PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same commit as each implementation slice.
 
 ## How it works today (why the county cannot log in once)
 
@@ -207,7 +207,7 @@ Seed still creates **one pending site per CODE / QB customer**. Suggestions are 
 
 ~703 Lanvac CODEs vs ~650 clean QB monitoring rows will not line up 1:1. Extra codes stay unmatched for a human.
 
-When we implement, write this into [PORTAL_PLAN.md](PORTAL_PLAN.md) 9.5.4 / 9.5.5 / 9.5.5C / R53, [ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md), and [PRODUCT_HANDOVER.md](PRODUCT_HANDOVER.md). Do not edit those docs until implementation.
+Those import rules are already written into [PORTAL_PLAN.md](../PORTAL_PLAN.md) 9.5.4 / 9.5.5 / 9.5.5C / R53, [ACCOUNTING_PLAN.md](../ACCOUNTING_PLAN.md), and the [PRODUCT_HANDOVER.md](../PRODUCT_HANDOVER.md) header. Keep them in lockstep when a slice changes behavior.
 
 `accounts.auto_onboard` (default **true** for a new single site):
 
@@ -266,7 +266,7 @@ Activation ([`linkProfileToUser`](website/src/lib/portal/actions/activation.ts))
 
 ## Docs and gates
 
-Add **R53** in [PORTAL_PLAN.md](PORTAL_PLAN.md): account vs site, Account admin vs Member (schema `owner` / `member`), hidden single-site UI for the majority, no org checkbox on New client, second site makes the extra UI and keeps the existing account admin, Lanvac/QB suggestions are accept/reject only, human grouping sign-off is a GO LIVE gate, Appoint account admin email (human, before a bill is due), `auto_onboard`, delete/disable rules, Stripe email rule, per-site due dates. Update 9.5.4 / 9.5.5 / 9.5.5C. Mirror in [ACCOUNTING_PLAN.md](ACCOUNTING_PLAN.md). [PRODUCT_HANDOVER.md](PRODUCT_HANDOVER.md): two Clients-tab buttons + Appoint account admin.
+**R53 is already in [PORTAL_PLAN.md](../PORTAL_PLAN.md)** as planned (account vs site, Account admin vs Member, hidden single-site UI, no org checkbox, grouping sign-off, Appoint account admin, `auto_onboard`, delete/disable, Stripe email rule, per-site due dates). 9.5.4 / 9.5.5 / 9.5.5C and [ACCOUNTING_PLAN.md](../ACCOUNTING_PLAN.md) match. [PRODUCT_HANDOVER.md](../PRODUCT_HANDOVER.md) header points at the two Clients-tab buttons + Appoint account admin. When a slice ships, mark the matching R53 bullets as built and update the CUA playbook in the same commit.
 
 Update [`rls-pentest.mjs`](website/scripts/rls-pentest.mjs), [`rls-check.mjs`](website/scripts/rls-check.mjs), [`activation-check.mjs`](website/scripts/activation-check.mjs), and cleanup expectations in [`cron-check.mjs`](website/scripts/cron-check.mjs): client A cannot see client B’s site; a second site on A’s account is visible; a member without `profiles.user_id` is not an orphan; client cannot flip `auto_onboard` unless we add a client UPDATE (we will not: only admin RLS UPDATE on accounts).
 
@@ -320,11 +320,14 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 4. Admin: two buttons, Account card, grouping board + empty-queue sign-off, Appoint account admin
 5. Client: sites list / switcher / People (hidden for the majority)
 6. Emails + render check
-7. PORTAL_PLAN R53 and the other docs
-8. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
+7. Keep PORTAL_PLAN R53 / 9.5.4 / 9.5.5 / 9.5.5C and this file current as each slice lands (R53 is already written as planned)
+8. **Living CUA playbook.** Update [`docs/PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same slice as the UI it describes. After deploy, a computer-using agent runs that file (devtools on) and writes a findings report. **This is the last gate before the Windows MCP bridge and the real import.** Do not start either until the report is clean or every fail is accepted.
+9. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
 
-**Confidence:** the design is ready to implement. The remaining risk is execution (many auth/RLS call sites, no automated suite). Ship the slices above against local Supabase and the existing check scripts before any real client import.
+**Pacing (locked):** Hosted has **staff and throwaway test clients only**. No real customer login to preserve. Implement **two slices at a time**, then stop for an end-to-end audit of what just landed. First stop: slices 1 and 2 (schema + `resolvePortalSession` / orphan / OAuth / cleanup / password). Do not start slice 3 until that audit is done. Same pattern for 3–4, 5–6, then CUA.
+
+**Alignment:** 10/10 we should proceed with slices 1–2 when asked. Execution risk on later slices stays; that is why we pause and audit instead of one-shotting.
 
 ## Already shipped (do not redo)
 
-Client-facing mail is off until Billing-tab `GO LIVE` (`f9d44af` on `main`). That is the production brake for all automated onboarding mail. Multi-site `auto_onboard` is the second brake after go-live.
+Client-facing mail is off until Billing-tab `GO LIVE` (`f9d44af` on `main`). That is the production brake for all automated onboarding mail. Multi-site `auto_onboard` is the second brake after go-live. `due_alerted_at` and `expiry_alerted_at` are not stamped while a client send is held, so the first run after the flip still notifies the customer.

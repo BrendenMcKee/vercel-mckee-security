@@ -6,7 +6,8 @@
 //  - payment-due: overdue manual service is in the digest; client reminder
 //    is held (reminded 0, due_alerted_at empty) while client mail is paused,
 //    or fires once per cycle when mail is live
-//  - device-expiry: expired device alerted + stamped once; second run alerts 0
+//  - device-expiry: expired device; client notice + stamp held while mail
+//    is paused (same as due_alerted_at), or fires once per expiry when live
 //  - cleanup: expired 90d+ invitation deleted, fresh invitation kept
 //  - daily dispatcher runs every job and reports per-job results
 
@@ -132,19 +133,40 @@ try {
     check("payment-due run 2 still lists it in the digest", body2.candidates >= 1, JSON.stringify(body2));
   }
 
-  // ---- device-expiry: alerts once ---------------------------------------------------
+  // ---- device-expiry: alerts once when mail is live; holds the stamp when paused ----
   {
+    const { data: mail } = await admin.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle();
+    const clientMailOn = mail?.client_mail_enabled === true;
+
     const res = await fetch(`${baseUrl}/api/cron/device-expiry`, authed);
     const body = await res.json();
     check("device-expiry run 1 responds 200", res.status === 200, `status=${res.status}`);
-    check("device-expiry run 1 alerts the expired battery", body.alerted >= 1, JSON.stringify(body));
 
-    const { data: after } = await admin.from("devices").select("expiry_alerted_at").eq("id", device.id).single();
-    check("expiry_alerted_at stamped after alert", Boolean(after?.expiry_alerted_at));
+    if (clientMailOn) {
+      check("device-expiry run 1 alerts the expired battery", body.alerted >= 1, JSON.stringify(body));
+      const { data: after } = await admin.from("devices").select("expiry_alerted_at").eq("id", device.id).single();
+      check("expiry_alerted_at stamped after alert", Boolean(after?.expiry_alerted_at));
+    } else {
+      check(
+        "device-expiry run 1 holds the client stamp while mail is paused",
+        body.alerted === 0 && body.clientMailPaused === true,
+        JSON.stringify(body),
+      );
+      const { data: after } = await admin.from("devices").select("expiry_alerted_at").eq("id", device.id).single();
+      check("expiry_alerted_at stays empty so the client notice can fire after go-live", !after?.expiry_alerted_at);
+    }
 
     const res2 = await fetch(`${baseUrl}/api/cron/device-expiry`, authed);
     const body2 = await res2.json();
-    check("device-expiry run 2 alerts 0 (once per expiry)", res2.status === 200 && body2.alerted === 0, JSON.stringify(body2));
+    if (clientMailOn) {
+      check("device-expiry run 2 alerts 0 (once per expiry)", res2.status === 200 && body2.alerted === 0, JSON.stringify(body2));
+    } else {
+      check(
+        "device-expiry run 2 still holds the stamp while mail is paused",
+        res2.status === 200 && body2.alerted === 0 && body2.clientMailPaused === true,
+        JSON.stringify(body2),
+      );
+    }
   }
 
   // ---- cleanup: old invitation deleted ------------------------------------------------
