@@ -68,6 +68,12 @@ import { LANVAC_ACCOUNT_CODE_INPUT_MAX, normalizeLanvacAccountInput } from "@/li
 import { guessLanvacCityFromAddress, lanvacEmergencyNumbers } from "@/lib/portal/lanvac-cities";
 import { LanvacCitySelect } from "@/components/admin-portal/lanvac-city-select";
 import { LanvacEmergencyReadout } from "@/components/portal/lanvac-emergency-readout";
+import {
+  LanvacStationReadout,
+  type LanvacStationSignal,
+  type LanvacStationState,
+  type LanvacStationZone,
+} from "@/components/portal/lanvac-station-readout";
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
 
@@ -1615,7 +1621,17 @@ function HistoryDiffList({
   );
 }
 
-function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
+function MonitoringStationCard({
+  client,
+  stationState,
+  stationZones,
+  stationSignals,
+}: {
+  client: AdminClientDetailRow;
+  stationState: LanvacStationState | null;
+  stationZones: LanvacStationZone[];
+  stationSignals: LanvacStationSignal[];
+}) {
   const router = useRouter();
   const hasMonitoring = hasCurrentMonitoring(client.services);
   const [editing, setEditing] = useState(false);
@@ -1756,6 +1772,18 @@ function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
                 numbers={lanvacEmergencyNumbers(client.lanvac_city)}
               />
             </div>
+          </div>
+        )}
+        {hasMonitoring && client.lanvac_account_code && (
+          <div className="border-t border-white/10 pt-5">
+            <LanvacStationReadout
+              profileId={client.id}
+              canRefresh
+              variant="admin"
+              state={stationState}
+              zones={stationZones}
+              signals={stationSignals}
+            />
           </div>
         )}
       </div>
@@ -2151,6 +2179,9 @@ export function AdminClientDetail({
   manualPayments,
   cardPayments,
   cloudBackupInterest,
+  stationState,
+  stationZones,
+  stationSignals,
 }: {
   client: AdminClientDetailRow;
   callerIdContacts: CallerIdContact[];
@@ -2159,6 +2190,9 @@ export function AdminClientDetail({
   manualPayments: Tables<"manual_payments">[];
   cardPayments: CardPaymentEntry[];
   cloudBackupInterest: Tables<"cloud_backup_interest"> | null;
+  stationState: LanvacStationState | null;
+  stationZones: LanvacStationZone[];
+  stationSignals: LanvacStationSignal[];
 }) {
   const showCallerId =
     hasCurrentMonitoring(client.services) || callerIdContacts.length > 0 || callerIdChanges.length > 0;
@@ -2177,7 +2211,14 @@ export function AdminClientDetail({
         cardPayments={cardPayments}
         cloudBackupInterest={cloudBackupInterest}
       />
-      {showStation && <MonitoringStationCard client={client} />}
+      {showStation && (
+        <MonitoringStationCard
+          client={client}
+          stationState={stationState}
+          stationZones={stationZones}
+          stationSignals={stationSignals}
+        />
+      )}
       {showCallerId && (
         <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
       )}

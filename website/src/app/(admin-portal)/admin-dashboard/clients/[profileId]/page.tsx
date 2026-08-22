@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getAuthContext } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { AdminClientDetail } from "@/components/admin-portal/admin-client-detail";
+import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
 import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
@@ -60,6 +61,9 @@ export default async function AdminClientDetailPage({
     cardPaymentsResult,
     cloudInterestResult,
     settingsResult,
+    stationStateResult,
+    stationZonesResult,
+    stationSignalsResult,
   ] = await Promise.all([
       supabase
         .from("caller_id_contacts")
@@ -96,6 +100,23 @@ export default async function AdminClientDetailPage({
         .eq("profile_id", profileId)
         .maybeSingle(),
       supabase.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle(),
+      supabase
+        .from("lanvac_account_state")
+        .select(
+          "panel_type, is_disabled, on_test_until, last_signal_at, last_signal_class, last_synced_at, last_error",
+        )
+        .eq("profile_id", profileId)
+        .maybeSingle(),
+      supabase
+        .from("lanvac_zones")
+        .select("zone_number, description, zone_type, on_test, use_call_list")
+        .eq("profile_id", profileId)
+        .order("zone_number"),
+      supabase
+        .from("lanvac_signals")
+        .select("occurred_at_text, signal, description, signal_class")
+        .eq("profile_id", profileId)
+        .order("sort_index"),
     ]);
 
   const subError =
@@ -104,7 +125,10 @@ export default async function AdminClientDetailPage({
     devicesResult.error ??
     paymentsResult.error ??
     cardPaymentsResult.error ??
-    cloudInterestResult.error;
+    cloudInterestResult.error ??
+    stationStateResult.error ??
+    stationZonesResult.error ??
+    stationSignalsResult.error;
   if (subError) {
     console.error("[portal] Admin client detail sub-queries failed:", subError);
     throw new Error("Client detail failed to load.");
@@ -137,6 +161,34 @@ export default async function AdminClientDetailPage({
           devices={devicesResult.data ?? []}
           manualPayments={paymentsResult.data ?? []}
           cloudBackupInterest={cloudInterestResult.data}
+          stationState={
+            stationStateResult.data
+              ? {
+                  panelType: stationStateResult.data.panel_type,
+                  isDisabled: stationStateResult.data.is_disabled,
+                  onTestUntil: stationStateResult.data.on_test_until,
+                  lastSignalAt: stationStateResult.data.last_signal_at,
+                  lastSignalClass: asLanvacSignalClass(
+                    stationStateResult.data.last_signal_class,
+                  ),
+                  lastSyncedAt: stationStateResult.data.last_synced_at,
+                  lastError: stationStateResult.data.last_error,
+                }
+              : null
+          }
+          stationZones={(stationZonesResult.data ?? []).map((zone) => ({
+            zoneNumber: zone.zone_number,
+            description: zone.description,
+            zoneType: zone.zone_type,
+            onTest: zone.on_test,
+            useCallList: zone.use_call_list,
+          }))}
+          stationSignals={(stationSignalsResult.data ?? []).map((row) => ({
+            occurredAtText: row.occurred_at_text,
+            signal: row.signal,
+            description: row.description,
+            signalClass: asLanvacSignalClass(row.signal_class) ?? "unknown",
+          }))}
           cardPayments={(cardPaymentsResult.data ?? []).map((event) => {
             const payload = event.payload as { amount_paid?: number } | null;
             return {

@@ -26,6 +26,7 @@ import {
 } from "@/lib/portal/lanvac";
 import { getStripeClient, isStripeConfigured } from "@/lib/portal/stripe";
 import { siteConfig } from "@/lib/site-config";
+import { clearLanvacStationCache } from "@/lib/portal/lanvac-station-store";
 
 const createClientSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(100),
@@ -491,7 +492,8 @@ export async function updateClientLanvacAction(input: {
   lanvacAccountCode: string;
   lanvacCity: string;
 }): Promise<UpdateClientLanvacResult> {
-  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const adminAuth = await tryRequireAdmin();
+  if (!adminAuth) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = updateLanvacSchema.safeParse(input);
   if (!parsed.success) {
@@ -500,7 +502,7 @@ export async function updateClientLanvacAction(input: {
   const supabase = await createPortalServerClient();
   const { data: target } = await supabase
     .from("profiles")
-    .select("id, role")
+    .select("id, role, lanvac_account_code")
     .eq("id", parsed.data.profileId)
     .maybeSingle();
   if (!target) return { ok: false, error: "Client not found." };
@@ -537,6 +539,16 @@ export async function updateClientLanvacAction(input: {
     }
     console.error("[portal] updateClientLanvac failed:", error);
     return { ok: false, error: "Could not save the station fields. Please try again." };
+  }
+
+  if (target.lanvac_account_code !== parsedCode.value) {
+    await clearLanvacStationCache({
+      profileId: parsed.data.profileId,
+      fromCode: target.lanvac_account_code,
+      toCode: parsedCode.value,
+      actorUserId: adminAuth.user.id,
+      actorEmail: adminAuth.user.email,
+    });
   }
 
   revalidatePath("/admin-dashboard", "layout");

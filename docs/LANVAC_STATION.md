@@ -1,6 +1,6 @@
 # Lanvac station layer
 
-Status: **planned. O5985 reads done 2026-08-22** (Account / Zone / Historic all 200). Restore list and color rules below. Zone writes, on/off test, and caller-ID `fullupdate` stay **O5985-only** until you say go. Do not fold this into multi-site (R53). [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) already treats zones / Historic / on-test as per-site (`profile_id`). After this ships, confirm that file still matches, then implement R53.
+Status: **schema + read-only UI shipped 2026-08-22.** `O5985` Account / Zone / Historic reads done. Zone writes, on/off test, and caller-ID `fullupdate` stay **O5985-only** until you say go. Do not fold this into multi-site (R53). [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) already treats zones / Historic / on-test as per-site (`profile_id`). After writes ship, confirm that file still matches, then implement R53.
 
 Re-pull: from `website/`, `node --env-file=.env.local scripts/lanvac-o5985-read.mjs`. Output is `website/.lanvac-o5985/` (gitignored, password stripped).
 
@@ -68,13 +68,13 @@ First admin edit after a pull must collect missing write fields. Defaults if Lan
 
 ## Access
 
-- New server-only module `website/src/lib/portal/lanvac-api.ts`. Never return the dealer password or raw request body.
+- New server-only module `website/src/lib/portal/lanvac-api.ts`. Never return the dealer password or raw request body. Cache writes live in `lanvac-station-store.ts` (`server-only`). Do not export cache-clear as a server action.
 - **Reads:** any CODE already on a portal profile. On-demand per open page. No cron over all CODEs.
 - **Writes:** `O5985` only until you say go. Other sites show the UI and "station writes not live."
 - UI and **server actions** require `hasCurrentMonitoring` and a CODE.
 - Every action takes `profileId` from day one. Today: session profile must match (or admin). After R53: `requireSelectedSite`.
 - Client SELECT only on cached rows. No client PostgREST write of `on_test`. On-test is a server action that talks to Lanvac, then updates our cache.
-- Client never sees delay, signal/restore codes, extra zone notify phones, or dealer fields.
+- Client never sees delay, signal/restore codes, extra zone notify phones, or dealer fields. Those columns are not on `lanvac_zones` (hosted auto-grant restored JWT SELECT after a column revoke). The write sitting adds a service-role-only table.
 - Client on-test: account-level, Account admin only after R53 (today: the one login). Duration 15 / 30 / **60** / 120 or custom 5-3600. 120s cooldown. Staff email. Alerts badge while on test.
 - Admin zone delete / overwrite: confirm + short reason + staff email.
 - CODE change: drop or re-pull that profile's cached zones/signals.
@@ -89,9 +89,9 @@ Tables keyed by `profile_id` only. One CODE = one site = one zone list. No count
 - Client Dashboard, after the monitoring card and before caller ID. Signals at the bottom of that block.
 - Admin: extend Monitoring station card. Create-client: optional seeder + pull.
 
-## Persistence (when schema ships)
+## Persistence (shipped 2026-08-22)
 
-`lanvac_zones`, `lanvac_account_state`, optional `lanvac_signals` cache (Lanvac is SoR for history), append-only `lanvac_station_events`. Failed pull keeps last good rows and shows stale.
+`lanvac_zones`, `lanvac_account_state`, `lanvac_signals` cache (Lanvac is SoR for history), append-only `lanvac_station_events`. Failed pull keeps last good rows and shows stale. Client SELECT own on zones/state/signals. Events are admin-only. No client INSERT/UPDATE/DELETE. All keyed by `profile_id`. Write-only zone fields are not on `lanvac_zones`. Cache writes are `server-only` (`lanvac-station-store.ts`), not callable actions. Pulls claim an 8s cooldown so two tabs cannot wipe Historic at once. User-facing pull errors stay generic.
 
 ## Test protocol
 

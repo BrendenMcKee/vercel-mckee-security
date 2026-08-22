@@ -26,7 +26,9 @@ import { PortalCard } from "@/components/portal/portal-card";
 import { CloudBackupInterest } from "@/components/portal/cloud-backup-interest";
 import { ClientSettingsForm } from "@/components/portal/client-settings-form";
 import { LanvacEmergencyReadout } from "@/components/portal/lanvac-emergency-readout";
+import { LanvacStationReadout } from "@/components/portal/lanvac-station-readout";
 import { lanvacEmergencyNumbers } from "@/lib/portal/lanvac-cities";
+import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
 
 export const metadata: Metadata = {
   title: "Manage Account",
@@ -88,6 +90,9 @@ export default async function UserDashboardPage({
     manualPaymentsResult,
     cardPaymentsResult,
     cloudInterestResult,
+    stationStateResult,
+    stationZonesResult,
+    stationSignalsResult,
   ] = await Promise.all([
       supabase
         .from("services")
@@ -124,20 +129,43 @@ export default async function UserDashboardPage({
         .select("profile_id, email, consented_at")
         .eq("profile_id", profile.id)
         .maybeSingle(),
+      supabase
+        .from("lanvac_account_state")
+        .select(
+          "panel_type, is_disabled, on_test_until, last_signal_at, last_signal_class, last_synced_at, last_error",
+        )
+        .eq("profile_id", profile.id)
+        .maybeSingle(),
+      supabase
+        .from("lanvac_zones")
+        .select("zone_number, description, zone_type, on_test, use_call_list")
+        .eq("profile_id", profile.id)
+        .order("zone_number"),
+      supabase
+        .from("lanvac_signals")
+        .select("occurred_at_text, signal, description, signal_class")
+        .eq("profile_id", profile.id)
+        .order("sort_index"),
     ]);
 
   if (
     servicesResult.error ||
     contactsResult.error ||
     devicesResult.error ||
-    cloudInterestResult.error
+    cloudInterestResult.error ||
+    stationStateResult.error ||
+    stationZonesResult.error ||
+    stationSignalsResult.error
   ) {
     console.error(
       "[portal] Client dashboard query failed:",
       servicesResult.error ??
         contactsResult.error ??
         devicesResult.error ??
-        cloudInterestResult.error,
+        cloudInterestResult.error ??
+        stationStateResult.error ??
+        stationZonesResult.error ??
+        stationSignalsResult.error,
     );
     throw new Error("Dashboard failed to load.");
   }
@@ -148,6 +176,34 @@ export default async function UserDashboardPage({
   const voip = services.find((s) => s.service_type === "voip");
   const showCallerId = hasCurrentMonitoring(services) || contactsResult.data.length > 0;
   const showDevices = hasCurrentMonitoring(services) || devicesResult.data.length > 0;
+  const stationZones = (stationZonesResult.data ?? []).map((zone) => ({
+    zoneNumber: zone.zone_number,
+    description: zone.description,
+    zoneType: zone.zone_type,
+    onTest: zone.on_test,
+    useCallList: zone.use_call_list,
+  }));
+  const stationSignals = (stationSignalsResult.data ?? []).map((row) => ({
+    occurredAtText: row.occurred_at_text,
+    signal: row.signal,
+    description: row.description,
+    signalClass: asLanvacSignalClass(row.signal_class) ?? "unknown",
+  }));
+  const stationState = stationStateResult.data
+    ? {
+        panelType: stationStateResult.data.panel_type,
+        isDisabled: stationStateResult.data.is_disabled,
+        onTestUntil: stationStateResult.data.on_test_until,
+        lastSignalAt: stationStateResult.data.last_signal_at,
+        lastSignalClass: asLanvacSignalClass(stationStateResult.data.last_signal_class),
+        lastSyncedAt: stationStateResult.data.last_synced_at,
+        lastError: stationStateResult.data.last_error,
+      }
+    : null;
+  const canRefreshStation =
+    hasCurrentMonitoring(services) && Boolean(profile.lanvac_account_code);
+  const showStation =
+    canRefreshStation || stationZones.length > 0 || stationState != null;
   const missingCallerId = hasCurrentMonitoring(services) && contactsResult.data.length === 0;
   const unpaidServices = services.filter((s) => s.status === "unpaid");
   const serviceTypeById = new Map(services.map((s) => [s.id, s.service_type]));
@@ -349,6 +405,26 @@ export default async function UserDashboardPage({
               </a>
               .
             </p>
+          </div>
+        </PortalCard>
+      )}
+
+      {showStation && (
+        <PortalCard
+          icon="shield"
+          tone="monitoring"
+          title="Zones and signals"
+          description="What the monitoring station has for this alarm, plus the recent signal log"
+        >
+          <div className="border-t border-white/10 pt-5">
+            <LanvacStationReadout
+              profileId={profile.id}
+              canRefresh={canRefreshStation}
+              variant="client"
+              state={stationState}
+              zones={stationZones}
+              signals={stationSignals}
+            />
           </div>
         </PortalCard>
       )}

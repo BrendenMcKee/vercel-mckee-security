@@ -324,9 +324,9 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 8. **Living CUA playbook.** Update [`docs/PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same slice as the UI it describes. After deploy, a computer-using agent runs that file (devtools on) and writes a findings report. **This is the last gate before the Windows MCP bridge and the real import.** Do not start either until the report is clean or every fail is accepted.
 9. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
 
-**Pacing (locked):** Do **not** start these R53 slices until R54 schema + read-only UI has shipped (or you override). Hosted has **staff and throwaway test clients only**. No real customer login to preserve. Implement **two slices at a time**, then stop for an end-to-end audit of what just landed. First stop: slices 1 and 2 (schema + `resolvePortalSession` / orphan / OAuth / cleanup / password). Do not start slice 3 until that audit is done. Same pattern for 3–4, 5–6, then CUA.
+**Pacing (locked):** R54 read UI shipped 2026-08-22. Do **not** start these R53 slices until the R54 write sitting is done (or you override). Hosted has **staff and throwaway test clients only**. No real customer login to preserve. Implement **two slices at a time**, then stop for an end-to-end audit of what just landed. First stop: slices 1 and 2 (schema + `resolvePortalSession` / orphan / OAuth / cleanup / password). Do not start slice 3 until that audit is done. Same pattern for 3–4, 5–6, then CUA.
 
-**Alignment:** 10/10 to implement R53 **after** R54 read UI. Station tables stay on `profile_id`; actions already take `profileId`; client on-test is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
+**Alignment:** 10/10 to implement R53 **after** R54 writes. Station tables stay on `profile_id`; actions already take `profileId`; client on-test is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
 
 ## Already shipped (do not redo)
 

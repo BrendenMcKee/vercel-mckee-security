@@ -285,6 +285,179 @@ export type Database = {
           },
         ]
       }
+      lanvac_account_state: {
+        Row: {
+          is_disabled: boolean
+          last_error: string | null
+          last_signal_at: string | null
+          last_signal_class: string | null
+          last_signal_description: string | null
+          last_synced_at: string | null
+          on_test_until: string | null
+          panel_type: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          is_disabled?: boolean
+          last_error?: string | null
+          last_signal_at?: string | null
+          last_signal_class?: string | null
+          last_signal_description?: string | null
+          last_synced_at?: string | null
+          on_test_until?: string | null
+          panel_type?: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          is_disabled?: boolean
+          last_error?: string | null
+          last_signal_at?: string | null
+          last_signal_class?: string | null
+          last_signal_description?: string | null
+          last_synced_at?: string | null
+          on_test_until?: string | null
+          panel_type?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lanvac_account_state_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lanvac_signals: {
+        Row: {
+          description: string
+          id: string
+          last_synced_at: string
+          occurred_at: string
+          occurred_at_text: string
+          profile_id: string
+          signal: string
+          signal_class: string
+          sort_index: number
+        }
+        Insert: {
+          description?: string
+          id?: string
+          last_synced_at?: string
+          occurred_at: string
+          occurred_at_text?: string
+          profile_id: string
+          signal?: string
+          signal_class?: string
+          sort_index?: number
+        }
+        Update: {
+          description?: string
+          id?: string
+          last_synced_at?: string
+          occurred_at?: string
+          occurred_at_text?: string
+          profile_id?: string
+          signal?: string
+          signal_class?: string
+          sort_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lanvac_signals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lanvac_station_events: {
+        Row: {
+          actor_email: string | null
+          actor_user_id: string | null
+          created_at: string
+          detail: Json
+          event_type: string
+          id: string
+          lanvac_account_code: string | null
+          profile_id: string
+        }
+        Insert: {
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_type: string
+          id?: string
+          lanvac_account_code?: string | null
+          profile_id: string
+        }
+        Update: {
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_type?: string
+          id?: string
+          lanvac_account_code?: string | null
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lanvac_station_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lanvac_zones: {
+        Row: {
+          description: string
+          id: string
+          last_synced_at: string
+          on_test: boolean
+          profile_id: string
+          use_call_list: boolean | null
+          zone_number: number
+          zone_type: string
+        }
+        Insert: {
+          description?: string
+          id?: string
+          last_synced_at?: string
+          on_test?: boolean
+          profile_id: string
+          use_call_list?: boolean | null
+          zone_number: number
+          zone_type?: string
+        }
+        Update: {
+          description?: string
+          id?: string
+          last_synced_at?: string
+          on_test?: boolean
+          profile_id?: string
+          use_call_list?: boolean | null
+          zone_number?: number
+          zone_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lanvac_zones_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manual_payments: {
         Row: {
           amount_cents: number

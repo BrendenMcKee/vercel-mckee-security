@@ -112,6 +112,61 @@ try {
     const { data, error } = await clientA.from("rentals").select("id");
     check("user A reads zero rows from rentals", Boolean(error) || (data ?? []).length === 0, error?.message);
   }
+
+  // 5. Station cache: own SELECT, no writes, no cross-tenant, events admin-only.
+  await admin.from("lanvac_zones").insert([
+    { profile_id: users[0].profileId, zone_number: 1, description: "A smoke" },
+    { profile_id: users[1].profileId, zone_number: 1, description: "B smoke" },
+  ]);
+  await admin.from("lanvac_account_state").insert({
+    profile_id: users[1].profileId,
+    panel_type: "secret",
+  });
+  await admin.from("lanvac_station_events").insert({
+    profile_id: users[0].profileId,
+    event_type: "pull",
+    detail: { probe: true },
+  });
+  {
+    const { data, error } = await clientA.from("lanvac_zones").select("zone_number, description");
+    const onlyOwn =
+      !error &&
+      (data ?? []).length === 1 &&
+      data[0].description === "A smoke";
+    check("user A sees exactly own lanvac zones", onlyOwn, error?.message ?? `rows=${data?.length}`);
+  }
+  {
+    const { data, error } = await clientA
+      .from("lanvac_account_state")
+      .select("panel_type")
+      .eq("profile_id", users[1].profileId);
+    check("user A cannot read user B station state", !error && (data ?? []).length === 0, error?.message);
+  }
+  {
+    const { data, error } = await clientA
+      .from("lanvac_zones")
+      .update({ on_test: true })
+      .eq("profile_id", users[0].profileId)
+      .select("id");
+    check("user A cannot UPDATE own lanvac zones", Boolean(error) || (data ?? []).length === 0, error?.message);
+  }
+  {
+    const { data, error } = await clientA
+      .from("lanvac_zones")
+      .insert({ profile_id: users[0].profileId, zone_number: 2, description: "Injected" })
+      .select("id");
+    check("user A cannot INSERT lanvac zones", Boolean(error) || (data ?? []).length === 0, error?.message);
+  }
+  {
+    const { data, error } = await clientA.from("lanvac_station_events").select("id");
+    check("user A reads zero station events", Boolean(error) || (data ?? []).length === 0, error?.message);
+  }
+  {
+    const { error } = await clientA
+      .from("lanvac_zones")
+      .select("delay, notify_list, signal_code, restore_code");
+    check("user A cannot select zone write-only columns", Boolean(error), error?.message);
+  }
 } finally {
   for (const u of created) {
     await admin.from("profiles").delete().eq("user_id", u.id);

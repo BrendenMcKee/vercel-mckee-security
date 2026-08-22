@@ -23,6 +23,7 @@ import {
   parseLanvacAccountCode,
   parseLanvacCity,
 } from "@/lib/portal/lanvac";
+import { clearLanvacStationCache } from "@/lib/portal/lanvac-station-store";
 
 export type ServiceActionResult = { ok: true; message?: string } | { ok: false; error: string };
 
@@ -90,7 +91,8 @@ export async function assignServiceAction(input: {
   lanvacAccountCode?: string;
   lanvacCity?: string;
 }): Promise<ServiceActionResult> {
-  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  const adminAuth = await tryRequireAdmin();
+  if (!adminAuth) return { ok: false, error: SESSION_ERROR_MESSAGE };
 
   const parsed = assignSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input." };
@@ -153,6 +155,15 @@ export async function assignServiceAction(input: {
         }
         console.error("[portal] assignService station save failed:", stationError);
         return { ok: false, error: "Could not save the Lanvac account or dispatch city." };
+      }
+      if (parsedCode.value !== profile?.lanvac_account_code) {
+        await clearLanvacStationCache({
+          profileId,
+          fromCode: profile?.lanvac_account_code ?? null,
+          toCode: parsedCode.value,
+          actorUserId: adminAuth.user.id,
+          actorEmail: adminAuth.user.email,
+        });
       }
     }
   }
