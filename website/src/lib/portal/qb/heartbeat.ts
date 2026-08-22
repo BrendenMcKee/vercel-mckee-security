@@ -4,6 +4,7 @@ import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { companyFilesMatch, displayCompanyFile } from "@/lib/portal/qb/company-file";
 import type { AuthorizedQbBridge } from "@/lib/portal/qb/auth";
 import type { QbHeartbeat } from "@/lib/portal/qb/schemas";
+import type { TablesUpdate } from "@/lib/portal/database.types";
 
 export type FileGuard =
   | { ok: true; match: boolean | null }
@@ -50,7 +51,7 @@ export async function stampBridgeSeen(
   extra: { last_error?: string | null; last_mirror_at?: string } = {},
 ): Promise<void> {
   const admin = getPortalAdminClient();
-  const patch: Record<string, string | null> = {
+  const patch: TablesUpdate<"qb_bridges"> = {
     last_seen_at: new Date().toISOString(),
   };
   if (heartbeat.company_file != null) {
