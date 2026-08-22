@@ -1,6 +1,7 @@
 import "server-only";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { invoiceSendCents, PAYMENT_INSTRUCTIONS } from "@/lib/portal/billing";
+import { isClientMailEnabled } from "@/lib/portal/client-mail";
 import {
   sendCollectionsDigest,
   sendManualPaymentReminder,
@@ -14,6 +15,7 @@ export type PaymentDueSummary = {
   candidates: number;
   reminded: number;
   digestSent: boolean;
+  clientMailPaused: boolean;
 };
 
 /**
@@ -91,5 +93,10 @@ export async function runPaymentDueJob(): Promise<PaymentDueSummary> {
 
   const digestSent = digest.length > 0 ? await sendCollectionsDigest(digest) : false;
 
-  return { candidates: rows.length, reminded, digestSent };
+  return {
+    candidates: rows.length,
+    reminded,
+    digestSent,
+    clientMailPaused: !(await isClientMailEnabled()),
+  };
 }

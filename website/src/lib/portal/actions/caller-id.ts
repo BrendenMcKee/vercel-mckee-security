@@ -6,6 +6,7 @@ import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireUser } from "@/lib/po
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient, isPortalAdminConfigured } from "@/lib/portal/supabase/admin";
 import { normalizePhone } from "@/lib/portal/phone";
+import { isClientMailEnabled } from "@/lib/portal/client-mail";
 import {
   sendCallerIdAdminAlert,
   sendCallerIdClientNotification,
@@ -47,6 +48,7 @@ export type SaveCallerIdResult =
       reordered: CallerIdDiffEntry[];
       adminEmailSent: boolean;
       clientEmailSent: boolean | null;
+      clientEmailPaused?: boolean;
     }
   | { ok: false; error: string; waitSeconds?: number };
 
@@ -165,6 +167,7 @@ async function runSave(opts: {
       reordered: [],
       adminEmailSent: false,
       clientEmailSent: null,
+      clientEmailPaused: false,
     };
   }
 
@@ -215,7 +218,16 @@ async function runSave(opts: {
 
   revalidatePath("/user-dashboard");
   revalidatePath("/admin-dashboard", "layout");
-  return { ok: true, noChange: false, added, removed, reordered, adminEmailSent, clientEmailSent };
+  return {
+    ok: true,
+    noChange: false,
+    added,
+    removed,
+    reordered,
+    adminEmailSent,
+    clientEmailSent,
+    clientEmailPaused: opts.changedVia === "admin_dashboard" && !(await isClientMailEnabled()),
+  };
 }
 
 /** Client saves their own list (handover 6.4). The session is the authorization. */

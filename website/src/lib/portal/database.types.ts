@@ -369,6 +369,30 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_settings: {
+        Row: {
+          client_mail_enabled: boolean
+          client_mail_enabled_at: string | null
+          client_mail_enabled_by: string | null
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          client_mail_enabled?: boolean
+          client_mail_enabled_at?: string | null
+          client_mail_enabled_by?: string | null
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          client_mail_enabled?: boolean
+          client_mail_enabled_at?: string | null
+          client_mail_enabled_by?: string | null
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null

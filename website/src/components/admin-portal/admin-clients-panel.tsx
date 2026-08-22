@@ -371,6 +371,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
           text: `Client created. There is no email on file, so copy the activation link and deliver it yourself:${seedNote}`,
           link: result.activateUrl,
         });
+      } else if (result.emailPaused) {
+        setNotice({
+          kind: "ok",
+          text: `Client created. Invitation email is held until go-live (Billing tab). Copy the link if you need it now:${seedNote}`,
+          link: result.activateUrl,
+        });
       } else if (!result.emailSent) {
         setNotice({
           kind: "error",
@@ -426,6 +432,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         setNotice({
           kind: "ok",
           text: "New invitation created. There is no email on file, so copy the activation link:",
+          link: result.activateUrl,
+        });
+      } else if (result.emailPaused) {
+        setNotice({
+          kind: "ok",
+          text: "Invitation refreshed. Email is held until go-live (Billing tab). Copy the link if you need it now:",
           link: result.activateUrl,
         });
       } else if (!result.emailSent) {

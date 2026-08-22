@@ -293,7 +293,9 @@ export function CallerIdEditor({
         parts.push(
           result.clientEmailSent
             ? "The client was emailed the changes and reason."
-            : "Client notification email did NOT send (no email on file or send failure). Notify them another way and note it.",
+            : result.clientEmailPaused
+              ? "Client notification email is held until go-live (Billing tab)."
+              : "Client notification email did NOT send (no email on file or send failure). Notify them another way and note it.",
         );
         setAuthorizedVia("");
         setChangeReason("");

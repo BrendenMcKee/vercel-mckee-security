@@ -3,8 +3,9 @@
 //
 // Verifies against a running server:
 //  - all cron routes reject missing/wrong bearer tokens (401)
-//  - payment-due: overdue manual service gets reminded exactly ONCE per cycle
-//    (due_alerted_at stamped; second run reminds 0), digest counts it
+//  - payment-due: overdue manual service is in the digest; client reminder
+//    is held (reminded 0, due_alerted_at empty) while client mail is paused,
+//    or fires once per cycle when mail is live
 //  - device-expiry: expired device alerted + stamped once; second run alerts 0
 //  - cleanup: expired 90d+ invitation deleted, fresh invitation kept
 //  - daily dispatcher runs every job and reports per-job results
@@ -103,14 +104,27 @@ try {
 
   // ---- payment-due: reminds once, digest counts -----------------------------------
   {
+    const { data: mail } = await admin.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle();
+    const clientMailOn = mail?.client_mail_enabled === true;
+
     const res = await fetch(`${baseUrl}/api/cron/payment-due`, authed);
     const body = await res.json();
     check("payment-due run 1 responds 200", res.status === 200, `status=${res.status}`);
-    check("payment-due run 1 reminds the overdue service", body.reminded >= 1, JSON.stringify(body));
     check("payment-due run 1 sends the collections digest", body.digestSent === true, JSON.stringify(body));
 
-    const { data: after } = await admin.from("services").select("due_alerted_at").eq("id", svc.id).single();
-    check("due_alerted_at stamped after reminder", Boolean(after?.due_alerted_at));
+    if (clientMailOn) {
+      check("payment-due run 1 reminds the overdue service", body.reminded >= 1, JSON.stringify(body));
+      const { data: after } = await admin.from("services").select("due_alerted_at").eq("id", svc.id).single();
+      check("due_alerted_at stamped after reminder", Boolean(after?.due_alerted_at));
+    } else {
+      check(
+        "payment-due run 1 holds the client reminder while mail is paused",
+        body.reminded === 0 && body.clientMailPaused === true,
+        JSON.stringify(body),
+      );
+      const { data: after } = await admin.from("services").select("due_alerted_at").eq("id", svc.id).single();
+      check("due_alerted_at stays empty so the first reminder can fire after go-live", !after?.due_alerted_at);
+    }
 
     const res2 = await fetch(`${baseUrl}/api/cron/payment-due`, authed);
     const body2 = await res2.json();

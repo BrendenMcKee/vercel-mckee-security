@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { SERVICE_TYPE_LABELS, tierLabel } from "@/lib/portal/service-labels";
 import { daysUntil, formatCents } from "@/lib/portal/billing";
+import { ClientMailGate } from "@/components/admin-portal/client-mail-gate";
 import { ServiceStatusBadge } from "@/components/admin-portal/ui";
 
 /**
@@ -14,7 +15,7 @@ export async function AdminBilling() {
   const supabase = await createPortalServerClient();
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [servicesRes, failedRes] = await Promise.all([
+  const [servicesRes, failedRes, settingsRes] = await Promise.all([
     supabase
       .from("services")
       .select(
@@ -27,6 +28,11 @@ export async function AdminBilling() {
       .eq("type", "invoice.payment_failed")
       .gte("created_at", thirtyDaysAgo)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("portal_settings")
+      .select("client_mail_enabled, client_mail_enabled_at")
+      .eq("id", 1)
+      .maybeSingle(),
   ]);
 
   if (servicesRes.error || failedRes.error) {
@@ -62,6 +68,11 @@ export async function AdminBilling() {
 
   return (
     <div className="space-y-8">
+      <ClientMailGate
+        enabled={settingsRes.data?.client_mail_enabled === true}
+        enabledAt={settingsRes.data?.client_mail_enabled_at ?? null}
+      />
+
       {failedEvents.length > 0 && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 sm:p-6">
           <h2 className="text-lg font-bold text-red-200">
@@ -98,8 +109,8 @@ export async function AdminBilling() {
           Pay by e-Transfer, cheque, or cash ({manual.length})
         </h2>
         <p className="mt-1 text-xs text-white/40">
-          These clients pay you directly. The system emails them a reminder
-          before their due date and again if they go overdue. When a payment
+          These clients pay you directly. When client email is live, they get a
+          reminder before their due date and again if they go overdue. When a payment
           arrives, click the client and record it, and their next due date
           moves forward automatically.
         </p>

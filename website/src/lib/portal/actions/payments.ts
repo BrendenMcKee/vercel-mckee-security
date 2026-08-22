@@ -18,6 +18,7 @@ import {
   trialEndFor,
 } from "@/lib/portal/stripe";
 import { activateRemainingAutopay, chargePortFeeOffSession } from "@/lib/portal/activate-autopay";
+import { isClientMailEnabled } from "@/lib/portal/client-mail";
 import { sendManualPaymentRecorded } from "@/lib/portal/emails";
 import {
   addMonths,
@@ -321,7 +322,7 @@ const recordPaymentSchema = z.object({
 });
 
 export type RecordPaymentResult =
-  | { ok: true; nextDueOn: string | null; emailSent: boolean | null }
+  | { ok: true; nextDueOn: string | null; emailSent: boolean | null; emailPaused: boolean }
   | { ok: false; error: string };
 
 export async function recordManualPayment(input: {
@@ -403,7 +404,7 @@ export async function recordManualPayment(input: {
 
   revalidatePath("/admin-dashboard", "layout");
   revalidatePath("/user-dashboard");
-  return { ok: true, nextDueOn, emailSent };
+  return { ok: true, nextDueOn, emailSent, emailPaused: !(await isClientMailEnabled()) };
 }
 
 // ---------------------------------------------------------------------------
@@ -687,7 +688,7 @@ export async function chargeVoipPortFee(input: {
     }
     revalidatePath("/admin-dashboard", "layout");
     revalidatePath("/user-dashboard");
-    return { ok: true, nextDueOn: null, emailSent: null };
+    return { ok: true, nextDueOn: null, emailSent: null, emailPaused: false };
   }
 
   const { error: ledgerError } = await supabase.from("manual_payments").insert({
@@ -708,7 +709,7 @@ export async function chargeVoipPortFee(input: {
 
   revalidatePath("/admin-dashboard", "layout");
   revalidatePath("/user-dashboard");
-  return { ok: true, nextDueOn: null, emailSent: null };
+  return { ok: true, nextDueOn: null, emailSent: null, emailPaused: false };
 }
 
 async function markPortFeeCharged(

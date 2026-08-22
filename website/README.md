@@ -9,7 +9,9 @@ Portal implementation lives in [`../PORTAL_PLAN.md`](../PORTAL_PLAN.md). The
 client portal (`/user-dashboard`) is tabbed: **Dashboard** (services, billing,
 alarm contacts, equipment), **Settings** (phone, service address, password;
 sign-in email is locked), and **Alerts**. The staff console is
-`/admin-dashboard` (Overview, Clients, Billing, Devices, Alerts).
+`/admin-dashboard` (Overview, Clients, Billing, Devices, Alerts). Client-facing
+portal mail (invites, reminders, receipts, caller-ID and device notices) stays
+off until the Billing-tab `GO LIVE` confirm (`PORTAL_PLAN.md` 9.5.5C).
 
 ## Local development
 

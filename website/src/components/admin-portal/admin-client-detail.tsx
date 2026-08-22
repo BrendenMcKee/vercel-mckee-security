@@ -551,6 +551,12 @@ function InvitationCard({ client }: { client: AdminClientDetailRow }) {
       }
       if (!result.emailAttempted) {
         setNotice({ kind: "ok", text: "New invitation created. No email on file, copy the link:", link: result.activateUrl });
+      } else if (result.emailPaused) {
+        setNotice({
+          kind: "ok",
+          text: "Invitation refreshed. Email is held until go-live (Billing tab). Copy the link if you need it now:",
+          link: result.activateUrl,
+        });
       } else if (!result.emailSent) {
         setNotice({ kind: "error", text: "Invitation refreshed, but the email failed to send. Copy the link:", link: result.activateUrl });
       } else {
@@ -954,7 +960,13 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
       setNotice({
         kind: "ok",
         text: `Payment recorded.${result.nextDueOn ? ` Next due ${result.nextDueOn}.` : ""}${
-          result.emailSent === false ? " Confirmation email failed to send." : result.emailSent ? " Client emailed a confirmation." : ""
+          result.emailPaused
+            ? " Confirmation email is held until go-live."
+            : result.emailSent === false
+              ? " Confirmation email failed to send."
+              : result.emailSent
+                ? " Client emailed a confirmation."
+                : ""
         }`,
       });
     });

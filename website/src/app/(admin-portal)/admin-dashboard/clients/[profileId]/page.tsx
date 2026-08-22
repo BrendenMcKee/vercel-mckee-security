@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getAuthContext } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { AdminClientDetail } from "@/components/admin-portal/admin-client-detail";
+import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
 export const metadata: Metadata = {
@@ -58,6 +59,7 @@ export default async function AdminClientDetailPage({
     paymentsResult,
     cardPaymentsResult,
     cloudInterestResult,
+    settingsResult,
   ] = await Promise.all([
       supabase
         .from("caller_id_contacts")
@@ -93,6 +95,7 @@ export default async function AdminClientDetailPage({
         .select("*")
         .eq("profile_id", profileId)
         .maybeSingle(),
+      supabase.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle(),
     ]);
 
   const subError =
@@ -123,6 +126,8 @@ export default async function AdminClientDetailPage({
         </div>
         <SignOutButton />
       </div>
+
+      {settingsResult.data?.client_mail_enabled !== true && <ClientMailPausedBanner />}
 
       <div className="mt-6 sm:mt-10">
         <AdminClientDetail

@@ -7,6 +7,7 @@ import {
   type EmailField,
 } from "@/lib/email-templates";
 import { siteConfig } from "@/lib/site-config";
+import { isClientMailEnabled } from "@/lib/portal/client-mail";
 import { formatPhone } from "@/lib/portal/phone";
 import { recordPortalAlert } from "@/lib/portal/alerts";
 
@@ -40,6 +41,22 @@ async function dispatchPortalEmail(
   }
 }
 
+/**
+ * Client-facing sends. No-ops while the go-live toggle is off so import
+ * cannot leak invitations or due-date reminders. Does not write email_failure
+ * alerts: a pause is intentional, not a send outage.
+ */
+async function dispatchClientEmail(
+  label: string,
+  payload: Parameters<typeof sendEmail>[0],
+): Promise<boolean> {
+  if (!(await isClientMailEnabled())) {
+    console.info(`[portal] ${label} skipped: client mail paused until go-live.`);
+    return false;
+  }
+  return dispatchPortalEmail(label, payload);
+}
+
 const PORTAL_FOOTER_HTML = `Sent by McKee Security &nbsp;&bull;&nbsp;
   <a href="${siteConfig.url}" style="color:#c91818;text-decoration:none;font-weight:600;">${siteConfig.url.replace("https://", "")}</a>
   &nbsp;&bull;&nbsp; (705) 457-2156`;
@@ -64,10 +81,10 @@ function formatExpiry(expiresAt: string): string {
 }
 
 /**
- * Account invitation (PORTAL_PLAN.md Section 8, Phase 2). Returns false when
- * the email could not be dispatched; callers surface that to the admin so the
- * invite link can be delivered manually (a failed send never rolls back the
- * created client).
+ * Account invitation (PORTAL_PLAN.md Section 8, Phase 2). Held until the
+ * 8C go-live flip (9.5.5C). Returns false when paused or when the email
+ * could not be dispatched; callers distinguish those so the invite link can
+ * be delivered manually (a failed or held send never rolls back the client).
  */
 export async function sendInvitationEmail({
   to,
@@ -103,7 +120,7 @@ export async function sendInvitationEmail({
     },
   ];
 
-  return dispatchPortalEmail("Invitation email", {
+  return dispatchClientEmail("Invitation email", {
     to,
     subject: "Your portal is ready",
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
@@ -335,7 +352,7 @@ export async function sendCallerIdClientNotification({
     },
   ];
 
-  return dispatchPortalEmail("Caller ID client notification", {
+  return dispatchClientEmail("Caller ID client notification", {
     to,
     subject: "Your alarm contact list was updated",
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
@@ -394,7 +411,7 @@ export async function sendManualPaymentReminder({
     },
   ];
 
-  return dispatchPortalEmail("Manual payment reminder", {
+  return dispatchClientEmail("Manual payment reminder", {
     to,
     subject: overdue
       ? `Payment overdue: ${service} (${dollars(amountCents)})`
@@ -436,7 +453,7 @@ export async function sendManualPaymentRecorded({
     fields.push({ label: "Next payment due", value: nextDueOn });
   }
 
-  return dispatchPortalEmail("Manual payment recorded email", {
+  return dispatchClientEmail("Manual payment recorded email", {
     to,
     subject: `Payment received: ${service} (${dollars(amountCents)})`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
@@ -510,7 +527,7 @@ export async function sendPaymentSuccessEmail({
     },
   ];
 
-  return dispatchPortalEmail("Payment success email", {
+  return dispatchClientEmail("Payment success email", {
     to,
     subject: `Payment successful: ${service} is active`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),
@@ -592,7 +609,7 @@ export async function sendDeviceExpiryClientNotice({
     },
   ];
 
-  return dispatchPortalEmail("Device expiry client notice", {
+  return dispatchClientEmail("Device expiry client notice", {
     to,
     subject: `Maintenance due: your ${deviceLabel} should be replaced`,
     text: buildBrandedEmailText(meta, fields, PORTAL_FOOTER_TEXT),

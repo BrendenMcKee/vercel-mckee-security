@@ -101,8 +101,11 @@ Local Supabase disables email confirmation and catches outbound mail in Mailpit 
 ### Graceful degradation (expected locally, not failures)
 
 Missing `RESEND_API_KEY` (email logs to console; portal invites show "invitation email failed to send,
-copy the link"), `STRIPE_*` (billing/checkout disabled), and the Data Drops / Starlink admin password
-gates all degrade gracefully. Only Supabase is hard-required for the portal.
+copy the link" when mail is live, or "held until go-live" while `portal_settings.client_mail_enabled`
+is false), `STRIPE_*` (billing/checkout disabled), and the Data Drops / Starlink admin password
+gates all degrade gracefully. Only Supabase is hard-required for the portal. Client-facing portal
+mail stays off until the Billing-tab `GO LIVE` flip (`PORTAL_PLAN.md` 9.5.5C). Do not enable it
+during import.
 
 ### Next.js 16 note
 

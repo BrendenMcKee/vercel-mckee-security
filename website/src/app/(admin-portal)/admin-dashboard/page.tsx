@@ -6,6 +6,7 @@ import { AdminBilling } from "@/components/admin-portal/admin-billing";
 import { AdminClientsPanel } from "@/components/admin-portal/admin-clients-panel";
 import { AdminDevices } from "@/components/admin-portal/admin-devices";
 import { AdminOverview } from "@/components/admin-portal/admin-overview";
+import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
 export const metadata: Metadata = {
@@ -49,10 +50,14 @@ export default async function AdminDashboardPage({
             : "overview";
 
   const supabase = await createPortalServerClient();
-  const { count: openAlerts } = await supabase
-    .from("portal_alerts")
-    .select("id", { count: "exact", head: true })
-    .is("resolved_at", null);
+  const [{ count: openAlerts }, settingsRes] = await Promise.all([
+    supabase
+      .from("portal_alerts")
+      .select("id", { count: "exact", head: true })
+      .is("resolved_at", null),
+    supabase.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle(),
+  ]);
+  const clientMailEnabled = settingsRes.data?.client_mail_enabled === true;
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
@@ -67,6 +72,8 @@ export default async function AdminDashboardPage({
         </div>
         <SignOutButton />
       </div>
+
+      {!clientMailEnabled && <ClientMailPausedBanner />}
 
       <nav
         className="no-scrollbar -mx-4 mt-6 flex gap-1 overflow-x-auto border-b border-white/10 px-4 sm:mx-0 sm:mt-8 sm:gap-2 sm:px-0"

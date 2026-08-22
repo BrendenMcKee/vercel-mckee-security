@@ -1,6 +1,6 @@
 # McKee Security Customer Portal — Product Handover Document
 
-> **Current implementation is in [`PORTAL_PLAN.md`](./PORTAL_PLAN.md) and the code.** This handover is the July 2026 requirements baseline (what / why). Several UX decisions have since superseded the sketches here: the client portal is tabbed (Dashboard / Settings / Alerts), sign-in email is locked, devices are an open categorized list (not a fixed battery/smoke pair), caller ID is editable by admin with recorded authorization, VoIP is a first-class service, and QuickBooks accounting is Track 1 Phase 8. Do not implement from this document's "four main sections" layout without checking the plan.
+> **Current implementation is in [`PORTAL_PLAN.md`](./PORTAL_PLAN.md) and the code.** This handover is the July 2026 requirements baseline (what / why). Several UX decisions have since superseded the sketches here: the client portal is tabbed (Dashboard / Settings / Alerts), sign-in email is locked, devices are an open categorized list (not a fixed battery/smoke pair), caller ID is editable by admin with recorded authorization, VoIP is a first-class service, QuickBooks accounting is Track 1 Phase 8, and **client-facing portal mail stays off until the 8C `GO LIVE` flip** (`PORTAL_PLAN.md` R52 / 9.5.5C). Do not implement from this document's "four main sections" layout without checking the plan.
 
 **Purpose:** This document describes *what* McKee Security is building with this project. It is intended for a new development team rebuilding the platform on a modern technology stack. It focuses on product scope, user experience, business rules, and functional requirements—the *what* and *why*, not the legacy prototype's implementation.
 
@@ -428,7 +428,7 @@ Regardless of section, the dashboard should include:
 - View install dates and expiry status only (dates are set/updated by admin)
 
 **Automated alerts (see Section 12):**
-When a device passes its expiry threshold, both the client and admin receive an email alert prompting replacement scheduling.
+When a device passes its expiry threshold, the admin receives an email alert prompting replacement scheduling. The matching client notice sends only after client mail is live.
 
 **Example alert content:**
 > User: Sarah Lee  
@@ -484,7 +484,7 @@ The admin dashboard is the operational control center for McKee staff. It is not
 1. A pending client profile is created in Supabase (linked to assigned service tiers)
 2. Assigned service tiers are recorded
 3. A unique, time-limited **activation token** is generated and stored
-4. An invitation email is sent to the client with a secure link, e.g.:  
+4. An invitation email is sent to the client with a secure link **once client mail is live** (Billing-tab `GO LIVE`; held during import). Example:  
    `https://mckeesecurity.ca/account/activate?token=[unique-token]`
 
 **Business rule:** Admin creates the account and assigns tiers *before* the client activates. The client chooses how to sign in during activation—not during admin creation.
@@ -501,7 +501,7 @@ The admin dashboard is the operational control center for McKee staff. It is not
 | **Modify service tier** | Change security monitoring or cloud backup tier for a client |
 | **Cancel service** | Cancel a specific service for a client |
 | **Restart service** | Re-activate a previously cancelled service |
-| **Resend activation link** | Re-email the account activation link if the client did not complete setup |
+| **Resend activation link** | Re-email the account activation link if the client did not complete setup (held until client mail is live; the link can still be copied) |
 | **Add backup service manually** | Assign cloud backup without requiring client to go through checkout |
 
 ---
@@ -555,7 +555,7 @@ Modern onboarding should feel fast and familiar. Clients receive an admin invite
 ```
 Admin creates pending client profile + assigns tiers
         ↓
-System sends invite email with secure activation link
+System sends invite email once client mail is live (held during import)
         ↓
 Client opens activation link (/account/activate?token=…)
         ↓

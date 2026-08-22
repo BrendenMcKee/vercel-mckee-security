@@ -7,6 +7,7 @@ import { SESSION_ERROR_MESSAGE, tryRequireAdmin } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { generateInvitationToken } from "@/lib/portal/invitations";
+import { isClientMailEnabled } from "@/lib/portal/client-mail";
 import { sendInvitationEmail } from "@/lib/portal/emails";
 import { serviceMonthlyCents, todayIsoDate } from "@/lib/portal/billing";
 import {
@@ -73,6 +74,8 @@ export type CreateClientResult =
       activateUrl: string;
       emailSent: boolean;
       emailAttempted: boolean;
+      /** True when client mail is paused (import / pre-go-live). Not a send failure. */
+      emailPaused: boolean;
       /** Client exists; optional follow-up if contacts/devices did not save. */
       warning?: string;
     }
@@ -307,12 +310,13 @@ export async function createClientAction(
     activateUrl,
     emailSent,
     emailAttempted: Boolean(email),
+    emailPaused: !(await isClientMailEnabled()),
     warning: seedWarnings.length > 0 ? seedWarnings.join(" ") : undefined,
   };
 }
 
 export type ResendInviteResult =
-  | { ok: true; activateUrl: string; emailSent: boolean; emailAttempted: boolean }
+  | { ok: true; activateUrl: string; emailSent: boolean; emailAttempted: boolean; emailPaused: boolean }
   | { ok: false; error: string };
 
 /**
@@ -391,7 +395,13 @@ export async function resendInviteAction(profileId: string): Promise<ResendInvit
   }
 
   revalidatePath("/admin-dashboard", "layout");
-  return { ok: true, activateUrl, emailSent, emailAttempted: Boolean(profile.email) };
+  return {
+    ok: true,
+    activateUrl,
+    emailSent,
+    emailAttempted: Boolean(profile.email),
+    emailPaused: !(await isClientMailEnabled()),
+  };
 }
 
 const updateProfileSchema = z.object({
