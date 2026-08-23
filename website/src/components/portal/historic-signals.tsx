@@ -10,6 +10,7 @@ import {
   filterHistoricEvents,
   groupHistoricEventsByDay,
   historicEventTone,
+  historicFilterChipTone,
   historicKindLabel,
   presentHistoricSignals,
   type HistoricEvent,
@@ -21,8 +22,7 @@ import type { LanvacStationSignal } from "@/components/portal/lanvac-station-rea
 
 const EMPTY_ZONES: HistoricZoneHint[] = [];
 
-function KindIcon({ kind }: { kind: HistoricKind }) {
-  const className = "h-4 w-4 shrink-0";
+function KindIcon({ kind, className = "h-4 w-4 shrink-0" }: { kind: HistoricKind; className?: string }) {
   switch (kind) {
     case "alarm":
       return (
@@ -76,7 +76,11 @@ function KindIcon({ kind }: { kind: HistoricKind }) {
     case "dispatch":
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5.5c6-4 12 4 18 0v13c-6 4-12-4-18 0v-13zM10 9h4M9 13h6" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 4.8c0-.4.4-.8.8-.8h2.3c.4 0 .8.3.9.7l.7 2.4c.1.4 0 .8-.3 1.1L8.4 9.2a12 12 0 005.4 5.4l1-1c.3-.3.7-.4 1.1-.3l2.4.7c.4.1.7.5.7.9v2.3c0 .4-.4.8-.8.8C10.4 19 5 13.6 5 4.8z"
+          />
         </svg>
       );
     case "override":
@@ -139,6 +143,100 @@ function EventCard({
         </div>
       </div>
     </li>
+  );
+}
+
+function EventTypeFilters({
+  filter,
+  events,
+  onChange,
+}: {
+  filter: HistoricFilterId;
+  events: HistoricEvent[];
+  onChange: (next: HistoricFilterId) => void;
+}) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [overflow, setOverflow] = useState({ left: false, right: false });
+  const chips = HISTORIC_FILTERS.filter((item) => {
+    if (item.id === "all") return true;
+    return events.some((event) => event.kind === item.id);
+  });
+
+  function updateOverflow() {
+    const node = scrollerRef.current;
+    if (!node) return;
+    const left = node.scrollLeft > 4;
+    const right = node.scrollLeft + node.clientWidth < node.scrollWidth - 4;
+    setOverflow((current) =>
+      current.left === left && current.right === right ? current : { left, right },
+    );
+  }
+
+  useEffect(() => {
+    const node = scrollerRef.current;
+    if (!node) return;
+    updateOverflow();
+    node.addEventListener("scroll", updateOverflow, { passive: true });
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(node);
+    return () => {
+      node.removeEventListener("scroll", updateOverflow);
+      observer.disconnect();
+    };
+  }, [chips.length]);
+
+  function scrollBy(direction: -1 | 1) {
+    scrollerRef.current?.scrollBy({ left: direction * 180, behavior: "smooth" });
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-semibold text-white">Event type</p>
+      <div className="relative mt-1.5">
+        <div
+          ref={scrollerRef}
+          className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1.5 scrollbar-thin [scrollbar-color:rgba(255,255,255,0.22)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25"
+        >
+          {chips.map((item) => {
+            const active = filter === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onChange(item.id)}
+                className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold ${historicFilterChipTone(item.id, active)}`}
+              >
+                {item.id !== "all" && (
+                  <KindIcon kind={item.id} className="h-3.5 w-3.5 shrink-0" />
+                )}
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+        {overflow.left && (
+          <button
+            type="button"
+            aria-label="Earlier event types"
+            onClick={() => scrollBy(-1)}
+            className="absolute inset-y-0 left-0 z-10 flex w-8 items-center justify-center bg-linear-to-r from-background via-background/80 to-transparent text-white/70"
+          >
+            ‹
+          </button>
+        )}
+        {overflow.right && (
+          <button
+            type="button"
+            aria-label="More event types"
+            onClick={() => scrollBy(1)}
+            className="absolute inset-y-0 right-0 z-10 flex w-8 items-center justify-center bg-linear-to-l from-background via-background/80 to-transparent text-white/70"
+          >
+            ›
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -354,29 +452,7 @@ export function HistoricSignals({
       {signals.length > 0 && (
         <div className="mt-4 space-y-4">
           <DayFilter value={dayKey} days={days} onChange={setDayKey} />
-          <div>
-            <p className="text-sm font-semibold text-white">Event type</p>
-            <div className="no-scrollbar mt-1.5 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-              {HISTORIC_FILTERS.filter((item) => {
-                if (item.id === "all") return true;
-                return events.some((event) => event.kind === item.id);
-              }).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-pressed={filter === item.id}
-                  onClick={() => setFilter(item.id)}
-                  className={`inline-flex min-h-10 shrink-0 items-center rounded-full border px-3 text-sm font-semibold ${
-                    filter === item.id
-                      ? "border-primary/50 bg-primary/15 text-white"
-                      : "border-white/15 text-white/70 hover:bg-white/5"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <EventTypeFilters filter={filter} events={events} onChange={setFilter} />
         </div>
       )}
 
@@ -402,12 +478,16 @@ export function HistoricSignals({
               {hasMore ? ". Load older signals to look further back." : "."}
             </p>
           ) : (
-            <div className="space-y-5">
-              {grouped.map((day) => (
-                <section key={day.dayKey} aria-labelledby={`historic-day-${day.dayKey}`}>
+            <div className="space-y-6">
+              {grouped.map((day, index) => (
+                <section
+                  key={day.dayKey}
+                  aria-labelledby={`historic-day-${day.dayKey}`}
+                  className={index === 0 ? "pt-1" : "border-t border-white/15 pt-5"}
+                >
                   <h4
                     id={`historic-day-${day.dayKey}`}
-                    className="px-1 pb-2 text-sm font-semibold text-white"
+                    className="px-1 pb-3 text-base font-semibold tracking-tight text-white"
                   >
                     {day.dayLabel}
                   </h4>

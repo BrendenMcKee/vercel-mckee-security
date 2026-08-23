@@ -401,7 +401,7 @@ function rewriteLine(description: string, zones?: HistoricZoneHint[]): string | 
   }
 
   if (/SIGNAL COMING FROM\s+ALARMNET/i.test(raw)) {
-    return "Received through the AlarmNet communicator";
+    return "Honeywell AlarmNet communicator (cellular or IP)";
   }
 
   const reference = raw.match(/REFERENCE#?\s*>>?\s*([A-Z0-9-]+)/i);
@@ -475,21 +475,28 @@ function pickTitle(kind: HistoricKind, details: string[]): string {
   switch (kind) {
     case "alarm": {
       const typed = details.find(
-        (line) => /alarm|supervisory/i.test(line) && !/received through|alarmnet/i.test(line),
+        (line) =>
+          /alarm|supervisory/i.test(line) &&
+          !/received through|alarmnet communicator/i.test(line),
       );
       if (typed) return typed;
       const zone = details.find((line) => /Zone \d+/i.test(line));
-      if (details.some((line) => /alarmnet|received through/i.test(line))) {
-        return zone ? `Alarm via AlarmNet · ${zone}` : "Alarm via AlarmNet";
+      if (details.some((line) => /alarmnet/i.test(line))) {
+        return zone ? `Alarm via AlarmNet · ${zone}` : "AlarmNet Communicator";
       }
       return zone ? `Alarm · ${zone}` : "Alarm";
     }
-    case "restore":
-      return (
-        details.find((line) => /communication restore/i.test(line)) ??
-        details.find((line) => /restore|after alarm/i.test(line)) ??
-        "Restore"
-      );
+    case "restore": {
+      const communication = details.find((line) => /communication restore/i.test(line));
+      if (communication) return communication;
+      const after = details.find((line) => /after alarm/i.test(line));
+      if (after) return after;
+      const zoned = details.find((line) => /restore/i.test(line) && /zone \d+/i.test(line));
+      if (zoned) return zoned;
+      const zone = details.find((line) => /Zone \d+/i.test(line));
+      if (zone) return `Restore · ${zone}`;
+      return "Communication Restore";
+    }
     case "on_test":
       return "On Test";
     case "off_test":
@@ -549,18 +556,19 @@ function pickSummary(kind: HistoricKind, details: string[], title: string): stri
     return "Opening is disarmed. Closing is armed.";
   }
   if (kind === "restore") {
-    if (/communication restore/i.test(title)) {
+    if (/communication restore/i.test(title) || !zone) {
       return "The communicator checked in again. The station can reach the system.";
     }
-    return zone
-      ? `${zone} returned to normal after an alarm.`
-      : "This condition returned to normal after an alarm.";
+    return `${zone} returned to normal after an alarm.`;
   }
   if (kind === "alarm") {
-    const path = details.find((line) => /alarmnet/i.test(line));
     if (/supervisory/i.test(title)) {
       return "A monitored device is off-normal. This is not a full alarm.";
     }
+    if (/alarmnet communicator/i.test(title) || (details.some((line) => /alarmnet/i.test(line)) && !zone && !/zone \d+/i.test(title))) {
+      return "No zone on this line. The Honeywell AlarmNet communicator (cellular or IP) reported to the station — usually a path or supervision event, not a sensor going off.";
+    }
+    const path = details.find((line) => /alarmnet/i.test(line));
     return [zone && !title.includes(zone) ? zone : null, path].filter(Boolean).join(" · ") || path || zone || null;
   }
   if (kind === "email") return details[0] ?? null;
@@ -638,6 +646,60 @@ export function historicEventTone(kind: HistoricKind): string {
       return "border-amber-400/25 bg-amber-500/5";
     default:
       return "border-white/10 bg-background";
+  }
+}
+
+export function historicFilterChipTone(id: HistoricFilterId, active: boolean): string {
+  if (id === "all") {
+    return active
+      ? "border-white/45 bg-white/15 text-white"
+      : "border-white/10 bg-white/[0.03] text-white/45 hover:bg-white/5";
+  }
+  switch (id) {
+    case "alarm":
+      return active
+        ? "border-red-400/70 bg-red-500/25 text-red-50"
+        : "border-red-500/15 bg-red-500/5 text-red-100/45 hover:bg-red-500/10";
+    case "restore":
+      return active
+        ? "border-emerald-400/70 bg-emerald-500/25 text-emerald-50"
+        : "border-emerald-500/15 bg-emerald-500/5 text-emerald-100/45 hover:bg-emerald-500/10";
+    case "on_test":
+      return active
+        ? "border-amber-400/70 bg-amber-500/25 text-amber-50"
+        : "border-amber-500/15 bg-amber-500/5 text-amber-100/45 hover:bg-amber-500/10";
+    case "off_test":
+      return active
+        ? "border-orange-400/70 bg-orange-500/25 text-orange-50"
+        : "border-orange-500/15 bg-orange-500/5 text-orange-100/45 hover:bg-orange-500/10";
+    case "viewed":
+      return active
+        ? "border-violet-400/70 bg-violet-500/25 text-violet-50"
+        : "border-violet-500/15 bg-violet-500/5 text-violet-100/45 hover:bg-violet-500/10";
+    case "email":
+      return active
+        ? "border-white/40 bg-white/15 text-white"
+        : "border-white/10 bg-white/[0.03] text-white/45 hover:bg-white/5";
+    case "open_close":
+      return active
+        ? "border-sky-400/70 bg-sky-500/25 text-sky-50"
+        : "border-sky-500/15 bg-sky-500/5 text-sky-100/45 hover:bg-sky-500/10";
+    case "call_list":
+      return active
+        ? "border-fuchsia-400/70 bg-fuchsia-500/25 text-fuchsia-50"
+        : "border-fuchsia-500/15 bg-fuchsia-500/5 text-fuchsia-100/45 hover:bg-fuchsia-500/10";
+    case "dispatch":
+      return active
+        ? "border-indigo-400/70 bg-indigo-500/25 text-indigo-50"
+        : "border-indigo-400/15 bg-indigo-500/5 text-indigo-100/45 hover:bg-indigo-500/10";
+    case "override":
+      return active
+        ? "border-yellow-400/70 bg-yellow-500/20 text-yellow-50"
+        : "border-yellow-500/15 bg-yellow-500/5 text-yellow-100/45 hover:bg-yellow-500/10";
+    default:
+      return active
+        ? "border-white/40 bg-white/15 text-white"
+        : "border-white/10 bg-white/[0.03] text-white/45 hover:bg-white/5";
   }
 }
 

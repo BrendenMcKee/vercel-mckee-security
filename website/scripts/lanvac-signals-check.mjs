@@ -316,6 +316,34 @@ check(
     !/Zone 2/i.test([farZone[0].title, farZone[0].summary, ...farZone[0].details].join(" ")),
 );
 
+const communicatorOnly = presentHistoricSignals([
+  {
+    occurredAtText: "03-11-2026 15:16:00",
+    signal: "110011",
+    description: "SIGNAL COMING FROM AlarmNet Receiver",
+    signalClass: "alarm",
+  },
+]);
+check(
+  "zone-less AlarmNet is a communicator event",
+  communicatorOnly[0]?.title === "AlarmNet Communicator" &&
+    /path or supervision/i.test(communicatorOnly[0].summary ?? ""),
+);
+
+const bareRestore = presentHistoricSignals([
+  {
+    occurredAtText: "03-11-2026 15:16:10",
+    signal: "350001",
+    description: "RESTORE",
+    signalClass: "comm_restore",
+  },
+]);
+check(
+  "zone-less restore is communicator restore",
+  bareRestore[0]?.title === "Communication Restore" &&
+    /checked in again/i.test(bareRestore[0].summary ?? ""),
+);
+
 check(
   "empty log is not all clear",
   stationStatusChip({

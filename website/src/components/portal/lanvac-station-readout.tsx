@@ -241,21 +241,25 @@ export function LanvacStationReadout({
               : "No zones on file."}
           </p>
         ) : (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 overflow-x-auto rounded-xl border border-white/10">
             <table className="min-w-full text-left text-sm">
               <thead>
-                <tr className="text-xs uppercase tracking-widest text-white/40">
-                  <th className="py-2 pr-3 font-bold">Zone #</th>
-                  <th className="py-2 pr-3 font-bold">Description</th>
-                  <th className="py-2 font-bold">Type</th>
+                <tr className="border-b border-white/10 bg-white/5 text-xs uppercase tracking-widest text-white/45">
+                  <th className="px-3 py-2.5 font-bold">Zone #</th>
+                  <th className="border-l border-white/10 px-3 py-2.5 font-bold">Description</th>
+                  <th className="border-l border-white/10 px-3 py-2.5 font-bold">Type</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-white/10">
                 {zones.map((zone) => (
                   <tr key={zone.zoneNumber} className="align-top text-white/80">
-                    <td className="py-2.5 pr-3 tabular-nums">{zone.zoneNumber}</td>
-                    <td className="py-2.5 pr-3">{zone.description || "Not on file"}</td>
-                    <td className="py-2.5">{zone.zoneType || "Not on file"}</td>
+                    <td className="px-3 py-2.5 tabular-nums">{zone.zoneNumber}</td>
+                    <td className="border-l border-white/10 px-3 py-2.5">
+                      {zone.description || "Not on file"}
+                    </td>
+                    <td className="border-l border-white/10 px-3 py-2.5">
+                      {zone.zoneType || "Not on file"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

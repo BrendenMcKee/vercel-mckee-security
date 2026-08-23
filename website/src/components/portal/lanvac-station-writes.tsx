@@ -100,41 +100,43 @@ function DurationPicker({
           </button>
         ))}
       </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <p className="w-full text-xs font-bold uppercase tracking-widest text-white/40">
+      <div className="pt-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-white/40">
           Custom
         </p>
-        <label className="text-xs text-white/50">
-          Days
-          <input
-            type="number"
-            min={0}
-            max={2}
-            inputMode="numeric"
-            disabled={disabled}
-            value={customDays}
-            placeholder="0"
-            onChange={(event) => applyCustom(event.target.value, customHours)}
-            className={`${inputClass} mt-1 w-24`}
-          />
-        </label>
-        <label className="text-xs text-white/50">
-          Hours
-          <input
-            type="number"
-            min={0}
-            max={60}
-            inputMode="numeric"
-            disabled={disabled}
-            value={customHours}
-            placeholder="0"
-            onChange={(event) => applyCustom(customDays, event.target.value)}
-            className={`${inputClass} mt-1 w-24`}
-          />
-        </label>
-        {customActive && !customError && (
-          <p className="pb-2 text-xs text-white/45">{onTestDurationLabel(minutes)}</p>
-        )}
+        <div className="mt-2 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1.5 text-xs text-white/50">
+            Days
+            <input
+              type="number"
+              min={0}
+              max={2}
+              inputMode="numeric"
+              disabled={disabled}
+              value={customDays}
+              placeholder="0"
+              onChange={(event) => applyCustom(event.target.value, customHours)}
+              className={`${inputClass} w-24`}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs text-white/50">
+            Hours
+            <input
+              type="number"
+              min={0}
+              max={60}
+              inputMode="numeric"
+              disabled={disabled}
+              value={customHours}
+              placeholder="0"
+              onChange={(event) => applyCustom(customDays, event.target.value)}
+              className={`${inputClass} w-24`}
+            />
+          </label>
+          {customActive && !customError && (
+            <p className="pb-2 text-xs text-white/45">{onTestDurationLabel(minutes)}</p>
+          )}
+        </div>
       </div>
       {customError && <p className="text-sm text-amber-100">{customError}</p>}
     </div>
