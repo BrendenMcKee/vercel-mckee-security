@@ -225,48 +225,58 @@ export function LanvacStationReadout({
         </div>
       )}
 
-      <div>
-        <h3 className="text-lg font-semibold tracking-tight text-white">Zones</h3>
-        <p className="mt-1 text-sm leading-relaxed text-white/55">
-          These are the zones the monitoring station has on file for this
-          security system.
-        </p>
-        {showEquipmentNote && (
-          <p className="mt-2 text-sm text-white/45">Equipment list below.</p>
-        )}
-        {zones.length === 0 ? (
-          <p className="mt-3 text-sm text-white/45">
-            {canRefresh
-              ? "No zones pulled yet. Use Refresh now."
-              : "No zones on file."}
+      {variant === "admin" ? (
+        <AdminZoneEditor
+          profileId={profileId}
+          writesLive={writesLive}
+          zones={zones}
+          canRefresh={canRefresh}
+          showEquipmentNote={showEquipmentNote}
+        />
+      ) : (
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight text-white">Zones</h3>
+          <p className="mt-1 text-sm leading-relaxed text-white/55">
+            These are the zones the monitoring station has on file for this
+            security system.
           </p>
-        ) : (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-white/10">
-            <table className="min-w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-white/10 bg-white/5 text-xs uppercase tracking-widest text-white/45">
-                  <th className="px-3 py-2.5 font-bold">Zone #</th>
-                  <th className="border-l border-white/10 px-3 py-2.5 font-bold">Description</th>
-                  <th className="border-l border-white/10 px-3 py-2.5 font-bold">Type</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {zones.map((zone) => (
-                  <tr key={zone.zoneNumber} className="align-top text-white/80">
-                    <td className="px-3 py-2.5 tabular-nums">{zone.zoneNumber}</td>
-                    <td className="border-l border-white/10 px-3 py-2.5">
-                      {zone.description || "Not on file"}
-                    </td>
-                    <td className="border-l border-white/10 px-3 py-2.5">
-                      {zone.zoneType || "Not on file"}
-                    </td>
+          {showEquipmentNote && (
+            <p className="mt-2 text-sm text-white/45">Equipment list below.</p>
+          )}
+          {zones.length === 0 ? (
+            <p className="mt-3 text-sm text-white/45">
+              {canRefresh
+                ? "No zones pulled yet. Use Refresh now."
+                : "No zones on file."}
+            </p>
+          ) : (
+            <div className="mt-3 overflow-x-auto rounded-xl border border-white/10">
+              <table className="min-w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/5 text-xs uppercase tracking-widest text-white/45">
+                    <th className="px-3 py-2.5 font-bold">Zone #</th>
+                    <th className="border-l border-white/10 px-3 py-2.5 font-bold">Description</th>
+                    <th className="border-l border-white/10 px-3 py-2.5 font-bold">Type</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {zones.map((zone) => (
+                    <tr key={zone.zoneNumber} className="align-top text-white/80">
+                      <td className="px-3 py-2.5 tabular-nums">{zone.zoneNumber}</td>
+                      <td className="border-l border-white/10 px-3 py-2.5">
+                        {zone.description || "Not on file"}
+                      </td>
+                      <td className="border-l border-white/10 px-3 py-2.5">
+                        {zone.zoneType || "Not on file"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="border-t border-white/15" />
 
@@ -278,13 +288,6 @@ export function LanvacStationReadout({
       />
 
       <div className="border-t border-white/15" />
-
-      {variant === "admin" && (
-        <>
-          <AdminZoneEditor profileId={profileId} writesLive={writesLive} zones={zones} />
-          <div className="border-t border-white/15" />
-        </>
-      )}
 
       <HistoricSignals
         profileId={profileId}

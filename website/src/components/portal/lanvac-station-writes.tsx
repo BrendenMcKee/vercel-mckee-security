@@ -249,14 +249,30 @@ function defaultWriteType(zoneType: string): ProvenZoneWriteType {
   return mapped.ok ? mapped.code : "BUR";
 }
 
+function nextUnusedZoneNumber(zones: LanvacStationZone[]): number {
+  const used = new Set(zones.map((zone) => zone.zoneNumber));
+  for (let number = 1; number <= 999; number += 1) {
+    if (!used.has(number)) return number;
+  }
+  return 1;
+}
+
+function canEditZone(zone: LanvacStationZone): boolean {
+  return Boolean(zone.write) && !isCarbonMonoxideZoneType(zone.zoneType);
+}
+
 export function AdminZoneEditor({
   profileId,
   writesLive,
   zones,
+  canRefresh,
+  showEquipmentNote,
 }: {
   profileId: string;
   writesLive: boolean;
   zones: LanvacStationZone[];
+  canRefresh: boolean;
+  showEquipmentNote?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -277,7 +293,7 @@ export function AdminZoneEditor({
   function openCreate() {
     setEditing("new");
     setForm({
-      zoneNumber: 1,
+      zoneNumber: nextUnusedZoneNumber(zones),
       description: "",
       zoneType: "BUR",
       useCallList: true,
@@ -360,27 +376,32 @@ export function AdminZoneEditor({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-lg font-semibold tracking-tight text-white">Change zones</p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-lg font-semibold tracking-tight text-white">Zones</h3>
+          <p className="mt-1 text-sm leading-relaxed text-white/55">
+            These are the zones the monitoring station has on file. You can add
+            an unused number or delete one. To change a name or type already at
+            the station, add the replacement on a new number, then delete the
+            old one. Carbon monoxide types cannot be written yet.
+          </p>
+          {showEquipmentNote && (
+            <p className="mt-2 text-sm text-white/45">Equipment list below.</p>
+          )}
+        </div>
         <button type="button" onClick={openCreate} className={buttonClass}>
           Add zone
         </button>
       </div>
-      <p className="text-sm leading-relaxed text-white/55">
-        Add a new unused zone number, or delete one. Edit is only for zones this
-        portal created, because the station does not send delay or call-list
-        settings back. Guessing those on a pulled zone would overwrite what is
-        already at the station. Carbon monoxide types cannot be written yet.
-      </p>
       {!writesLive && <p className="text-sm text-white/45">{STATION_WRITES_NOT_LIVE}</p>}
       {notice && <p className="text-sm text-amber-100">{notice}</p>}
 
       {editing != null && (
         <div className="space-y-3 rounded-xl border border-white/10 bg-background p-4">
           <p className="text-sm text-white/70">
-            {editing === "new" ? "New zone" : `Edit zone #${form.zoneNumber}`}.
-            Delay, call list, and optional codes are stored here after a portal
-            create so later edits do not invent defaults.
+            {editing === "new"
+              ? `New zone #${form.zoneNumber}. Delay and extra notify apply to this new number only.`
+              : `Edit zone #${form.zoneNumber}.`}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs text-white/50">
@@ -511,44 +532,61 @@ export function AdminZoneEditor({
         </div>
       )}
 
-      <ul className="space-y-2">
-        {zones.map((zone) => {
-          const carbon = isCarbonMonoxideZoneType(zone.zoneType);
-          const canEdit = !carbon && Boolean(zone.write);
-          const blockedReason = carbon
-            ? "Carbon monoxide type cannot be changed yet."
-            : !zone.write
-              ? "Pulled from the station. Delay and call-list settings are not on file, so this one cannot be edited."
-              : null;
-          return (
-            <li
-              key={zone.zoneNumber}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/5 px-3 py-2 text-sm text-white/75"
-            >
-              <span className="min-w-0">
-                <span className="text-white/90">
-                  #{zone.zoneNumber} {zone.description || "Not on file"}
-                </span>
-                {blockedReason && (
-                  <span className="mt-0.5 block text-xs leading-relaxed text-white/45">
-                    {blockedReason}
-                  </span>
-                )}
-              </span>
-              <span className="flex flex-wrap gap-2">
-                {canEdit && (
-                  <button type="button" onClick={() => openEdit(zone)} className={buttonClass}>
-                    Edit
-                  </button>
-                )}
-                <button type="button" onClick={() => remove(zone)} className={buttonClass}>
-                  Delete
-                </button>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      {zones.length === 0 ? (
+        <p className="text-sm text-white/45">
+          {canRefresh
+            ? "No zones pulled yet. Use Refresh now."
+            : "No zones on file."}
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-white/10">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-white/10 bg-white/5 text-xs uppercase tracking-widest text-white/45">
+                <th className="px-3 py-2.5 font-bold">Zone #</th>
+                <th className="border-l border-white/10 px-3 py-2.5 font-bold">Description</th>
+                <th className="border-l border-white/10 px-3 py-2.5 font-bold">Type</th>
+                <th className="border-l border-white/10 px-3 py-2.5 font-bold">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/10">
+              {zones.map((zone) => (
+                <tr key={zone.zoneNumber} className="align-top text-white/80">
+                  <td className="px-3 py-2.5 tabular-nums">{zone.zoneNumber}</td>
+                  <td className="border-l border-white/10 px-3 py-2.5">
+                    {zone.description || "Not on file"}
+                  </td>
+                  <td className="border-l border-white/10 px-3 py-2.5">
+                    {zone.zoneType || "Not on file"}
+                  </td>
+                  <td className="border-l border-white/10 px-3 py-2.5">
+                    <span className="flex flex-wrap justify-end gap-2">
+                      {canEditZone(zone) && (
+                        <button
+                          type="button"
+                          onClick={() => openEdit(zone)}
+                          className={buttonClass}
+                        >
+                          Edit
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => remove(zone)}
+                        className={buttonClass}
+                      >
+                        Delete
+                      </button>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

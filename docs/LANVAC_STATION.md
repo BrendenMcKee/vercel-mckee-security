@@ -63,7 +63,7 @@ Seen alarm example: signal `110011`, `ALARM((FIRE)) ZONE:001` and matching `REST
 
 **Zone list types on GET are English labels, not the 3-char write enum.** Map before create/update: `FIRE` → `FIR`, `BURGLAR` → `BUR`, `LOW TEMPERATURE` → `LOW`. `CARBON MONOXIDE` write code (`CO*` / `CO1` / `CO2`) is **still unproven**. Create/update of that type is refused. Delete is allowed. We do not put a zone on test.
 
-**Do not PUT an existing live zone** unless `lanvac_zone_write` already has delay / call list / codes from a portal create. GET does not return those fields. Defaults (`delay = 1`, empty notify) would overwrite the station. Edit stays off until write fields exist. The admin UI says that in plain language (not “write fields unknown”). Test create/update/delete only on unused numbers (7 and 8 on O5985).
+**Do not PUT an existing live zone** unless `lanvac_zone_write` already has delay / call list / codes from a portal create. GET does not return those fields. Defaults (`delay = 1`, empty notify) would overwrite the station. Edit stays off until write fields exist. The admin Zones table is add / delete; Edit appears only after a portal create. Staff change a pulled zone by adding a replacement on an unused number, then deleting the old one. Test create/update/delete only on unused numbers (7 and 8 on O5985).
 
 **`panelType` can be empty.** Show "Not on file". `isDisabled` is a real boolean (`false` on O5985). `language` was `en`. `accountType` can be empty.
 
