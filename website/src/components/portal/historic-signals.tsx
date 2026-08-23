@@ -470,7 +470,7 @@ export function HistoricSignals({
           tabIndex={0}
           role="region"
           aria-label="Historic Signals"
-          className="mt-4 max-h-[min(32rem,70vh)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-background/40 px-3 py-3 scrollbar-thin [scrollbar-color:rgba(255,255,255,0.22)_transparent] sm:px-4 sm:py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25"
+          className="mt-4 max-h-[min(32rem,70vh)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-background/40 px-3 py-3 scrollbar-thin [scrollbar-color:rgba(255,255,255,0.22)_transparent] sm:px-4 sm:py-4 lg:max-h-[min(48rem,80vh)] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25"
         >
           {visible.length === 0 ? (
             <p className="px-1 py-2 text-sm text-white/45">
