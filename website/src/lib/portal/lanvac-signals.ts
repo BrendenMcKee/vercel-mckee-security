@@ -87,6 +87,21 @@ const MONTH_NAMES = [
   "December",
 ] as const;
 
+const MONTH_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 const WEEKDAY_NAMES = [
   "Sunday",
   "Monday",
@@ -139,6 +154,15 @@ export function formatLanvacHistoricWhen(raw: string): string {
   const month = MONTH_NAMES[parts.month - 1];
   if (!month) return raw.trim();
   return `${month} ${parts.day}, ${parts.year}, ${formatHourMinute(parts.hour, parts.minute)}`;
+}
+
+/** Abbreviated date plus time, for the right side of a Historic card. */
+export function formatLanvacHistoricShortWhen(raw: string): string {
+  const parts = parseLanvacHistoricParts(raw);
+  if (!parts) return raw.trim();
+  const month = MONTH_SHORT[parts.month - 1];
+  if (!month) return raw.trim();
+  return `${month} ${parts.day} · ${formatHourMinute(parts.hour, parts.minute)}`;
 }
 
 export function formatLanvacHistoricDay(raw: string): { key: string; label: string } | null {

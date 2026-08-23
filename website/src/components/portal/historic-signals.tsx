@@ -15,6 +15,7 @@ import {
   type HistoricEvent,
   type HistoricFilterId,
   type HistoricKind,
+  type HistoricZoneHint,
 } from "@/lib/portal/lanvac-historic";
 import type { LanvacStationSignal } from "@/components/portal/lanvac-station-readout";
 
@@ -64,6 +65,24 @@ function KindIcon({ kind }: { kind: HistoricKind }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 7V5a2 2 0 00-2-2H6a2 2 0 00-2 2v14a2 2 0 002 2h7a2 2 0 002-2v-2m3-5h-8m8 0l-3-3m3 3l-3 3" />
         </svg>
       );
+    case "call_list":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+        </svg>
+      );
+    case "dispatch":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5.5c6-4 12 4 18 0v13c-6 4-12-4-18 0v-13zM10 9h4M9 13h6" />
+        </svg>
+      );
+    case "override":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z" />
+        </svg>
+      );
     default:
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
@@ -80,38 +99,134 @@ function EventCard({
   event: HistoricEvent;
   variant: "admin" | "client";
 }) {
+  const kindLabel = historicKindLabel(event.kind);
+  const showKind = event.title.toLowerCase() !== kindLabel.toLowerCase();
+
   return (
-    <li className={`rounded-xl border px-3 py-3 text-sm text-white/85 ${historicEventTone(event.kind)}`}>
-      <div className="flex items-start gap-3">
+    <li className={`rounded-xl border px-3 py-2 text-sm text-white/80 ${historicEventTone(event.kind)}`}>
+      <div className="flex items-start gap-2.5">
         <span className="mt-0.5 text-current" aria-hidden>
           <KindIcon kind={event.kind} />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-semibold text-white">{event.title}</p>
-              {event.title !== historicKindLabel(event.kind) && (
-                <p className="mt-0.5 text-[11px] font-bold uppercase tracking-widest text-white/45">
-                  {historicKindLabel(event.kind)}
-                </p>
+              <p className="font-semibold leading-snug text-white">{event.title}</p>
+              {showKind && (
+                <p className="mt-0.5 text-xs font-medium text-white/55">{kindLabel}</p>
               )}
             </div>
-            <p className="shrink-0 text-xs tabular-nums text-white/50">{event.timeLabel}</p>
+            <p
+              className="shrink-0 pt-0.5 text-right text-xs tabular-nums text-white/60"
+              title={event.whenLabel}
+            >
+              {event.timeLabel}
+            </p>
           </div>
-          {event.summary && <p className="mt-1.5 text-sm text-white/70">{event.summary}</p>}
+          {event.summary && <p className="mt-1 text-sm leading-snug text-white/70">{event.summary}</p>}
           {event.details.length > 0 && (
-            <ul className="mt-2 space-y-1 text-sm text-white/55">
+            <ul className="mt-1 space-y-0.5 text-sm leading-snug text-white/60">
               {event.details.map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
           )}
           {variant === "admin" && event.signals.length > 0 && (
-            <p className="mt-2 text-xs text-white/35">{event.signals.join(" · ")}</p>
+            <p className="mt-1 text-xs text-white/35">{event.signals.join(" · ")}</p>
           )}
         </div>
       </div>
     </li>
+  );
+}
+
+function DayFilter({
+  value,
+  days,
+  onChange,
+}: {
+  value: string;
+  days: Array<[string, string]>;
+  onChange: (next: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const selected = value === "all" ? "All days" : days.find(([key]) => key === value)?.[1] ?? "All days";
+
+  useEffect(() => {
+    function onDoc(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative max-w-md">
+      <p className="text-sm font-semibold text-white">Date</p>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="mt-1.5 inline-flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-white/15 bg-background px-3 text-left text-sm text-white outline-none hover:border-white/30 focus:border-primary"
+      >
+        <span className="truncate">{selected}</span>
+        <svg
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className={`h-4 w-4 shrink-0 text-white/55 transition-transform ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-surface p-1 shadow-xl"
+        >
+          <li>
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === "all"}
+              onClick={() => {
+                onChange("all");
+                setOpen(false);
+              }}
+              className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm ${
+                value === "all" ? "bg-primary/20 text-white" : "text-white/80 hover:bg-white/5"
+              }`}
+            >
+              All days
+            </button>
+          </li>
+          {days.map(([key, label]) => (
+            <li key={key}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={value === key}
+                onClick={() => {
+                  onChange(key);
+                  setOpen(false);
+                }}
+                className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm ${
+                  value === key ? "bg-primary/20 text-white" : "text-white/80 hover:bg-white/5"
+                }`}
+              >
+                {label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -120,11 +235,13 @@ export function HistoricSignals({
   canLoadMore,
   variant,
   signals,
+  zones = [],
 }: {
   profileId: string;
   canLoadMore: boolean;
   variant: "admin" | "client";
   signals: LanvacStationSignal[];
+  zones?: HistoricZoneHint[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -143,7 +260,10 @@ export function HistoricSignals({
     signals.length % LANVAC_HISTORIC_PAGE_SIZE === 0 &&
     signals.length < LANVAC_HISTORIC_PAGE_SIZE * LANVAC_HISTORIC_MAX_PAGES;
 
-  const events = useMemo(() => presentHistoricSignals(signals), [signals]);
+  const events = useMemo(
+    () => presentHistoricSignals(signals, { zones }),
+    [signals, zones],
+  );
   const days = useMemo(
     () =>
       Array.from(new Map(events.map((event) => [event.dayKey, event.dayLabel])).entries()),
@@ -202,55 +322,39 @@ export function HistoricSignals({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canLoadMore, hasMore, watchingAll, profileId, signals.length]);
 
-  const selectClass =
-    "min-h-11 rounded-xl border border-white/15 bg-background px-3 text-sm text-white outline-none focus:border-primary";
-
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-widest text-white/40">
-        Historic signals
-      </p>
-      <p className="mt-1 text-sm text-white/50">
+      <h3 className="text-lg font-semibold tracking-tight text-white">Historic Signals</h3>
+      <p className="mt-1 text-sm leading-relaxed text-white/55">
         Recent events from the monitoring station. An empty log does not mean
         the system is clear.
       </p>
 
       {signals.length > 0 && (
-        <div className="mt-4 flex flex-col gap-3">
-          <label className="text-xs font-bold uppercase tracking-widest text-white/40">
-            Date
-            <select
-              value={dayKey}
-              onChange={(event) => setDayKey(event.target.value)}
-              className={`${selectClass} mt-1.5 w-full sm:max-w-xs`}
-            >
-              <option value="all">All days</option>
-              {days.map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
+        <div className="mt-4 space-y-4">
+          <DayFilter value={dayKey} days={days} onChange={setDayKey} />
+          <div>
+            <p className="text-sm font-semibold text-white">Event type</p>
+            <div className="no-scrollbar mt-1.5 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              {HISTORIC_FILTERS.filter((item) => {
+                if (item.id === "all") return true;
+                return events.some((event) => event.kind === item.id);
+              }).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={filter === item.id}
+                  onClick={() => setFilter(item.id)}
+                  className={`inline-flex min-h-10 shrink-0 items-center rounded-full border px-3 text-sm font-semibold ${
+                    filter === item.id
+                      ? "border-primary/50 bg-primary/15 text-white"
+                      : "border-white/15 text-white/70 hover:bg-white/5"
+                  }`}
+                >
+                  {item.label}
+                </button>
               ))}
-            </select>
-          </label>
-          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-            {HISTORIC_FILTERS.filter((item) => {
-              if (item.id === "all") return true;
-              return events.some((event) => event.kind === item.id);
-            }).map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={filter === item.id}
-                onClick={() => setFilter(item.id)}
-                className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 text-xs font-bold uppercase tracking-wide ${
-                  filter === item.id
-                    ? "border-primary/50 bg-primary/15 text-white"
-                    : "border-white/15 text-white/65 hover:bg-white/5"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+            </div>
           </div>
         </div>
       )}
@@ -268,22 +372,25 @@ export function HistoricSignals({
           ref={listRef}
           tabIndex={0}
           role="region"
-          aria-label="Historic signals"
-          className="mt-4 max-h-[min(32rem,70vh)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-background/40 p-2 sm:p-3"
+          aria-label="Historic Signals"
+          className="mt-4 max-h-[min(32rem,70vh)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-background/40 px-3 py-3 [scrollbar-color:rgba(255,255,255,0.22)_transparent] [scrollbar-width:thin] sm:px-4 sm:py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25"
         >
           {visible.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-white/45">
+            <p className="px-1 py-2 text-sm text-white/45">
               No events match those filters
               {hasMore ? ". Load older signals to look further back." : "."}
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {grouped.map((day) => (
-                <section key={day.dayKey} className="rounded-xl border border-white/10">
-                  <h3 className="sticky top-0 z-10 border-b border-white/10 bg-surface/95 px-3 py-2 text-sm font-semibold text-white/70 backdrop-blur-sm">
+                <section key={day.dayKey} aria-labelledby={`historic-day-${day.dayKey}`}>
+                  <h4
+                    id={`historic-day-${day.dayKey}`}
+                    className="px-1 pb-2 text-sm font-semibold text-white"
+                  >
                     {day.dayLabel}
-                  </h3>
-                  <ul className="space-y-2 p-2">
+                  </h4>
+                  <ul className="space-y-1.5">
                     {day.events.map((event) => (
                       <EventCard key={event.id} event={event} variant={variant} />
                     ))}
@@ -299,7 +406,7 @@ export function HistoricSignals({
                   type="button"
                   onClick={loadMore}
                   disabled={pending}
-                  className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-white/20 px-4 text-xs font-bold uppercase tracking-wide text-white/70 hover:bg-white/10 disabled:opacity-50"
+                  className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-white/20 px-4 text-sm font-semibold text-white/75 hover:bg-white/10 disabled:opacity-50"
                 >
                   {pending ? "Loading older signals..." : "Load older signals"}
                 </button>

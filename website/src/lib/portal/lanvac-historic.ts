@@ -1,7 +1,7 @@
 import {
   formatHourMinute,
   formatLanvacHistoricDay,
-  formatLanvacHistoricTime,
+  formatLanvacHistoricShortWhen,
   formatLanvacHistoricWhen,
   parseLanvacHistoricParts,
   type LanvacSignalClass,
@@ -18,19 +18,25 @@ export type HistoricKind =
   | "viewed"
   | "email"
   | "open_close"
+  | "call_list"
+  | "dispatch"
+  | "override"
   | "other";
 
 export type HistoricFilterId = "all" | HistoricKind;
 
 export const HISTORIC_FILTERS: Array<{ id: HistoricFilterId; label: string }> = [
-  { id: "all", label: "All events" },
+  { id: "all", label: "All Events" },
   { id: "alarm", label: "Alarms" },
   { id: "restore", label: "Restores" },
-  { id: "on_test", label: "On test" },
-  { id: "off_test", label: "Off test" },
-  { id: "viewed", label: "File viewed" },
+  { id: "on_test", label: "On Test" },
+  { id: "off_test", label: "Off Test" },
+  { id: "viewed", label: "File Viewed" },
   { id: "email", label: "Emails" },
-  { id: "open_close", label: "Open / close" },
+  { id: "open_close", label: "Open / Close" },
+  { id: "call_list", label: "Call List" },
+  { id: "dispatch", label: "Station Calls" },
+  { id: "override", label: "Override" },
   { id: "other", label: "Other" },
 ];
 
@@ -39,6 +45,11 @@ export type HistoricSource = {
   signal: string;
   description: string;
   signalClass: LanvacSignalClass;
+};
+
+export type HistoricZoneHint = {
+  zoneNumber: number;
+  description: string;
 };
 
 export type HistoricEvent = {
@@ -61,10 +72,37 @@ export type HistoricDayGroup = {
 };
 
 const BURST_MS = 20_000;
+const NEARBY_MS = 45_000;
+
+const OVERRIDE_CODES: Record<string, string> = {
+  FA: "Fire alarm",
+  BUR: "Burglar alarm",
+  OPN: "Opening",
+  CLS: "Closing",
+  ADV: "Advise",
+  PAN: "Panic",
+  CO: "Carbon monoxide",
+  SUP: "Supervisory",
+};
 
 export function isHistoricSeparator(description: string): boolean {
   const trimmed = description.trim();
   return /^[-_=.]{6,}$/.test(trimmed);
+}
+
+function isLooseDetail(description: string): boolean {
+  const trimmed = description.trim();
+  const upper = trimmed.toUpperCase();
+  if (/^\[E-MAIL\]\s*>>\s*\[EMAIL\]$/.test(upper)) return true;
+  if (/^\d{3,}\s*>>\s*[A-Z0-9]+$/.test(upper.replace(/^\[ON-TEST\]\s*/i, "").trim())) {
+    return true;
+  }
+  if (/^ZONE[:\s]*0*\d+$/i.test(trimmed)) return true;
+  if (/^(TO|FROM|AT)[:\s]/i.test(trimmed)) return true;
+  if (/^BY[\s:]/i.test(trimmed) && !/FILE VIEWED|STOP TESTING|ON-TEST|UPDATE CALL/i.test(upper)) {
+    return true;
+  }
+  return false;
 }
 
 export function historicKind(input: {
@@ -84,10 +122,40 @@ export function historicKind(input: {
     return "off_test";
   }
   if (text.includes("ON-TEST") || text.includes("ON TEST")) return "on_test";
+  if (text.includes("UPDATE CALL-LIST") || text.includes("UPDATE CALL LIST")) {
+    return "call_list";
+  }
+  if (
+    text.includes("OVERIDE") ||
+    text.includes("OVERRIDE") ||
+    text.includes("SENT TO SUPERVISOR")
+  ) {
+    return "override";
+  }
+  if (
+    text.includes("REFERENCE CALL") ||
+    text.includes("CALLING PREMISES") ||
+    text.includes("CALL TO PREMISES") ||
+    text.includes("SPOKE TO") ||
+    /RING:\s*\d+/i.test(input.description)
+  ) {
+    return "dispatch";
+  }
   if (text.includes("[E-MAIL]") || text.startsWith("[E-MAIL]")) return "email";
   if (input.signalClass === "alarm") return "alarm";
-  if (input.signalClass === "restore") return "restore";
+  if (input.signalClass === "restore" || input.signalClass === "comm_restore") {
+    return "restore";
+  }
+  if (
+    text.includes("COMMUNICATION RESTORE") ||
+    text.includes("AFTER ALARM") ||
+    /^RESTORE\b/.test(text)
+  ) {
+    return "restore";
+  }
+  if (input.signalClass === "on_test") return "on_test";
   if (input.signalClass === "open_close") return "open_close";
+  if (text.includes("OPENING") || text.includes("CLOSING")) return "open_close";
   return "other";
 }
 
@@ -102,7 +170,10 @@ function titleCaseName(value: string): string {
     .toLowerCase()
     .split(/\s+/)
     .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => {
+      if (/^[a-z]\.$/i.test(word)) return word.toUpperCase();
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
     .join(" ");
 }
 
@@ -144,22 +215,110 @@ function rewriteEmbeddedWhen(value: string): string {
     .trim();
 }
 
+function stripDealerNumber(value: string): string {
+  return value.replace(/\b\d{4,5}\s+(?=[A-Za-z])/g, "").trim();
+}
+
 function cleanPerson(value: string): string | null {
+  const supervisor = value.match(/\b(?:BY\s+)?SUPERVISOR\s*:?\s*(.+)$/i);
+  if (supervisor) return `Supervisor ${titleCaseName(supervisor[1])}`;
+  const operator = value.match(/\b(?:BY\s+)?OPR\s*:?\s*(.+)$/i);
+  if (operator) return `Operator ${titleCaseName(operator[1])}`;
+
   const match = value.match(/\b(?:BY[:\s]+)?(?:MOBI|WEB)\s+(.+)$/i);
   if (match) {
     const channel = value.toUpperCase().includes("WEB") ? "Web" : "Mobi";
-    return `${titleCaseName(match[1])} (${channel})`;
+    return `${titleCaseName(stripDealerNumber(match[1]))} (${channel})`;
   }
   const by = value.match(/\bBY[:\s]+(.+)$/i);
-  return by ? titleCaseName(by[1]) : null;
+  if (!by) return null;
+  const rest = stripDealerNumber(by[1].replace(/\s*\((MOBI|WEB)\)\s*$/i, "").trim());
+  const channel = /\bWEB\b/i.test(value) ? "Web" : /\bMOBI\b/i.test(value) ? "Mobi" : null;
+  const name = titleCaseName(rest);
+  return channel ? `${name} (${channel})` : name;
 }
 
-function zoneFrom(value: string): string | null {
-  const match = value.match(/\bZONE[:\s]*0*(\d+)/i);
-  return match ? `Zone ${Number(match[1])}` : null;
+function zoneNumberFrom(value: string): number | null {
+  const match = value.match(/\bZONE[:\s#]*0*(\d+)/i);
+  return match ? Number(match[1]) : null;
 }
 
-function rewriteLine(description: string): string | null {
+function zoneFrom(value: string, zones?: HistoricZoneHint[]): string | null {
+  const number = zoneNumberFrom(value);
+  if (number == null) return null;
+  const hint = zones?.find((zone) => zone.zoneNumber === number);
+  const name = hint?.description.trim();
+  return name ? `Zone ${number} · ${titleCaseName(name)}` : `Zone ${number}`;
+}
+
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `1-${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  return raw.trim();
+}
+
+function formatTalkTime(minutes: number, seconds: number): string {
+  if (minutes <= 0) return `${seconds} second${seconds === 1 ? "" : "s"}`;
+  if (seconds === 0) return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  return `${minutes} min ${seconds} sec`;
+}
+
+function formatCallMeta(text: string): string | null {
+  if (!/RING\s*:|CALL\s*DUR|OP\s*:/i.test(text)) return null;
+  const ring = text.match(/RING\s*:\s*(\d+)/i);
+  const dur = text.match(/CALL\s*DUR(?:ATION)?\s*:\s*(\d{1,2}):(\d{2})/i);
+  const op = text.match(/\bOP\s*:\s*(?:\d+\s*)?([A-Za-z][A-Za-z .'-]*)/i);
+  const parts: string[] = [];
+  if (ring) parts.push(`Ring ${ring[1]}`);
+  if (dur) parts.push(formatTalkTime(Number(dur[1]), Number(dur[2])));
+  if (op) parts.push(`Operator ${titleCaseName(op[1].trim())}`);
+  return parts.join(" · ") || null;
+}
+
+function decodeOverrideToken(token: string): string {
+  const upper = token.toUpperCase();
+  return OVERRIDE_CODES[upper] ?? titleCaseName(token);
+}
+
+function decodeOverrideCodes(value: string): string | null {
+  const match = value.match(
+    /(?:OVERIDE|OVERRIDE)\s*:?\s*(.+)$/i,
+  );
+  if (!match) return null;
+  const tokens = match[1]
+    .replace(/[·>•]/g, " ")
+    .trim()
+    .split(/[\s/,]+/)
+    .filter(Boolean);
+  if (tokens.length === 0) return null;
+  return tokens.map(decodeOverrideToken).join(" · ");
+}
+
+function alarmTypeFrom(value: string): string | null {
+  const typed = value.match(/ALARM\(\(([^)]+)\)\)/i);
+  if (typed) return `${titleCaseName(typed[1])} Alarm`;
+  if (/\bFIRE\b/i.test(value) && /ALARM/i.test(value)) return "Fire Alarm";
+  if (/\bBUR(?:GLAR)?\b/i.test(value) && /ALARM/i.test(value)) return "Burglar Alarm";
+  if (/\bPANIC\b/i.test(value)) return "Panic Alarm";
+  if (/\bSUPERVISORY\b/i.test(value)) return "Supervisory";
+  return null;
+}
+
+function userAreaFrom(value: string): string | null {
+  const user = value.match(/\bUSER\s*:?\s*0*(\d+)/i);
+  const area = value.match(/\bAREA\s*:?\s*0*(\d+)/i);
+  const parts: string[] = [];
+  if (user && Number(user[1]) > 0) parts.push(`User ${Number(user[1])}`);
+  if (area) parts.push(`Area ${Number(area[1])}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+function rewriteLine(description: string, zones?: HistoricZoneHint[]): string | null {
   const raw = description.trim();
   if (!raw || isHistoricSeparator(raw)) return null;
   const upper = raw.toUpperCase();
@@ -176,11 +335,64 @@ function rewriteLine(description: string): string | null {
     return null;
   }
 
+  const callMeta = formatCallMeta(raw);
+  if (callMeta) return callMeta;
+
+  if (upper.includes("UPDATE CALL-LIST") || upper.includes("UPDATE CALL LIST")) {
+    const slot = raw.match(/#\s*(\d+)/);
+    return slot ? `Call List Updated · Contact #${slot[1]}` : "Call List Updated";
+  }
+
+  if (upper.includes("REFERENCE CALL")) {
+    const number = raw.match(/REFERENCE\s*CALL\s*NUMBER\s*[·:>\s]*([A-Z0-9-]+)/i);
+    return number
+      ? `Station Call · Reference ${number[1]}`
+      : "Station Call";
+  }
+  if (upper.includes("CALLING PREMISES")) {
+    const phone = raw.match(/(\+?1?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})/);
+    return phone
+      ? `Calling the property · ${formatPhone(phone[1])}`
+      : "Calling the property";
+  }
+  if (upper.includes("CALL TO PREMISES") && upper.includes("END")) {
+    const phone = raw.match(/(\d{10,11})/);
+    return phone
+      ? `Call to the property ended · ${formatPhone(phone[1])}`
+      : "Call to the property ended";
+  }
+  if (upper.includes("SPOKE TO")) {
+    const who = raw.replace(/^.*SPOKE TO\s*[·:>\s]*/i, "").trim();
+    return who ? `Spoke with ${titleCaseName(who)}` : "Spoke with someone on the call list";
+  }
+
+  if (upper.includes("SENT TO SUPERVISOR")) {
+    const codes = decodeOverrideCodes(raw);
+    return codes
+      ? `Sent to supervisor for override · ${codes}`
+      : "Sent to supervisor for override";
+  }
+  if (/^\s*OVERIDE\s*:?\s*$/i.test(raw) || /^\s*OVERRIDE\s*:?\s*$/i.test(raw)) {
+    return "Supervisor override";
+  }
+  if (upper.includes("OVERIDE") || upper.includes("OVERRIDE")) {
+    const codes = decodeOverrideCodes(raw);
+    return codes ? `Supervisor override · ${codes}` : "Supervisor override";
+  }
+
+  if (upper.includes("CUSTOMER RESPONDING") || upper.includes("COMMUNICATION RESTORE")) {
+    return "Communication Restore";
+  }
+
+  if (/SIGNAL COMING FROM\s+ALARMNET/i.test(raw)) {
+    return "Received through the AlarmNet communicator";
+  }
+
   const reference = raw.match(/REFERENCE#?\s*>>?\s*([A-Z0-9-]+)/i);
   if (reference) return `Reference ${reference[1]}`;
 
   const person = cleanPerson(raw);
-  if (person && (upper.includes("BY:") || upper.includes(" BY "))) {
+  if (person && (upper.includes("BY:") || upper.includes(" BY ") || /^BY\s/i.test(raw))) {
     return `By ${person}`;
   }
 
@@ -192,27 +404,52 @@ function rewriteLine(description: string): string | null {
     return "Station email sent";
   }
 
+  if (upper.includes("SUMMARY") && upper.includes("LAST") && /HRS?/.test(upper)) {
+    const hours = raw.match(/LAST\s+(\d+)\s*HRS?/i);
+    const at = raw.match(/ALARM\s+AT\s+(\d{1,2}):(\d{2})/i);
+    const when = at ? formatHourMinute(Number(at[1]), Number(at[2])) : null;
+    return [
+      hours ? `${hours[1]}-hour summary email` : "Summary email",
+      when ? `Alarm at ${when}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
   let text = raw
     .replace(/^\[ON-TEST\]\s*>?\s*/i, "")
     .replace(/^\[E-MAIL\]\s*>?\s*/i, "")
     .replace(/\bSTOP\/FINISH\s*>?\s*/gi, "")
+    .replace(/^[A-Z]\d{3,}\s*[·>]\s*/i, "")
     .replace(/\s*>+\s*/g, " · ")
     .replace(/\s{2,}/g, " ")
     .trim();
   text = rewriteEmbeddedWhen(text);
 
-  const zone = zoneFrom(raw);
+  const zone = zoneFrom(raw, zones);
   if (zone && /^ZONE[:\s]*0*\d+$/i.test(text.replace(/^·\s*/, ""))) return zone;
   if (/^TO[:\s]/i.test(text)) return `Until ${text.replace(/^TO[:\s]+/i, "")}`;
   if (/^FROM[:\s]/i.test(text)) return `From ${text.replace(/^FROM[:\s]+/i, "")}`;
   if (/^AT[:\s]/i.test(text)) return `At ${text.replace(/^AT[:\s]+/i, "")}`;
 
-  const alarm = raw.match(/ALARM\(\(([^)]+)\)\)/i);
-  if (alarm) {
-    return `${titleCaseName(alarm[1])} alarm${zone ? ` · ${zone}` : ""}`;
+  const alarm = alarmTypeFrom(raw);
+  if (alarm) return zone ? `${alarm} · ${zone}` : alarm;
+
+  if (/^RESTORE\b/i.test(text) || /^AFTER ALARM\b/i.test(text)) {
+    const after = /^AFTER ALARM\b/i.test(text);
+    const who = userAreaFrom(raw);
+    return [after ? "After alarm" : "Restore", zone, who].filter(Boolean).join(" · ");
   }
-  if (/^RESTORE\b/i.test(text)) {
-    return `Restore${zone ? ` · ${zone}` : ""}`;
+
+  if (/\bOPENING\b/i.test(text)) {
+    return ["System Opened (Disarmed)", userAreaFrom(raw)].filter(Boolean).join(" · ");
+  }
+  if (/\bCLOSING\b/i.test(text)) {
+    return ["System Closed (Armed)", userAreaFrom(raw)].filter(Boolean).join(" · ");
+  }
+
+  if (/\bSUPERVISORY\b/i.test(text)) {
+    return zone ? `Supervisory · ${zone}` : "Supervisory";
   }
 
   return text || null;
@@ -220,36 +457,97 @@ function rewriteLine(description: string): string | null {
 
 function pickTitle(kind: HistoricKind, details: string[]): string {
   switch (kind) {
-    case "alarm":
-      return details.find((line) => /alarm/i.test(line)) ?? "Alarm";
+    case "alarm": {
+      const typed = details.find(
+        (line) => /alarm|supervisory/i.test(line) && !/received through|alarmnet/i.test(line),
+      );
+      if (typed) return typed;
+      const zone = details.find((line) => /Zone \d+/i.test(line));
+      if (details.some((line) => /alarmnet|received through/i.test(line))) {
+        return zone ? `Alarm via AlarmNet · ${zone}` : "Alarm via AlarmNet";
+      }
+      return zone ? `Alarm · ${zone}` : "Alarm";
+    }
     case "restore":
-      return details.find((line) => /restore/i.test(line)) ?? "Restore";
+      return (
+        details.find((line) => /communication restore/i.test(line)) ??
+        details.find((line) => /restore|after alarm/i.test(line)) ??
+        "Restore"
+      );
     case "on_test":
-      return "On test";
+      return "On Test";
     case "off_test":
-      return "Off test";
+      return "Off Test";
     case "viewed":
-      return "File viewed";
+      return "File Viewed";
     case "email":
-      return "Station email";
+      return "Station Email";
     case "open_close":
-      return "Open / close";
+      return (
+        details.find((line) => /system opened|system closed/i.test(line)) ??
+        "Open / Close"
+      );
+    case "call_list":
+      return details.find((line) => /call list/i.test(line)) ?? "Call List Updated";
+    case "dispatch":
+      return (
+        details.find((line) => /station call|calling the property|spoke with/i.test(line)) ??
+        "Station Call"
+      );
+    case "override":
+      return (
+        details.find((line) => /override|supervisor/i.test(line)) ??
+        "Supervisor Override"
+      );
     default:
-      return details[0] ?? "Station event";
+      return details[0] ?? "Station Event";
   }
 }
 
-function pickSummary(kind: HistoricKind, details: string[]): string | null {
+function pickSummary(kind: HistoricKind, details: string[], title: string): string | null {
   const person = details.find((line) => /^(Stopped by|By |File viewed by)/i.test(line));
-  const zone = details.find((line) => /^Zone \d+$/i.test(line));
+  const zone = details.find((line) => /^Zone \d+/i.test(line));
   if (kind === "on_test" || kind === "off_test") {
     return [zone, person].filter(Boolean).join(" · ") || null;
   }
   if (kind === "viewed") {
     return details.find((line) => line.startsWith("File viewed")) ?? person ?? null;
   }
+  if (kind === "call_list") {
+    return person ?? "The station contact list was changed.";
+  }
+  if (kind === "dispatch") {
+    if (/spoke with/i.test(title)) return "The station reached someone on the call list.";
+    const extra = details.find(
+      (line) =>
+        line !== title && /ring |operator |spoke |call to the property/i.test(line),
+    );
+    return extra ?? "The monitoring station placed a call.";
+  }
+  if (kind === "override") {
+    return "A station supervisor approved how this signal was handled.";
+  }
+  if (kind === "open_close") {
+    if (/opened/i.test(title)) return "Someone turned the system off (disarmed).";
+    if (/closed/i.test(title)) return "Someone turned the system on (armed).";
+    return "Opening is disarmed. Closing is armed.";
+  }
+  if (kind === "restore") {
+    if (/communication restore/i.test(title)) {
+      return "The communicator checked in again. The station can reach the system.";
+    }
+    return zone
+      ? `${zone} returned to normal after an alarm.`
+      : "This condition returned to normal after an alarm.";
+  }
+  if (kind === "alarm") {
+    const path = details.find((line) => /alarmnet/i.test(line));
+    if (/supervisory/i.test(title)) {
+      return "A monitored device is off-normal. This is not a full alarm.";
+    }
+    return [zone && !title.includes(zone) ? zone : null, path].filter(Boolean).join(" · ") || path || zone || null;
+  }
   if (kind === "email") return details[0] ?? null;
-  if (kind === "alarm" || kind === "restore") return zone ?? null;
   return details[1] ?? null;
 }
 
@@ -263,6 +561,45 @@ function unique(values: string[]): string[] {
     next.push(value);
   }
   return next;
+}
+
+function compactOnTestDetails(details: string[]): string[] {
+  const from = details.find((line) => /^From /i.test(line));
+  const until = details.find((line) => /^Until /i.test(line));
+  if (!from || !until) return details;
+  return details
+    .filter((line) => line !== from && line !== until)
+    .concat(`${from} – ${until.replace(/^Until /i, "")}`);
+}
+
+function leftoverDetails(
+  kind: HistoricKind,
+  title: string,
+  summary: string | null,
+  details: string[],
+): string[] {
+  const haystack = `${title} ${summary ?? ""}`.toLowerCase();
+  const compact = kind === "on_test" || kind === "off_test" ? compactOnTestDetails(details) : details;
+  return compact.filter((line) => {
+    const lower = line.toLowerCase();
+    if (lower === title.toLowerCase() || (summary && lower === summary.toLowerCase())) return false;
+    if (haystack.includes(lower)) return false;
+    if (
+      line === "Station email sent" &&
+      details.some((other) => other !== line && /email/i.test(other))
+    ) {
+      return false;
+    }
+    if (/^zone \d+/i.test(line) && haystack.includes(line.toLowerCase())) return false;
+    if (/^by /i.test(line) && haystack.includes(line.replace(/^by /i, "").toLowerCase())) {
+      return false;
+    }
+    if (kind === "override" && /approved how this signal/i.test(summary ?? "")) {
+      return !/supervisor override$/i.test(line);
+    }
+    if (kind === "dispatch" && summary && lower === summary.toLowerCase()) return false;
+    return true;
+  });
 }
 
 export function historicEventTone(kind: HistoricKind): string {
@@ -281,6 +618,12 @@ export function historicEventTone(kind: HistoricKind): string {
       return "border-white/15 bg-white/5";
     case "open_close":
       return "border-sky-500/20 bg-sky-500/5";
+    case "call_list":
+      return "border-fuchsia-500/20 bg-fuchsia-500/5";
+    case "dispatch":
+      return "border-indigo-400/25 bg-indigo-500/10";
+    case "override":
+      return "border-amber-400/25 bg-amber-500/5";
     default:
       return "border-white/10 bg-background";
   }
@@ -293,49 +636,84 @@ export function historicKindLabel(kind: HistoricKind): string {
     case "restore":
       return "Restore";
     case "on_test":
-      return "On test";
+      return "On Test";
     case "off_test":
-      return "Off test";
+      return "Off Test";
     case "viewed":
-      return "Viewed";
+      return "File Viewed";
     case "email":
       return "Email";
     case "open_close":
-      return "Open / close";
+      return "Open / Close";
+    case "call_list":
+      return "Call List";
+    case "dispatch":
+      return "Station Call";
+    case "override":
+      return "Override";
     default:
       return "Other";
   }
 }
 
-function buildEvent(rows: HistoricSource[], startIndex: number): HistoricEvent | null {
+function nearbyZoneText(
+  rows: HistoricSource[],
+  center: HistoricSource,
+  zones?: HistoricZoneHint[],
+): { zone: string | null; alarm: string | null } {
+  const centerStamp = historicStamp(center.occurredAtText);
+  let zone: string | null = null;
+  let alarm: string | null = null;
+  for (const row of rows) {
+    const stamp = historicStamp(row.occurredAtText);
+    if (centerStamp == null || stamp == null || Math.abs(stamp - centerStamp) > NEARBY_MS) {
+      continue;
+    }
+    zone ??= zoneFrom(row.description, zones);
+    alarm ??= alarmTypeFrom(row.description);
+  }
+  return { zone, alarm };
+}
+
+function buildEvent(
+  rows: HistoricSource[],
+  allRows: HistoricSource[],
+  startIndex: number,
+  zones?: HistoricZoneHint[],
+): HistoricEvent | null {
   const first = rows[0];
   if (!first) return null;
   const kinds = rows
     .map((row) => historicKind(row))
     .filter((kind): kind is HistoricKind => kind !== "separator");
   if (kinds.length === 0) return null;
-  const kind = kinds.find((item) => item !== "email") ?? kinds[0];
-  const details = unique(rows.map((row) => rewriteLine(row.description)).filter((line): line is string => Boolean(line)));
+  const kind =
+    kinds.find((item) => item !== "email" && item !== "other") ??
+    kinds.find((item) => item !== "other") ??
+    kinds[0];
+  const details = unique(
+    rows
+      .map((row) => rewriteLine(row.description, zones))
+      .filter((line): line is string => Boolean(line)),
+  );
+  const nearby = nearbyZoneText(allRows, first, zones);
+  if (kind === "alarm") {
+    if (nearby.alarm && !details.some((line) => /alarm/i.test(line) && !/alarmnet|received through/i.test(line))) {
+      details.unshift(nearby.zone ? `${nearby.alarm} · ${nearby.zone}` : nearby.alarm);
+    } else if (nearby.zone && !details.some((line) => /^Zone \d+/i.test(line) || /Zone \d+/i.test(line))) {
+      details.push(nearby.zone);
+    }
+  }
   const day = formatLanvacHistoricDay(first.occurredAtText);
   const title = pickTitle(kind, details);
-  const summary = pickSummary(kind, details);
-  const leftover = details.filter((line) => {
-    if (line === title || line === summary) return false;
-    if (
-      line === "Station email sent" &&
-      details.some((other) => other !== line && /email/i.test(other))
-    ) {
-      return false;
-    }
-    return true;
-  });
+  const summary = pickSummary(kind, details, title);
   return {
     id: `${first.occurredAtText}-${first.signal}-${startIndex}`,
     kind,
     title,
     summary,
-    details: leftover,
-    timeLabel: formatLanvacHistoricTime(first.occurredAtText) ?? formatLanvacHistoricWhen(first.occurredAtText),
+    details: leftoverDetails(kind, title, summary, details),
+    timeLabel: formatLanvacHistoricShortWhen(first.occurredAtText),
     whenLabel: formatLanvacHistoricWhen(first.occurredAtText),
     dayKey: day?.key ?? first.occurredAtText.slice(0, 10),
     dayLabel: day?.label ?? first.occurredAtText,
@@ -343,30 +721,58 @@ function buildEvent(rows: HistoricSource[], startIndex: number): HistoricEvent |
   };
 }
 
-export function presentHistoricSignals(rows: HistoricSource[]): HistoricEvent[] {
+export function presentHistoricSignals(
+  rows: HistoricSource[],
+  options?: { zones?: HistoricZoneHint[] },
+): HistoricEvent[] {
   const events: HistoricEvent[] = [];
   let burst: HistoricSource[] = [];
   let burstKind: HistoricKind | null = null;
   let burstStamp: number | null = null;
   let startIndex = 0;
+  const zones = options?.zones;
 
   function flush() {
-    const event = buildEvent(burst, startIndex);
+    const event = buildEvent(burst, rows, startIndex, zones);
     if (event) events.push(event);
     burst = [];
     burstKind = null;
     burstStamp = null;
   }
 
+  function peekAnchorKind(fromIndex: number, stamp: number | null): HistoricKind | null {
+    for (let index = fromIndex + 1; index < rows.length && index <= fromIndex + 6; index += 1) {
+      const next = rows[index];
+      const nextKind = historicKind(next);
+      if (nextKind === "separator" || isLooseDetail(next.description)) continue;
+      const nextStamp = historicStamp(next.occurredAtText);
+      if (stamp != null && nextStamp != null && Math.abs(nextStamp - stamp) > BURST_MS) break;
+      if (nextKind !== "other") return nextKind;
+    }
+    return null;
+  }
+
   rows.forEach((row, index) => {
-    const kind = historicKind(row);
-    if (kind === "separator") return;
+    const rawKind = historicKind(row);
+    if (rawKind === "separator") return;
     const stamp = historicStamp(row.occurredAtText);
+    const inheritBurst =
+      burst.length > 0 &&
+      burstKind != null &&
+      stamp != null &&
+      burstStamp != null &&
+      Math.abs(stamp - burstStamp) <= BURST_MS;
+    const kind = isLooseDetail(row.description)
+      ? peekAnchorKind(index, stamp) ?? (inheritBurst ? burstKind : null) ?? rawKind
+      : rawKind;
     const attachEmail = kind === "email" && burst.length > 0 && burstKind != null && burstKind !== "email";
+    const sameTestFamily =
+      (kind === "on_test" || kind === "off_test") &&
+      (burstKind === "on_test" || burstKind === "off_test");
     const sameBurst =
       burst.length > 0 &&
       burstKind != null &&
-      (kind === burstKind || attachEmail) &&
+      (kind === burstKind || attachEmail || sameTestFamily) &&
       stamp != null &&
       burstStamp != null &&
       Math.abs(stamp - burstStamp) <= BURST_MS;
@@ -374,7 +780,9 @@ export function presentHistoricSignals(rows: HistoricSource[]): HistoricEvent[] 
     if (!sameBurst && burst.length > 0) flush();
     if (burst.length === 0) startIndex = index;
     burst.push(row);
-    if (burstKind == null || burstKind === "email") burstKind = kind;
+    if (burstKind == null || burstKind === "email" || (burstKind === "on_test" && kind === "off_test")) {
+      burstKind = kind;
+    }
     if (stamp != null) burstStamp = burstStamp ?? stamp;
   });
 

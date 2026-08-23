@@ -192,10 +192,10 @@ export function StationOnTestControls({
 
   return (
     <div className="space-y-3 rounded-xl border border-white/10 bg-background p-4">
-      <p className="text-xs font-bold uppercase tracking-widest text-white/40">
-        Put the system on test
-      </p>
-      <p className="text-sm text-white/50">
+      <h3 className="text-lg font-semibold tracking-tight text-white">
+        Put the System on Test
+      </h3>
+      <p className="text-sm leading-relaxed text-white/55">
         Tells the monitoring station you are working on the system. The system
         stays armed.
       </p>
@@ -355,7 +355,7 @@ export function AdminZoneEditor({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-widest text-white/40">Zone writes</p>
+        <p className="text-lg font-semibold tracking-tight text-white">Zone Writes</p>
         <button type="button" onClick={openCreate} className={buttonClass}>
           Add zone
         </button>

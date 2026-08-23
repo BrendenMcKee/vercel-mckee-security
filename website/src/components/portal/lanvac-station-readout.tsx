@@ -103,7 +103,7 @@ function StationTestStatus({
               : "bg-emerald-500/15 text-emerald-200"
           }`}
         >
-          {accountOnTest ? "On test" : "Off test"}
+          {accountOnTest ? "On Test" : "Off Test"}
         </span>
         {isDisabled && (
           <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-white/60">
@@ -226,8 +226,8 @@ export function LanvacStationReadout({
       )}
 
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-white/40">Zones</p>
-        <p className="mt-1 text-sm text-white/50">
+        <h3 className="text-lg font-semibold tracking-tight text-white">Zones</h3>
+        <p className="mt-1 text-sm leading-relaxed text-white/55">
           These are the zones the monitoring station has on file for this
           security system.
         </p>
@@ -280,6 +280,7 @@ export function LanvacStationReadout({
         canLoadMore={canRefresh}
         variant={variant}
         signals={signals}
+        zones={zones}
       />
     </div>
   );
