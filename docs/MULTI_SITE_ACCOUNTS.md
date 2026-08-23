@@ -46,7 +46,7 @@ isProject: false
 
 # Multi-site accounts and extra logins
 
-Status: **planned, not built. R54 is shipped.** Implement this next ([`LANVAC_STATION.md`](LANVAC_STATION.md)). Zones, Historic, panel, and **account** on-test are per site (`profile_id`). One CODE = one site. We never put a single zone on test. Client on-test is Account admin only. Delete cascades `lanvac_*` and does not wipe Lanvac. Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. **R53 is in `PORTAL_PLAN.md` as planned** (not shipped). Keep this file, R53, 9.5.4 / 9.5.5 / 9.5.5C, and [`PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same commit as each implementation slice.
+Status: **planned, not built. R54 is done.** Implement this file next, starting at slices 1 and 2 (schema + `resolvePortalSession`). Station layer: [`LANVAC_STATION.md`](LANVAC_STATION.md). Zones, Historic, and **account** on-test stay per site (`profile_id`). One CODE = one site. We never put a single zone on test. Client on-test is Account admin only. Delete cascades `lanvac_*` and does not wipe Lanvac. Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. **R53 is in `PORTAL_PLAN.md` as planned** (not shipped). Keep this file, R53, 9.5.4 / 9.5.5 / 9.5.5C, and [`PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same commit as each implementation slice. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
 
 ## How it works today (why the county cannot log in once)
 

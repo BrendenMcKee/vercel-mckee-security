@@ -1,6 +1,6 @@
 # Lanvac station layer
 
-Status: **read UI + O5985-gated writes / account on-test shipped 2026-08-22.** Caller-ID `fullupdate` stays off until you say go. [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) is confirmed: zones, Historic, and account on-test stay per site (`profile_id`). **Next implementation is R53.** Do not start R53 in this file.
+Status: **read UI + O5985-gated writes / account on-test shipped 2026-08-22. UI close-out 2026-08-23.** Caller-ID `fullupdate` stays off until you say go. [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) is confirmed: zones, Historic, and account on-test stay per site (`profile_id`). **R54 is done. Next implementation is R53.** Do not start R53 in this file.
 
 Re-pull: from `website/`, `node --env-file=.env.local scripts/lanvac-o5985-read.mjs`. Output is `website/.lanvac-o5985/` (gitignored, password stripped).
 
@@ -12,7 +12,7 @@ Portal `devices` (batteries / smokes) is a **different** list. Zones are what th
 
 On every **current monitoring** site that has a Lanvac CODE:
 
-- Zone list: admin fetch / create / edit / delete. Client read-only (number, description, type, on-test, uses-call-list).
+- Zone list: admin fetch / create / edit / delete. Client read-only (number, description, type). Account on-test / off-test sits above the list. Per-zone on-test, uses-call-list, and panel type are cached, not shown.
 - Historic signals: paged log for admin and client, grouped and color-coded, at the bottom of the Security tab on both portals. Not a live stream. Dates are 12-hour with the month spelled out. Older pages load as you scroll.
 - Panel type + a last-known status chip.
 - On/off test with a duration. **Whole account only** (`Account/OnTest` / `OffTest`). Admin and client Account admin. We do not put a single zone on test. `Zone/OnTest` exists on Lanvac and is unused.
@@ -65,7 +65,7 @@ Seen alarm example: signal `110011`, `ALARM((FIRE)) ZONE:001` and matching `REST
 
 **McKee zone writes always send the same extras.** Station delay, per-zone extra notify, and signal/restore codes are not a McKee workflow. The office uses the account caller ID list. GET does not return those extras, so the portal never asks staff for them. Create and update always send `delay = 1`, `useCallList = true`, an empty extra-notify list, and no codes. Edit is on for fire / burglar / low temperature, including pulled live zones. Carbon monoxide still has no proven write code, so those rows stay delete-only. Add only offers unused zone numbers. A create on a number that is already on file is refused (`Zone 1 is already BUNKIE SMOKE DETECTOR'S…`). The reason on the staff email is generated (`Added` / `Updated` / `Deleted zone #n …`). Test create/delete on unused numbers (7 and 8 on O5985).
 
-**`panelType` can be empty.** Show "Not on file". `isDisabled` is a real boolean (`false` on O5985). `language` was `en`. `accountType` can be empty.
+**`panelType` can be empty.** It is cached and not shown on the Security card. `isDisabled` is a real boolean (`false` on O5985) and shows as "Station disabled" on the account chip. `language` was `en`. `accountType` can be empty.
 
 Zone numbers above 100 are fine to list. We never call Zone/OnTest.
 
@@ -78,7 +78,7 @@ Zone numbers above 100 are fine to list. We never call Zone/OnTest.
 - Every action takes `profileId` from day one. Today: session profile must match (or admin). After R53: `requireSelectedSite`.
 - Client SELECT only on cached rows. No client PostgREST write of `on_test`. On-test is a server action that talks to Lanvac, then updates our cache.
 - Client never sees delay, signal/restore codes, extra zone notify phones, or dealer fields. Those live on `lanvac_zone_write` (admin SELECT only, service-role writes).
-- On-test is **the whole account only**, for staff and for the client Account admin (today: the one login). Duration 30 min / 1 / 2 / 4 / 8 / 12 / **24** hours or custom days+hours (API still 5-3600 minutes). Client 120s cooldown. Staff email. Alerts badge while `on_test_until` is in the future. No per-zone on-test UI, column, or action. `on_test_until` is the SoR (Account GET has no on-test field; Historic is a log). OffTest stores a past `on_test_until` so the UI can show when the last test ended. Zone `onTest` does not flip during an account test and is not shown.
+- On-test is **the whole account only**, for staff and for the client Account admin (today: the one login). Duration 30 min / 1 / 2 / 4 / 8 / 12 / **24** hours or custom days+hours (API still 5-3600 minutes). Client 120s cooldown. Staff email. Alerts badge while `on_test_until` is in the future. No per-zone on-test UI, column, or action. `on_test_until` is the SoR for the amber On Test / green Off Test chip (Account GET has no on-test field; Historic is a log). OffTest stores a past `on_test_until` so the UI can show when the last test ended. Zone `onTest` does not flip during an account test and is not shown.
 - Admin zone delete / overwrite: confirm + generated reason + staff email.
 - CODE change: drop or re-pull that profile's cached zones/signals.
 - Site delete later: cascade `lanvac_*`. Do not wipe Lanvac.
@@ -89,14 +89,14 @@ Tables keyed by `profile_id` only. One CODE = one site = one zone list. No count
 
 ## Placement
 
-- Client: **Security tab** only (`/user-dashboard?tab=security`). Header, then Zones & Signals, caller ID, equipment. Dashboard / Settings / Alerts do not pull Lanvac.
-- Admin: client detail **Security tab** (`/admin-dashboard/clients/{id}?tab=security`). Header + Monitoring station + Zones & Signals + caller ID. Devices are their own tab. Create-client still does not require zones. Optional seeder is not in this sitting.
+- Client: **Security tab** only (`/user-dashboard?tab=security`). Header, account on-test chip, Refresh, zone table (number / description / type), account on-test controls, Historic, then caller ID and equipment. Dashboard / Settings / Alerts do not pull Lanvac.
+- Admin: client detail **Security tab** (`/admin-dashboard/clients/{id}?tab=security`). Same station block, with Add / Edit / Delete on the zone table (Edit off for carbon monoxide). Devices are their own tab. Create-client still does not require zones. Optional seeder is not in this sitting.
 
 ## Persistence (shipped 2026-08-22)
 
 `lanvac_zones`, `lanvac_account_state`, `lanvac_signals` cache (Lanvac is SoR for history), append-only `lanvac_station_events`. Failed pull keeps last good rows and shows stale. Client SELECT own on zones/state/signals. Events are admin-only. No client INSERT/UPDATE/DELETE. All keyed by `profile_id`. Write-only zone fields live on `lanvac_zone_write`. Cache writes are `server-only` (`lanvac-station-store.ts`), not callable actions. Pulls claim an 8s cooldown so two tabs cannot wipe Historic at once. User-facing pull and write errors stay generic. Zone CRUD and **account** on/off test are O5985-gated. Carbon monoxide type writes stay refused.
 
-Pull does **not** clear account `on_test_until` (Account GET has no on-test field). That timestamp is the SoR for the blue chip. Zone `onTest` / trailing `+` stay a read-only display if Lanvac already marked a zone.
+Pull does **not** clear account `on_test_until` (Account GET has no on-test field). That timestamp is the SoR for the On Test / Off Test chip. Zone `onTest` / trailing `+` stay in the cache if Lanvac already marked a zone; they are not a table column.
 
 ## Test protocol
 
