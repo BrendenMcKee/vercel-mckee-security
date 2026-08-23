@@ -63,7 +63,7 @@ Seen alarm example: signal `110011`, `ALARM((FIRE)) ZONE:001` and matching `REST
 
 **Zone list types on GET are English labels, not the 3-char write enum.** Map before create/update: `FIRE` → `FIR`, `BURGLAR` → `BUR`, `LOW TEMPERATURE` → `LOW`. `CARBON MONOXIDE` write code (`CO*` / `CO1` / `CO2`) is **still unproven**. Create/update of that type is refused. Delete is allowed. We do not put a zone on test.
 
-**Do not PUT an existing live zone** unless `lanvac_zone_write` already has delay / call list / codes from a portal create. GET does not return those fields. Defaults (`delay = 1`, empty notify) would overwrite the station. Edit stays off until write fields exist. The admin Zones table is add / delete; Edit appears only after a portal create. Staff change a pulled zone by adding a replacement on an unused number, then deleting the old one. Test create/update/delete only on unused numbers (7 and 8 on O5985).
+**McKee zone writes always send the same extras.** Station delay, per-zone extra notify, and signal/restore codes are not a McKee workflow. The office uses the account caller ID list. GET does not return those extras, so the portal never asks staff for them. Create and update always send `delay = 1`, `useCallList = true`, an empty extra-notify list, and no codes. Edit is on for fire / burglar / low temperature, including pulled live zones. Carbon monoxide still has no proven write code, so those rows stay delete-only. Add only offers unused zone numbers. A create on a number that is already on file is refused (`Zone 1 is already BUNKIE SMOKE DETECTOR'S…`). The reason on the staff email is generated (`Added` / `Updated` / `Deleted zone #n …`). Test create/delete on unused numbers (7 and 8 on O5985).
 
 **`panelType` can be empty.** Show "Not on file". `isDisabled` is a real boolean (`false` on O5985). `language` was `en`. `accountType` can be empty.
 
@@ -79,7 +79,7 @@ Zone numbers above 100 are fine to list. We never call Zone/OnTest.
 - Client SELECT only on cached rows. No client PostgREST write of `on_test`. On-test is a server action that talks to Lanvac, then updates our cache.
 - Client never sees delay, signal/restore codes, extra zone notify phones, or dealer fields. Those live on `lanvac_zone_write` (admin SELECT only, service-role writes).
 - On-test is **the whole account only**, for staff and for the client Account admin (today: the one login). Duration 30 min / 1 / 2 / 4 / 8 / 12 / **24** hours or custom days+hours (API still 5-3600 minutes). Client 120s cooldown. Staff email. Alerts badge while `on_test_until` is in the future. No per-zone on-test UI, column, or action. `on_test_until` is the SoR (Account GET has no on-test field; Historic is a log). OffTest stores a past `on_test_until` so the UI can show when the last test ended. Zone `onTest` does not flip during an account test and is not shown.
-- Admin zone delete / overwrite: confirm + short reason + staff email.
+- Admin zone delete / overwrite: confirm + generated reason + staff email.
 - CODE change: drop or re-pull that profile's cached zones/signals.
 - Site delete later: cascade `lanvac_*`. Do not wipe Lanvac.
 
@@ -100,7 +100,7 @@ Pull does **not** clear account `on_test_until` (Account GET has no on-test fiel
 
 ## Test protocol
 
-`O5985` only. Snapshot Account / Zone / Historic with the password stripped (`website/scripts/lanvac-o5985-read.mjs`). Restore the exact zone list after any write sitting. **Account** OnTest 5 minutes then OffTest. Never call `Zone/OnTest`. Never leave McKee on test. Never call `Account/status`. Do not PUT zones 1-6 or 9 (write fields unknown). Use unused 7 or 8 for create/update/delete only. Write probe: `website/scripts/lanvac-o5985-write-check.mjs` (account on-test by default; `INCLUDE_ZONE_WRITES=1` for unused zone 7).
+`O5985` only. Snapshot Account / Zone / Historic with the password stripped (`website/scripts/lanvac-o5985-read.mjs`). Restore the exact zone list after any write sitting. **Account** OnTest 5 minutes then OffTest. Never call `Zone/OnTest`. Never leave McKee on test. Never call `Account/status`. PUT of pulled fire / burglar / low-temp is allowed with McKee defaults. Do not PUT carbon monoxide (zones 6 and 9). Use unused 7 or 8 for create/delete tests. Write probe: `website/scripts/lanvac-o5985-write-check.mjs` (account on-test by default; `INCLUDE_ZONE_WRITES=1` for unused zone 7).
 
 **Live write sitting 2026-08-22 (restored):** Account OnTest 200. Zone GET stayed off with no `+`. Immediate OffTest can 500 while Historic still has not caught up; retry OffTest is 200. Historic begin: `[ON-TEST]` on `-X0070` plus `-X0076` email. An earlier unused probe also hit Zone 2 OnTest (not a product path) and unused zone 7 `BUR` create / PUT / delete. Site restored to the table below, all `onTest: false`.
 

@@ -18,6 +18,13 @@ export const STATION_WRITES_NOT_LIVE = "Station writes are not live on this acco
 export const PROVEN_ZONE_WRITE_TYPES = ["FIR", "BUR", "LOW"] as const;
 export type ProvenZoneWriteType = (typeof PROVEN_ZONE_WRITE_TYPES)[number];
 
+/** McKee does not use station delay, per-zone notify, or event codes. */
+export const MCKEE_ZONE_WRITE_DEFAULTS = {
+  delay: 1,
+  useCallList: true,
+  emailsAndPhoneNumbers: [] as string[],
+} as const;
+
 const GET_TYPE_TO_WRITE: Record<string, ProvenZoneWriteType> = {
   FIRE: "FIR",
   FIR: "FIR",
@@ -223,4 +230,30 @@ export function parseNotifyList(value: unknown): string[] {
     .map((item) => item.trim())
     .filter(Boolean)
     .slice(0, 5);
+}
+
+export function unusedZoneNumbers(used: Iterable<number>, through = 64): number[] {
+  const taken = new Set(used);
+  const highest = taken.size ? Math.max(...taken) : 0;
+  const limit = Math.min(999, Math.max(through, highest + 8));
+  const unused: number[] = [];
+  for (let number = 1; number <= limit; number += 1) {
+    if (!taken.has(number)) unused.push(number);
+  }
+  return unused;
+}
+
+export function zoneOccupiedMessage(zoneNumber: number, description: string): string {
+  const label = description.trim() || "a zone";
+  return `Zone ${zoneNumber} is already ${label}. Delete it first or pick another number.`;
+}
+
+export function zoneWriteReason(
+  action: "create" | "update" | "delete",
+  zoneNumber: number,
+  description: string,
+): string {
+  const label = description.trim() || "zone";
+  const verb = action === "create" ? "Added" : action === "delete" ? "Deleted" : "Updated";
+  return `${verb} zone #${zoneNumber} ${label}`.slice(0, 300);
 }

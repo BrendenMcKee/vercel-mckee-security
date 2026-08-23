@@ -33,10 +33,12 @@ import {
 import {
   LANVAC_CLIENT_TEST_COOLDOWN_MS,
   LANVAC_ZONE_DESCRIPTION_MAX,
+  MCKEE_ZONE_WRITE_DEFAULTS,
   STATION_WRITES_NOT_LIVE,
   lanvacWritesLive,
   mapZoneTypeToWrite,
-  parseNotifyList,
+  zoneOccupiedMessage,
+  zoneWriteReason,
 } from "@/lib/portal/lanvac-writes";
 import {
   sendStationOnTestAdminAlert,
@@ -281,12 +283,7 @@ const zoneWriteSchema = z.object({
   zoneNumber: z.number().int().min(1).max(999),
   description: z.string().trim().min(1).max(LANVAC_ZONE_DESCRIPTION_MAX),
   zoneType: z.string().trim().min(1).max(80),
-  useCallList: z.boolean(),
-  delay: z.number().int().min(1).max(999),
-  notifyList: z.array(z.string().trim().min(1).max(80)).max(5),
-  signalCode: z.string().trim().max(6).optional(),
-  restoreCode: z.string().trim().max(6).optional(),
-  reason: z.string().trim().min(3).max(300),
+  mode: z.enum(["create", "update"]),
 });
 
 export async function upsertLanvacZoneAction(input: z.infer<typeof zoneWriteSchema>): Promise<StationActionResult> {
@@ -298,46 +295,33 @@ export async function upsertLanvacZoneAction(input: z.infer<typeof zoneWriteSche
   const mapped = mapZoneTypeToWrite(parsed.data.zoneType);
   if (!mapped.ok) return mapped;
 
-  const signalCode = parsed.data.signalCode?.toUpperCase() || null;
-  const restoreCode = parsed.data.restoreCode?.toUpperCase() || null;
-  if ((signalCode && !/^[A-Z0-9]{6}$/.test(signalCode)) || (restoreCode && !/^[A-Z0-9]{6}$/.test(restoreCode))) {
-    return { ok: false, error: "Signal and restore codes must be six letters or numbers." };
-  }
-  const notifyList = parseNotifyList(parsed.data.notifyList);
   const payload = {
     zoneNumber: parsed.data.zoneNumber,
     description: parsed.data.description,
     zoneType: mapped.code,
-    useCallList: parsed.data.useCallList,
-    delay: parsed.data.delay,
-    emailsAndPhoneNumbers: notifyList,
-    signalCode,
-    restoreCode,
+    useCallList: MCKEE_ZONE_WRITE_DEFAULTS.useCallList,
+    delay: MCKEE_ZONE_WRITE_DEFAULTS.delay,
+    emailsAndPhoneNumbers: [...MCKEE_ZONE_WRITE_DEFAULTS.emailsAndPhoneNumbers],
   };
 
   const adminClient = getPortalAdminClient();
   const existing = await adminClient
     .from("lanvac_zones")
-    .select("zone_number")
+    .select("zone_number, description")
     .eq("profile_id", parsed.data.profileId)
     .eq("zone_number", parsed.data.zoneNumber)
     .maybeSingle();
-  const action = existing.data ? "update" : "create";
-  if (action === "update") {
-    const writeRow = await adminClient
-      .from("lanvac_zone_write")
-      .select("zone_number")
-      .eq("profile_id", parsed.data.profileId)
-      .eq("zone_number", parsed.data.zoneNumber)
-      .maybeSingle();
-    if (!writeRow.data) {
-      return {
-        ok: false,
-        error:
-          "This zone has no stored delay or call list. Do not overwrite it from defaults. Use a new unused zone number.",
-      };
-    }
+  if (parsed.data.mode === "create" && existing.data) {
+    return {
+      ok: false,
+      error: zoneOccupiedMessage(parsed.data.zoneNumber, existing.data.description),
+    };
   }
+  if (parsed.data.mode === "update" && !existing.data) {
+    return { ok: false, error: "That zone is not on file." };
+  }
+  const action = parsed.data.mode;
+  const reason = zoneWriteReason(action, parsed.data.zoneNumber, parsed.data.description);
   const written =
     action === "create"
       ? await createLanvacZone(access.code, payload)
@@ -352,12 +336,12 @@ export async function upsertLanvacZoneAction(input: z.infer<typeof zoneWriteSche
     zoneNumber: parsed.data.zoneNumber,
     description: parsed.data.description,
     zoneType: WRITE_TYPE_DISPLAY[mapped.code] ?? mapped.code,
-    useCallList: parsed.data.useCallList,
-    delay: parsed.data.delay,
-    notifyList,
-    signalCode,
-    restoreCode,
-    reason: parsed.data.reason,
+    useCallList: payload.useCallList,
+    delay: payload.delay,
+    notifyList: payload.emailsAndPhoneNumbers,
+    signalCode: null,
+    restoreCode: null,
+    reason,
     action,
   });
   if (!persisted.ok) return persisted;
@@ -372,7 +356,7 @@ export async function upsertLanvacZoneAction(input: z.infer<typeof zoneWriteSche
     zoneNumber: parsed.data.zoneNumber,
     description: parsed.data.description,
     zoneType: WRITE_TYPE_DISPLAY[mapped.code] ?? mapped.code,
-    reason: parsed.data.reason,
+    reason,
   });
   revalidateStation();
   return { ok: true };
@@ -381,18 +365,25 @@ export async function upsertLanvacZoneAction(input: z.infer<typeof zoneWriteSche
 export async function deleteLanvacZoneAction(input: {
   profileId: string;
   zoneNumber: number;
-  reason: string;
 }): Promise<StationActionResult> {
   const parsed = z
     .object({
       profileId: z.string().uuid(),
       zoneNumber: z.number().int().min(1).max(999),
-      reason: z.string().trim().min(3).max(300),
     })
     .safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Check the zone number and reason." };
+  if (!parsed.success) return { ok: false, error: "Check the zone number." };
   const access = await requireWriteAccess(parsed.data.profileId, "admin");
   if (!access.ok) return access;
+
+  const existing = await getPortalAdminClient()
+    .from("lanvac_zones")
+    .select("description")
+    .eq("profile_id", parsed.data.profileId)
+    .eq("zone_number", parsed.data.zoneNumber)
+    .maybeSingle();
+  const description = existing.data?.description ?? "";
+  const reason = zoneWriteReason("delete", parsed.data.zoneNumber, description);
 
   const written = await deleteLanvacZone(access.code, parsed.data.zoneNumber);
   if (!written.ok) return { ok: false, error: written.error };
@@ -403,7 +394,7 @@ export async function deleteLanvacZoneAction(input: {
     actorUserId: access.actor.userId,
     actorEmail: access.actor.email,
     zoneNumber: parsed.data.zoneNumber,
-    reason: parsed.data.reason,
+    reason,
   });
   if (!persisted.ok) return persisted;
 
@@ -415,9 +406,9 @@ export async function deleteLanvacZoneAction(input: {
     changedBy: access.actor.email ?? "staff",
     action: "delete",
     zoneNumber: parsed.data.zoneNumber,
-    description: "",
+    description,
     zoneType: "",
-    reason: parsed.data.reason,
+    reason,
   });
   revalidateStation();
   return { ok: true };

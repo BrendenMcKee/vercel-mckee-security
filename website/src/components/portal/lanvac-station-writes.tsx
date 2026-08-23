@@ -15,11 +15,12 @@ import {
   STATION_WRITES_NOT_LIVE,
   formatOnTestRemaining,
   formatStationDateTime,
-  isCarbonMonoxideZoneType,
   mapZoneTypeToWrite,
   minutesFromDaysAndHours,
   onTestDurationLabel,
   onTestPresetLabel,
+  unusedZoneNumbers,
+  zoneOccupiedMessage,
   zoneWriteTypeLabel,
   type ProvenZoneWriteType,
 } from "@/lib/portal/lanvac-writes";
@@ -250,15 +251,15 @@ function defaultWriteType(zoneType: string): ProvenZoneWriteType {
 }
 
 function nextUnusedZoneNumber(zones: LanvacStationZone[]): number {
-  const used = new Set(zones.map((zone) => zone.zoneNumber));
-  for (let number = 1; number <= 999; number += 1) {
-    if (!used.has(number)) return number;
-  }
-  return 1;
+  return unusedZoneNumbers(zones.map((zone) => zone.zoneNumber))[0] ?? 1;
 }
 
 function canEditZone(zone: LanvacStationZone): boolean {
-  return Boolean(zone.write) && !isCarbonMonoxideZoneType(zone.zoneType);
+  return mapZoneTypeToWrite(zone.zoneType).ok;
+}
+
+function occupiedZone(zones: LanvacStationZone[], zoneNumber: number): LanvacStationZone | undefined {
+  return zones.find((zone) => zone.zoneNumber === zoneNumber);
 }
 
 export function AdminZoneEditor({
@@ -282,13 +283,8 @@ export function AdminZoneEditor({
     zoneNumber: 1,
     description: "",
     zoneType: "BUR" as ProvenZoneWriteType,
-    useCallList: true,
-    delay: 1,
-    notifyList: "",
-    signalCode: "",
-    restoreCode: "",
-    reason: "",
   });
+  const unusedNumbers = unusedZoneNumbers(zones.map((zone) => zone.zoneNumber));
 
   function openCreate() {
     setEditing("new");
@@ -296,12 +292,6 @@ export function AdminZoneEditor({
       zoneNumber: nextUnusedZoneNumber(zones),
       description: "",
       zoneType: "BUR",
-      useCallList: true,
-      delay: 1,
-      notifyList: "",
-      signalCode: "",
-      restoreCode: "",
-      reason: "",
     });
     setNotice(null);
   }
@@ -312,12 +302,6 @@ export function AdminZoneEditor({
       zoneNumber: zone.zoneNumber,
       description: zone.description.slice(0, LANVAC_ZONE_DESCRIPTION_MAX),
       zoneType: defaultWriteType(zone.zoneType),
-      useCallList: zone.useCallList ?? true,
-      delay: zone.write?.delay ?? 1,
-      notifyList: (zone.write?.notifyList ?? []).join(", "),
-      signalCode: zone.write?.signalCode ?? "",
-      restoreCode: zone.write?.restoreCode ?? "",
-      reason: "",
     });
     setNotice(null);
   }
@@ -327,6 +311,15 @@ export function AdminZoneEditor({
       setNotice(STATION_WRITES_NOT_LIVE);
       return;
     }
+    if (editing === "new") {
+      const taken = occupiedZone(zones, form.zoneNumber);
+      if (taken) {
+        const message = zoneOccupiedMessage(form.zoneNumber, taken.description);
+        setNotice(message);
+        window.alert(message);
+        return;
+      }
+    }
     if (!window.confirm(`Write zone #${form.zoneNumber} to the station?`)) return;
     setNotice(null);
     startTransition(async () => {
@@ -335,15 +328,7 @@ export function AdminZoneEditor({
         zoneNumber: form.zoneNumber,
         description: form.description,
         zoneType: form.zoneType,
-        useCallList: form.useCallList,
-        delay: form.delay,
-        notifyList: form.notifyList
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        signalCode: form.signalCode.toUpperCase(),
-        restoreCode: form.restoreCode.toUpperCase(),
-        reason: form.reason,
+        mode: editing === "new" ? "create" : "update",
       });
       if (!result.ok) {
         setNotice(result.error);
@@ -355,15 +340,13 @@ export function AdminZoneEditor({
   }
 
   function remove(zone: LanvacStationZone) {
-    const reason = window.prompt(`Why delete zone #${zone.zoneNumber}?`);
-    if (!reason || reason.trim().length < 3) return;
-    if (!window.confirm(`Delete zone #${zone.zoneNumber} from the station?`)) return;
+    const label = zone.description.trim() || "this zone";
+    if (!window.confirm(`Delete zone #${zone.zoneNumber} ${label} from the station?`)) return;
     setNotice(null);
     startTransition(async () => {
       const result = await deleteLanvacZoneAction({
         profileId,
         zoneNumber: zone.zoneNumber,
-        reason: reason.trim(),
       });
       if (!result.ok) {
         setNotice(result.error);
@@ -381,15 +364,19 @@ export function AdminZoneEditor({
           <h3 className="text-lg font-semibold tracking-tight text-white">Zones</h3>
           <p className="mt-1 text-sm leading-relaxed text-white/55">
             These are the zones the monitoring station has on file. You can add
-            an unused number or delete one. To change a name or type already at
-            the station, add the replacement on a new number, then delete the
-            old one. Carbon monoxide types cannot be written yet.
+            an unused number, change a name or type, or delete one. Carbon
+            monoxide types cannot be changed yet.
           </p>
           {showEquipmentNote && (
             <p className="mt-2 text-sm text-white/45">Equipment list below.</p>
           )}
         </div>
-        <button type="button" onClick={openCreate} className={buttonClass}>
+        <button
+          type="button"
+          onClick={openCreate}
+          disabled={unusedNumbers.length === 0}
+          className={buttonClass}
+        >
           Add zone
         </button>
       </div>
@@ -399,24 +386,39 @@ export function AdminZoneEditor({
       {editing != null && (
         <div className="space-y-3 rounded-xl border border-white/10 bg-background p-4">
           <p className="text-sm text-white/70">
-            {editing === "new"
-              ? `New zone #${form.zoneNumber}. Delay and extra notify apply to this new number only.`
-              : `Edit zone #${form.zoneNumber}.`}
+            {editing === "new" ? `New zone #${form.zoneNumber}.` : `Edit zone #${form.zoneNumber}.`}
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs text-white/50">
               Zone number
-              <input
-                type="number"
-                min={1}
-                max={999}
-                disabled={editing !== "new"}
-                value={form.zoneNumber}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, zoneNumber: Number(event.target.value) }))
-                }
-                className={`${inputClass} mt-1 w-full`}
-              />
+              {editing === "new" ? (
+                <select
+                  value={form.zoneNumber}
+                  onChange={(event) => {
+                    const next = Number(event.target.value);
+                    const taken = occupiedZone(zones, next);
+                    if (taken) {
+                      window.alert(zoneOccupiedMessage(next, taken.description));
+                      return;
+                    }
+                    setForm((current) => ({ ...current, zoneNumber: next }));
+                  }}
+                  className={`${inputClass} mt-1 w-full`}
+                >
+                  {unusedNumbers.map((number) => (
+                    <option key={number} value={number}>
+                      {number}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="number"
+                  disabled
+                  value={form.zoneNumber}
+                  className={`${inputClass} mt-1 w-full`}
+                />
+              )}
             </label>
             <label className="text-xs text-white/50">
               Type
@@ -444,78 +446,6 @@ export function AdminZoneEditor({
                 maxLength={LANVAC_ZONE_DESCRIPTION_MAX}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, description: event.target.value }))
-                }
-                className={`${inputClass} mt-1 w-full`}
-              />
-            </label>
-            <label className="text-xs text-white/50">
-              Delay
-              <input
-                type="number"
-                min={1}
-                max={999}
-                value={form.delay}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, delay: Number(event.target.value) }))
-                }
-                className={`${inputClass} mt-1 w-full`}
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-white/70">
-              <input
-                type="checkbox"
-                checked={form.useCallList}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, useCallList: event.target.checked }))
-                }
-              />
-              Use the caller ID list
-            </label>
-            <label className="sm:col-span-2 text-xs text-white/50">
-              Extra notify phones or emails (comma, max 5)
-              <input
-                value={form.notifyList}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, notifyList: event.target.value }))
-                }
-                className={`${inputClass} mt-1 w-full`}
-              />
-            </label>
-            <label className="text-xs text-white/50">
-              Signal code (optional)
-              <input
-                value={form.signalCode}
-                maxLength={6}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    signalCode: event.target.value.toUpperCase(),
-                  }))
-                }
-                className={`${inputClass} mt-1 w-full`}
-              />
-            </label>
-            <label className="text-xs text-white/50">
-              Restore code (optional)
-              <input
-                value={form.restoreCode}
-                maxLength={6}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    restoreCode: event.target.value.toUpperCase(),
-                  }))
-                }
-                className={`${inputClass} mt-1 w-full`}
-              />
-            </label>
-            <label className="sm:col-span-2 text-xs text-white/50">
-              Reason
-              <input
-                value={form.reason}
-                maxLength={300}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, reason: event.target.value }))
                 }
                 className={`${inputClass} mt-1 w-full`}
               />
