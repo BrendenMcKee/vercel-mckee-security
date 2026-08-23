@@ -57,6 +57,27 @@ check(
   "unknown stays unknown",
   classifyLanvacSignal({ description: "Something new", signal: "999999" }) === "unknown",
 );
+check(
+  "AlarmNet brand is not an alarm by itself",
+  classifyLanvacSignal({
+    description: "AlarmNet supervision check-in",
+    signal: "230001",
+  }) !== "alarm",
+);
+check(
+  "AlarmNet receiver path is an alarm",
+  classifyLanvacSignal({
+    description: "SIGNAL COMING FROM AlarmNet Receiver",
+    signal: "110011",
+  }) === "alarm",
+);
+check(
+  "8-hour summary is not an alarm",
+  classifyLanvacSignal({
+    description: "[E-MAIL] SUMMARY 10638 Last 8Hrs. Alarm At 20:30",
+    signal: "-X0019",
+  }) !== "alarm",
+);
 
 const parsed = parseLanvacHistoricDate("08-22-2026 14:05:09");
 check("historic date parses", parsed.iso === "2026-08-22T14:05:09.000Z" && parsed.display === "08-22-2026 14:05:09");
@@ -147,7 +168,7 @@ check(
   "call list is not other",
   callList[0]?.kind === "call_list" &&
     callList[0].title === "Call List Updated · Contact #1" &&
-    /Dennis Mckee/i.test(callList[0].summary ?? ""),
+    /Dennis McKee/i.test(callList[0].summary ?? ""),
 );
 
 const opening = presentHistoricSignals([
@@ -239,6 +260,60 @@ const fire = presentHistoricSignals([
 check(
   "fire alarm keeps the zone",
   fire[0]?.kind === "alarm" && fire[0].title === "Fire Alarm · Zone 1",
+);
+
+const summaryEmail = presentHistoricSignals([
+  {
+    occurredAtText: "05-29-2026 19:10:00",
+    signal: "-X0019",
+    description: "SUMMARY 10638 Last 8Hrs. Alarm At 20:30",
+    signalClass: "alarm",
+  },
+]);
+check(
+  "summary email is not shown as an alarm",
+  summaryEmail[0]?.kind === "email",
+);
+
+const looseThenAlarm = presentHistoricSignals([
+  {
+    occurredAtText: "05-29-2026 18:43:00",
+    signal: "-X0071",
+    description: "By 10638 Dennis Mckee (Mobi)",
+    signalClass: "ops",
+  },
+  {
+    occurredAtText: "05-29-2026 18:43:10",
+    signal: "110011",
+    description: "ALARM((FIRE)) ZONE:001",
+    signalClass: "alarm",
+  },
+]);
+check(
+  "a by-line does not attach to a later alarm",
+  looseThenAlarm.length === 2 &&
+    looseThenAlarm[0].kind === "other" &&
+    looseThenAlarm[1].kind === "alarm",
+);
+
+const farZone = presentHistoricSignals([
+  {
+    occurredAtText: "05-29-2026 21:04:00",
+    signal: "110011",
+    description: "SIGNAL COMING FROM AlarmNet Receiver",
+    signalClass: "alarm",
+  },
+  {
+    occurredAtText: "05-29-2026 21:04:40",
+    signal: "406012",
+    description: "RESTORE ZONE:002",
+    signalClass: "restore",
+  },
+]);
+check(
+  "a zone 40 seconds away is not borrowed",
+  farZone[0]?.kind === "alarm" &&
+    !/Zone 2/i.test([farZone[0].title, farZone[0].summary, ...farZone[0].details].join(" ")),
 );
 
 check(

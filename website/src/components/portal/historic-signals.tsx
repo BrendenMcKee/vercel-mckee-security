@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { loadMoreLanvacHistoricAction } from "@/lib/portal/actions/lanvac-station";
 import {
@@ -18,6 +18,8 @@ import {
   type HistoricZoneHint,
 } from "@/lib/portal/lanvac-historic";
 import type { LanvacStationSignal } from "@/components/portal/lanvac-station-readout";
+
+const EMPTY_ZONES: HistoricZoneHint[] = [];
 
 function KindIcon({ kind }: { kind: HistoricKind }) {
   const className = "h-4 w-4 shrink-0";
@@ -126,8 +128,8 @@ function EventCard({
           {event.summary && <p className="mt-1 text-sm leading-snug text-white/70">{event.summary}</p>}
           {event.details.length > 0 && (
             <ul className="mt-1 space-y-0.5 text-sm leading-snug text-white/60">
-              {event.details.map((line) => (
-                <li key={line}>{line}</li>
+              {event.details.map((line, index) => (
+                <li key={`${index}-${line}`}>{line}</li>
               ))}
             </ul>
           )}
@@ -151,23 +153,34 @@ function DayFilter({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const labelId = useId();
+  const listId = useId();
   const selected = value === "all" ? "All days" : days.find(([key]) => key === value)?.[1] ?? "All days";
 
   useEffect(() => {
     function onDoc(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   return (
     <div ref={rootRef} className="relative max-w-md">
-      <p className="text-sm font-semibold text-white">Date</p>
+      <p id={labelId} className="text-sm font-semibold text-white">Date</p>
       <button
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-labelledby={labelId}
+        aria-controls={listId}
         onClick={() => setOpen((current) => !current)}
         className="mt-1.5 inline-flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-white/15 bg-background px-3 text-left text-sm text-white outline-none hover:border-white/30 focus:border-primary"
       >
@@ -187,6 +200,7 @@ function DayFilter({
       </button>
       {open && (
         <ul
+          id={listId}
           role="listbox"
           className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-surface p-1 shadow-xl"
         >
@@ -235,7 +249,7 @@ export function HistoricSignals({
   canLoadMore,
   variant,
   signals,
-  zones = [],
+  zones,
 }: {
   profileId: string;
   canLoadMore: boolean;
@@ -243,6 +257,7 @@ export function HistoricSignals({
   signals: LanvacStationSignal[];
   zones?: HistoricZoneHint[];
 }) {
+  const zoneHints = zones ?? EMPTY_ZONES;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [filter, setFilter] = useState<HistoricFilterId>("all");
@@ -261,8 +276,8 @@ export function HistoricSignals({
     signals.length < LANVAC_HISTORIC_PAGE_SIZE * LANVAC_HISTORIC_MAX_PAGES;
 
   const events = useMemo(
-    () => presentHistoricSignals(signals, { zones }),
-    [signals, zones],
+    () => presentHistoricSignals(signals, { zones: zoneHints }),
+    [signals, zoneHints],
   );
   const days = useMemo(
     () =>
@@ -305,6 +320,12 @@ export function HistoricSignals({
       setDayKey("all");
     }
   }, [dayKey, days]);
+
+  useEffect(() => {
+    if (filter !== "all" && !events.some((event) => event.kind === filter)) {
+      setFilter("all");
+    }
+  }, [filter, events]);
 
   useEffect(() => {
     if (!canLoadMore || !hasMore || !watchingAll) return;
@@ -373,7 +394,7 @@ export function HistoricSignals({
           tabIndex={0}
           role="region"
           aria-label="Historic Signals"
-          className="mt-4 max-h-[min(32rem,70vh)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-background/40 px-3 py-3 [scrollbar-color:rgba(255,255,255,0.22)_transparent] [scrollbar-width:thin] sm:px-4 sm:py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25"
+          className="mt-4 max-h-[min(32rem,70vh)] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-background/40 px-3 py-3 scrollbar-thin [scrollbar-color:rgba(255,255,255,0.22)_transparent] sm:px-4 sm:py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/25"
         >
           {visible.length === 0 ? (
             <p className="px-1 py-2 text-sm text-white/45">

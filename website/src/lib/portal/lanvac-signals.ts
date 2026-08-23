@@ -36,9 +36,14 @@ export function classifyLanvacSignal(input: {
   const signal = (input.signal ?? "").trim().toUpperCase();
   const isRestoreText =
     description.includes("RESTORE") || description.includes("AFTER ALARM");
+  const isSummaryEmail =
+    description.includes("SUMMARY") && /LAST\s+\d+\s*HRS?/.test(description);
+  const withoutAlarmNet = description.replace(/ALARMNET/g, " ");
   const isAlarmText =
-    description.includes("ALARM((") ||
-    (description.includes("ALARM") && !isRestoreText);
+    !isSummaryEmail &&
+    (description.includes("ALARM((") ||
+      (description.includes("SIGNAL COMING FROM") && description.includes("ALARMNET")) ||
+      (/\bALARM\b/.test(withoutAlarmNet) && !isRestoreText));
 
   if (isAlarmText) return "alarm";
   if (

@@ -72,7 +72,17 @@ export type HistoricDayGroup = {
 };
 
 const BURST_MS = 20_000;
-const NEARBY_MS = 45_000;
+const NEARBY_MS = 5_000;
+
+const LOOSE_ANCHOR_KINDS = new Set<HistoricKind>([
+  "call_list",
+  "on_test",
+  "off_test",
+  "viewed",
+  "override",
+  "dispatch",
+  "email",
+]);
 
 const OVERRIDE_CODES: Record<string, string> = {
   FA: "Fire alarm",
@@ -142,6 +152,8 @@ export function historicKind(input: {
     return "dispatch";
   }
   if (text.includes("[E-MAIL]") || text.startsWith("[E-MAIL]")) return "email";
+  if (text.includes("SUMMARY") && /LAST\s+\d+\s*HRS?/.test(text)) return "email";
+  if (text.includes("SIGNAL COMING FROM") && text.includes("ALARMNET")) return "alarm";
   if (input.signalClass === "alarm") return "alarm";
   if (input.signalClass === "restore" || input.signalClass === "comm_restore") {
     return "restore";
@@ -172,6 +184,10 @@ function titleCaseName(value: string): string {
     .filter(Boolean)
     .map((word) => {
       if (/^[a-z]\.$/i.test(word)) return word.toUpperCase();
+      const lower = word.toLowerCase();
+      if (/^mc[a-z]/.test(lower) && lower.length > 3) {
+        return `Mc${lower.charAt(2).toUpperCase()}${lower.slice(3)}`;
+      }
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
     .join(" ");
@@ -583,21 +599,17 @@ function leftoverDetails(
   return compact.filter((line) => {
     const lower = line.toLowerCase();
     if (lower === title.toLowerCase() || (summary && lower === summary.toLowerCase())) return false;
-    if (haystack.includes(lower)) return false;
     if (
       line === "Station email sent" &&
       details.some((other) => other !== line && /email/i.test(other))
     ) {
       return false;
     }
-    if (/^zone \d+/i.test(line) && haystack.includes(line.toLowerCase())) return false;
+    if (/^zone \d+/i.test(line) && haystack.includes(lower)) return false;
     if (/^by /i.test(line) && haystack.includes(line.replace(/^by /i, "").toLowerCase())) {
       return false;
     }
-    if (kind === "override" && /approved how this signal/i.test(summary ?? "")) {
-      return !/supervisor override$/i.test(line);
-    }
-    if (kind === "dispatch" && summary && lower === summary.toLowerCase()) return false;
+    if (kind === "override" && /supervisor override$/i.test(line)) return false;
     return true;
   });
 }
@@ -662,13 +674,27 @@ function nearbyZoneText(
   zones?: HistoricZoneHint[],
 ): { zone: string | null; alarm: string | null } {
   const centerStamp = historicStamp(center.occurredAtText);
-  let zone: string | null = null;
-  let alarm: string | null = null;
+  const sameTime: HistoricSource[] = [];
+  const near: HistoricSource[] = [];
   for (const row of rows) {
+    if (row === center) continue;
+    const kind = historicKind(row);
+    if (kind === "on_test" || kind === "off_test" || kind === "separator") continue;
+    if (!/ZONE[:\s#]*0*\d+/i.test(row.description)) continue;
+    if (!/ALARM|RESTORE|AFTER ALARM/i.test(row.description)) continue;
+    if (row.occurredAtText === center.occurredAtText) {
+      sameTime.push(row);
+      continue;
+    }
     const stamp = historicStamp(row.occurredAtText);
     if (centerStamp == null || stamp == null || Math.abs(stamp - centerStamp) > NEARBY_MS) {
       continue;
     }
+    near.push(row);
+  }
+  let zone: string | null = null;
+  let alarm: string | null = null;
+  for (const row of [...sameTime, ...near]) {
     zone ??= zoneFrom(row.description, zones);
     alarm ??= alarmTypeFrom(row.description);
   }
@@ -747,7 +773,7 @@ export function presentHistoricSignals(
       if (nextKind === "separator" || isLooseDetail(next.description)) continue;
       const nextStamp = historicStamp(next.occurredAtText);
       if (stamp != null && nextStamp != null && Math.abs(nextStamp - stamp) > BURST_MS) break;
-      if (nextKind !== "other") return nextKind;
+      if (nextKind !== "other" && LOOSE_ANCHOR_KINDS.has(nextKind)) return nextKind;
     }
     return null;
   }
@@ -759,6 +785,7 @@ export function presentHistoricSignals(
     const inheritBurst =
       burst.length > 0 &&
       burstKind != null &&
+      LOOSE_ANCHOR_KINDS.has(burstKind) &&
       stamp != null &&
       burstStamp != null &&
       Math.abs(stamp - burstStamp) <= BURST_MS;
