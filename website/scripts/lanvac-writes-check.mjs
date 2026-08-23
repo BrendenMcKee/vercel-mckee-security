@@ -7,7 +7,11 @@ const {
   isCarbonMonoxideZoneType,
   isStationOnTest,
   lanvacWritesLive,
+  lastHistoricOnTestText,
   mapZoneTypeToWrite,
+  minutesFromDaysAndHours,
+  onTestDurationLabel,
+  onTestPresetLabel,
   parseNotifyList,
   recentLanvacZoneTestIntent,
   redactLanvacHistoricText,
@@ -71,6 +75,19 @@ check(
     ],
     2,
   ) === "on",
+);
+check("1 hour custom is 60 minutes", minutesFromDaysAndHours(0, 1) === 60);
+check("1 day custom is 1440 minutes", minutesFromDaysAndHours(1, 0) === 1440);
+check("station max is 2 days 12 hours", minutesFromDaysAndHours(2, 12) === 3600);
+check("over-max custom is refused", minutesFromDaysAndHours(3, 0) == null);
+check("24 hour preset label", onTestPresetLabel(1440) === "24 hours");
+check("24 hour confirm label", onTestDurationLabel(1440) === "24 hours");
+check("1 hour confirm label", onTestDurationLabel(60) === "1 hour");
+check(
+  "historic on-test text",
+  lastHistoricOnTestText([
+    { occurredAtText: "Aug 22, 1:40 p.m.", description: "[ON-TEST]", signalClass: "on_test" },
+  ]) === "Aug 22, 1:40 p.m.",
 );
 
 if (failures.length > 0) {

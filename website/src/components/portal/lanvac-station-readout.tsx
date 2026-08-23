@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { refreshLanvacStationAction } from "@/lib/portal/actions/lanvac-station";
+import { signalRowTone, type LanvacSignalClass } from "@/lib/portal/lanvac-signals";
 import {
-  chipTone,
-  signalRowTone,
-  stationStatusChip,
-  type LanvacSignalClass,
-} from "@/lib/portal/lanvac-signals";
+  formatOnTestRemaining,
+  formatStationDateTime,
+  lastHistoricOnTestText,
+} from "@/lib/portal/lanvac-writes";
 import {
   AdminZoneEditor,
   StationOnTestControls,
@@ -48,22 +48,83 @@ export type LanvacStationState = {
 };
 
 const REFRESH_MS = 45_000;
+const STATUS_TICK_MS = 15_000;
 
-function formatSyncedAt(iso: string | null): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleString("en-CA", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+function parseOnTestUntil(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function callListLabel(value: boolean | null): string {
-  if (value == null) return "Not on file";
-  return value ? "Yes" : "No";
+function formatSyncedAt(iso: string | null): string | null {
+  const date = parseOnTestUntil(iso);
+  return date ? formatStationDateTime(date) : null;
+}
+
+function useNowTick(ms = STATUS_TICK_MS): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), ms);
+    return () => window.clearInterval(timer);
+  }, [ms]);
+  return now;
+}
+
+function StationTestStatus({
+  onTestUntil,
+  isDisabled,
+  signals,
+  now,
+}: {
+  onTestUntil: string | null;
+  isDisabled: boolean;
+  signals: LanvacStationSignal[];
+  now: Date;
+}) {
+  const until = parseOnTestUntil(onTestUntil);
+  const accountOnTest = Boolean(until && until > now);
+  const lastEnded = until && until <= now ? until : null;
+  const historic = lastHistoricOnTestText(signals);
+
+  return (
+    <div
+      className={`rounded-xl border px-3 py-3 sm:px-4 ${
+        accountOnTest
+          ? "border-sky-500/35 bg-sky-500/10"
+          : "border-emerald-500/25 bg-emerald-500/5"
+      }`}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${
+            accountOnTest
+              ? "bg-sky-500/20 text-sky-100"
+              : "bg-emerald-500/15 text-emerald-200"
+          }`}
+        >
+          {accountOnTest ? "On test" : "Off test"}
+        </span>
+        {isDisabled && (
+          <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-white/60">
+            Station disabled
+          </span>
+        )}
+      </div>
+      {accountOnTest && until && (
+        <p className="mt-2 text-sm text-sky-100">
+          Until {formatStationDateTime(until)} · {formatOnTestRemaining(until, now)}
+        </p>
+      )}
+      {!accountOnTest && lastEnded && (
+        <p className="mt-2 text-sm text-white/60">
+          Last on test ended {formatStationDateTime(lastEnded)}
+        </p>
+      )}
+      {!accountOnTest && !lastEnded && historic && (
+        <p className="mt-2 text-sm text-white/60">Last on-test signal {historic}</p>
+      )}
+    </div>
+  );
 }
 
 export function LanvacStationReadout({
@@ -74,6 +135,7 @@ export function LanvacStationReadout({
   state,
   zones,
   signals,
+  showEquipmentNote = false,
 }: {
   profileId: string;
   canRefresh: boolean;
@@ -82,20 +144,15 @@ export function LanvacStationReadout({
   state: LanvacStationState | null;
   zones: LanvacStationZone[];
   signals: LanvacStationSignal[];
+  showEquipmentNote?: boolean;
 }) {
   const router = useRouter();
+  const now = useNowTick();
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
   const pulledOnce = useRef(false);
   const pendingRef = useRef(false);
 
-  const chip = stationStatusChip({
-    isDisabled: state?.isDisabled ?? false,
-    onTestUntil: state?.onTestUntil ?? null,
-    anyZoneOnTest: zones.some((zone) => zone.onTest),
-    lastSignalClass: state?.lastSignalClass ?? null,
-    lastSignalAt: state?.lastSignalAt ?? null,
-  });
   const synced = formatSyncedAt(state?.lastSyncedAt ?? null);
   const stale = Boolean(state?.lastError);
 
@@ -134,19 +191,12 @@ export function LanvacStationReadout({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/40">Panel</p>
-          <p className="mt-1 text-sm text-white/85">
-            {state?.panelType?.trim() ? state.panelType : "Not on file"}
-          </p>
-        </div>
-        <span
-          className={`inline-flex max-w-full items-center rounded-full px-3 py-1 text-xs font-bold ${chipTone(chip.kind)}`}
-        >
-          {chip.label}
-        </span>
-      </div>
+      <StationTestStatus
+        onTestUntil={state?.onTestUntil ?? null}
+        isDisabled={state?.isDisabled ?? false}
+        signals={signals}
+        now={now}
+      />
 
       {stale && (
         <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
@@ -166,7 +216,7 @@ export function LanvacStationReadout({
             type="button"
             onClick={refresh}
             disabled={pending}
-            className="cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50"
+            className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-white/20 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50"
           >
             {pending ? "Refreshing..." : "Refresh now"}
           </button>
@@ -177,10 +227,12 @@ export function LanvacStationReadout({
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-white/40">Zones</p>
         <p className="mt-1 text-sm text-white/50">
-          What the monitoring station has for this alarm. Batteries and smokes
-          you replace are on the equipment list. Putting the alarm on test is
-          the whole account, not one zone.
+          These are the zones the monitoring station has on file for this
+          security system.
         </p>
+        {showEquipmentNote && (
+          <p className="mt-2 text-sm text-white/45">Equipment list below.</p>
+        )}
         {zones.length === 0 ? (
           <p className="mt-3 text-sm text-white/45">
             {canRefresh
@@ -192,13 +244,9 @@ export function LanvacStationReadout({
             <table className="min-w-full text-left text-sm">
               <thead>
                 <tr className="text-xs uppercase tracking-widest text-white/40">
-                  <th className="py-2 pr-3 font-bold">#</th>
+                  <th className="py-2 pr-3 font-bold">Zone #</th>
                   <th className="py-2 pr-3 font-bold">Description</th>
-                  <th className="py-2 pr-3 font-bold">Type</th>
-                  <th className="py-2 pr-3 font-bold">On test</th>
-                  <th className="py-2 font-bold">
-                    {variant === "client" ? "Uses your call list" : "Call list"}
-                  </th>
+                  <th className="py-2 font-bold">Type</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -206,9 +254,7 @@ export function LanvacStationReadout({
                   <tr key={zone.zoneNumber} className="align-top text-white/80">
                     <td className="py-2.5 pr-3 tabular-nums">{zone.zoneNumber}</td>
                     <td className="py-2.5 pr-3">{zone.description || "Not on file"}</td>
-                    <td className="py-2.5 pr-3">{zone.zoneType || "Not on file"}</td>
-                    <td className="py-2.5 pr-3">{zone.onTest ? "Yes" : "No"}</td>
-                    <td className="py-2.5">{callListLabel(zone.useCallList)}</td>
+                    <td className="py-2.5">{zone.zoneType || "Not on file"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -219,10 +265,9 @@ export function LanvacStationReadout({
 
       <StationOnTestControls
         profileId={profileId}
-        variant={variant}
         writesLive={writesLive}
         onTestUntil={state?.onTestUntil ?? null}
-        anyZoneOnTest={zones.some((zone) => zone.onTest)}
+        now={now}
       />
 
       {variant === "admin" && (
@@ -234,8 +279,8 @@ export function LanvacStationReadout({
           Historic signals
         </p>
         <p className="mt-1 text-sm text-white/50">
-          A recent station log, not a live alarm console. Empty is not proof
-          that everything is clear.
+          Recent events from the monitoring station. An empty log does not mean
+          the system is clear.
         </p>
         {signals.length === 0 ? (
           <p className="mt-3 text-sm text-white/45">No signals on file.</p>

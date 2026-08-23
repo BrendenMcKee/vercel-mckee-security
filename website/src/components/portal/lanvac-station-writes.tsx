@@ -13,84 +13,168 @@ import {
   LANVAC_ZONE_DESCRIPTION_MAX,
   PROVEN_ZONE_WRITE_TYPES,
   STATION_WRITES_NOT_LIVE,
+  formatOnTestRemaining,
+  formatStationDateTime,
   isCarbonMonoxideZoneType,
   mapZoneTypeToWrite,
+  minutesFromDaysAndHours,
+  onTestDurationLabel,
+  onTestPresetLabel,
   zoneWriteTypeLabel,
   type ProvenZoneWriteType,
 } from "@/lib/portal/lanvac-writes";
 import type { LanvacStationZone } from "@/components/portal/lanvac-station-readout";
 
 const inputClass =
-  "rounded-xl border border-white/15 bg-background px-3 py-2 text-sm text-white outline-none transition-colors focus:border-primary";
+  "min-h-11 rounded-xl border border-white/15 bg-background px-3 py-2 text-sm text-white outline-none transition-colors focus:border-primary";
 const buttonClass =
-  "cursor-pointer rounded-lg border border-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50";
+  "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-white/20 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
 
 function DurationPicker({
   minutes,
   onChange,
+  onValidChange,
+  disabled,
 }: {
   minutes: number;
   onChange: (value: number) => void;
+  onValidChange?: (ok: boolean) => void;
+  disabled?: boolean;
 }) {
-  const preset = (LANVAC_ON_TEST_MINUTES as readonly number[]).includes(minutes);
+  const [customDays, setCustomDays] = useState("");
+  const [customHours, setCustomHours] = useState("");
+  const [customError, setCustomError] = useState<string | null>(null);
+  const [customActive, setCustomActive] = useState(false);
+
+  function setValid(ok: boolean, error: string | null) {
+    setCustomError(error);
+    onValidChange?.(ok);
+  }
+
+  function applyCustom(nextDays: string, nextHours: string) {
+    setCustomActive(true);
+    setCustomDays(nextDays);
+    setCustomHours(nextHours);
+    const days = nextDays.trim() === "" ? 0 : Number(nextDays);
+    const hours = nextHours.trim() === "" ? 0 : Number(nextHours);
+    if (!Number.isFinite(days) || !Number.isFinite(hours) || days < 0 || hours < 0) {
+      setValid(false, "Enter days and hours as numbers.");
+      return;
+    }
+    if (days === 0 && hours === 0) {
+      setValid(true, null);
+      return;
+    }
+    const next = minutesFromDaysAndHours(days, hours);
+    if (next == null) {
+      setValid(false, "Choose between 1 hour and 2 days 12 hours.");
+      return;
+    }
+    setValid(true, null);
+    onChange(next);
+  }
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {LANVAC_ON_TEST_MINUTES.map((value) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => onChange(value)}
-          className={`${buttonClass} ${minutes === value ? "border-sky-400/50 bg-sky-500/15 text-sky-100" : ""}`}
-        >
-          {value} min
-        </button>
-      ))}
-      <label className="flex items-center gap-2 text-xs text-white/50">
-        Custom
-        <input
-          type="number"
-          min={5}
-          max={3600}
-          value={preset ? "" : minutes}
-          placeholder="5-3600"
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            if (Number.isFinite(next)) onChange(next);
-          }}
-          className={`${inputClass} w-24`}
-        />
-      </label>
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        {LANVAC_ON_TEST_MINUTES.map((value) => (
+          <button
+            key={value}
+            type="button"
+            disabled={disabled}
+            aria-pressed={!customActive && minutes === value}
+            onClick={() => {
+              setCustomActive(false);
+              setCustomDays("");
+              setCustomHours("");
+              setValid(true, null);
+              onChange(value);
+            }}
+            className={`${buttonClass} ${
+              !customActive && minutes === value
+                ? "border-sky-400/50 bg-sky-500/15 text-sky-100"
+                : ""
+            }`}
+          >
+            {onTestPresetLabel(value)}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <p className="w-full text-xs font-bold uppercase tracking-widest text-white/40">
+          Custom
+        </p>
+        <label className="text-xs text-white/50">
+          Days
+          <input
+            type="number"
+            min={0}
+            max={2}
+            inputMode="numeric"
+            disabled={disabled}
+            value={customDays}
+            placeholder="0"
+            onChange={(event) => applyCustom(event.target.value, customHours)}
+            className={`${inputClass} mt-1 w-24`}
+          />
+        </label>
+        <label className="text-xs text-white/50">
+          Hours
+          <input
+            type="number"
+            min={0}
+            max={60}
+            inputMode="numeric"
+            disabled={disabled}
+            value={customHours}
+            placeholder="0"
+            onChange={(event) => applyCustom(customDays, event.target.value)}
+            className={`${inputClass} mt-1 w-24`}
+          />
+        </label>
+        {customActive && !customError && (
+          <p className="pb-2 text-xs text-white/45">{onTestDurationLabel(minutes)}</p>
+        )}
+      </div>
+      {customError && <p className="text-sm text-amber-100">{customError}</p>}
     </div>
   );
 }
 
 export function StationOnTestControls({
   profileId,
-  variant,
   writesLive,
   onTestUntil,
-  anyZoneOnTest,
+  now,
 }: {
   profileId: string;
-  variant: "admin" | "client";
   writesLive: boolean;
   onTestUntil: string | null;
-  anyZoneOnTest: boolean;
+  now: Date;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [minutes, setMinutes] = useState(LANVAC_ON_TEST_DEFAULT_MINUTES);
+  const [durationOk, setDurationOk] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const until = onTestUntil ? new Date(onTestUntil) : null;
-  const accountOnTest = Boolean(until && !Number.isNaN(until.getTime()) && until > new Date());
+  const accountOnTest = Boolean(until && !Number.isNaN(until.getTime()) && until > now);
+  const canStart = writesLive && !pending && !accountOnTest && durationOk;
+  const canEnd = writesLive && !pending && accountOnTest;
 
   function run(onTest: boolean) {
     if (!writesLive) {
       setNotice(STATION_WRITES_NOT_LIVE);
       return;
     }
-    if (onTest && !window.confirm(`Put this alarm on test for ${minutes} minutes?`)) return;
-    if (!onTest && !window.confirm("Take this alarm off test and put it back in service?")) return;
+    if (onTest && accountOnTest) return;
+    if (!onTest && !accountOnTest) return;
+    if (onTest && !window.confirm(`Put this system on test for ${onTestDurationLabel(minutes)}?`)) {
+      return;
+    }
+    if (!onTest && !window.confirm("Take this system off test and put it back in service?")) {
+      return;
+    }
     setNotice(null);
     startTransition(async () => {
       const result = await setLanvacAccountTestAction({
@@ -109,38 +193,45 @@ export function StationOnTestControls({
   return (
     <div className="space-y-3 rounded-xl border border-white/10 bg-background p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-white/40">
-        {variant === "client" ? "Put the alarm on test" : "Account on test"}
+        Put the system on test
       </p>
       <p className="text-sm text-white/50">
-        {variant === "client"
-          ? "This tells the station you are working on the system. It does not turn the alarm off."
-          : "Puts the whole account on test. We do not put individual zones on test."}
+        Tells the monitoring station you are working on the system. The system
+        stays armed.
+      </p>
+      <p className={`text-sm ${accountOnTest ? "text-sky-100" : "text-emerald-200/90"}`}>
+        {accountOnTest && until
+          ? `This system is on test until ${formatStationDateTime(until)} · ${formatOnTestRemaining(until, now)}.`
+          : "This system is off test."}
       </p>
       {!writesLive && (
         <p className="text-sm text-white/45">{STATION_WRITES_NOT_LIVE}</p>
       )}
-      {accountOnTest && until && (
-        <p className="text-sm text-sky-100">
-          On test until{" "}
-          {until.toLocaleString("en-CA", {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
-        </p>
-      )}
-      {anyZoneOnTest && !accountOnTest && (
-        <p className="text-sm text-sky-100">At least one zone is on test.</p>
-      )}
       {notice && <p className="text-sm text-amber-100">{notice}</p>}
-      <DurationPicker minutes={minutes} onChange={setMinutes} />
+      {!accountOnTest && (
+        <DurationPicker
+          minutes={minutes}
+          onChange={setMinutes}
+          onValidChange={setDurationOk}
+          disabled={!writesLive || pending}
+        />
+      )}
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={pending || !writesLive} onClick={() => run(true)} className={buttonClass}>
-          {pending ? "Working..." : "Start account test"}
+        <button
+          type="button"
+          disabled={!canStart}
+          onClick={() => run(true)}
+          className={buttonClass}
+        >
+          {pending && !accountOnTest ? "Working..." : "Start account test"}
         </button>
-        <button type="button" disabled={pending || !writesLive} onClick={() => run(false)} className={buttonClass}>
-          End account test
+        <button
+          type="button"
+          disabled={!canEnd}
+          onClick={() => run(false)}
+          className={buttonClass}
+        >
+          {pending && accountOnTest ? "Working..." : "End account test"}
         </button>
       </div>
     </div>

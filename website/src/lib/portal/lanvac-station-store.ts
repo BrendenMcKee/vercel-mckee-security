@@ -364,12 +364,16 @@ export async function persistLanvacOnTest(input: {
     return { ok: false, error: "The station cache is not configured." };
   }
   const admin = getPortalAdminClient();
-  const { error } = await admin.from("lanvac_account_state").upsert({
-    profile_id: input.profileId,
-    on_test_until: input.onTest && input.minutes
-      ? new Date(Date.now() + input.minutes * 60_000).toISOString()
-      : null,
-  });
+  const { error } = await admin.from("lanvac_account_state").upsert(
+    {
+      profile_id: input.profileId,
+      on_test_until:
+        input.onTest && input.minutes
+          ? new Date(Date.now() + input.minutes * 60_000).toISOString()
+          : new Date().toISOString(),
+    },
+    { onConflict: "profile_id" },
+  );
   if (error) {
     console.error("[portal] station account on-test cache failed:", error);
     return { ok: false, error: "Could not save the on-test state." };

@@ -1778,15 +1778,22 @@ function MonitoringStationCard({
         )}
         {hasMonitoring && client.lanvac_account_code && (
           <div className="border-t border-white/10 pt-5">
-            <LanvacStationReadout
-              profileId={client.id}
-              canRefresh
-              variant="admin"
-              writesLive={writesLive}
-              state={stationState}
-              zones={stationZones}
-              signals={stationSignals}
-            />
+            <h3 className="text-lg font-bold text-white">Zones &amp; Signals</h3>
+            <p className="mt-1 text-sm text-white/50">
+              The zone list and recent signals the monitoring station keeps for
+              this security system
+            </p>
+            <div className="mt-4">
+              <LanvacStationReadout
+                profileId={client.id}
+                canRefresh
+                variant="admin"
+                writesLive={writesLive}
+                state={stationState}
+                zones={stationZones}
+                signals={stationSignals}
+              />
+            </div>
           </div>
         )}
       </div>

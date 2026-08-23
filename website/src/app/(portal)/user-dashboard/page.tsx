@@ -23,7 +23,8 @@ import { CallerIdEditor } from "@/components/portal/caller-id-editor";
 import { ManageBillingButton } from "@/components/portal/manage-billing-button";
 import { ManualPaymentBanner, ServiceRateLine } from "@/components/portal/manual-payment-notice";
 import { PaymentSetupBanner } from "@/components/portal/payment-setup-banner";
-import { PortalCard } from "@/components/portal/portal-card";
+import { PortalCard, PortalCardIcon } from "@/components/portal/portal-card";
+import { PayNowButton } from "@/components/portal/pay-now-button";
 import { CloudBackupInterest } from "@/components/portal/cloud-backup-interest";
 import { ClientSettingsForm } from "@/components/portal/client-settings-form";
 import { LanvacEmergencyReadout } from "@/components/portal/lanvac-emergency-readout";
@@ -63,44 +64,18 @@ type ClientTabId = "dashboard" | "security" | "settings" | "alerts";
  * equipment rows; that is the only client tab that mounts the station
  * readout (Lanvac pull) or the full caller-ID editor.
  */
-function monitoringSubscriptionCopy(tier: string): { lead: string; details: string[] } {
+function monitoringHeaderCopy(tier: string): string {
   switch (tier) {
     case "landline":
-      return {
-        lead:
-          "Your alarm reports to the monitoring station over a telephone land line. When it goes off, the station treats this site as a live alarm and works down your contact list.",
-        details: ["A working land line on site is required for the signal to go through."],
-      };
+      return "This system reports to the monitoring station over a land line. If it goes off, they call your contact list in order.";
     case "cellular":
-      return {
-        lead:
-          "Your alarm reports over a cellular communicator, so it does not depend on a land line. When it goes off, the station treats this site as a live alarm and works down your contact list.",
-        details: ["A cell booster can be installed if the signal on site is weak."],
-      };
+      return "This system reports over a cellular communicator. If it goes off, the station calls your contact list in order.";
     case "cellular_tc":
-      return {
-        lead:
-          "Your alarm reports over a cellular communicator, and you have Total Connect 2.0 smartphone control. When it goes off, the station treats this site as a live alarm and works down your contact list.",
-        details: [
-          "A cell booster can be installed if the signal on site is weak.",
-          "Use the Total Connect 2.0 app to arm, disarm, and check the system.",
-        ],
-      };
+      return "Cellular communicator plus Total Connect 2.0 app control. If it goes off, the station calls your contact list in order.";
     case "cellular_tc_home":
-      return {
-        lead:
-          "Your alarm reports over a cellular communicator, with Total Connect 2.0 plus home automation. When it goes off, the station treats this site as a live alarm and works down your contact list.",
-        details: [
-          "Home automation needs internet on site in addition to cell signal.",
-          "Use the Total Connect 2.0 app to arm, disarm, and control connected devices.",
-        ],
-      };
+      return "Cellular communicator, Total Connect 2.0, and home automation. If it goes off, the station calls your contact list in order.";
     default:
-      return {
-        lead:
-          "When your alarm goes off, the monitoring station treats this site as a live alarm and works down your contact list.",
-        details: [],
-      };
+      return "If this system goes off, the monitoring station calls your contact list in order.";
   }
 }
 
@@ -200,7 +175,7 @@ export default async function UserDashboardPage({
       .maybeSingle(),
     supabase
       .from("lanvac_zones")
-      .select("on_test")
+      .select("zone_number")
       .eq("profile_id", profile.id),
     requestedTab === "dashboard" ? fetchDashboardExtras() : Promise.resolve(null),
     requestedTab === "security" ? fetchSecurityExtras() : Promise.resolve(null),
@@ -235,7 +210,6 @@ export default async function UserDashboardPage({
   const showDevices = hasCurrentMonitoring(services) || devicesResult.data.length > 0;
   const canRefreshStation =
     hasCurrentMonitoring(services) && Boolean(profile.lanvac_account_code);
-  const cachedZonesOnTest = (cachedZonesResult.data ?? []).some((zone) => zone.on_test);
   const showStation =
     canRefreshStation ||
     (cachedZonesResult.data ?? []).length > 0 ||
@@ -355,10 +329,6 @@ export default async function UserDashboardPage({
       : 0;
   const stationOnTest = isStationOnTest({
     onTestUntil: stationState?.onTestUntil,
-    anyZoneOnTest:
-      stationZones.length > 0
-        ? stationZones.some((zone) => zone.onTest)
-        : cachedZonesOnTest,
   });
   const alertCount =
     manualUnpaid +
@@ -934,6 +904,7 @@ function ClientSecurityPanel({
   lanvacCity: string | null;
   lanvacAccountCode: string | null;
   monitoring: {
+    id: string;
     status: "active" | "paused" | "cancelled" | "unpaid";
     tier: string;
     monthly_amount_cents: number | null;
@@ -975,68 +946,49 @@ function ClientSecurityPanel({
     lifetime_years: number;
   }>;
 }) {
-  const subscription = monitoring ? monitoringSubscriptionCopy(monitoring.tier) : null;
-
   return (
     <div className="space-y-6">
-      <PortalCard
-        icon="shield"
-        tone="monitoring"
-        title="Your security system"
-        description={
-          monitoring
-            ? `${tierLabel(monitoring.tier)} · ${SERVICE_TYPE_LABELS.monitoring}`
-            : "Alarm contacts and equipment on file"
-        }
-        status={monitoring ? <ServiceStatusBadge status={monitoring.status} withIcon /> : undefined}
-      >
-        <div className="space-y-4 border-t border-white/10 pt-5">
-          {monitoring ? (
-            <>
-              <p className="max-w-3xl text-sm leading-relaxed text-white/70">{subscription?.lead}</p>
-              {subscription && subscription.details.length > 0 && (
-                <ul className="max-w-3xl list-disc space-y-1.5 pl-5 text-sm text-white/55">
-                  {subscription.details.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              )}
-              {monitoring.monthly_amount_cents != null && (
-                <ServiceRateLine
-                  monthlyCents={monitoring.monthly_amount_cents}
-                  interval={monitoring.billing_interval}
-                  billingMethod={monitoring.billing_method}
-                />
-              )}
-              <p className="max-w-3xl text-sm leading-relaxed text-white/50">
-                Zones and recent signals are what the monitoring station has for
-                this alarm. Your contact list is who they call, in order. Plan
-                changes go through McKee Security at{" "}
-                <a
-                  href="tel:+17054572156"
-                  className="whitespace-nowrap font-bold text-white hover:text-primary"
-                >
-                  (705) 457-2156
-                </a>
-                .
-              </p>
-            </>
-          ) : (
-            <p className="max-w-3xl text-sm leading-relaxed text-white/55">
-              There is no current monitoring plan on this account. Contacts and
-              equipment from an earlier plan stay here so you can still review
-              them.
+      <header className="space-y-4">
+        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+          <PortalCardIcon icon="shield" tone="monitoring" />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-lg font-bold leading-snug tracking-tight text-white sm:text-xl">
+                Your security system
+              </h2>
+              {monitoring && <ServiceStatusBadge status={monitoring.status} withIcon />}
+            </div>
+            <p className="mt-1 text-[13px] leading-relaxed text-white/50">
+              {monitoring
+                ? `${tierLabel(monitoring.tier)} · ${SERVICE_TYPE_LABELS.monitoring}`
+                : "Contacts and equipment on file"}
             </p>
-          )}
+          </div>
         </div>
-      </PortalCard>
+        <p className="max-w-3xl text-sm leading-relaxed text-white/65">
+          {monitoring
+            ? monitoringHeaderCopy(monitoring.tier)
+            : "There is no current monitoring plan on this account. Contacts and equipment from an earlier plan stay here so you can still review them."}
+        </p>
+        {monitoring?.status === "unpaid" &&
+          (monitoring.billing_method === "stripe" ? (
+            <PayNowButton serviceId={monitoring.id} label="Add your card and start services" />
+          ) : (
+            <Link
+              href="/user-dashboard"
+              className="inline-flex min-h-11 cursor-pointer items-center rounded-xl bg-primary px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
+            >
+              See how to pay
+            </Link>
+          ))}
+      </header>
 
       {showStation && (
         <PortalCard
           icon="shield"
           tone="monitoring"
-          title="Zones and signals"
-          description="What the monitoring station has for this alarm, plus the recent signal log"
+          title="Zones & Signals"
+          description="The zone list and recent signals the monitoring station keeps for this security system"
         >
           <div className="border-t border-white/10 pt-5">
             <LanvacStationReadout
@@ -1047,6 +999,7 @@ function ClientSecurityPanel({
               state={stationState}
               zones={stationZones}
               signals={stationSignals}
+              showEquipmentNote={showDevices && devices.length > 0}
             />
           </div>
         </PortalCard>
@@ -1213,9 +1166,9 @@ function ClientAlertsPanel({
       />
       {stationOnTest && (
         <div className="rounded-2xl border border-sky-500/40 bg-sky-500/10 p-4 sm:p-6">
-          <h2 className="text-lg font-bold text-sky-100">Alarm is on test</h2>
+          <h2 className="text-lg font-bold text-sky-100">System is on test</h2>
           <p className="mt-3 text-sm leading-relaxed text-sky-100/90">
-            The monitoring station is not treating this site as a live alarm
+            The monitoring station will not dispatch on this system
             {stationOnTestUntil
               ? ` until ${new Date(stationOnTestUntil).toLocaleString("en-CA", {
                   month: "short",

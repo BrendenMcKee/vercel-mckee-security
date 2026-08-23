@@ -5,8 +5,10 @@
 
 export const LANVAC_WRITE_TEST_ACCOUNT = "O5985";
 export const LANVAC_ZONE_DESCRIPTION_MAX = 65;
-export const LANVAC_ON_TEST_MINUTES = [15, 30, 60, 120] as const;
+export const LANVAC_ON_TEST_MINUTES = [30, 60, 120, 240, 480, 720, 1440] as const;
 export const LANVAC_ON_TEST_DEFAULT_MINUTES = 60;
+export const LANVAC_ON_TEST_MIN_MINUTES = 5;
+export const LANVAC_ON_TEST_MAX_MINUTES = 3600;
 export const LANVAC_CLIENT_TEST_COOLDOWN_MS = 120_000;
 export const LANVAC_ON_TEST_PULL_GRACE_MS = 45_000;
 export const STATION_WRITES_NOT_LIVE = "Station writes are not live on this account.";
@@ -28,6 +30,80 @@ const WRITE_TYPE_LABEL: Record<ProvenZoneWriteType, string> = {
   BUR: "Burglar",
   LOW: "Low temperature",
 };
+
+export function clampOnTestMinutes(minutes: number): number | null {
+  if (!Number.isFinite(minutes)) return null;
+  const rounded = Math.round(minutes);
+  if (rounded < LANVAC_ON_TEST_MIN_MINUTES || rounded > LANVAC_ON_TEST_MAX_MINUTES) {
+    return null;
+  }
+  return rounded;
+}
+
+export function minutesFromDaysAndHours(days: number, hours: number): number | null {
+  return clampOnTestMinutes(days * 1440 + hours * 60);
+}
+
+export function formatStationDateTime(date: Date): string {
+  return date.toLocaleString("en-CA", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function onTestDurationLabel(minutes: number): string {
+  if (minutes === 30) return "30 min";
+  if (minutes === 1440) return "24 hours";
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440;
+    return days === 1 ? "1 day" : `${days} days`;
+  }
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return hours === 1 ? "1 hour" : `${hours} hours`;
+  }
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return `${hours}h ${remainder}m`;
+}
+
+export function onTestPresetLabel(minutes: number): string {
+  if (minutes === 30) return "30 min";
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return hours === 1 ? "1 hour" : `${hours} hours`;
+  }
+  return onTestDurationLabel(minutes);
+}
+
+export function lastHistoricOnTestText(
+  signals: Array<{ occurredAtText: string; description: string; signalClass: string }>,
+): string | null {
+  const row = signals.find((signal) => {
+    if (signal.signalClass !== "on_test") return false;
+    const text = signal.description.toUpperCase();
+    return text.includes("ON-TEST") && !text.includes("STOP TESTING");
+  });
+  return row?.occurredAtText ?? null;
+}
+
+export function formatOnTestRemaining(until: Date, now = new Date()): string {
+  const ms = until.getTime() - now.getTime();
+  if (ms <= 0) return "ending now";
+  const totalMin = Math.max(1, Math.round(ms / 60_000));
+  if (totalMin < 60) return `${totalMin} min left`;
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const rest = hours % 24;
+    return rest ? `${days}d ${rest}h left` : `${days}d left`;
+  }
+  return mins ? `${hours}h ${mins}m left` : `${hours}h left`;
+}
 
 export function lanvacWritesLive(account: string | null | undefined): boolean {
   return (account ?? "").trim().toUpperCase() === LANVAC_WRITE_TEST_ACCOUNT;
@@ -69,13 +145,13 @@ export function zoneWriteTypeLabel(code: ProvenZoneWriteType): string {
 
 export function isStationOnTest(input: {
   onTestUntil: string | null | undefined;
-  anyZoneOnTest: boolean;
+  anyZoneOnTest?: boolean;
   now?: Date;
 }): boolean {
   const now = input.now ?? new Date();
   const until = input.onTestUntil ? new Date(input.onTestUntil) : null;
   return (
-    input.anyZoneOnTest ||
+    Boolean(input.anyZoneOnTest) ||
     (until != null && !Number.isNaN(until.getTime()) && until > now)
   );
 }
