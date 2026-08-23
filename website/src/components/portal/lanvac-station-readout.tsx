@@ -280,7 +280,10 @@ export function LanvacStationReadout({
       <div className="border-t border-white/15" />
 
       {variant === "admin" && (
-        <AdminZoneEditor profileId={profileId} writesLive={writesLive} zones={zones} />
+        <>
+          <AdminZoneEditor profileId={profileId} writesLive={writesLive} zones={zones} />
+          <div className="border-t border-white/15" />
+        </>
       )}
 
       <HistoricSignals

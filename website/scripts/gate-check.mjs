@@ -92,7 +92,12 @@ try {
 
   {
     const res = await fetch(`${baseUrl}/admin-dashboard`, { headers: { cookie: clientCookies } });
-    check("client session denied on admin portal (404)", res.status === 404, `status=${res.status}`);
+    const html = await res.text();
+    check(
+      "client session on admin portal gets wrong-door",
+      res.status === 200 && html.includes("You are a client") && html.includes("Open the client portal"),
+      `status=${res.status}`,
+    );
   }
 
   {

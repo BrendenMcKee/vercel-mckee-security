@@ -157,7 +157,7 @@ try {
 
   // --- Admin sees a disabled cloud-backup planning template ----------------
   {
-    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}`, {
+    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}?tab=billing`, {
       headers: { cookie: adminSession.cookieHeader() },
     });
     const html = await res.text();
@@ -212,12 +212,12 @@ try {
     check("clients tab lists the test client (search data present)", res.status === 200 && html.includes("Servicia"), `status=${res.status}`);
   }
   {
-    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}`, {
+    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}?tab=billing`, {
       headers: { cookie: adminSession.cookieHeader() },
     });
     const html = await res.text();
     check(
-      "client detail renders profile + services",
+      "client detail billing tab renders profile + services",
       res.status === 200 && html.includes("Servicia") && html.includes("Security Monitoring"),
       `status=${res.status}`,
     );
@@ -240,7 +240,12 @@ try {
     const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}`, {
       headers: { cookie: clientSession.cookieHeader() },
     });
-    check("client session denied on client detail (404)", res.status === 404, `status=${res.status}`);
+    const html = await res.text();
+    check(
+      "client session on admin client detail gets wrong-door",
+      res.status === 200 && html.includes("You are a client") && html.includes("Open the client portal"),
+      `status=${res.status}`,
+    );
   }
 } finally {
   for (const id of createdProfiles) {

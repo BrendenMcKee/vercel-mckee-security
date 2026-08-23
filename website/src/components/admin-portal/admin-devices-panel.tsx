@@ -172,7 +172,7 @@ export function AdminDevicesPanel({ devices }: { devices: AdminDeviceRow[] }) {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3 text-sm">
                   <Link
-                    href={`/admin-dashboard/clients/${row.profileId}`}
+                    href={`/admin-dashboard/clients/${row.profileId}?tab=devices`}
                     className="font-bold text-white hover:text-primary"
                   >
                     {row.clientName}
@@ -208,7 +208,7 @@ export function AdminDevicesPanel({ devices }: { devices: AdminDeviceRow[] }) {
                     <td className="px-4 py-3 text-white/60">{deviceCategoryLabel(row.category)}</td>
                     <td className="px-4 py-3">
                       <Link
-                        href={`/admin-dashboard/clients/${row.profileId}`}
+                        href={`/admin-dashboard/clients/${row.profileId}?tab=devices`}
                         className="font-bold text-white hover:text-primary"
                       >
                         {row.clientName}

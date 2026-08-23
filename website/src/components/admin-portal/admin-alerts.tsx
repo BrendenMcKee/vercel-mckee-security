@@ -76,14 +76,14 @@ export async function AdminAlerts() {
             Sites on test ({onTestIds.length})
           </h2>
           <p className="mt-1 text-sm text-white/50">
-            End the test from the client&apos;s Monitoring station card. Do not
+            End the test from the client&apos;s Security tab. Do not
             leave McKee on test.
           </p>
           <ul className="mt-4 space-y-2">
             {onTestIds.map((profileId) => (
               <li key={profileId}>
                 <a
-                  href={`/admin-dashboard/clients/${profileId}`}
+                  href={`/admin-dashboard/clients/${profileId}?tab=security`}
                   className="text-sm font-bold text-sky-100 hover:text-white"
                 >
                   Open site

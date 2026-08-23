@@ -288,7 +288,7 @@ try {
 
   // --- Client detail billing card ------------------------------------------------
   {
-    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}`, {
+    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}?tab=billing`, {
       headers: { cookie: adminSession.cookieHeader() },
     });
     const html = await res.text();

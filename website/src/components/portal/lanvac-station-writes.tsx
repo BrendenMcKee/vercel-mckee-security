@@ -361,20 +361,26 @@ export function AdminZoneEditor({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-lg font-semibold tracking-tight text-white">Zone Writes</p>
+        <p className="text-lg font-semibold tracking-tight text-white">Change zones</p>
         <button type="button" onClick={openCreate} className={buttonClass}>
           Add zone
         </button>
       </div>
+      <p className="text-sm leading-relaxed text-white/55">
+        Add a new unused zone number, or delete one. Edit is only for zones this
+        portal created, because the station does not send delay or call-list
+        settings back. Guessing those on a pulled zone would overwrite what is
+        already at the station. Carbon monoxide types cannot be written yet.
+      </p>
       {!writesLive && <p className="text-sm text-white/45">{STATION_WRITES_NOT_LIVE}</p>}
       {notice && <p className="text-sm text-amber-100">{notice}</p>}
 
       {editing != null && (
         <div className="space-y-3 rounded-xl border border-white/10 bg-background p-4">
           <p className="text-sm text-white/70">
-            {editing === "new" ? "New zone" : `Edit zone #${form.zoneNumber}`}. Edit is only for
-            zones this portal already wrote (stored delay and call list). Do not PUT a pulled
-            live zone from defaults. Carbon monoxide type cannot be written yet.
+            {editing === "new" ? "New zone" : `Edit zone #${form.zoneNumber}`}.
+            Delay, call list, and optional codes are stored here after a portal
+            create so later edits do not invent defaults.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs text-white/50">
@@ -508,25 +514,33 @@ export function AdminZoneEditor({
       <ul className="space-y-2">
         {zones.map((zone) => {
           const carbon = isCarbonMonoxideZoneType(zone.zoneType);
+          const canEdit = !carbon && Boolean(zone.write);
+          const blockedReason = carbon
+            ? "Carbon monoxide type cannot be changed yet."
+            : !zone.write
+              ? "Pulled from the station. Delay and call-list settings are not on file, so this one cannot be edited."
+              : null;
           return (
             <li
               key={zone.zoneNumber}
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/5 px-3 py-2 text-sm text-white/75"
             >
-              <span>
-                #{zone.zoneNumber} {zone.description || "Not on file"}
-                {carbon ? " (carbon monoxide: type locked)" : ""}
-                {!carbon && !zone.write ? " (write fields unknown)" : ""}
+              <span className="min-w-0">
+                <span className="text-white/90">
+                  #{zone.zoneNumber} {zone.description || "Not on file"}
+                </span>
+                {blockedReason && (
+                  <span className="mt-0.5 block text-xs leading-relaxed text-white/45">
+                    {blockedReason}
+                  </span>
+                )}
               </span>
               <span className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={carbon || !zone.write}
-                  onClick={() => openEdit(zone)}
-                  className={buttonClass}
-                >
-                  Edit
-                </button>
+                {canEdit && (
+                  <button type="button" onClick={() => openEdit(zone)} className={buttonClass}>
+                    Edit
+                  </button>
+                )}
                 <button type="button" onClick={() => remove(zone)} className={buttonClass}>
                   Delete
                 </button>

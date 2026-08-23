@@ -413,12 +413,12 @@ try {
 
   // --- UI: admin client detail shows caller ID history ------------------------
   {
-    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}`, {
+    const res = await fetch(`${baseUrl}/admin-dashboard/clients/${clientUser.profileId}?tab=security`, {
       headers: { cookie: adminSession.cookieHeader() },
     });
     const html = await res.text();
     check(
-      "admin client detail renders caller ID card + history + devices",
+      "admin client security tab renders caller ID card + history + devices tab",
       res.status === 200 && html.includes("Caller ID List") && html.includes("History (") && html.includes("Devices"),
       `status=${res.status}`,
     );

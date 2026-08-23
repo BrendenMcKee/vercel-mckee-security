@@ -3,11 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthContext } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
-import { AdminClientDetail } from "@/components/admin-portal/admin-client-detail";
+import {
+  AdminClientDetail,
+  type AdminClientTab,
+} from "@/components/admin-portal/admin-client-detail";
 import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
 import { lanvacWritesLive, parseNotifyList } from "@/lib/portal/lanvac-writes";
 import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
+import { hasCurrentMonitoring } from "@/lib/portal/service-labels";
 
 export const metadata: Metadata = {
   title: "Client Detail",
@@ -17,24 +21,25 @@ export const metadata: Metadata = {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Client detail (PORTAL_PLAN.md 7.2): one page per client with profile
- * editing, service management (R21: all plan changes live here, on the admin
- * side only), invitation state, caller ID list + audit history (Phase 4,
- * R23/R24), device maintenance dates, and billing (Phase 5: rails, record
- * payment, ledger). Reads run on the user-context client so admin RLS
- * authorizes them (R13); the layout gate 404s non-admins.
+ * Client detail (PORTAL_PLAN.md 7.2): one page per client, tabbed like the
+ * staff console. Account (profile, invite, disable/delete), Billing (R21
+ * plans + rails), Security (station, on-test, zones, Historic, caller ID),
+ * Devices. Reads run on the user-context client so admin RLS authorizes
+ * them (R13). Signed-in clients get the layout wrong-door screen.
  */
 export default async function AdminClientDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ profileId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { profileId } = await params;
+  const { tab } = await searchParams;
 
   // Pages render in parallel with the layout gate: signed-out visitors get
   // the layout's SignIn screen, so render nothing here instead of a 404.
-  // Signed-in non-admins fall through; RLS returns no row and they 404,
-  // matching the layout's neutral not-found response.
+  // Signed-in clients get the layout wrong-door screen.
   const { user } = await getAuthContext();
   if (!user) return null;
 
@@ -141,6 +146,49 @@ export default async function AdminClientDetailPage({
     throw new Error("Client detail failed to load.");
   }
 
+  const showSecurityTab =
+    hasCurrentMonitoring(client.services) ||
+    Boolean(client.lanvac_account_code || client.lanvac_city) ||
+    (contactsResult.data ?? []).length > 0 ||
+    (changesResult.data ?? []).length > 0 ||
+    (stationZonesResult.data ?? []).length > 0 ||
+    stationStateResult.data != null;
+  const showDevicesTab =
+    hasCurrentMonitoring(client.services) || (devicesResult.data ?? []).length > 0;
+  const requestedTab =
+    tab === "billing" || tab === "security" || tab === "devices" || tab === "account"
+      ? tab
+      : "account";
+  const activeTab: AdminClientTab =
+    requestedTab === "security" && !showSecurityTab
+      ? "account"
+      : requestedTab === "devices" && !showDevicesTab
+        ? "account"
+        : requestedTab;
+
+  const clientTabs: Array<{ id: AdminClientTab; label: string; href: string }> = [
+    { id: "account", label: "Account", href: `/admin-dashboard/clients/${profileId}` },
+    { id: "billing", label: "Billing", href: `/admin-dashboard/clients/${profileId}?tab=billing` },
+    ...(showSecurityTab
+      ? [
+          {
+            id: "security" as const,
+            label: "Security",
+            href: `/admin-dashboard/clients/${profileId}?tab=security`,
+          },
+        ]
+      : []),
+    ...(showDevicesTab
+      ? [
+          {
+            id: "devices" as const,
+            label: "Devices",
+            href: `/admin-dashboard/clients/${profileId}?tab=devices`,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-12">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -160,8 +208,30 @@ export default async function AdminClientDetailPage({
 
       {settingsResult.data?.client_mail_enabled !== true && <ClientMailPausedBanner />}
 
-      <div className="mt-6 sm:mt-10">
+      <nav
+        className="no-scrollbar -mx-4 mt-6 flex gap-1 overflow-x-auto border-b border-white/10 px-4 sm:mx-0 sm:mt-8 sm:gap-2 sm:px-0"
+        aria-label="Client sections"
+      >
+        {clientTabs.map((item) => (
+          <Link
+            key={item.id}
+            href={item.href}
+            prefetch={item.id === "security" ? false : undefined}
+            className={`shrink-0 whitespace-nowrap rounded-t-xl px-3.5 py-2.5 text-[13px] font-bold uppercase tracking-wide transition-colors sm:px-5 sm:text-sm ${
+              activeTab === item.id
+                ? "border border-b-0 border-white/10 bg-surface text-white"
+                : "text-white/50 hover:text-white"
+            }`}
+            aria-current={activeTab === item.id ? "page" : undefined}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="mt-6 sm:mt-8">
         <AdminClientDetail
+          tab={activeTab}
           client={client}
           callerIdContacts={contactsResult.data ?? []}
           callerIdChanges={changesResult.data ?? []}

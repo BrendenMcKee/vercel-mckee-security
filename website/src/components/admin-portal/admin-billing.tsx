@@ -57,7 +57,7 @@ export async function AdminBilling() {
   const clientCell = (service: (typeof services)[number]) =>
     service.profiles ? (
       <Link
-        href={`/admin-dashboard/clients/${service.profiles.id}`}
+        href={`/admin-dashboard/clients/${service.profiles.id}?tab=billing`}
         className="font-bold text-white hover:text-primary"
       >
         {service.profiles.first_name} {service.profiles.last_name}
@@ -83,7 +83,7 @@ export async function AdminBilling() {
               <li key={event.id} className="flex flex-wrap items-baseline justify-between gap-2">
                 {event.profile_id ? (
                   <Link
-                    href={`/admin-dashboard/clients/${event.profile_id}`}
+                    href={`/admin-dashboard/clients/${event.profile_id}?tab=billing`}
                     className="font-bold text-white hover:text-primary"
                   >
                     {nameByProfileId.get(event.profile_id) ?? "View client"}

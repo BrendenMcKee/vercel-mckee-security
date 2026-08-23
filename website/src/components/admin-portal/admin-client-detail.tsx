@@ -1692,8 +1692,9 @@ function MonitoringStationCard({
       </div>
       <p className="mt-1 text-xs text-white/40">
         Lanvac account number and the city they use for police, fire, and
-        ambulance. Those numbers stay at the station. The people list is the
-        next card.
+        ambulance. Those numbers stay at the station. Zones, on-test, and
+        Historic Signals below are for this account. The people list is the
+        next card on this tab.
       </p>
       {missingStation && (
         <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
@@ -1780,8 +1781,15 @@ function MonitoringStationCard({
           <div className="border-t border-white/10 pt-5">
             <h3 className="text-lg font-bold text-white">Zones &amp; Signals</h3>
             <p className="mt-1 text-sm text-white/50">
-              The zone list and recent signals the monitoring station keeps for
-              this security system
+              Zone list, on-test, and Historic Signals for Lanvac{" "}
+              <span className="font-semibold text-white/80">{client.lanvac_account_code}</span>
+              {client.lanvac_city ? (
+                <>
+                  {" "}
+                  in <span className="font-semibold text-white/80">{client.lanvac_city}</span>
+                </>
+              ) : null}
+              .
             </p>
             <div className="mt-4">
               <LanvacStationReadout
@@ -2181,7 +2189,10 @@ function DevicesCard({
   );
 }
 
+export type AdminClientTab = "account" | "billing" | "security" | "devices";
+
 export function AdminClientDetail({
+  tab,
   client,
   callerIdContacts,
   callerIdChanges,
@@ -2194,6 +2205,7 @@ export function AdminClientDetail({
   stationZones,
   stationSignals,
 }: {
+  tab: AdminClientTab;
   client: AdminClientDetailRow;
   callerIdContacts: CallerIdContact[];
   callerIdChanges: Tables<"caller_id_changes">[];
@@ -2214,28 +2226,54 @@ export function AdminClientDetail({
     showCallerId;
   const showDevices = hasCurrentMonitoring(client.services) || devices.length > 0;
 
-  return (
-    <div className="space-y-6">
-      <ProfileCard client={client} />
+  if (tab === "billing") {
+    return (
       <ServicesBillingCard
         client={client}
         manualPayments={manualPayments}
         cardPayments={cardPayments}
         cloudBackupInterest={cloudBackupInterest}
       />
-      {showStation && (
-        <MonitoringStationCard
-          client={client}
-          writesLive={writesLive}
-          stationState={stationState}
-          stationZones={stationZones}
-          stationSignals={stationSignals}
-        />
-      )}
-      {showCallerId && (
-        <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
-      )}
-      {showDevices && <DevicesCard client={client} devices={devices} />}
+    );
+  }
+
+  if (tab === "security") {
+    return (
+      <div className="space-y-6">
+        {showStation && (
+          <MonitoringStationCard
+            client={client}
+            writesLive={writesLive}
+            stationState={stationState}
+            stationZones={stationZones}
+            stationSignals={stationSignals}
+          />
+        )}
+        {showCallerId && (
+          <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
+        )}
+        {!showStation && !showCallerId && (
+          <p className="rounded-2xl border border-white/10 bg-surface p-4 text-sm text-white/50 sm:p-6">
+            No monitoring station or alarm contact list on this account yet.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (tab === "devices") {
+    return showDevices ? (
+      <DevicesCard client={client} devices={devices} />
+    ) : (
+      <p className="rounded-2xl border border-white/10 bg-surface p-4 text-sm text-white/50 sm:p-6">
+        No equipment is tracked on this account yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <ProfileCard client={client} />
       <InvitationCard client={client} />
       <DangerZone client={client} />
     </div>
