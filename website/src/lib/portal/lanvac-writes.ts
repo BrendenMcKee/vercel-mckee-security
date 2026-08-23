@@ -3,6 +3,8 @@
  * Carbon monoxide write codes stay unproven. Do not guess on a live write.
  */
 
+import { formatLanvacHistoricWhen } from "@/lib/portal/lanvac-signals";
+
 export const LANVAC_WRITE_TEST_ACCOUNT = "O5985";
 export const LANVAC_ZONE_DESCRIPTION_MAX = 65;
 export const LANVAC_ON_TEST_MINUTES = [30, 60, 120, 240, 480, 720, 1440] as const;
@@ -46,10 +48,12 @@ export function minutesFromDaysAndHours(days: number, hours: number): number | n
 
 export function formatStationDateTime(date: Date): string {
   return date.toLocaleString("en-CA", {
-    month: "short",
+    month: "long",
     day: "numeric",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   });
 }
 
@@ -85,9 +89,14 @@ export function lastHistoricOnTestText(
   const row = signals.find((signal) => {
     if (signal.signalClass !== "on_test") return false;
     const text = signal.description.toUpperCase();
-    return text.includes("ON-TEST") && !text.includes("STOP TESTING");
+    return (
+      text.includes("ON-TEST") &&
+      !text.includes("STOP TESTING") &&
+      !text.includes("STOP/FINISH") &&
+      !text.includes("ON-TEST END")
+    );
   });
-  return row?.occurredAtText ?? null;
+  return row ? formatLanvacHistoricWhen(row.occurredAtText) : null;
 }
 
 export function formatOnTestRemaining(until: Date, now = new Date()): string {

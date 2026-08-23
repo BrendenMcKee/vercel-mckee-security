@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { refreshLanvacStationAction } from "@/lib/portal/actions/lanvac-station";
-import { signalRowTone, type LanvacSignalClass } from "@/lib/portal/lanvac-signals";
+import { type LanvacSignalClass } from "@/lib/portal/lanvac-signals";
 import {
   formatOnTestRemaining,
   formatStationDateTime,
@@ -13,6 +13,7 @@ import {
   AdminZoneEditor,
   StationOnTestControls,
 } from "@/components/portal/lanvac-station-writes";
+import { HistoricSignals } from "@/components/portal/historic-signals";
 
 export type LanvacStationZoneWrite = {
   delay: number;
@@ -90,7 +91,7 @@ function StationTestStatus({
     <div
       className={`rounded-xl border px-3 py-3 sm:px-4 ${
         accountOnTest
-          ? "border-sky-500/35 bg-sky-500/10"
+          ? "border-amber-500/40 bg-amber-500/10"
           : "border-emerald-500/25 bg-emerald-500/5"
       }`}
     >
@@ -98,7 +99,7 @@ function StationTestStatus({
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${
             accountOnTest
-              ? "bg-sky-500/20 text-sky-100"
+              ? "bg-amber-500/20 text-amber-100"
               : "bg-emerald-500/15 text-emerald-200"
           }`}
         >
@@ -111,7 +112,7 @@ function StationTestStatus({
         )}
       </div>
       {accountOnTest && until && (
-        <p className="mt-2 text-sm text-sky-100">
+        <p className="mt-2 text-sm text-amber-100">
           Until {formatStationDateTime(until)} · {formatOnTestRemaining(until, now)}
         </p>
       )}
@@ -274,35 +275,12 @@ export function LanvacStationReadout({
         <AdminZoneEditor profileId={profileId} writesLive={writesLive} zones={zones} />
       )}
 
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-white/40">
-          Historic signals
-        </p>
-        <p className="mt-1 text-sm text-white/50">
-          Recent events from the monitoring station. An empty log does not mean
-          the system is clear.
-        </p>
-        {signals.length === 0 ? (
-          <p className="mt-3 text-sm text-white/45">No signals on file.</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {signals.map((row, index) => (
-              <li
-                key={`${row.occurredAtText}-${row.signal}-${index}`}
-                className={`rounded-xl border px-3 py-2.5 text-sm ${signalRowTone(row.signalClass)}`}
-              >
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-semibold">{row.description || "Signal"}</p>
-                  <p className="text-xs text-white/45">{row.occurredAtText}</p>
-                </div>
-                {variant === "admin" && row.signal && (
-                  <p className="mt-1 text-xs text-white/40">{row.signal}</p>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <HistoricSignals
+        profileId={profileId}
+        canLoadMore={canRefresh}
+        variant={variant}
+        signals={signals}
+      />
     </div>
   );
 }

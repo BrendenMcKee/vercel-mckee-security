@@ -1,6 +1,10 @@
 import "server-only";
 
 import {
+  LANVAC_HISTORIC_MAX_PAGES,
+  LANVAC_HISTORIC_PAGE_SIZE,
+} from "@/lib/portal/lanvac-historic";
+import {
   LANVAC_WRITE_TEST_ACCOUNT,
   interpretLanvacZoneRead,
   lanvacWritesLive,
@@ -13,8 +17,12 @@ import {
  * Never call /api/Account/status (disable) or /api/Account/new (erase).
  */
 
-export { LANVAC_WRITE_TEST_ACCOUNT, lanvacWritesLive };
-export const LANVAC_HISTORIC_PAGE_SIZE = 50;
+export {
+  LANVAC_WRITE_TEST_ACCOUNT,
+  lanvacWritesLive,
+  LANVAC_HISTORIC_MAX_PAGES,
+  LANVAC_HISTORIC_PAGE_SIZE,
+};
 const LANVAC_READ_TIMEOUT_MS = 12_000;
 const LANVAC_WRITE_TIMEOUT_MS = 20_000;
 
@@ -359,5 +367,24 @@ export async function fetchLanvacHistoric(
     });
   }
 
+  return { ok: true, data: rows };
+}
+
+export async function fetchLanvacHistoricPages(
+  account: string,
+  pageCount: number,
+): Promise<LanvacResult<LanvacHistoricRead[]>> {
+  const pages = Math.max(1, Math.min(pageCount, LANVAC_HISTORIC_MAX_PAGES));
+  const results = await Promise.all(
+    Array.from({ length: pages }, (_, index) =>
+      fetchLanvacHistoric(account, { currentPage: index + 1 }),
+    ),
+  );
+  const rows: LanvacHistoricRead[] = [];
+  for (const result of results) {
+    if (!result.ok) return result;
+    rows.push(...result.data);
+    if (result.data.length < LANVAC_HISTORIC_PAGE_SIZE) break;
+  }
   return { ok: true, data: rows };
 }

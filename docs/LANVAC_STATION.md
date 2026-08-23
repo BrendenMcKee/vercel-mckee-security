@@ -13,7 +13,7 @@ Portal `devices` (batteries / smokes) is a **different** list. Zones are what th
 On every **current monitoring** site that has a Lanvac CODE:
 
 - Zone list: admin fetch / create / edit / delete. Client read-only (number, description, type, on-test, uses-call-list).
-- Historic signals: paged log for admin and client, color-coded, at the bottom of the Security tab (client) or the admin station card. Not a live stream.
+- Historic signals: paged log for admin and client, grouped and color-coded, at the bottom of the Security tab (client) or the admin station card. Not a live stream. Dates are 12-hour with the month spelled out. Older pages load as you scroll.
 - Panel type + a last-known status chip.
 - On/off test with a duration. **Whole account only** (`Account/OnTest` / `OffTest`). Admin and client Account admin. We do not put a single zone on test. `Zone/OnTest` exists on Lanvac and is unused.
 

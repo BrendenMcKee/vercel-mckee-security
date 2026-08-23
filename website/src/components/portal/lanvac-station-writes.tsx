@@ -92,7 +92,7 @@ function DurationPicker({
             }}
             className={`${buttonClass} ${
               !customActive && minutes === value
-                ? "border-sky-400/50 bg-sky-500/15 text-sky-100"
+                ? "border-primary/50 bg-primary/15 text-white"
                 : ""
             }`}
           >
@@ -199,7 +199,7 @@ export function StationOnTestControls({
         Tells the monitoring station you are working on the system. The system
         stays armed.
       </p>
-      <p className={`text-sm ${accountOnTest ? "text-sky-100" : "text-emerald-200/90"}`}>
+      <p className={`text-sm ${accountOnTest ? "text-amber-100" : "text-emerald-200/90"}`}>
         {accountOnTest && until
           ? `This system is on test until ${formatStationDateTime(until)} · ${formatOnTestRemaining(until, now)}.`
           : "This system is off test."}

@@ -72,16 +72,95 @@ export function classifyLanvacSignal(input: {
   return "unknown";
 }
 
-/** Lanvac Historic dates are `MM-DD-YYYY HH:mm:ss`. Display the raw text. */
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+
+export type LanvacHistoricParts = {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+};
+
+/** Parse Lanvac `MM-DD-YYYY HH:mm:ss` as written. Do not shift time zones. */
+export function parseLanvacHistoricParts(raw: string): LanvacHistoricParts | null {
+  const match = raw.trim().match(
+    /^(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+  if (!match) return null;
+  return {
+    month: Number(match[1]),
+    day: Number(match[2]),
+    year: Number(match[3]),
+    hour: Number(match[4]),
+    minute: Number(match[5]),
+    second: Number(match[6] ?? "0"),
+  };
+}
+
+export function formatHourMinute(hour: number, minute: number): string {
+  const suffix = hour >= 12 ? "p.m." : "a.m.";
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${String(minute).padStart(2, "0")} ${suffix}`;
+}
+
+export function formatLanvacHistoricTime(raw: string): string | null {
+  const parts = parseLanvacHistoricParts(raw);
+  return parts ? formatHourMinute(parts.hour, parts.minute) : null;
+}
+
+export function formatLanvacHistoricWhen(raw: string): string {
+  const parts = parseLanvacHistoricParts(raw);
+  if (!parts) return raw.trim();
+  const month = MONTH_NAMES[parts.month - 1];
+  if (!month) return raw.trim();
+  return `${month} ${parts.day}, ${parts.year}, ${formatHourMinute(parts.hour, parts.minute)}`;
+}
+
+export function formatLanvacHistoricDay(raw: string): { key: string; label: string } | null {
+  const parts = parseLanvacHistoricParts(raw);
+  if (!parts) return null;
+  const month = MONTH_NAMES[parts.month - 1];
+  if (!month) return null;
+  const weekday = WEEKDAY_NAMES[new Date(parts.year, parts.month - 1, parts.day).getDay()];
+  return {
+    key: `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`,
+    label: `${weekday}, ${month} ${parts.day}, ${parts.year}`,
+  };
+}
+
+/** Lanvac Historic dates are `MM-DD-YYYY HH:mm:ss`. Keep a stable sort key. */
 export function parseLanvacHistoricDate(raw: string): {
   iso: string;
   display: string;
 } {
   const trimmed = raw.trim();
-  const match = trimmed.match(
-    /^(\d{2})-(\d{2})-(\d{4})[ T](\d{2}):(\d{2}):(\d{2})$/,
-  );
-  if (!match) {
+  const parts = parseLanvacHistoricParts(trimmed);
+  if (!parts) {
     const fallback = new Date(trimmed);
     return {
       iso: Number.isNaN(fallback.getTime())
@@ -90,9 +169,9 @@ export function parseLanvacHistoricDate(raw: string): {
       display: trimmed,
     };
   }
-  const [, month, day, year, hour, minute, second] = match;
+  const stamp = `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}T${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}:${String(parts.second).padStart(2, "0")}`;
   return {
-    iso: `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`,
+    iso: `${stamp}.000Z`,
     display: trimmed,
   };
 }
@@ -162,7 +241,7 @@ export function signalRowTone(signalClass: LanvacSignalClass): string {
     case "restore":
       return "border-emerald-500/20 bg-emerald-500/5 text-white/80";
     case "on_test":
-      return "border-sky-500/30 bg-sky-500/10 text-sky-100";
+      return "border-amber-500/35 bg-amber-500/10 text-amber-100";
     default:
       return "border-white/10 bg-background text-white/70";
   }
@@ -173,7 +252,7 @@ export function chipTone(kind: StationChipKind): string {
     case "disabled":
       return "bg-white/10 text-white/70 ring-1 ring-white/15";
     case "on_test":
-      return "bg-sky-500/20 text-sky-100 ring-1 ring-sky-400/40";
+      return "bg-amber-500/20 text-amber-100 ring-1 ring-amber-400/40";
     case "alarm":
       return "bg-red-500 text-white";
     case "ok":

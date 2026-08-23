@@ -255,6 +255,67 @@ export async function persistLanvacPull(
   return failed.length > 0 ? { ok: false, error: publicError } : { ok: true };
 }
 
+export async function persistLanvacHistoricAppend(input: {
+  profileId: string;
+  rows: LanvacHistoricRead[];
+  syncedAt: string;
+}): Promise<{ ok: true; added: number } | { ok: false; error: string }> {
+  if (!isPortalAdminConfigured()) {
+    return { ok: false, error: "The station cache is not configured." };
+  }
+  if (input.rows.length === 0) return { ok: true, added: 0 };
+  const admin = getPortalAdminClient();
+  const [{ data: last, error: lastError }, { data: existing, error: existingError }] =
+    await Promise.all([
+      admin
+        .from("lanvac_signals")
+        .select("sort_index")
+        .eq("profile_id", input.profileId)
+        .order("sort_index", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      admin
+        .from("lanvac_signals")
+        .select("occurred_at_text, signal, description")
+        .eq("profile_id", input.profileId),
+    ]);
+  if (lastError || existingError) {
+    console.error(
+      "[portal] station historic append read failed:",
+      lastError ?? existingError,
+    );
+    return { ok: false, error: "Could not save the station signals." };
+  }
+  const seen = new Set(
+    (existing ?? []).map((row) => `${row.occurred_at_text}|${row.signal}|${row.description}`),
+  );
+  const fresh = input.rows.filter(
+    (row) => !seen.has(`${row.date}|${row.signal}|${row.description}`),
+  );
+  if (fresh.length === 0) return { ok: true, added: 0 };
+  const startIndex = (last?.sort_index ?? -1) + 1;
+  const { error } = await admin.from("lanvac_signals").insert(
+    fresh.map((row, index) => {
+      const when = parseLanvacHistoricDate(row.date);
+      return {
+        profile_id: input.profileId,
+        occurred_at: when.iso,
+        occurred_at_text: when.display,
+        signal: row.signal,
+        description: row.description,
+        signal_class: classifyLanvacSignal(row),
+        sort_index: startIndex + index,
+        last_synced_at: input.syncedAt,
+      };
+    }),
+  );
+  if (error) {
+    console.error("[portal] station historic append failed:", error);
+    return { ok: false, error: "Could not save the station signals." };
+  }
+  return { ok: true, added: fresh.length };
+}
+
 export async function persistLanvacZoneCache(input: {
   profileId: string;
   code: string;

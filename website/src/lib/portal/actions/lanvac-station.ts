@@ -15,12 +15,16 @@ import {
   deleteLanvacZone,
   fetchLanvacAccount,
   fetchLanvacHistoric,
+  fetchLanvacHistoricPages,
   fetchLanvacZones,
+  LANVAC_HISTORIC_MAX_PAGES,
+  LANVAC_HISTORIC_PAGE_SIZE,
   putLanvacAccountOffTest,
   putLanvacAccountOnTest,
   updateLanvacZone,
 } from "@/lib/portal/lanvac-api";
 import {
+  persistLanvacHistoricAppend,
   persistLanvacOnTest,
   persistLanvacPull,
   persistLanvacZoneCache,
@@ -114,11 +118,21 @@ export async function refreshLanvacStationAction(input: {
   }
 
   const admin = getPortalAdminClient();
-  const { data: existing } = await admin
-    .from("lanvac_account_state")
-    .select("last_synced_at, last_error")
-    .eq("profile_id", input.profileId)
-    .maybeSingle();
+  const [{ data: existing }, { count: signalCount }] = await Promise.all([
+    admin
+      .from("lanvac_account_state")
+      .select("last_synced_at, last_error")
+      .eq("profile_id", input.profileId)
+      .maybeSingle(),
+    admin
+      .from("lanvac_signals")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", input.profileId),
+  ]);
+  const historicPages = Math.min(
+    LANVAC_HISTORIC_MAX_PAGES,
+    Math.max(1, Math.ceil((signalCount ?? 0) / LANVAC_HISTORIC_PAGE_SIZE)),
+  );
 
   if (existing?.last_synced_at) {
     const age = Date.now() - new Date(existing.last_synced_at).getTime();
@@ -142,7 +156,7 @@ export async function refreshLanvacStationAction(input: {
   const [account, zones, historic] = await Promise.all([
     fetchLanvacAccount(access.code),
     fetchLanvacZones(access.code),
-    fetchLanvacHistoric(access.code),
+    fetchLanvacHistoricPages(access.code, historicPages),
   ]);
 
   const syncedAt = new Date().toISOString();
@@ -169,6 +183,50 @@ export async function refreshLanvacStationAction(input: {
   }
 
   return { ok: true, pulledAt: syncedAt };
+}
+
+export async function loadMoreLanvacHistoricAction(input: {
+  profileId: string;
+}): Promise<{ ok: true; added: number; hasMore: boolean } | { ok: false; error: string }> {
+  const parsed = profileIdSchema.safeParse(input.profileId);
+  if (!parsed.success) return { ok: false, error: "That site could not be found." };
+  const access = await requireStationAccess(parsed.data);
+  if (!access.ok) return { ok: false, error: access.error };
+  if (!isPortalAdminConfigured()) {
+    return { ok: false, error: "The station cache is not configured." };
+  }
+
+  const admin = getPortalAdminClient();
+  const { count, error: countError } = await admin
+    .from("lanvac_signals")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", parsed.data);
+  if (countError) {
+    console.error("[portal] station historic count failed:", countError);
+    return { ok: false, error: "Could not load older signals." };
+  }
+
+  const nextPage = Math.floor((count ?? 0) / LANVAC_HISTORIC_PAGE_SIZE) + 1;
+  if (nextPage > LANVAC_HISTORIC_MAX_PAGES) return { ok: true, added: 0, hasMore: false };
+
+  const historic = await fetchLanvacHistoric(access.code, { currentPage: nextPage });
+  if (!historic.ok) return { ok: false, error: historic.error };
+
+  const persisted = await persistLanvacHistoricAppend({
+    profileId: parsed.data,
+    rows: historic.data,
+    syncedAt: new Date().toISOString(),
+  });
+  if (!persisted.ok) return persisted;
+
+  revalidateStation();
+  return {
+    ok: true,
+    added: persisted.added,
+    hasMore:
+      historic.data.length >= LANVAC_HISTORIC_PAGE_SIZE &&
+      nextPage < LANVAC_HISTORIC_MAX_PAGES,
+  };
 }
 
 type StationActionResult = { ok: true } | { ok: false; error: string };

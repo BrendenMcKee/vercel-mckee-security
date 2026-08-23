@@ -947,40 +947,45 @@ function ClientSecurityPanel({
   }>;
 }) {
   return (
-    <div className="space-y-6">
-      <header className="space-y-4">
-        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-          <PortalCardIcon icon="shield" tone="monitoring" />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-lg font-bold leading-snug tracking-tight text-white sm:text-xl">
-                Your security system
-              </h2>
-              {monitoring && <ServiceStatusBadge status={monitoring.status} withIcon />}
+    <div className="space-y-8 sm:space-y-10">
+      <header className="border-b border-white/10 pb-8 pt-4 sm:pb-10 sm:pt-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+            <PortalCardIcon icon="shield" tone="monitoring" />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h2 className="text-xl font-bold leading-snug tracking-tight text-white sm:text-2xl">
+                  Your security system
+                </h2>
+                {monitoring && <ServiceStatusBadge status={monitoring.status} withIcon />}
+              </div>
+              <p className="mt-1.5 text-sm leading-relaxed text-white/50">
+                {monitoring
+                  ? `${tierLabel(monitoring.tier)} · ${SERVICE_TYPE_LABELS.monitoring}`
+                  : "Contacts and equipment on file"}
+              </p>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/70">
+                {monitoring
+                  ? monitoringHeaderCopy(monitoring.tier)
+                  : "There is no current monitoring plan on this account. Contacts and equipment from an earlier plan stay here so you can still review them."}
+              </p>
             </div>
-            <p className="mt-1 text-[13px] leading-relaxed text-white/50">
-              {monitoring
-                ? `${tierLabel(monitoring.tier)} · ${SERVICE_TYPE_LABELS.monitoring}`
-                : "Contacts and equipment on file"}
-            </p>
           </div>
+          {monitoring?.status === "unpaid" && (
+            <div className="shrink-0 sm:pt-1">
+              {monitoring.billing_method === "stripe" ? (
+                <PayNowButton serviceId={monitoring.id} label="Add your card and start services" />
+              ) : (
+                <Link
+                  href="/user-dashboard"
+                  className="inline-flex min-h-11 cursor-pointer items-center rounded-xl bg-primary px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
+                >
+                  See how to pay
+                </Link>
+              )}
+            </div>
+          )}
         </div>
-        <p className="max-w-3xl text-sm leading-relaxed text-white/65">
-          {monitoring
-            ? monitoringHeaderCopy(monitoring.tier)
-            : "There is no current monitoring plan on this account. Contacts and equipment from an earlier plan stay here so you can still review them."}
-        </p>
-        {monitoring?.status === "unpaid" &&
-          (monitoring.billing_method === "stripe" ? (
-            <PayNowButton serviceId={monitoring.id} label="Add your card and start services" />
-          ) : (
-            <Link
-              href="/user-dashboard"
-              className="inline-flex min-h-11 cursor-pointer items-center rounded-xl bg-primary px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
-            >
-              See how to pay
-            </Link>
-          ))}
       </header>
 
       {showStation && (

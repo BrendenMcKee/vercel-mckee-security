@@ -89,6 +89,21 @@ check(
     { occurredAtText: "Aug 22, 1:40 p.m.", description: "[ON-TEST]", signalClass: "on_test" },
   ]) === "Aug 22, 1:40 p.m.",
 );
+check(
+  "end email is not last on-test",
+  lastHistoricOnTestText([
+    {
+      occurredAtText: "08-22-2026 13:56:24",
+      description: "[E-MAIL] ON-TEST END > SENT",
+      signalClass: "on_test",
+    },
+    {
+      occurredAtText: "08-22-2026 13:45:00",
+      description: "[ON-TEST] begin",
+      signalClass: "on_test",
+    },
+  ]) === "August 22, 2026, 1:45 p.m.",
+);
 
 if (failures.length > 0) {
   console.error(`\n${failures.length} write check(s) FAILED.`);
