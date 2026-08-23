@@ -52,21 +52,55 @@ type PaymentHistoryEntry = {
   serviceType: string | null;
 };
 
-/**
- * Client portal (PORTAL_PLAN.md 7.1). Tabs: Dashboard / Settings / Alerts
- * (R47). Dashboard: owned service cards, Billing & Payments, alarm contacts
- * and equipment when R45 applies, unused services in a dashed band, plus
- * payment / contact / card-setup banners. Settings: locked email, phone,
- * address, password (current required). Alerts mirrors the banners with the
- * same always-on count badge as admin. Reads go through RLS.
- */
-const CLIENT_TABS = [
-  { id: "dashboard", label: "Dashboard", href: "/user-dashboard" },
-  { id: "settings", label: "Settings", href: "/user-dashboard?tab=settings" },
-  { id: "alerts", label: "Alerts", href: "/user-dashboard?tab=alerts" },
-] as const;
+type ClientTabId = "dashboard" | "security" | "settings" | "alerts";
 
-type ClientTabId = (typeof CLIENT_TABS)[number]["id"];
+/**
+ * Client portal (PORTAL_PLAN.md 7.1). Tabs: Dashboard / Security / Settings /
+ * Alerts. Dashboard is billing-first plus compact service cards. Security is
+ * only shown when the account has monitoring or leftover station/contact/
+ * equipment rows; that is the only client tab that mounts the station
+ * readout (Lanvac pull) or the full caller-ID editor.
+ */
+function monitoringSubscriptionCopy(tier: string): { lead: string; details: string[] } {
+  switch (tier) {
+    case "landline":
+      return {
+        lead:
+          "Your alarm reports to the monitoring station over a telephone land line. When it goes off, the station treats this site as a live alarm and works down your contact list.",
+        details: ["A working land line on site is required for the signal to go through."],
+      };
+    case "cellular":
+      return {
+        lead:
+          "Your alarm reports over a cellular communicator, so it does not depend on a land line. When it goes off, the station treats this site as a live alarm and works down your contact list.",
+        details: ["A cell booster can be installed if the signal on site is weak."],
+      };
+    case "cellular_tc":
+      return {
+        lead:
+          "Your alarm reports over a cellular communicator, and you have Total Connect 2.0 smartphone control. When it goes off, the station treats this site as a live alarm and works down your contact list.",
+        details: [
+          "A cell booster can be installed if the signal on site is weak.",
+          "Use the Total Connect 2.0 app to arm, disarm, and check the system.",
+        ],
+      };
+    case "cellular_tc_home":
+      return {
+        lead:
+          "Your alarm reports over a cellular communicator, with Total Connect 2.0 plus home automation. When it goes off, the station treats this site as a live alarm and works down your contact list.",
+        details: [
+          "Home automation needs internet on site in addition to cell signal.",
+          "Use the Total Connect 2.0 app to arm, disarm, and control connected devices.",
+        ],
+      };
+    default:
+      return {
+        lead:
+          "When your alarm goes off, the monitoring station treats this site as a live alarm and works down your contact list.",
+        details: [],
+      };
+  }
+}
 
 export default async function UserDashboardPage({
   searchParams,
@@ -80,38 +114,18 @@ export default async function UserDashboardPage({
   if (!user || !profile || profile.status === "disabled" || profile.role === "admin") return null;
 
   const { payment, tab } = await searchParams;
-  const activeTab: ClientTabId =
-    tab === "settings" ? "settings" : tab === "alerts" ? "alerts" : "dashboard";
+  const requestedTab: ClientTabId =
+    tab === "settings"
+      ? "settings"
+      : tab === "alerts"
+        ? "alerts"
+        : tab === "security"
+          ? "security"
+          : "dashboard";
 
   const supabase = await createPortalServerClient();
-  const [
-    servicesResult,
-    contactsResult,
-    devicesResult,
-    manualPaymentsResult,
-    cardPaymentsResult,
-    cloudInterestResult,
-    stationStateResult,
-    stationZonesResult,
-    stationSignalsResult,
-  ] = await Promise.all([
-      supabase
-        .from("services")
-        .select(
-          "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, number_count, seat_count, port_count, port_fee_charged_count, next_due_on, stripe_subscription_id",
-        )
-        .eq("profile_id", profile.id)
-        .order("service_type"),
-      supabase
-        .from("caller_id_contacts")
-        .select("id, phone, label, passcode, sort_order")
-        .eq("profile_id", profile.id)
-        .order("sort_order"),
-      supabase
-        .from("devices")
-        .select("id, label, category, installed_on, lifetime_years")
-        .eq("profile_id", profile.id)
-        .order("created_at"),
+  const fetchDashboardExtras = () =>
+    Promise.all([
       supabase
         .from("manual_payments")
         .select("id, service_id, amount_cents, method, paid_on")
@@ -130,13 +144,14 @@ export default async function UserDashboardPage({
         .select("profile_id, email, consented_at")
         .eq("profile_id", profile.id)
         .maybeSingle(),
+    ]);
+  const fetchSecurityExtras = () =>
+    Promise.all([
       supabase
-        .from("lanvac_account_state")
-        .select(
-          "panel_type, is_disabled, on_test_until, last_signal_at, last_signal_class, last_synced_at, last_error",
-        )
+        .from("caller_id_contacts")
+        .select("id, phone, label, passcode, sort_order")
         .eq("profile_id", profile.id)
-        .maybeSingle(),
+        .order("sort_order"),
       supabase
         .from("lanvac_zones")
         .select("zone_number, description, zone_type, on_test, use_call_list")
@@ -149,42 +164,119 @@ export default async function UserDashboardPage({
         .order("sort_index"),
     ]);
 
+  const [
+    servicesResult,
+    devicesResult,
+    contactsCountResult,
+    stationStateResult,
+    cachedZonesResult,
+    earlyDashboard,
+    earlySecurity,
+  ] = await Promise.all([
+    supabase
+      .from("services")
+      .select(
+        "id, service_type, tier, status, billing_method, billing_interval, monthly_amount_cents, number_count, seat_count, port_count, port_fee_charged_count, next_due_on, stripe_subscription_id",
+      )
+      .eq("profile_id", profile.id)
+      .order("service_type"),
+    supabase
+      .from("devices")
+      .select("id, label, category, installed_on, lifetime_years")
+      .eq("profile_id", profile.id)
+      .order("created_at"),
+    supabase
+      .from("caller_id_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", profile.id),
+    supabase
+      .from("lanvac_account_state")
+      .select(
+        "panel_type, is_disabled, on_test_until, last_signal_at, last_signal_class, last_synced_at, last_error",
+      )
+      .eq("profile_id", profile.id)
+      .maybeSingle(),
+    supabase
+      .from("lanvac_zones")
+      .select("on_test")
+      .eq("profile_id", profile.id),
+    requestedTab === "dashboard" ? fetchDashboardExtras() : Promise.resolve(null),
+    requestedTab === "security" ? fetchSecurityExtras() : Promise.resolve(null),
+  ]);
+
   if (
     servicesResult.error ||
-    contactsResult.error ||
     devicesResult.error ||
-    cloudInterestResult.error ||
+    contactsCountResult.error ||
     stationStateResult.error ||
-    stationZonesResult.error ||
-    stationSignalsResult.error
+    cachedZonesResult.error
   ) {
     console.error(
       "[portal] Client dashboard query failed:",
       servicesResult.error ??
-        contactsResult.error ??
         devicesResult.error ??
-        cloudInterestResult.error ??
+        contactsCountResult.error ??
         stationStateResult.error ??
-        stationZonesResult.error ??
-        stationSignalsResult.error,
+        cachedZonesResult.error,
     );
     throw new Error("Dashboard failed to load.");
   }
 
   const services = servicesResult.data;
   const monitoring = services.find((s) => s.service_type === "monitoring");
+  const currentMonitoring =
+    monitoring && monitoring.status !== "cancelled" ? monitoring : null;
   const cloud = services.find((s) => s.service_type === "cloud_backup");
   const voip = services.find((s) => s.service_type === "voip");
-  const showCallerId = hasCurrentMonitoring(services) || contactsResult.data.length > 0;
+  const contactCount = contactsCountResult.count ?? 0;
+  const showCallerId = hasCurrentMonitoring(services) || contactCount > 0;
   const showDevices = hasCurrentMonitoring(services) || devicesResult.data.length > 0;
-  const stationZones = (stationZonesResult.data ?? []).map((zone) => ({
+  const canRefreshStation =
+    hasCurrentMonitoring(services) && Boolean(profile.lanvac_account_code);
+  const cachedZonesOnTest = (cachedZonesResult.data ?? []).some((zone) => zone.on_test);
+  const showStation =
+    canRefreshStation ||
+    (cachedZonesResult.data ?? []).length > 0 ||
+    stationStateResult.data != null;
+  const showSecurityTab = showCallerId || showDevices || showStation;
+  const activeTab: ClientTabId =
+    requestedTab === "security" && !showSecurityTab ? "dashboard" : requestedTab;
+
+  let dashboardExtras = earlyDashboard;
+  let securityExtras = activeTab === "security" ? earlySecurity : null;
+  if (activeTab === "dashboard" && !dashboardExtras) {
+    dashboardExtras = await fetchDashboardExtras();
+  }
+
+  if (dashboardExtras) {
+    const [manualPaymentsResult, cardPaymentsResult, cloudInterestResult] = dashboardExtras;
+    if (manualPaymentsResult.error || cardPaymentsResult.error || cloudInterestResult.error) {
+      console.error(
+        "[portal] Client dashboard billing query failed:",
+        manualPaymentsResult.error ?? cardPaymentsResult.error ?? cloudInterestResult.error,
+      );
+      throw new Error("Dashboard failed to load.");
+    }
+  }
+  if (securityExtras) {
+    const [contactsResult, stationZonesResult, stationSignalsResult] = securityExtras;
+    if (contactsResult.error || stationZonesResult.error || stationSignalsResult.error) {
+      console.error(
+        "[portal] Client security tab query failed:",
+        contactsResult.error ?? stationZonesResult.error ?? stationSignalsResult.error,
+      );
+      throw new Error("Dashboard failed to load.");
+    }
+  }
+
+  const stationZones = (securityExtras?.[1].data ?? []).map((zone) => ({
     zoneNumber: zone.zone_number,
     description: zone.description,
     zoneType: zone.zone_type,
     onTest: zone.on_test,
     useCallList: zone.use_call_list,
   }));
-  const stationSignals = (stationSignalsResult.data ?? []).map((row) => ({
+  const stationSignals = (securityExtras?.[2].data ?? []).map((row) => ({
     occurredAtText: row.occurred_at_text,
     signal: row.signal,
     description: row.description,
@@ -201,16 +293,10 @@ export default async function UserDashboardPage({
         lastError: stationStateResult.data.last_error,
       }
     : null;
-  const canRefreshStation =
-    hasCurrentMonitoring(services) && Boolean(profile.lanvac_account_code);
-  const showStation =
-    canRefreshStation || stationZones.length > 0 || stationState != null;
-  const missingCallerId = hasCurrentMonitoring(services) && contactsResult.data.length === 0;
+  const missingCallerId = hasCurrentMonitoring(services) && contactCount === 0;
   const unpaidServices = services.filter((s) => s.status === "unpaid");
   const serviceTypeById = new Map(services.map((s) => [s.id, s.service_type]));
 
-  // Autopay services with no card on file yet, but nothing owing right now:
-  // prompt for card setup (billing starts at their anniversary).
   const cardSetupNeeded = services.filter(
     (s) => s.billing_method === "stripe" && !s.stripe_subscription_id && s.status === "active",
   );
@@ -228,16 +314,19 @@ export default async function UserDashboardPage({
   const outstandingPortFee =
     voip && unchargedPorts > 0 ? { serviceId: voip.id, uncharged: unchargedPorts } : null;
 
-  // Unified payment history: manual ledger + successful card payments.
+  const manualPayments = dashboardExtras?.[0].data ?? [];
+  const cardPayments = dashboardExtras?.[1].data ?? [];
+  const cloudInterest = dashboardExtras?.[2].data ?? null;
+
   const history: PaymentHistoryEntry[] = [
-    ...(manualPaymentsResult.data ?? []).map((p) => ({
+    ...manualPayments.map((p) => ({
       key: `m-${p.id}`,
       paidOn: p.paid_on,
       amountCents: p.amount_cents,
       how: PAYMENT_METHOD_LABELS[p.method as PaymentMethod] ?? "Payment",
       serviceType: serviceTypeById.get(p.service_id) ?? null,
     })),
-    ...(cardPaymentsResult.data ?? []).map((e) => {
+    ...cardPayments.map((e) => {
       const payload = e.payload as { amount_paid?: number } | null;
       return {
         key: `c-${e.id}`,
@@ -264,7 +353,10 @@ export default async function UserDashboardPage({
       : 0;
   const stationOnTest = isStationOnTest({
     onTestUntil: stationState?.onTestUntil,
-    anyZoneOnTest: stationZones.some((zone) => zone.onTest),
+    anyZoneOnTest:
+      stationZones.length > 0
+        ? stationZones.some((zone) => zone.onTest)
+        : cachedZonesOnTest,
   });
   const alertCount =
     manualUnpaid +
@@ -273,13 +365,22 @@ export default async function UserDashboardPage({
     expiredDevices.length +
     (stationOnTest ? 1 : 0);
 
+  const clientTabs: Array<{ id: ClientTabId; label: string; href: string }> = [
+    { id: "dashboard", label: "Dashboard", href: "/user-dashboard" },
+    ...(showSecurityTab
+      ? [{ id: "security" as const, label: "Security", href: "/user-dashboard?tab=security" }]
+      : []),
+    { id: "settings", label: "Settings", href: "/user-dashboard?tab=settings" },
+    { id: "alerts", label: "Alerts", href: "/user-dashboard?tab=alerts" },
+  ];
+
   return (
     <div className="space-y-6">
       <nav
         className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto border-b border-white/10 px-4 sm:mx-0 sm:gap-2 sm:px-0"
         aria-label="Client portal sections"
       >
-        {CLIENT_TABS.map((item) => (
+        {clientTabs.map((item) => (
           <Link
             key={item.id}
             href={item.href}
@@ -322,9 +423,117 @@ export default async function UserDashboardPage({
           expiredDevices={expiredDevices}
           stationOnTest={stationOnTest}
           stationOnTestUntil={stationState?.onTestUntil ?? null}
+          showSecurityTab={showSecurityTab}
+        />
+      ) : activeTab === "security" ? (
+        <ClientSecurityPanel
+          profileId={profile.id}
+          lanvacCity={profile.lanvac_city}
+          lanvacAccountCode={profile.lanvac_account_code}
+          monitoring={currentMonitoring}
+          showStation={showStation}
+          canRefreshStation={canRefreshStation}
+          stationState={stationState}
+          stationZones={stationZones}
+          stationSignals={stationSignals}
+          showCallerId={showCallerId}
+          contacts={securityExtras?.[0].data ?? []}
+          showDevices={showDevices}
+          devices={devicesResult.data}
         />
       ) : (
-        <>
+        <ClientDashboardPanel
+          payment={payment}
+          unpaidServices={unpaidServices}
+          stripePayables={stripePayables}
+          outstandingPortFee={outstandingPortFee}
+          hasCardOnFile={hasCardOnFile}
+          missingCallerId={missingCallerId}
+          showSecurityTab={showSecurityTab}
+          monitoring={monitoring ?? null}
+          voip={voip ?? null}
+          cloud={cloud ?? null}
+          billableServices={billableServices}
+          history={history}
+          cloudInterest={cloudInterest}
+          email={profile.email}
+        />
+      )}
+    </div>
+  );
+}
+
+function ClientDashboardPanel({
+  payment,
+  unpaidServices,
+  stripePayables,
+  outstandingPortFee,
+  hasCardOnFile,
+  missingCallerId,
+  showSecurityTab,
+  monitoring,
+  voip,
+  cloud,
+  billableServices,
+  history,
+  cloudInterest,
+  email,
+}: {
+  payment?: string;
+  unpaidServices: Array<{
+    id: string;
+    service_type: "monitoring" | "cloud_backup" | "voip";
+    billing_method: "stripe" | "manual";
+    billing_interval: "monthly" | "annual";
+    monthly_amount_cents: number | null;
+    next_due_on: string | null;
+  }>;
+  stripePayables: Array<{
+    id: string;
+    service_type: "monitoring" | "cloud_backup" | "voip";
+    tier: string;
+    status: string;
+    next_due_on: string | null;
+  }>;
+  outstandingPortFee: { serviceId: string; uncharged: number } | null;
+  hasCardOnFile: boolean;
+  missingCallerId: boolean;
+  showSecurityTab: boolean;
+  monitoring: {
+    status: "active" | "paused" | "cancelled" | "unpaid";
+    tier: string;
+    monthly_amount_cents: number | null;
+    billing_interval: "monthly" | "annual";
+    billing_method: "stripe" | "manual";
+  } | null;
+  voip: {
+    status: "active" | "paused" | "cancelled" | "unpaid";
+    tier: string;
+    monthly_amount_cents: number | null;
+    billing_interval: "monthly" | "annual";
+    billing_method: "stripe" | "manual";
+    number_count: number;
+    seat_count: number;
+  } | null;
+  cloud: {
+    status: "active" | "paused" | "cancelled" | "unpaid";
+    tier: string;
+  } | null;
+  billableServices: Array<{
+    id: string;
+    service_type: "monitoring" | "cloud_backup" | "voip";
+    billing_method: "stripe" | "manual";
+    billing_interval: "monthly" | "annual";
+    monthly_amount_cents: number | null;
+    next_due_on: string | null;
+    stripe_subscription_id: string | null;
+  }>;
+  history: PaymentHistoryEntry[];
+  cloudInterest: { profile_id: string } | null;
+  email: string | null;
+}) {
+  return (
+    <>
       {payment === "success" && (
         <p
           role="status"
@@ -375,138 +584,12 @@ export default async function UserDashboardPage({
             passcode.
           </p>
           <a
-            href="/user-dashboard#alarm-contact-list"
+            href="/user-dashboard?tab=security#alarm-contact-list"
             className="mt-4 inline-flex cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
           >
             Add contacts
           </a>
         </div>
-      )}
-
-      {monitoring && (
-        <PortalCard
-          icon="shield"
-          tone="monitoring"
-          title={SERVICE_TYPE_LABELS.monitoring}
-          description="Your alarm monitoring plan"
-          status={<ServiceStatusBadge status={monitoring.status} withIcon />}
-          action={<ServiceStatusBadge status={monitoring.status} />}
-        >
-          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
-            <div>
-              <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                {tierLabel(monitoring.tier)}
-              </p>
-              {monitoring.monthly_amount_cents != null && (
-                <ServiceRateLine
-                  monthlyCents={monitoring.monthly_amount_cents}
-                  interval={monitoring.billing_interval}
-                  billingMethod={monitoring.billing_method}
-                />
-              )}
-            </div>
-            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
-              Your monitoring plan is managed by McKee Security. To make changes,
-              call{" "}
-              <a
-                href="tel:+17054572156"
-                className="whitespace-nowrap font-bold text-white hover:text-primary"
-              >
-                (705) 457-2156
-              </a>
-              .
-            </p>
-          </div>
-        </PortalCard>
-      )}
-
-      {showStation && (
-        <PortalCard
-          icon="shield"
-          tone="monitoring"
-          title="Zones and signals"
-          description="What the monitoring station has for this alarm, plus the recent signal log"
-        >
-          <div className="border-t border-white/10 pt-5">
-            <LanvacStationReadout
-              profileId={profile.id}
-              canRefresh={canRefreshStation}
-              variant="client"
-              writesLive={lanvacWritesLive(profile.lanvac_account_code)}
-              state={stationState}
-              zones={stationZones}
-              signals={stationSignals}
-            />
-          </div>
-        </PortalCard>
-      )}
-
-      {voip && (
-        <PortalCard
-          icon="voip"
-          tone="voip"
-          title={SERVICE_TYPE_LABELS.voip}
-          description="Your phone service plan"
-          status={<ServiceStatusBadge status={voip.status} withIcon />}
-          action={<ServiceStatusBadge status={voip.status} />}
-        >
-          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
-            <div>
-              <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                {tierLabel(voip.tier)}
-              </p>
-              {voip.monthly_amount_cents != null && (
-                <ServiceRateLine
-                  monthlyCents={voip.monthly_amount_cents}
-                  interval={voip.billing_interval}
-                  billingMethod={voip.billing_method}
-                  suffix={` for ${voipCoverageLabel({
-                    tier: voip.tier,
-                    numberCount: voip.number_count,
-                    seatCount: voip.seat_count,
-                  })}`}
-                />
-              )}
-            </div>
-            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
-              Your phone service is managed by McKee Security. To add numbers or
-              seats, or to make other changes, call{" "}
-              <a
-                href="tel:+17054572156"
-                className="whitespace-nowrap font-bold text-white hover:text-primary"
-              >
-                (705) 457-2156
-              </a>
-              .
-            </p>
-          </div>
-        </PortalCard>
-      )}
-
-      {cloud && (
-        <PortalCard
-          icon="cloud"
-          tone="cloud_backup"
-          title={SERVICE_TYPE_LABELS.cloud_backup}
-          description="Camera footage stored securely off-site"
-          status={<ServiceStatusBadge status={cloud.status} withIcon />}
-          action={<ServiceStatusBadge status={cloud.status} />}
-        >
-          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
-            <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{tierLabel(cloud.tier)}</p>
-            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
-              Your cloud backup plan runs on McKee-managed equipment. For plan
-              questions or changes, contact McKee Security at{" "}
-              <a
-                href="tel:+17054572156"
-                className="whitespace-nowrap font-bold text-white hover:text-primary"
-              >
-                (705) 457-2156
-              </a>
-              .
-            </p>
-          </div>
-        </PortalCard>
       )}
 
       {billableServices.length > 0 && (
@@ -630,70 +713,115 @@ export default async function UserDashboardPage({
         </PortalCard>
       )}
 
-      {showCallerId && (
+      {monitoring && (
         <PortalCard
-          id="alarm-contact-list"
-          icon="phone"
+          icon="shield"
           tone="monitoring"
-          title="Alarm Contact List (Caller ID)"
-          description="Who the monitoring station calls, in order, when your alarm goes off"
+          title={SERVICE_TYPE_LABELS.monitoring}
+          description="Your alarm monitoring plan"
+          status={<ServiceStatusBadge status={monitoring.status} withIcon />}
+          action={<ServiceStatusBadge status={monitoring.status} />}
         >
-          <div className="border-t border-white/10 pt-5">
-            <p className="max-w-3xl text-sm leading-relaxed text-white/55">
-              When your alarm goes off, the monitoring station works down this
-              list from #1 to the last person. Each person has a passcode they
-              give the station to confirm who they are. Add or remove people and
-              save. McKee Security is notified automatically and updates the
-              station.
+          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {tierLabel(monitoring.tier)}
+              </p>
+              {monitoring.monthly_amount_cents != null && (
+                <ServiceRateLine
+                  monthlyCents={monitoring.monthly_amount_cents}
+                  interval={monitoring.billing_interval}
+                  billingMethod={monitoring.billing_method}
+                />
+              )}
+              {showSecurityTab && (
+                <a
+                  href="/user-dashboard?tab=security"
+                  className="mt-4 inline-flex cursor-pointer text-sm font-bold text-white underline decoration-white/30 underline-offset-4 hover:text-primary hover:decoration-primary"
+                >
+                  Manage zones, signals, and contacts
+                </a>
+              )}
+            </div>
+            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
+              Your monitoring plan is managed by McKee Security. To make changes,
+              call{" "}
+              <a
+                href="tel:+17054572156"
+                className="whitespace-nowrap font-bold text-white hover:text-primary"
+              >
+                (705) 457-2156
+              </a>
+              .
             </p>
-            <div className="mt-5">
-              <CallerIdEditor variant="client" initialContacts={contactsResult.data} />
-            </div>
-            <div className="mt-6 border-t border-white/10 pt-5">
-              <LanvacEmergencyReadout
-                city={profile.lanvac_city}
-                numbers={lanvacEmergencyNumbers(profile.lanvac_city)}
-              />
-            </div>
           </div>
         </PortalCard>
       )}
 
-      {showDevices && devicesResult.data.length > 0 && (
+      {voip && (
         <PortalCard
-          icon="wrench"
-          tone="monitoring"
-          title="Equipment Maintenance"
-          description="Install dates and upcoming replacements for your system's hardware"
+          icon="voip"
+          tone="voip"
+          title={SERVICE_TYPE_LABELS.voip}
+          description="Your phone service plan"
+          status={<ServiceStatusBadge status={voip.status} withIcon />}
+          action={<ServiceStatusBadge status={voip.status} />}
         >
-          <div className="grid gap-3 border-t border-white/10 pt-5 md:grid-cols-2">
-            {devicesResult.data.map((device) => {
-              const expired = isDeviceExpired(device.installed_on, device.lifetime_years);
-              const expiry = deviceExpiryDate(device.installed_on, device.lifetime_years);
-              return (
-                <div
-                  key={device.id}
-                  className={`rounded-xl border p-4 ${
-                    expired
-                      ? "border-amber-500/40 bg-amber-500/10"
-                      : "border-white/10 bg-background"
-                  }`}
-                >
-                  <p className="font-bold text-white">{device.label}</p>
-                  <p className="mt-0.5 text-[11px] font-bold uppercase tracking-widest text-white/35">
-                    {deviceCategoryLabel(device.category)}
-                  </p>
-                  <p className="mt-1.5 text-sm text-white/65">
-                    Installed {formatDate(device.installed_on)}
-                  </p>
-                  <p className={`mt-1 text-sm font-semibold ${expired ? "text-amber-300" : "text-white/65"}`}>
-                    {expired
-                      ? `Replacement was due ${expiry.toLocaleDateString("en-CA", { year: "numeric", month: "long" })}. Call McKee to schedule it.`
-                      : `Next replacement due ${expiry.toLocaleDateString("en-CA", { year: "numeric", month: "long" })}.`}
-                  </p>
-                </div>
-              );
-            })}
+          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
+            <div>
+              <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                {tierLabel(voip.tier)}
+              </p>
+              {voip.monthly_amount_cents != null && (
+                <ServiceRateLine
+                  monthlyCents={voip.monthly_amount_cents}
+                  interval={voip.billing_interval}
+                  billingMethod={voip.billing_method}
+                  suffix={` for ${voipCoverageLabel({
+                    tier: voip.tier,
+                    numberCount: voip.number_count,
+                    seatCount: voip.seat_count,
+                  })}`}
+                />
+              )}
+            </div>
+            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
+              Your phone service is managed by McKee Security. To add numbers or
+              seats, or to make other changes, call{" "}
+              <a
+                href="tel:+17054572156"
+                className="whitespace-nowrap font-bold text-white hover:text-primary"
+              >
+                (705) 457-2156
+              </a>
+              .
+            </p>
+          </div>
+        </PortalCard>
+      )}
+
+      {cloud && (
+        <PortalCard
+          icon="cloud"
+          tone="cloud_backup"
+          title={SERVICE_TYPE_LABELS.cloud_backup}
+          description="Camera footage stored securely off-site"
+          status={<ServiceStatusBadge status={cloud.status} withIcon />}
+          action={<ServiceStatusBadge status={cloud.status} />}
+        >
+          <div className="flex flex-col gap-5 border-t border-white/10 pt-5 md:flex-row md:items-center md:justify-between md:gap-10">
+            <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{tierLabel(cloud.tier)}</p>
+            <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
+              Your cloud backup plan runs on McKee-managed equipment. For plan
+              questions or changes, contact McKee Security at{" "}
+              <a
+                href="tel:+17054572156"
+                className="whitespace-nowrap font-bold text-white hover:text-primary"
+              >
+                (705) 457-2156
+              </a>
+              .
+            </p>
           </div>
         </PortalCard>
       )}
@@ -766,8 +894,8 @@ export default async function UserDashboardPage({
                   The service is still being prepared.
                 </p>
                 <CloudBackupInterest
-                  initiallyInterested={cloudInterestResult.data != null}
-                  email={profile.email}
+                  initiallyInterested={cloudInterest != null}
+                  email={email}
                   quiet
                 />
               </div>
@@ -775,7 +903,214 @@ export default async function UserDashboardPage({
           )}
         </div>
       )}
-        </>
+    </>
+  );
+}
+
+function ClientSecurityPanel({
+  profileId,
+  lanvacCity,
+  lanvacAccountCode,
+  monitoring,
+  showStation,
+  canRefreshStation,
+  stationState,
+  stationZones,
+  stationSignals,
+  showCallerId,
+  contacts,
+  showDevices,
+  devices,
+}: {
+  profileId: string;
+  lanvacCity: string | null;
+  lanvacAccountCode: string | null;
+  monitoring: {
+    status: "active" | "paused" | "cancelled" | "unpaid";
+    tier: string;
+    monthly_amount_cents: number | null;
+    billing_interval: "monthly" | "annual";
+    billing_method: "stripe" | "manual";
+  } | null;
+  showStation: boolean;
+  canRefreshStation: boolean;
+  stationState: {
+    panelType: string;
+    isDisabled: boolean;
+    onTestUntil: string | null;
+    lastSignalAt: string | null;
+    lastSignalClass: ReturnType<typeof asLanvacSignalClass>;
+    lastSyncedAt: string | null;
+    lastError: string | null;
+  } | null;
+  stationZones: Array<{
+    zoneNumber: number;
+    description: string;
+    zoneType: string;
+    onTest: boolean;
+    useCallList: boolean | null;
+  }>;
+  stationSignals: Array<{
+    occurredAtText: string;
+    signal: string;
+    description: string;
+    signalClass: NonNullable<ReturnType<typeof asLanvacSignalClass>>;
+  }>;
+  showCallerId: boolean;
+  contacts: Array<{ id: string; phone: string; label: string; passcode: string | null }>;
+  showDevices: boolean;
+  devices: Array<{
+    id: string;
+    label: string;
+    category: string;
+    installed_on: string;
+    lifetime_years: number;
+  }>;
+}) {
+  const subscription = monitoring ? monitoringSubscriptionCopy(monitoring.tier) : null;
+
+  return (
+    <div className="space-y-6">
+      <PortalCard
+        icon="shield"
+        tone="monitoring"
+        title="Your security system"
+        description={
+          monitoring
+            ? `${tierLabel(monitoring.tier)} · ${SERVICE_TYPE_LABELS.monitoring}`
+            : "Alarm contacts and equipment on file"
+        }
+        status={monitoring ? <ServiceStatusBadge status={monitoring.status} withIcon /> : undefined}
+      >
+        <div className="space-y-4 border-t border-white/10 pt-5">
+          {monitoring ? (
+            <>
+              <p className="max-w-3xl text-sm leading-relaxed text-white/70">{subscription?.lead}</p>
+              {subscription && subscription.details.length > 0 && (
+                <ul className="max-w-3xl list-disc space-y-1.5 pl-5 text-sm text-white/55">
+                  {subscription.details.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              )}
+              {monitoring.monthly_amount_cents != null && (
+                <ServiceRateLine
+                  monthlyCents={monitoring.monthly_amount_cents}
+                  interval={monitoring.billing_interval}
+                  billingMethod={monitoring.billing_method}
+                />
+              )}
+              <p className="max-w-3xl text-sm leading-relaxed text-white/50">
+                Zones and recent signals are what the monitoring station has for
+                this alarm. Your contact list is who they call, in order. Plan
+                changes go through McKee Security at{" "}
+                <a
+                  href="tel:+17054572156"
+                  className="whitespace-nowrap font-bold text-white hover:text-primary"
+                >
+                  (705) 457-2156
+                </a>
+                .
+              </p>
+            </>
+          ) : (
+            <p className="max-w-3xl text-sm leading-relaxed text-white/55">
+              There is no current monitoring plan on this account. Contacts and
+              equipment from an earlier plan stay here so you can still review
+              them.
+            </p>
+          )}
+        </div>
+      </PortalCard>
+
+      {showStation && (
+        <PortalCard
+          icon="shield"
+          tone="monitoring"
+          title="Zones and signals"
+          description="What the monitoring station has for this alarm, plus the recent signal log"
+        >
+          <div className="border-t border-white/10 pt-5">
+            <LanvacStationReadout
+              profileId={profileId}
+              canRefresh={canRefreshStation}
+              variant="client"
+              writesLive={lanvacWritesLive(lanvacAccountCode)}
+              state={stationState}
+              zones={stationZones}
+              signals={stationSignals}
+            />
+          </div>
+        </PortalCard>
+      )}
+
+      {showCallerId && (
+        <PortalCard
+          id="alarm-contact-list"
+          icon="phone"
+          tone="monitoring"
+          title="Alarm Contact List (Caller ID)"
+          description="Who the monitoring station calls, in order, when your alarm goes off"
+        >
+          <div className="border-t border-white/10 pt-5">
+            <p className="max-w-3xl text-sm leading-relaxed text-white/55">
+              When your alarm goes off, the monitoring station works down this
+              list from #1 to the last person. Each person has a passcode they
+              give the station to confirm who they are. Add, edit, or remove
+              people and save. McKee Security is notified automatically and
+              updates the station.
+            </p>
+            <div className="mt-5">
+              <CallerIdEditor variant="client" initialContacts={contacts} />
+            </div>
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <LanvacEmergencyReadout
+                city={lanvacCity}
+                numbers={lanvacEmergencyNumbers(lanvacCity)}
+              />
+            </div>
+          </div>
+        </PortalCard>
+      )}
+
+      {showDevices && devices.length > 0 && (
+        <PortalCard
+          id="equipment-maintenance"
+          icon="wrench"
+          tone="monitoring"
+          title="Equipment Maintenance"
+          description="Install dates and upcoming replacements for your system's hardware"
+        >
+          <div className="grid gap-3 border-t border-white/10 pt-5 md:grid-cols-2">
+            {devices.map((device) => {
+              const expired = isDeviceExpired(device.installed_on, device.lifetime_years);
+              const expiry = deviceExpiryDate(device.installed_on, device.lifetime_years);
+              return (
+                <div
+                  key={device.id}
+                  className={`rounded-xl border p-4 ${
+                    expired
+                      ? "border-amber-500/40 bg-amber-500/10"
+                      : "border-white/10 bg-background"
+                  }`}
+                >
+                  <p className="font-bold text-white">{device.label}</p>
+                  <p className="mt-0.5 text-[11px] font-bold uppercase tracking-widest text-white/35">
+                    {deviceCategoryLabel(device.category)}
+                  </p>
+                  <p className="mt-1.5 text-sm text-white/65">
+                    Installed {formatDate(device.installed_on)}
+                  </p>
+                  <p className={`mt-1 text-sm font-semibold ${expired ? "text-amber-300" : "text-white/65"}`}>
+                    {expired
+                      ? `Replacement was due ${expiry.toLocaleDateString("en-CA", { year: "numeric", month: "long" })}. Call McKee to schedule it.`
+                      : `Next replacement due ${expiry.toLocaleDateString("en-CA", { year: "numeric", month: "long" })}.`}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </PortalCard>
       )}
     </div>
   );
@@ -791,6 +1126,7 @@ function ClientAlertsPanel({
   expiredDevices,
   stationOnTest,
   stationOnTestUntil,
+  showSecurityTab,
 }: {
   unpaidServices: Array<{
     id: string;
@@ -824,6 +1160,7 @@ function ClientAlertsPanel({
   }>;
   stationOnTest: boolean;
   stationOnTestUntil: string | null;
+  showSecurityTab: boolean;
 }) {
   const clear =
     unpaidServices.length === 0 &&
@@ -879,7 +1216,18 @@ function ClientAlertsPanel({
                   minute: "2-digit",
                 })}`
               : ""}
-            . End the test from the Dashboard when the work is done.
+            . End the test from the{" "}
+            {showSecurityTab ? (
+              <a
+                href="/user-dashboard?tab=security"
+                className="font-bold text-white underline decoration-white/30 underline-offset-4 hover:text-primary hover:decoration-primary"
+              >
+                Security tab
+              </a>
+            ) : (
+              "Dashboard"
+            )}{" "}
+            when the work is done.
           </p>
         </div>
       )}
@@ -891,7 +1239,7 @@ function ClientAlertsPanel({
             anyone to call yet.
           </p>
           <a
-            href="/user-dashboard#alarm-contact-list"
+            href="/user-dashboard?tab=security#alarm-contact-list"
             className="mt-4 inline-flex cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
           >
             Add contacts
@@ -915,6 +1263,14 @@ function ClientAlertsPanel({
               </a>{" "}
               to schedule it.
             </p>
+            {showSecurityTab && (
+              <a
+                href="/user-dashboard?tab=security#equipment-maintenance"
+                className="mt-4 inline-flex cursor-pointer text-sm font-bold text-white underline decoration-white/30 underline-offset-4 hover:text-primary hover:decoration-primary"
+              >
+                View equipment
+              </a>
+            )}
           </div>
         );
       })}

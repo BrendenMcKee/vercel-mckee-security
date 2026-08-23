@@ -100,11 +100,11 @@ This is the most important regression. Most clients are not orgs.
 
 1. Sign in as the single-site client at `/user-dashboard`.
 2. Welcome uses their first name. One monitoring (and optional VoIP) card. No site switcher. No sites list. No “People with access.”
-3. Tabs: Dashboard, Settings (`?tab=settings`), Alerts (`?tab=alerts`). All three render.
+3. Tabs: Dashboard, Security (`?tab=security`, only with monitoring or leftover station/contact/equipment), Settings (`?tab=settings`), Alerts (`?tab=alerts`). Dashboard is billing-first. Security holds zones, Historic, the alarm contact list, and equipment.
 4. Settings: email is locked (sign-in identity). Change phone or address and save. Success. Reload. Value stuck. Admin should later see an account-change path if that alert exists; do not fail the suite if the staff alert is only in email.
 5. Settings password: wrong current password is rejected. A valid change works only if the operator gave a disposable password. If you change it, record the new password in the report.
-6. Dashboard: caller list visible if contacts exist. Save a harmless reorder or a test contact if the editor is open. Confirm the list is this house only.
-7. Billing card: due date / rail matches this one site. Do not complete a live Stripe checkout against a real card unless the operator said test-mode is OK. Opening the billing portal or checkout and then cancelling is enough if Stripe is configured.
+6. Security tab: caller list visible if contacts exist. Edit an existing person (name / phone / passcode) or save a harmless reorder. Confirm the list is this house only. Dashboard must not show the list or pull Lanvac.
+7. Billing card on Dashboard: due date / rail matches this one site. Do not complete a live Stripe checkout against a real card unless the operator said test-mode is OK. Opening the billing portal or checkout and then cancelling is enough if Stripe is configured.
 8. Sign out. Sign-in page again. Sign back in. Still no org chrome.
 
 ## Suite C. Auth edges (single-site)

@@ -46,7 +46,8 @@ function withStableIds(contacts: Array<Partial<CallerIdContact> & { phone: strin
  * Shared caller ID list editor (R23): the client dashboard and the admin
  * client-detail page render the same list UI and run the same save pipeline.
  * Every contact carries the passcode the monitoring station uses to verify
- * them. The admin variant additionally requires an authorization method +
+ * them. Existing people can be edited (name, number, passcode) before save.
+ * The admin variant additionally requires an authorization method +
  * reason note (R24) and shows the exact diff in the confirm dialog before
  * saving.
  */
@@ -67,6 +68,10 @@ export function CallerIdEditor({
   const [newLabel, setNewLabel] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newPasscode, setNewPasscode] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editPasscode, setEditPasscode] = useState("");
   const [authorizedVia, setAuthorizedVia] = useState("");
   const [changeReason, setChangeReason] = useState("");
   const [notice, setNotice] = useState<{ kind: "ok" | "error" | "wait"; text: string } | null>(null);
@@ -96,40 +101,47 @@ export function CallerIdEditor({
     return () => window.clearInterval(id);
   }, [waitUntil, notice?.kind]);
 
-  // Existing contacts saved before passcodes existed need one before the
-  // next save goes through.
-  const missingPasscodes = contacts.filter((c) => !c.passcode?.trim());
-
-  function addContact() {
-    setNotice(null);
-    const label = newLabel.trim();
+  function parsedContact(
+    labelRaw: string,
+    phoneRaw: string,
+    passcodeRaw: string,
+    { requirePasscode }: { requirePasscode: boolean },
+  ): { label: string; phone: string; passcode: string } | null {
+    const label = labelRaw.trim();
     if (!label) {
       setNotice({ kind: "error", text: "Add the person's name first." });
-      return;
+      return null;
     }
     if (label.length > LANVAC_CONTACT_NAME_MAX) {
       setNotice({ kind: "error", text: `Name is too long (${LANVAC_CONTACT_NAME_MAX} max).` });
-      return;
+      return null;
     }
-    const phone = normalizePhone(newPhone);
+    const phone = normalizePhone(phoneRaw);
     if (!phone) {
-      setNotice({ kind: "error", text: `"${newPhone}" is not a valid North American phone number.` });
-      return;
+      setNotice({ kind: "error", text: `"${phoneRaw}" is not a valid North American phone number.` });
+      return null;
     }
-    const passcode = newPasscode.trim();
-    if (!passcode) {
+    const passcode = passcodeRaw.trim();
+    if (requirePasscode && !passcode) {
       setNotice({
         kind: "error",
         text: "Add this person's passcode. It's the word they give the monitoring station to confirm who they are.",
       });
-      return;
+      return null;
     }
     if (passcode.length > LANVAC_PASSCODE_MAX) {
       setNotice({ kind: "error", text: `Passcode is too long (${LANVAC_PASSCODE_MAX} max).` });
-      return;
+      return null;
     }
-    if (contacts.some((c) => contactKey(c) === `${phone}|${label}|${passcode}`)) {
-      setNotice({ kind: "error", text: `${label} with that number and passcode is already on the list.` });
+    return { label, phone, passcode };
+  }
+
+  function addContact() {
+    setNotice(null);
+    const parsed = parsedContact(newLabel, newPhone, newPasscode, { requirePasscode: true });
+    if (!parsed) return;
+    if (contacts.some((c) => contactKey(c) === contactKey(parsed))) {
+      setNotice({ kind: "error", text: `${parsed.label} with that number and passcode is already on the list.` });
       return;
     }
     if (contacts.length >= 15) {
@@ -138,11 +150,56 @@ export function CallerIdEditor({
     }
     setContacts((list) => [
       ...list,
-      { id: crypto.randomUUID(), phone, label, passcode },
+      { id: crypto.randomUUID(), phone: parsed.phone, label: parsed.label, passcode: parsed.passcode },
     ]);
     setNewLabel("");
     setNewPhone("");
     setNewPasscode("");
+  }
+
+  function startEdit(contact: CallerIdContact) {
+    setNotice(null);
+    setEditingId(contact.id);
+    setEditLabel(contact.label);
+    setEditPhone(formatPhone(contact.phone));
+    setEditPasscode(contact.passcode ?? "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditLabel("");
+    setEditPhone("");
+    setEditPasscode("");
+  }
+
+  function contactsAfterEdit(): CallerIdContact[] | null {
+    if (!editingId) return contacts;
+    setNotice(null);
+    const parsed = parsedContact(editLabel, editPhone, editPasscode, { requirePasscode: true });
+    if (!parsed) return null;
+    if (
+      contacts.some(
+        (c) => c.id !== editingId && contactKey(c) === contactKey(parsed),
+      )
+    ) {
+      setNotice({ kind: "error", text: `${parsed.label} with that number and passcode is already on the list.` });
+      return null;
+    }
+    return contacts.map((c) =>
+      c.id === editingId
+        ? { ...c, phone: parsed.phone, label: parsed.label, passcode: parsed.passcode }
+        : c,
+    );
+  }
+
+  function applyEdit(): boolean {
+    const next = contactsAfterEdit();
+    if (!next) return false;
+    if (editingId) {
+      setContacts(next);
+      cancelEdit();
+    }
+    return true;
   }
 
   function removeContact(id: string) {
@@ -196,20 +253,20 @@ export function CallerIdEditor({
     setDraggingId(null);
   }
 
-  function describeDiff(): string {
+  function describeDiff(list: CallerIdContact[] = contacts): string {
     const initial = new Set(baseline.map(contactKey));
-    const next = new Set(contacts.map(contactKey));
-    const added = contacts.filter((c) => !initial.has(contactKey(c)));
+    const next = new Set(list.map(contactKey));
+    const added = list.filter((c) => !initial.has(contactKey(c)));
     const removed = baseline.filter((c) => !next.has(contactKey(c)));
     const line = (c: CallerIdContact, index: number) =>
       `#${index + 1} ${c.label}, ${formatPhone(c.phone)}${c.passcode ? `, passcode: ${c.passcode}` : ""}`;
-    const moved = contacts.flatMap((c, index) => {
+    const moved = list.flatMap((c, index) => {
       const from = baseline.findIndex((entry) => contactKey(entry) === contactKey(c));
       if (from < 0 || from === index) return [];
       return [`~ ${line(c, index)} (was #${from + 1})`];
     });
     return [
-      ...added.map((c) => `+ ${line(c, contacts.indexOf(c))}`),
+      ...added.map((c) => `+ ${line(c, list.indexOf(c))}`),
       ...removed.map((c) => `- ${c.label}, ${formatPhone(c.phone)}`),
       ...moved,
     ].join("\n");
@@ -217,6 +274,12 @@ export function CallerIdEditor({
 
   function save() {
     setNotice(null);
+    const list = contactsAfterEdit();
+    if (!list) return;
+    if (editingId) {
+      setContacts(list);
+      cancelEdit();
+    }
 
     if (variant === "client" && waitUntil != null && Date.now() < waitUntil) {
       setNotice({
@@ -226,10 +289,11 @@ export function CallerIdEditor({
       return;
     }
 
-    if (missingPasscodes.length > 0) {
+    const missingOnList = list.filter((c) => !c.passcode?.trim());
+    if (missingOnList.length > 0) {
       setNotice({
         kind: "error",
-        text: `Every contact needs a passcode before saving. Missing: ${missingPasscodes.map((c) => c.label).join(", ")}.`,
+        text: `Every contact needs a passcode before saving. Missing: ${missingOnList.map((c) => c.label).join(", ")}.`,
       });
       return;
     }
@@ -245,13 +309,13 @@ export function CallerIdEditor({
       }
       // R24: the exact diff is confirmed before an admin save commits.
       const confirmed = window.confirm(
-        `Save these contact list changes on the client's behalf?\n\n${describeDiff()}\n\nThe client will be emailed these exact changes and the reason you recorded.`,
+        `Save these contact list changes on the client's behalf?\n\n${describeDiff(list)}\n\nThe client will be emailed these exact changes and the reason you recorded.`,
       );
       if (!confirmed) return;
     }
 
     startTransition(async () => {
-      const payload = contacts.map((c) => ({ phone: c.phone, label: c.label, passcode: c.passcode ?? "" }));
+      const payload = list.map((c) => ({ phone: c.phone, label: c.label, passcode: c.passcode ?? "" }));
       let result: SaveCallerIdResult;
       if (variant === "admin") {
         result = await saveClientCallerIdList({
@@ -277,14 +341,27 @@ export function CallerIdEditor({
         setNotice({ kind: "ok", text: "No changes to save." });
         return;
       }
-      setBaseline(contacts);
+      setBaseline(list);
       if (variant === "client") {
         setWaitUntil(Date.now() + CALLER_ID_CLIENT_COOLDOWN_SECONDS * 1000);
       }
+      const updatedCount = list.filter((c) => {
+        const prev = baseline.find((b) => b.id === c.id);
+        return prev != null && contactKey(prev) !== contactKey(c);
+      }).length;
+      const addedById = list.filter((c) => !baseline.some((b) => b.id === c.id)).length;
+      const removedById = baseline.filter((b) => !list.some((c) => c.id === b.id)).length;
+      const movedCount = result.reordered.length;
+      const summaryBits = [
+        addedById > 0 && `${addedById} added`,
+        removedById > 0 && `${removedById} removed`,
+        updatedCount > 0 && `${updatedCount} updated`,
+        movedCount > 0 && `${movedCount} moved`,
+      ].filter(Boolean);
       const parts = [
-        result.reordered.length > 0 && result.added.length === 0 && result.removed.length === 0
+        movedCount > 0 && addedById === 0 && removedById === 0 && updatedCount === 0
           ? "Call order saved."
-          : `List saved (${result.added.length} added, ${result.removed.length} removed${result.reordered.length > 0 ? `, ${result.reordered.length} moved` : ""}).`,
+          : `List saved (${summaryBits.join(", ") || "changes stored"}).`,
         result.adminEmailSent
           ? "McKee has been notified and will update the monitoring station."
           : "Heads up: the notification email to McKee failed; please call to confirm the change was received.",
@@ -322,21 +399,25 @@ export function CallerIdEditor({
             Drag the handle to change who the station calls first. #1 is first.
           </p>
           <ul className="space-y-2">
-          {contacts.map((contact, index) => (
+          {contacts.map((contact, index) => {
+            const isEditing = editingId === contact.id;
+            return (
             <li
               key={contact.id}
               data-contact-id={contact.id}
               className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background px-3 py-3 sm:px-4 ${
                 draggingId === contact.id
                   ? "border-sky-400/50 bg-sky-500/10"
-                  : "border-white/10"
+                  : isEditing
+                    ? "border-sky-400/40 bg-sky-500/5"
+                    : "border-white/10"
               }`}
             >
-              <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
+              <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center sm:gap-3.5">
                 <button
                   type="button"
                   aria-label={`Reorder ${contact.label}. Currently #${index + 1}. Use arrow keys or drag.`}
-                  disabled={pending}
+                  disabled={pending || editingId != null}
                   onPointerDown={(event) => onDragHandlePointerDown(contact.id, event)}
                   onPointerMove={onDragHandlePointerMove}
                   onPointerUp={onDragHandlePointerUp}
@@ -358,9 +439,58 @@ export function CallerIdEditor({
                     <rect x="4" y="13.2" width="12" height="1.8" rx="0.9" />
                   </svg>
                 </button>
-                <span className="w-8 shrink-0 text-sm font-bold tabular-nums text-white">
+                <span
+                  className={`w-8 shrink-0 text-sm font-bold tabular-nums text-white ${
+                    isEditing ? "pt-2 sm:pt-0" : ""
+                  }`}
+                >
                   #{index + 1}
                 </span>
+                {isEditing ? (
+                  <div
+                    className="grid min-w-0 flex-1 gap-2 sm:grid-cols-3"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        applyEdit();
+                      } else if (event.key === "Escape") {
+                        event.preventDefault();
+                        cancelEdit();
+                      }
+                    }}
+                  >
+                    <label className="flex min-w-0 flex-col gap-1 text-xs text-white/70">
+                      Name / relation
+                      <input
+                        aria-label={`Name for contact #${index + 1}`}
+                        maxLength={LANVAC_CONTACT_NAME_MAX}
+                        value={editLabel}
+                        onChange={(e) => setEditLabel(e.target.value)}
+                        className={`${inputClass} py-2!`}
+                      />
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1 text-xs text-white/70">
+                      Phone number
+                      <input
+                        type="tel"
+                        aria-label={`Phone for ${editLabel || contact.label}`}
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className={`${inputClass} py-2!`}
+                      />
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1 text-xs text-white/70">
+                      Passcode
+                      <input
+                        aria-label={`Passcode for ${editLabel || contact.label}`}
+                        maxLength={LANVAC_PASSCODE_MAX}
+                        value={editPasscode}
+                        onChange={(e) => setEditPasscode(e.target.value)}
+                        className={`${inputClass} py-2!`}
+                      />
+                    </label>
+                  </div>
+                ) : (
                 <div className="min-w-0">
                   <p className="font-bold text-white">{contact.label}</p>
                   <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/55">
@@ -385,17 +515,52 @@ export function CallerIdEditor({
                     )}
                   </p>
                 </div>
+                )}
               </div>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => removeContact(contact.id)}
-                className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
-              >
-                Remove
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={applyEdit}
+                      className="min-h-11 cursor-pointer rounded-lg bg-primary px-3 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-(--primary-hover) disabled:cursor-default disabled:opacity-50"
+                    >
+                      Done
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={cancelEdit}
+                      className="min-h-11 cursor-pointer rounded-lg border border-white/20 px-3 text-xs font-bold uppercase tracking-wide text-white/70 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={pending || editingId != null}
+                      onClick={() => startEdit(contact)}
+                      className="min-h-11 cursor-pointer rounded-lg border border-white/20 px-3 text-xs font-bold uppercase tracking-wide text-white/70 transition-colors hover:bg-white/10 disabled:cursor-default disabled:opacity-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pending || editingId != null}
+                      onClick={() => removeContact(contact.id)}
+                      className="min-h-11 cursor-pointer rounded-lg border border-red-500/30 px-3 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </>
+                )}
+              </div>
             </li>
-          ))}
+            );
+          })}
           </ul>
         </div>
       )}
@@ -443,7 +608,8 @@ export function CallerIdEditor({
         </div>
         <p className="mt-3 text-xs leading-relaxed text-white/40">
           The passcode is the word this person gives the monitoring station to
-          prove who they are when the alarm goes off.
+          prove who they are when the alarm goes off. Use Edit on an existing
+          person to change their name, number, or passcode, then Save List.
         </p>
       </div>
 

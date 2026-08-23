@@ -6,9 +6,10 @@ internal Data Drops tool. This is the `website/` app in the
 [vercel-mckee-security monorepo](../README.md) and is the Vercel root directory.
 
 Portal implementation lives in [`../PORTAL_PLAN.md`](../PORTAL_PLAN.md). The
-client portal (`/user-dashboard`) is tabbed: **Dashboard** (services, billing,
-alarm contacts, equipment), **Settings** (phone, service address, password;
-sign-in email is locked), and **Alerts**. The staff console is
+client portal (`/user-dashboard`) is tabbed: **Dashboard** (billing first,
+then compact service cards), **Security** (zones, signals, alarm contacts,
+equipment — only when the account has monitoring), **Settings** (phone,
+service address, password; sign-in email is locked), and **Alerts**. The staff console is
 `/admin-dashboard` (Overview, Clients, Billing, Devices, Alerts). Client-facing
 portal mail (invites, reminders, receipts, caller-ID and device notices) stays
 off until the Billing-tab `GO LIVE` confirm (`PORTAL_PLAN.md` 9.5.5C). R54
@@ -34,7 +35,7 @@ npm run dev    # http://localhost:3000
 
 - Marketing pages: `src/app/*` and `src/components/*`
 - Customer portal: `src/app/(portal)/user-dashboard`, `src/components/portal/*`,
-  `src/lib/portal/*`. Tabs are query-param driven (`?tab=settings`, `?tab=alerts`).
+  `src/lib/portal/*`. Tabs are query-param driven (`?tab=security`, `?tab=settings`, `?tab=alerts`).
 - Admin portal: `src/app/(admin-portal)/admin-dashboard`,
   `src/components/admin-portal/*`
 - Starlink rental admin: `src/app/starlink-admin`, `src/components/starlink-admin/*`,

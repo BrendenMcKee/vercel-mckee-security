@@ -168,6 +168,7 @@ async function audit(name, path, session) {
 try {
   await audit("client-signin", "/user-dashboard", null);
   await audit("client-dashboard", "/user-dashboard", clientSession);
+  await audit("client-security", "/user-dashboard?tab=security", clientSession);
   await audit("admin-signin", "/admin-dashboard", null);
   await audit("admin-overview", "/admin-dashboard", adminSession);
   await audit("admin-clients", "/admin-dashboard?tab=clients", adminSession);

@@ -13,7 +13,7 @@ Portal `devices` (batteries / smokes) is a **different** list. Zones are what th
 On every **current monitoring** site that has a Lanvac CODE:
 
 - Zone list: admin fetch / create / edit / delete. Client read-only (number, description, type, on-test, uses-call-list).
-- Historic signals: paged log for admin and client, color-coded, at the bottom of the security block. Not a live stream.
+- Historic signals: paged log for admin and client, color-coded, at the bottom of the Security tab (client) or the admin station card. Not a live stream.
 - Panel type + a last-known status chip.
 - On/off test with a duration. **Whole account only** (`Account/OnTest` / `OffTest`). Admin and client Account admin. We do not put a single zone on test. `Zone/OnTest` exists on Lanvac and is unused.
 
@@ -72,7 +72,7 @@ Zone numbers above 100 are fine to list. We never call Zone/OnTest.
 ## Access
 
 - New server-only module `website/src/lib/portal/lanvac-api.ts`. Never return the dealer password or raw request body. Cache writes live in `lanvac-station-store.ts` (`server-only`). Do not export cache-clear as a server action.
-- **Reads:** any CODE already on a portal profile. On-demand per open page. No cron over all CODEs.
+- **Reads:** any CODE already on a portal profile. On-demand when the client Security tab or the admin station card is open. No cron over all CODEs. Dashboard / Settings / Alerts do not pull Lanvac.
 - **Writes:** `O5985` only until you say go. Other sites show the UI and "Station writes are not live on this account."
 - UI and **server actions** require `hasCurrentMonitoring` and a CODE.
 - Every action takes `profileId` from day one. Today: session profile must match (or admin). After R53: `requireSelectedSite`.

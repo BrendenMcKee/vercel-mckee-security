@@ -11,7 +11,7 @@
 //    (different names). Reordering the list is a recorded change.
 //  - cross-profile writes are blocked by RLS (client cannot touch another list)
 //  - devices: expired device (2018 battery) renders amber on the client
-//    dashboard; admin date update clears it; clients cannot write devices
+//    Security tab; admin date update clears it; clients cannot write devices
 
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -346,12 +346,12 @@ try {
 
   // --- UI: client dashboard caller ID card -----------------------------------
   {
-    const res = await fetch(`${baseUrl}/user-dashboard`, {
+    const res = await fetch(`${baseUrl}/user-dashboard?tab=security`, {
       headers: { cookie: clientSession.cookieHeader() },
     });
     const html = await res.text();
     check(
-      "client dashboard renders caller ID card with formatted contact",
+      "client security tab renders caller ID card with formatted contact",
       res.status === 200 && html.includes("Alarm Contact List") && html.includes("(705) 555-0101"),
       `status=${res.status}`,
     );
@@ -383,12 +383,12 @@ try {
     check("admin INSERT device succeeds (RLS)", !error, error?.code ?? "");
   }
   {
-    const res = await fetch(`${baseUrl}/user-dashboard`, {
+    const res = await fetch(`${baseUrl}/user-dashboard?tab=security`, {
       headers: { cookie: clientSession.cookieHeader() },
     });
     const html = await res.text();
     check(
-      "2018 battery renders expired (amber) on client dashboard",
+      "2018 battery renders expired (amber) on client security tab",
       res.status === 200 && html.includes("Replacement was due"),
       `status=${res.status}`,
     );
@@ -400,12 +400,12 @@ try {
       .update({ installed_on: today, expiry_alerted_at: null })
       .eq("id", deviceId);
     check("admin device date update succeeds (RLS)", !error, error?.code ?? "");
-    const res = await fetch(`${baseUrl}/user-dashboard`, {
+    const res = await fetch(`${baseUrl}/user-dashboard?tab=security`, {
       headers: { cookie: clientSession.cookieHeader() },
     });
     const html = await res.text();
     check(
-      "date update clears expired state on client dashboard",
+      "date update clears expired state on client security tab",
       res.status === 200 && !html.includes("Replacement was due") && html.includes("Next replacement due"),
       `status=${res.status}`,
     );
