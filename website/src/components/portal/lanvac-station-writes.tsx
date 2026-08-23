@@ -29,6 +29,8 @@ const inputClass =
   "min-h-11 rounded-xl border border-white/15 bg-background px-3 py-2 text-sm text-white outline-none transition-colors focus:border-primary";
 const buttonClass =
   "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-white/20 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
+const startTestButtonClass =
+  "inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-primary/50 bg-primary/20 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-primary/20";
 
 function DurationPicker({
   minutes,
@@ -92,7 +94,7 @@ function DurationPicker({
             }}
             className={`${buttonClass} ${
               !customActive && minutes === value
-                ? "border-primary/50 bg-primary/15 text-white"
+                ? "border-primary bg-primary/45 text-white"
                 : ""
             }`}
           >
@@ -195,11 +197,13 @@ export function StationOnTestControls({
   return (
     <div className="space-y-3 rounded-xl border border-white/10 bg-background p-4">
       <h3 className="text-lg font-semibold tracking-tight text-white">
-        Put the System on Test
+        Put Account on Test
       </h3>
       <p className="text-sm leading-relaxed text-white/55">
-        Tells the monitoring station you are working on the system. The system
-        stays armed.
+        Use this before you service the system or trip a sensor on purpose. The
+        station still receives the signals but will not call your list or
+        dispatch police or fire. The system stays armed. It comes off test when
+        the time ends, or when you end it here.
       </p>
       <p className={`text-sm ${accountOnTest ? "text-amber-100" : "text-emerald-200/90"}`}>
         {accountOnTest && until
@@ -223,9 +227,9 @@ export function StationOnTestControls({
           type="button"
           disabled={!canStart}
           onClick={() => run(true)}
-          className={buttonClass}
+          className={startTestButtonClass}
         >
-          {pending && !accountOnTest ? "Working..." : "Start account test"}
+          {pending && !accountOnTest ? "Working..." : "Put Account on Test"}
         </button>
         <button
           type="button"

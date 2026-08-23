@@ -268,12 +268,16 @@ export function LanvacStationReadout({
         )}
       </div>
 
+      <div className="border-t border-white/15" />
+
       <StationOnTestControls
         profileId={profileId}
         writesLive={writesLive}
         onTestUntil={state?.onTestUntil ?? null}
         now={now}
       />
+
+      <div className="border-t border-white/15" />
 
       {variant === "admin" && (
         <AdminZoneEditor profileId={profileId} writesLive={writesLive} zones={zones} />

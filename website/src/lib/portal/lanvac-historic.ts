@@ -401,7 +401,7 @@ function rewriteLine(description: string, zones?: HistoricZoneHint[]): string | 
   }
 
   if (/SIGNAL COMING FROM\s+ALARMNET/i.test(raw)) {
-    return "Honeywell AlarmNet communicator (cellular or IP)";
+    return "Came in through AlarmNet";
   }
 
   const reference = raw.match(/REFERENCE#?\s*>>?\s*([A-Z0-9-]+)/i);
@@ -477,7 +477,7 @@ function pickTitle(kind: HistoricKind, details: string[]): string {
       const typed = details.find(
         (line) =>
           /alarm|supervisory/i.test(line) &&
-          !/received through|alarmnet communicator/i.test(line),
+          !/received through|alarmnet/i.test(line),
       );
       if (typed) return typed;
       const zone = details.find((line) => /Zone \d+/i.test(line));
@@ -566,7 +566,7 @@ function pickSummary(kind: HistoricKind, details: string[], title: string): stri
       return "A monitored device is off-normal. This is not a full alarm.";
     }
     if (/alarmnet communicator/i.test(title) || (details.some((line) => /alarmnet/i.test(line)) && !zone && !/zone \d+/i.test(title))) {
-      return "No zone on this line. The Honeywell AlarmNet communicator (cellular or IP) reported to the station — usually a path or supervision event, not a sensor going off.";
+      return "No zone was listed. This is a communicator report, not a sensor.";
     }
     const path = details.find((line) => /alarmnet/i.test(line));
     return [zone && !title.includes(zone) ? zone : null, path].filter(Boolean).join(" · ") || path || zone || null;
@@ -593,7 +593,7 @@ function compactOnTestDetails(details: string[]): string[] {
   if (!from || !until) return details;
   return details
     .filter((line) => line !== from && line !== until)
-    .concat(`${from} – ${until.replace(/^Until /i, "")}`);
+    .concat(`${from} to ${until.replace(/^Until /i, "")}`);
 }
 
 function leftoverDetails(

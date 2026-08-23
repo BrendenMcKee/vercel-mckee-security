@@ -327,7 +327,7 @@ const communicatorOnly = presentHistoricSignals([
 check(
   "zone-less AlarmNet is a communicator event",
   communicatorOnly[0]?.title === "AlarmNet Communicator" &&
-    /path or supervision/i.test(communicatorOnly[0].summary ?? ""),
+    /communicator report/i.test(communicatorOnly[0].summary ?? ""),
 );
 
 const bareRestore = presentHistoricSignals([
