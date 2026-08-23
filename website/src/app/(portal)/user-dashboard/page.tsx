@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { getAuthContext } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import {
@@ -30,6 +31,7 @@ import { LanvacStationReadout } from "@/components/portal/lanvac-station-readout
 import { lanvacEmergencyNumbers } from "@/lib/portal/lanvac-cities";
 import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
 import { isStationOnTest, lanvacWritesLive } from "@/lib/portal/lanvac-writes";
+import { ScrollToHash } from "@/components/portal/scroll-to-hash";
 
 export const metadata: Metadata = {
   title: "Manage Account",
@@ -376,6 +378,9 @@ export default async function UserDashboardPage({
 
   return (
     <div className="space-y-6">
+      <Suspense fallback={null}>
+        <ScrollToHash />
+      </Suspense>
       <nav
         className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto border-b border-white/10 px-4 sm:mx-0 sm:gap-2 sm:px-0"
         aria-label="Client portal sections"
@@ -384,6 +389,7 @@ export default async function UserDashboardPage({
           <Link
             key={item.id}
             href={item.href}
+            prefetch={item.id === "security" ? false : undefined}
             className={`shrink-0 whitespace-nowrap rounded-t-xl px-3.5 py-2.5 text-[13px] font-bold uppercase tracking-wide transition-colors sm:px-5 sm:text-sm ${
               activeTab === item.id
                 ? "border border-b-0 border-white/10 bg-surface text-white"
@@ -583,12 +589,13 @@ function ClientDashboardPanel({
             does not have anyone to call yet. Add at least one person with their
             passcode.
           </p>
-          <a
+          <Link
             href="/user-dashboard?tab=security#alarm-contact-list"
+            prefetch={false}
             className="mt-4 inline-flex cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
           >
             Add contacts
-          </a>
+          </Link>
         </div>
       )}
 
@@ -735,12 +742,13 @@ function ClientDashboardPanel({
                 />
               )}
               {showSecurityTab && (
-                <a
+                <Link
                   href="/user-dashboard?tab=security"
+                  prefetch={false}
                   className="mt-4 inline-flex cursor-pointer text-sm font-bold text-white underline decoration-white/30 underline-offset-4 hover:text-primary hover:decoration-primary"
                 >
                   Manage zones, signals, and contacts
-                </a>
+                </Link>
               )}
             </div>
             <p className="max-w-sm text-sm leading-relaxed text-white/55 md:border-l md:border-white/10 md:pl-8">
@@ -1218,12 +1226,13 @@ function ClientAlertsPanel({
               : ""}
             . End the test from the{" "}
             {showSecurityTab ? (
-              <a
+              <Link
                 href="/user-dashboard?tab=security"
+                prefetch={false}
                 className="font-bold text-white underline decoration-white/30 underline-offset-4 hover:text-primary hover:decoration-primary"
               >
                 Security tab
-              </a>
+              </Link>
             ) : (
               "Dashboard"
             )}{" "}
@@ -1238,12 +1247,13 @@ function ClientAlertsPanel({
             Your monitoring plan is on this account, but the monitoring station does not have
             anyone to call yet.
           </p>
-          <a
+          <Link
             href="/user-dashboard?tab=security#alarm-contact-list"
+            prefetch={false}
             className="mt-4 inline-flex cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-(--primary-hover)"
           >
             Add contacts
-          </a>
+          </Link>
         </div>
       )}
       {expiredDevices.map((device) => {
@@ -1264,12 +1274,13 @@ function ClientAlertsPanel({
               to schedule it.
             </p>
             {showSecurityTab && (
-              <a
+              <Link
                 href="/user-dashboard?tab=security#equipment-maintenance"
+                prefetch={false}
                 className="mt-4 inline-flex cursor-pointer text-sm font-bold text-white underline decoration-white/30 underline-offset-4 hover:text-primary hover:decoration-primary"
               >
                 View equipment
-              </a>
+              </Link>
             )}
           </div>
         );

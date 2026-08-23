@@ -78,12 +78,21 @@ export function CallerIdEditor({
   const [pending, startTransition] = useTransition();
 
   const dirty = useMemo(() => {
+    const editing = editingId ? contacts.find((c) => c.id === editingId) : null;
+    if (
+      editing &&
+      (editLabel !== editing.label ||
+        editPhone !== formatPhone(editing.phone) ||
+        editPasscode !== (editing.passcode ?? ""))
+    ) {
+      return true;
+    }
     if (contacts.length !== baseline.length) return true;
     return contacts.some((contact, index) => {
       const saved = baseline[index];
       return !saved || contactKey(contact) !== contactKey(saved);
     });
-  }, [contacts, baseline]);
+  }, [contacts, baseline, editingId, editLabel, editPhone, editPasscode]);
 
   useEffect(() => {
     if (waitUntil == null || notice?.kind !== "wait") return;
