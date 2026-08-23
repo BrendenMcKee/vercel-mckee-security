@@ -12,6 +12,7 @@ export function AuthFrame({
   description,
   children,
   footer,
+  badge,
 }: {
   variant: "client" | "admin";
   eyebrow: string;
@@ -19,6 +20,7 @@ export function AuthFrame({
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  badge?: string;
 }) {
   const isAdmin = variant === "admin";
 
@@ -27,6 +29,10 @@ export function AuthFrame({
       {isAdmin ? (
         <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200">
           Staff only
+        </span>
+      ) : badge ? (
+        <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-red-100">
+          {badge}
         </span>
       ) : (
         <img
