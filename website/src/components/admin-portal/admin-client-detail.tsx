@@ -76,7 +76,7 @@ import {
 } from "@/components/portal/lanvac-station-readout";
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
-import { PortalCard, PortalCardIcon } from "@/components/portal/portal-card";
+import { PortalCard, PortalCardIcon, SERVICE_PORTAL_ICON } from "@/components/portal/portal-card";
 
 type InvitationSummary = Pick<
   Tables<"invitations">,
@@ -275,22 +275,18 @@ function CloudBackupDevelopmentCard() {
   if (CLOUD_BACKUP_AVAILABLE) return null;
 
   return (
-    <div
-      aria-disabled
-      className="rounded-xl border border-dashed border-white/10 bg-white/2.5 p-4 opacity-75"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="font-bold text-white">{SERVICE_TYPE_LABELS.cloud_backup}</p>
-          <p className="mt-1 text-xs text-white/45">
-            Secure off-site retention for IP-camera footage
-          </p>
-        </div>
+    <PortalCard
+      icon="cloud"
+      tone="muted"
+      title={SERVICE_TYPE_LABELS.cloud_backup}
+      description="Secure off-site retention for IP-camera footage"
+      action={
         <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white/65">
           In Development
         </span>
-      </div>
-      <p className="mt-3 text-xs leading-relaxed text-white/45">
+      }
+    >
+      <p className="text-xs leading-relaxed text-white/45">
         Planned retention options: {CLOUD_BACKUP_PLANNED_RETENTION_COPY}. This
         template will unlock after the camera ingestion and retrieval system is
         ready.
@@ -311,7 +307,7 @@ function CloudBackupDevelopmentCard() {
           ))}
         </select>
       </label>
-    </div>
+    </PortalCard>
   );
 }
 
@@ -993,9 +989,12 @@ function ServiceRow({ service }: { service: Tables<"services"> }) {
     <div className={`space-y-4 rounded-xl border bg-background p-4 sm:p-5 ${SERVICE_THEME[service.service_type].card}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className={`h-2.5 w-2.5 rounded-full ${SERVICE_THEME[service.service_type].dot}`} aria-hidden />
+          <PortalCardIcon
+            icon={SERVICE_PORTAL_ICON[service.service_type]}
+            tone={service.service_type}
+          />
           <span className="font-bold text-white">{serviceLabel}</span>
-          <ServiceStatusBadge status={service.status} />
+          <ServiceStatusBadge status={service.status} withIcon />
         </div>
         <span className="text-xs uppercase tracking-widest text-white/40">
           {service.billing_method === "stripe"
@@ -1490,16 +1489,12 @@ function ServicesBillingCard({
   ].sort((a, b) => b.paidOn.localeCompare(a.paidOn));
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
-      <h2 className="text-lg font-bold text-white">Services &amp; Billing</h2>
-      <p className="mt-1 text-xs text-white/40">
-        Each service shows what the client has and how they pay for it, in one
-        place. Only McKee can change plans; the client sees theirs read-only.
-        Clients either pay automatically by card, or pay you directly and you
-        record it here. Recorded payments can&apos;t be edited afterwards; if
-        you make a mistake, record a correcting entry (a negative amount works).
-      </p>
-
+    <PortalCard
+      icon="card"
+      tone="billing"
+      title="Services & Billing"
+      description="Each service keeps its product color: red for monitoring, teal for VoIP, sky for Camera Cloud Backup. Only McKee can change plans. Recorded payments cannot be edited afterwards; a correcting entry (including a negative amount) works."
+    >
       {cloudBackupInterest &&
         !client.services.some(
           (service) =>
@@ -1568,7 +1563,7 @@ function ServicesBillingCard({
           </div>
         )}
       </div>
-    </div>
+    </PortalCard>
   );
 }
 
@@ -2274,12 +2269,32 @@ export function AdminClientDetail({
 
   if (tab === "billing") {
     return (
-      <ServicesBillingCard
-        client={client}
-        manualPayments={manualPayments}
-        cardPayments={cardPayments}
-        cloudBackupInterest={cloudBackupInterest}
-      />
+      <div className="space-y-8 sm:space-y-10">
+        <header className="border-b border-white/10 pb-8 pt-4 sm:pb-10 sm:pt-6">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+            <PortalCardIcon icon="card" tone="billing" />
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold leading-snug tracking-tight text-white sm:text-2xl">
+                Services &amp; billing
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-white/50">
+                Plans, payment rails, and history
+              </p>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/70">
+                Each assigned service keeps the same color and icon as the
+                client portal: red for monitoring, teal for VoIP, sky for
+                Camera Cloud Backup.
+              </p>
+            </div>
+          </div>
+        </header>
+        <ServicesBillingCard
+          client={client}
+          manualPayments={manualPayments}
+          cardPayments={cardPayments}
+          cloudBackupInterest={cloudBackupInterest}
+        />
+      </div>
     );
   }
 

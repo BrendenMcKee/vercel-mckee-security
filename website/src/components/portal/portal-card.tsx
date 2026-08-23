@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import { SERVICE_THEME, type ServiceType } from "@/lib/portal/service-labels";
 
 /**
- * Shared card shell for the client dashboard: icon chip + title + optional
- * one-line description, consistent borders and spacing across every section.
+ * Shared card shell for both portals: icon chip + title + optional
+ * one-line description. Service tones use SERVICE_THEME so monitoring is
+ * red, VoIP is teal, and Camera Cloud Backup is sky on admin and client.
  */
 
 export type PortalIcon =
@@ -16,6 +17,12 @@ export type PortalIcon =
   | "settings";
 
 export type PortalCardTone = ServiceType | "billing" | "muted";
+
+export const SERVICE_PORTAL_ICON: Record<ServiceType, PortalIcon> = {
+  monitoring: "shield",
+  voip: "voip",
+  cloud_backup: "cloud",
+};
 
 const ICON_PATHS: Record<PortalIcon, ReactNode> = {
   shield: (

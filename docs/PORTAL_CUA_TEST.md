@@ -114,6 +114,7 @@ This is the most important regression. Most clients are not orgs.
 3. `/account/reset-password` without a valid link: expired / retry state, not a crash.
 4. `/account/activate` without a token: invalid-invite copy, not a stack trace.
 5. Staff login on `/user-dashboard`: staff are sent to the “you are an administrator” frame with a link to `/admin-dashboard`, not a fake client dashboard.
+6. Client session on `/admin-dashboard`: “You are a client” frame with a link to `/user-dashboard`, not the marketing 404 and not the staff console.
 
 ## Suite D. Staff console (generic)
 
@@ -121,7 +122,7 @@ Sign in as staff.
 
 1. `/admin-dashboard` Overview: KPI cards render. No uncaught error.
 2. `?tab=clients`: list of clients. Search by a known test name. Open that row.
-3. Client detail `/admin-dashboard/clients/{id}`: profile, services, caller list, devices, billing. Banner still says mail is paused.
+3. Client detail `/admin-dashboard/clients/{id}`: tabs Account / Billing / Security / Devices. Account has profile. Billing has services (monitoring red, VoIP teal, cloud sky). Security has station + caller list when R45 applies. Devices when R45 applies. Banner still says mail is paused.
 4. `?tab=billing`: collections / due list. Test client appears if they have a due service. Account name chip is OK if multi-site exists; single-site must not look like “14 sites.”
 5. `?tab=devices`: device table or empty state. Links to client detail work.
 6. `?tab=alerts`: list or empty. Resolve one only if it is clearly a test alert.
@@ -188,11 +189,11 @@ If there is no disposable site, skip and say so.
 
 Run this on a **monitoring test site** with a Lanvac CODE. Never put a real customer on test. Use `O5985` only for a write sitting. Restore the zone table in [`LANVAC_STATION.md`](LANVAC_STATION.md) after any write.
 
-1. Single-site monitoring client, Dashboard: station block sits after the monitoring card and before caller ID. Historic is at the bottom of that block. Settings / Alerts do not grow a second zone editor.
+1. Single-site monitoring client, **Security tab**: station block sits after the header and before caller ID. Historic is at the bottom of that block. Dashboard / Settings / Alerts do not grow a second zone editor and must not pull Lanvac.
 2. Client sees zone number, description, type, on-test, uses-call-list, panel type (or "Not on file"), last-known chip, Historic list. Client does **not** see delay, zone signal/restore codes, extra notify phones, or dealer fields. Historic signal codes stay on the staff card only.
 3. If the CODE is not `O5985`, client on-test returns "Station writes are not live on this account." If it is `O5985`, **account** on-test works and Alerts badges while on test. There is no per-zone on-test control. Do not leave a site on test.
 4. After R53: only the Account admin can start/stop **account-level** on-test. Member sees the chip and cannot start or stop. On-test is per site (Fire Hall must not mute Public Works). Skip until R53.
-5. Staff client detail: Monitoring station card shows panel, chip, zone table, Refresh now, Historic, zone write controls, and **account** on-test. No zone on-test buttons. Create-client does not require zones. Carbon monoxide zones cannot change type. Pulled live zones show "write fields unknown" and cannot be edited until the portal has stored delay / call list from a create. Account OffTest can return 500 if already off; the UI should still succeed. A refresh must not clear the account chip (`on_test_until` is the SoR).
+5. Staff client detail **Security tab**: header names the Lanvac CODE and city. Monitoring station, Zones & Signals (red cards), Refresh now, Historic, Change zones, and **account** on-test. No zone on-test buttons. Create-client does not require zones. Carbon monoxide type cannot be changed yet. Pulled live zones cannot be edited until the portal has stored delay / call list from a create (plain-language reason, no “write fields unknown”). Account OffTest can return 500 if already off; the UI should still succeed. A refresh must not clear the account chip (`on_test_until` is the SoR).
 6. Isolation: site A zones / Historic must not appear as site B. Crafting another site's `profileId` on a station action must fail.
 7. Confirm you did not call Lanvac `Account/status` or `Account/new`. Confirm you did not type `GO LIVE`.
 

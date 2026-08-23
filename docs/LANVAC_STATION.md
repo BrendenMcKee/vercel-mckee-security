@@ -13,7 +13,7 @@ Portal `devices` (batteries / smokes) is a **different** list. Zones are what th
 On every **current monitoring** site that has a Lanvac CODE:
 
 - Zone list: admin fetch / create / edit / delete. Client read-only (number, description, type, on-test, uses-call-list).
-- Historic signals: paged log for admin and client, grouped and color-coded, at the bottom of the Security tab (client) or the admin station card. Not a live stream. Dates are 12-hour with the month spelled out. Older pages load as you scroll.
+- Historic signals: paged log for admin and client, grouped and color-coded, at the bottom of the Security tab on both portals. Not a live stream. Dates are 12-hour with the month spelled out. Older pages load as you scroll.
 - Panel type + a last-known status chip.
 - On/off test with a duration. **Whole account only** (`Account/OnTest` / `OffTest`). Admin and client Account admin. We do not put a single zone on test. `Zone/OnTest` exists on Lanvac and is unused.
 
@@ -63,7 +63,7 @@ Seen alarm example: signal `110011`, `ALARM((FIRE)) ZONE:001` and matching `REST
 
 **Zone list types on GET are English labels, not the 3-char write enum.** Map before create/update: `FIRE` → `FIR`, `BURGLAR` → `BUR`, `LOW TEMPERATURE` → `LOW`. `CARBON MONOXIDE` write code (`CO*` / `CO1` / `CO2`) is **still unproven**. Create/update of that type is refused. Delete is allowed. We do not put a zone on test.
 
-**Do not PUT an existing live zone** unless `lanvac_zone_write` already has delay / call list / codes from a portal create. GET does not return those fields. Defaults (`delay = 1`, empty notify) would overwrite the station. Edit is disabled until write fields exist. Test create/update/delete only on unused numbers (7 and 8 on O5985).
+**Do not PUT an existing live zone** unless `lanvac_zone_write` already has delay / call list / codes from a portal create. GET does not return those fields. Defaults (`delay = 1`, empty notify) would overwrite the station. Edit stays off until write fields exist. The admin UI says that in plain language (not “write fields unknown”). Test create/update/delete only on unused numbers (7 and 8 on O5985).
 
 **`panelType` can be empty.** Show "Not on file". `isDisabled` is a real boolean (`false` on O5985). `language` was `en`. `accountType` can be empty.
 
@@ -72,7 +72,7 @@ Zone numbers above 100 are fine to list. We never call Zone/OnTest.
 ## Access
 
 - New server-only module `website/src/lib/portal/lanvac-api.ts`. Never return the dealer password or raw request body. Cache writes live in `lanvac-station-store.ts` (`server-only`). Do not export cache-clear as a server action.
-- **Reads:** any CODE already on a portal profile. On-demand when the client Security tab or the admin station card is open. No cron over all CODEs. Dashboard / Settings / Alerts do not pull Lanvac.
+- **Reads:** any CODE already on a portal profile. On-demand when the client Security tab or the admin client Security tab is open. No cron over all CODEs. Dashboard / Settings / Alerts / admin Account or Billing tabs do not pull Lanvac.
 - **Writes:** `O5985` only until you say go. Other sites show the UI and "Station writes are not live on this account."
 - UI and **server actions** require `hasCurrentMonitoring` and a CODE.
 - Every action takes `profileId` from day one. Today: session profile must match (or admin). After R53: `requireSelectedSite`.
@@ -89,8 +89,8 @@ Tables keyed by `profile_id` only. One CODE = one site = one zone list. No count
 
 ## Placement
 
-- Client Dashboard, after the monitoring card and before caller ID. Signals at the bottom of that block.
-- Admin: extend Monitoring station card. Create-client still does not require zones. Optional seeder is not in this sitting.
+- Client: **Security tab** only (`/user-dashboard?tab=security`). Header, then Zones & Signals, caller ID, equipment. Dashboard / Settings / Alerts do not pull Lanvac.
+- Admin: client detail **Security tab** (`/admin-dashboard/clients/{id}?tab=security`). Header + Monitoring station + Zones & Signals + caller ID. Devices are their own tab. Create-client still does not require zones. Optional seeder is not in this sitting.
 
 ## Persistence (shipped 2026-08-22)
 
