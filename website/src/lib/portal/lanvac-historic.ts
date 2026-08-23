@@ -401,7 +401,7 @@ function rewriteLine(description: string, zones?: HistoricZoneHint[]): string | 
   }
 
   if (/SIGNAL COMING FROM\s+ALARMNET/i.test(raw)) {
-    return "Came in through AlarmNet";
+    return "Came in through AlarmNet (Cellular/IP)";
   }
 
   const reference = raw.match(/REFERENCE#?\s*>>?\s*([A-Z0-9-]+)/i);
