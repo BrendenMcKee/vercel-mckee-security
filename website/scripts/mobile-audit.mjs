@@ -176,6 +176,9 @@ try {
   await audit("admin-devices", "/admin-dashboard?tab=devices", adminSession);
   await audit("admin-alerts", "/admin-dashboard?tab=alerts", adminSession);
   await audit("admin-client-detail", `/admin-dashboard/clients/${clientUser.profileId}`, adminSession);
+  await audit("admin-client-billing", `/admin-dashboard/clients/${clientUser.profileId}?tab=billing`, adminSession);
+  await audit("admin-client-security", `/admin-dashboard/clients/${clientUser.profileId}?tab=security`, adminSession);
+  await audit("admin-client-devices", `/admin-dashboard/clients/${clientUser.profileId}?tab=devices`, adminSession);
 } finally {
   await browser.close();
   for (const id of createdProfiles) await admin.from("profiles").delete().eq("id", id);

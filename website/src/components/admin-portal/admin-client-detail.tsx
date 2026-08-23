@@ -76,6 +76,7 @@ import {
 } from "@/components/portal/lanvac-station-readout";
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
+import { PortalCard, PortalCardIcon } from "@/components/portal/portal-card";
 
 type InvitationSummary = Pick<
   Tables<"invitations">,
@@ -1621,19 +1622,59 @@ function HistoryDiffList({
   );
 }
 
-function MonitoringStationCard({
-  client,
-  writesLive,
-  stationState,
-  stationZones,
-  stationSignals,
-}: {
-  client: AdminClientDetailRow;
-  writesLive: boolean;
-  stationState: LanvacStationState | null;
-  stationZones: LanvacStationZone[];
-  stationSignals: LanvacStationSignal[];
-}) {
+function staffMonitoringHeaderCopy(tier: string): string {
+  switch (tier) {
+    case "landline":
+      return "This system reports to the monitoring station over a land line. If it goes off, they call the contact list in order.";
+    case "cellular":
+      return "This system reports over a cellular communicator. If it goes off, the station calls the contact list in order.";
+    case "cellular_tc":
+      return "Cellular communicator plus Total Connect 2.0 app control. If it goes off, the station calls the contact list in order.";
+    case "cellular_tc_home":
+      return "Cellular communicator, Total Connect 2.0, and home automation. If it goes off, the station calls the contact list in order.";
+    default:
+      return "If this system goes off, the monitoring station calls the contact list in order.";
+  }
+}
+
+function AdminSecurityHeader({ client }: { client: AdminClientDetailRow }) {
+  const monitoring = client.services.find(
+    (service) => service.service_type === "monitoring" && service.status !== "cancelled",
+  );
+  const stationBits = [
+    client.lanvac_account_code ? `Lanvac ${client.lanvac_account_code}` : null,
+    client.lanvac_city,
+  ].filter(Boolean);
+
+  return (
+    <header className="border-b border-white/10 pb-8 pt-4 sm:pb-10 sm:pt-6">
+      <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+        <PortalCardIcon icon="shield" tone="monitoring" />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h2 className="text-xl font-bold leading-snug tracking-tight text-white sm:text-2xl">
+              Security system
+            </h2>
+            {monitoring && <ServiceStatusBadge status={monitoring.status} withIcon />}
+          </div>
+          <p className="mt-1.5 text-sm leading-relaxed text-white/50">
+            {monitoring
+              ? `${tierLabel(monitoring.tier)} · ${SERVICE_TYPE_LABELS.monitoring}`
+              : "Contacts and equipment on file"}
+            {stationBits.length > 0 ? ` · ${stationBits.join(" · ")}` : ""}
+          </p>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/70">
+            {monitoring
+              ? staffMonitoringHeaderCopy(monitoring.tier)
+              : "There is no current monitoring plan on this account. Station details, contacts, and leftover zone data stay here so staff can still review them."}
+          </p>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function MonitoringStationCard({ client }: { client: AdminClientDetailRow }) {
   const router = useRouter();
   const hasMonitoring = hasCurrentMonitoring(client.services);
   const [editing, setEditing] = useState(false);
@@ -1675,9 +1716,12 @@ function MonitoringStationCard({
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-white">Monitoring station</h2>
+    <PortalCard
+      icon="shield"
+      tone="monitoring"
+      title="Monitoring station"
+      description="Lanvac account number and the city they use for police, fire, and ambulance. Those numbers stay at the station. Zones and signals below are for this account."
+      action={
         <button
           type="button"
           onClick={() => {
@@ -1689,21 +1733,16 @@ function MonitoringStationCard({
         >
           {editing ? "Cancel" : "Edit"}
         </button>
-      </div>
-      <p className="mt-1 text-xs text-white/40">
-        Lanvac account number and the city they use for police, fire, and
-        ambulance. Those numbers stay at the station. Zones, on-test, and
-        Historic Signals below are for this account. The people list is the
-        next card on this tab.
-      </p>
+      }
+    >
       {missingStation && (
-        <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+        <p className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
           Required for this monitoring account: set the Lanvac account number
           and dispatch city.
         </p>
       )}
 
-      <div className="mt-4 space-y-3">
+      <div className="space-y-3">
         <NoticeBanner notice={notice} />
         {editing ? (
           <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
@@ -1777,35 +1816,47 @@ function MonitoringStationCard({
             </div>
           </div>
         )}
-        {hasMonitoring && client.lanvac_account_code && (
-          <div className="border-t border-white/10 pt-5">
-            <h3 className="text-lg font-bold text-white">Zones &amp; Signals</h3>
-            <p className="mt-1 text-sm text-white/50">
-              Zone list, on-test, and Historic Signals for Lanvac{" "}
-              <span className="font-semibold text-white/80">{client.lanvac_account_code}</span>
-              {client.lanvac_city ? (
-                <>
-                  {" "}
-                  in <span className="font-semibold text-white/80">{client.lanvac_city}</span>
-                </>
-              ) : null}
-              .
-            </p>
-            <div className="mt-4">
-              <LanvacStationReadout
-                profileId={client.id}
-                canRefresh
-                variant="admin"
-                writesLive={writesLive}
-                state={stationState}
-                zones={stationZones}
-                signals={stationSignals}
-              />
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+    </PortalCard>
+  );
+}
+
+function ZonesSignalsCard({
+  client,
+  writesLive,
+  stationState,
+  stationZones,
+  stationSignals,
+}: {
+  client: AdminClientDetailRow;
+  writesLive: boolean;
+  stationState: LanvacStationState | null;
+  stationZones: LanvacStationZone[];
+  stationSignals: LanvacStationSignal[];
+}) {
+  if (!hasCurrentMonitoring(client.services) || !client.lanvac_account_code) return null;
+
+  return (
+    <PortalCard
+      icon="shield"
+      tone="monitoring"
+      title="Zones & Signals"
+      description={`Zone list, on-test, and Historic Signals for Lanvac ${client.lanvac_account_code}${
+        client.lanvac_city ? ` in ${client.lanvac_city}` : ""
+      }.`}
+    >
+      <div className="border-t border-white/10 pt-5">
+        <LanvacStationReadout
+          profileId={client.id}
+          canRefresh
+          variant="admin"
+          writesLive={writesLive}
+          state={stationState}
+          zones={stationZones}
+          signals={stationSignals}
+        />
+      </div>
+    </PortalCard>
   );
 }
 
@@ -1821,22 +1872,19 @@ function CallerIdCard({
   const [showHistory, setShowHistory] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-white">Caller ID List</h2>
+    <PortalCard
+      id="alarm-contact-list"
+      icon="phone"
+      tone="monitoring"
+      title="Caller ID List"
+      description="People the station should call, in order. Do not add police, fire, or ambulance here. Those come from the dispatch city on the Monitoring station card. Changes here are made on the client's behalf. You must record how they authorized it and why; the history below is permanent and the client is automatically emailed exactly what changed."
+      action={
         <button type="button" onClick={() => setShowHistory((v) => !v)} className={buttonSecondary}>
           {showHistory ? "Hide History" : `History (${changes.length})`}
         </button>
-      </div>
-      <p className="mt-1 text-xs text-white/40">
-        People the station should call, in order. Do not add police, fire, or
-        ambulance here. Those come from the dispatch city on the Monitoring
-        station card. Changes here are made on the client&apos;s behalf. You
-        must record how they authorized it and why; the history below is
-        permanent and the client is automatically emailed exactly what changed.
-      </p>
-
-      <div className="mt-5">
+      }
+    >
+      <div className="border-t border-white/10 pt-5">
         <CallerIdEditor
           key={contacts.map((c) => `${c.id}|${c.phone}|${c.label}|${c.passcode ?? ""}`).join(",")}
           variant="admin"
@@ -1897,7 +1945,7 @@ function CallerIdCard({
           })}
         </div>
       )}
-    </div>
+    </PortalCard>
   );
 }
 
@@ -2101,16 +2149,14 @@ function DevicesCard({
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-surface p-4 sm:p-6">
-      <h2 className="text-lg font-bold text-white">Devices</h2>
-      <p className="mt-1 text-xs text-white/40">
-        Name devices however you need (hallway smoke 1, bedroom smoke). The
-        Devices tab filters by category, not by name. A wireless smoke or CO
-        detector is two rows: the detector unit, and its battery. When a
-        device comes due, both the client and the McKee inbox are emailed.
-      </p>
-
-      <div className="mt-4 space-y-3">
+    <PortalCard
+      id="equipment-maintenance"
+      icon="wrench"
+      tone="monitoring"
+      title="Devices"
+      description="Name devices however you need (hallway smoke 1, bedroom smoke). The Devices tab filters by category, not by name. A wireless smoke or CO detector is two rows: the detector unit, and its battery. When a device comes due, both the client and the McKee inbox are emailed."
+    >
+      <div className="space-y-3 border-t border-white/10 pt-5">
         <NoticeBanner notice={notice} />
 
         {devices.length === 0 && (
@@ -2185,7 +2231,7 @@ function DevicesCard({
           </button>
         </form>
       </div>
-    </div>
+    </PortalCard>
   );
 }
 
@@ -2239,16 +2285,16 @@ export function AdminClientDetail({
 
   if (tab === "security") {
     return (
-      <div className="space-y-6">
-        {showStation && (
-          <MonitoringStationCard
-            client={client}
-            writesLive={writesLive}
-            stationState={stationState}
-            stationZones={stationZones}
-            stationSignals={stationSignals}
-          />
-        )}
+      <div className="space-y-8 sm:space-y-10">
+        <AdminSecurityHeader client={client} />
+        {showStation && <MonitoringStationCard client={client} />}
+        <ZonesSignalsCard
+          client={client}
+          writesLive={writesLive}
+          stationState={stationState}
+          stationZones={stationZones}
+          stationSignals={stationSignals}
+        />
         {showCallerId && (
           <CallerIdCard client={client} contacts={callerIdContacts} changes={callerIdChanges} />
         )}
@@ -2262,12 +2308,33 @@ export function AdminClientDetail({
   }
 
   if (tab === "devices") {
-    return showDevices ? (
-      <DevicesCard client={client} devices={devices} />
-    ) : (
-      <p className="rounded-2xl border border-white/10 bg-surface p-4 text-sm text-white/50 sm:p-6">
-        No equipment is tracked on this account yet.
-      </p>
+    return (
+      <div className="space-y-8 sm:space-y-10">
+        <header className="border-b border-white/10 pb-8 pt-4 sm:pb-10 sm:pt-6">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+            <PortalCardIcon icon="wrench" tone="monitoring" />
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold leading-snug tracking-tight text-white sm:text-2xl">
+                Equipment
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-white/50">
+                Replacement tracking for this site
+              </p>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/70">
+                These are the devices McKee tracks for service life. They are
+                not the same as the station zone list.
+              </p>
+            </div>
+          </div>
+        </header>
+        {showDevices ? (
+          <DevicesCard client={client} devices={devices} />
+        ) : (
+          <p className="rounded-2xl border border-white/10 bg-surface p-4 text-sm text-white/50 sm:p-6">
+            No equipment is tracked on this account yet.
+          </p>
+        )}
+      </div>
     );
   }
 

@@ -1,17 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { getAuthContext } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import {
   AdminClientDetail,
   type AdminClientTab,
+  type CardPaymentEntry,
 } from "@/components/admin-portal/admin-client-detail";
+import type { CallerIdContact } from "@/components/portal/caller-id-editor";
+import type { Tables } from "@/lib/portal/database.types";
+import type {
+  LanvacStationSignal,
+  LanvacStationState,
+  LanvacStationZone,
+} from "@/components/portal/lanvac-station-readout";
 import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
 import { lanvacWritesLive, parseNotifyList } from "@/lib/portal/lanvac-writes";
 import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
+import { ScrollToHash } from "@/components/portal/scroll-to-hash";
 import { hasCurrentMonitoring } from "@/lib/portal/service-labels";
+
+type PortalClient = Awaited<ReturnType<typeof createPortalServerClient>>;
 
 export const metadata: Metadata = {
   title: "Client Detail",
@@ -59,106 +71,82 @@ export default async function AdminClientDetailPage({
   }
   if (!client) notFound();
 
-  const [
-    contactsResult,
-    changesResult,
-    devicesResult,
-    paymentsResult,
-    cardPaymentsResult,
-    cloudInterestResult,
-    settingsResult,
-    stationStateResult,
-    stationZonesResult,
-    stationSignalsResult,
-    stationWriteResult,
-  ] = await Promise.all([
-      supabase
-        .from("caller_id_contacts")
-        .select("id, phone, label, passcode, sort_order")
-        .eq("profile_id", profileId)
-        .order("sort_order"),
-      supabase
-        .from("caller_id_changes")
-        .select("*")
-        .eq("profile_id", profileId)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("devices")
-        .select("*")
-        .eq("profile_id", profileId)
-        .order("created_at"),
-      supabase
-        .from("manual_payments")
-        .select("*")
-        .eq("profile_id", profileId)
-        .order("paid_on", { ascending: false })
-        .limit(24),
-      supabase
-        .from("billing_events")
-        .select("id, service_id, created_at, payload")
-        .eq("profile_id", profileId)
-        .eq("type", "invoice.paid")
-        .order("created_at", { ascending: false })
-        .limit(24),
-      supabase
-        .from("cloud_backup_interest")
-        .select("*")
-        .eq("profile_id", profileId)
-        .maybeSingle(),
-      supabase.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle(),
-      supabase
-        .from("lanvac_account_state")
-        .select(
-          "panel_type, is_disabled, on_test_until, last_signal_at, last_signal_class, last_synced_at, last_error",
-        )
-        .eq("profile_id", profileId)
-        .maybeSingle(),
-      supabase
-        .from("lanvac_zones")
-        .select("zone_number, description, zone_type, on_test, use_call_list")
-        .eq("profile_id", profileId)
-        .order("zone_number"),
-      supabase
-        .from("lanvac_signals")
-        .select("occurred_at_text, signal, description, signal_class")
-        .eq("profile_id", profileId)
-        .order("sort_index"),
-      supabase
-        .from("lanvac_zone_write")
-        .select("zone_number, delay, notify_list, signal_code, restore_code")
-        .eq("profile_id", profileId),
-    ]);
+  const urlTab: AdminClientTab =
+    tab === "billing" || tab === "security" || tab === "devices" || tab === "account"
+      ? tab
+      : "account";
 
-  const subError =
-    contactsResult.error ??
-    changesResult.error ??
-    devicesResult.error ??
-    paymentsResult.error ??
-    cardPaymentsResult.error ??
-    cloudInterestResult.error ??
-    stationStateResult.error ??
-    stationZonesResult.error ??
-    stationSignalsResult.error ??
-    stationWriteResult.error;
-  if (subError) {
-    console.error("[portal] Admin client detail sub-queries failed:", subError);
+  const [
+    contactsCountResult,
+    changesCountResult,
+    devicesCountResult,
+    zonesCountResult,
+    stationPeekResult,
+    settingsResult,
+    billingExtras,
+    securityExtras,
+    devicesExtras,
+  ] = await Promise.all([
+    supabase
+      .from("caller_id_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", profileId),
+    supabase
+      .from("caller_id_changes")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", profileId),
+    supabase
+      .from("devices")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", profileId),
+    supabase
+      .from("lanvac_zones")
+      .select("zone_number", { count: "exact", head: true })
+      .eq("profile_id", profileId),
+    supabase
+      .from("lanvac_account_state")
+      .select("profile_id")
+      .eq("profile_id", profileId)
+      .maybeSingle(),
+    supabase.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle(),
+    urlTab === "billing" ? loadBillingExtras(supabase, profileId) : Promise.resolve(null),
+    urlTab === "security" ? loadSecurityExtras(supabase, profileId) : Promise.resolve(null),
+    urlTab === "devices" ? loadDevicesExtras(supabase, profileId) : Promise.resolve(null),
+  ]);
+
+  const visibilityError =
+    contactsCountResult.error ??
+    changesCountResult.error ??
+    devicesCountResult.error ??
+    zonesCountResult.error ??
+    stationPeekResult.error;
+  if (visibilityError) {
+    console.error("[portal] Admin client detail tab visibility failed:", visibilityError);
+    throw new Error("Client detail failed to load.");
+  }
+  if (billingExtras && !billingExtras.ok) {
+    console.error("[portal] Admin client detail billing query failed:", billingExtras.error);
+    throw new Error("Client detail failed to load.");
+  }
+  if (securityExtras && !securityExtras.ok) {
+    console.error("[portal] Admin client detail security query failed:", securityExtras.error);
+    throw new Error("Client detail failed to load.");
+  }
+  if (devicesExtras && !devicesExtras.ok) {
+    console.error("[portal] Admin client detail devices query failed:", devicesExtras.error);
     throw new Error("Client detail failed to load.");
   }
 
   const showSecurityTab =
     hasCurrentMonitoring(client.services) ||
     Boolean(client.lanvac_account_code || client.lanvac_city) ||
-    (contactsResult.data ?? []).length > 0 ||
-    (changesResult.data ?? []).length > 0 ||
-    (stationZonesResult.data ?? []).length > 0 ||
-    stationStateResult.data != null;
+    (contactsCountResult.count ?? 0) > 0 ||
+    (changesCountResult.count ?? 0) > 0 ||
+    (zonesCountResult.count ?? 0) > 0 ||
+    stationPeekResult.data != null;
   const showDevicesTab =
-    hasCurrentMonitoring(client.services) || (devicesResult.data ?? []).length > 0;
-  const requestedTab =
-    tab === "billing" || tab === "security" || tab === "devices" || tab === "account"
-      ? tab
-      : "account";
+    hasCurrentMonitoring(client.services) || (devicesCountResult.count ?? 0) > 0;
+  const requestedTab = urlTab;
   const activeTab: AdminClientTab =
     requestedTab === "security" && !showSecurityTab
       ? "account"
@@ -208,6 +196,10 @@ export default async function AdminClientDetailPage({
 
       {settingsResult.data?.client_mail_enabled !== true && <ClientMailPausedBanner />}
 
+      <Suspense fallback={null}>
+        <ScrollToHash />
+      </Suspense>
+
       <nav
         className="no-scrollbar -mx-4 mt-6 flex gap-1 overflow-x-auto border-b border-white/10 px-4 sm:mx-0 sm:mt-8 sm:gap-2 sm:px-0"
         aria-label="Client sections"
@@ -233,64 +225,162 @@ export default async function AdminClientDetailPage({
         <AdminClientDetail
           tab={activeTab}
           client={client}
-          callerIdContacts={contactsResult.data ?? []}
-          callerIdChanges={changesResult.data ?? []}
-          devices={devicesResult.data ?? []}
-          manualPayments={paymentsResult.data ?? []}
-          cloudBackupInterest={cloudInterestResult.data}
-          stationState={
-            stationStateResult.data
-              ? {
-                  panelType: stationStateResult.data.panel_type,
-                  isDisabled: stationStateResult.data.is_disabled,
-                  onTestUntil: stationStateResult.data.on_test_until,
-                  lastSignalAt: stationStateResult.data.last_signal_at,
-                  lastSignalClass: asLanvacSignalClass(
-                    stationStateResult.data.last_signal_class,
-                  ),
-                  lastSyncedAt: stationStateResult.data.last_synced_at,
-                  lastError: stationStateResult.data.last_error,
-                }
-              : null
-          }
+          callerIdContacts={securityExtras?.ok ? securityExtras.contacts : []}
+          callerIdChanges={securityExtras?.ok ? securityExtras.changes : []}
+          devices={devicesExtras?.ok ? devicesExtras.devices : []}
+          manualPayments={billingExtras?.ok ? billingExtras.manualPayments : []}
+          cloudBackupInterest={billingExtras?.ok ? billingExtras.cloudBackupInterest : null}
+          stationState={securityExtras?.ok ? securityExtras.stationState : null}
           writesLive={lanvacWritesLive(client.lanvac_account_code)}
-          stationZones={(stationZonesResult.data ?? []).map((zone) => {
-            const write = (stationWriteResult.data ?? []).find(
-              (row) => row.zone_number === zone.zone_number,
-            );
-            return {
-              zoneNumber: zone.zone_number,
-              description: zone.description,
-              zoneType: zone.zone_type,
-              onTest: zone.on_test,
-              useCallList: zone.use_call_list,
-              write: write
-                ? {
-                    delay: write.delay,
-                    notifyList: parseNotifyList(write.notify_list),
-                    signalCode: write.signal_code,
-                    restoreCode: write.restore_code,
-                  }
-                : null,
-            };
-          })}
-          stationSignals={(stationSignalsResult.data ?? []).map((row) => ({
-            occurredAtText: row.occurred_at_text,
-            signal: row.signal,
-            description: row.description,
-            signalClass: asLanvacSignalClass(row.signal_class) ?? "unknown",
-          }))}
-          cardPayments={(cardPaymentsResult.data ?? []).map((event) => {
-            const payload = event.payload as { amount_paid?: number } | null;
-            return {
-              id: event.id,
-              serviceId: event.service_id,
-              paidOn: event.created_at.slice(0, 10),
-              amountCents: typeof payload?.amount_paid === "number" ? payload.amount_paid : null,
-            };
-          })}
+          stationZones={securityExtras?.ok ? securityExtras.stationZones : []}
+          stationSignals={securityExtras?.ok ? securityExtras.stationSignals : []}
+          cardPayments={billingExtras?.ok ? billingExtras.cardPayments : []}
         />
       </div>
     </section>
   );
+}
+
+async function loadBillingExtras(supabase: PortalClient, profileId: string) {
+  const [paymentsResult, cardPaymentsResult, cloudInterestResult] = await Promise.all([
+    supabase
+      .from("manual_payments")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("paid_on", { ascending: false })
+      .limit(24),
+    supabase
+      .from("billing_events")
+      .select("id, service_id, created_at, payload")
+      .eq("profile_id", profileId)
+      .eq("type", "invoice.paid")
+      .order("created_at", { ascending: false })
+      .limit(24),
+    supabase.from("cloud_backup_interest").select("*").eq("profile_id", profileId).maybeSingle(),
+  ]);
+  const error = paymentsResult.error ?? cardPaymentsResult.error ?? cloudInterestResult.error;
+  if (error) return { ok: false as const, error };
+  return {
+    ok: true as const,
+    manualPayments: paymentsResult.data ?? [],
+    cloudBackupInterest: cloudInterestResult.data,
+    cardPayments: (cardPaymentsResult.data ?? []).map((event): CardPaymentEntry => {
+      const payload = event.payload as { amount_paid?: number } | null;
+      return {
+        id: event.id,
+        serviceId: event.service_id,
+        paidOn: event.created_at.slice(0, 10),
+        amountCents: typeof payload?.amount_paid === "number" ? payload.amount_paid : null,
+      };
+    }),
+  };
+}
+
+async function loadDevicesExtras(supabase: PortalClient, profileId: string) {
+  const devicesResult = await supabase
+    .from("devices")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("created_at");
+  if (devicesResult.error) return { ok: false as const, error: devicesResult.error };
+  return { ok: true as const, devices: devicesResult.data ?? [] };
+}
+
+async function loadSecurityExtras(supabase: PortalClient, profileId: string) {
+  const [
+    contactsResult,
+    changesResult,
+    stationStateResult,
+    stationZonesResult,
+    stationSignalsResult,
+    stationWriteResult,
+  ] = await Promise.all([
+    supabase
+      .from("caller_id_contacts")
+      .select("id, phone, label, passcode, sort_order")
+      .eq("profile_id", profileId)
+      .order("sort_order"),
+    supabase
+      .from("caller_id_changes")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("lanvac_account_state")
+      .select(
+        "panel_type, is_disabled, on_test_until, last_signal_at, last_signal_class, last_synced_at, last_error",
+      )
+      .eq("profile_id", profileId)
+      .maybeSingle(),
+    supabase
+      .from("lanvac_zones")
+      .select("zone_number, description, zone_type, on_test, use_call_list")
+      .eq("profile_id", profileId)
+      .order("zone_number"),
+    supabase
+      .from("lanvac_signals")
+      .select("occurred_at_text, signal, description, signal_class")
+      .eq("profile_id", profileId)
+      .order("sort_index"),
+    supabase
+      .from("lanvac_zone_write")
+      .select("zone_number, delay, notify_list, signal_code, restore_code")
+      .eq("profile_id", profileId),
+  ]);
+  const error =
+    contactsResult.error ??
+    changesResult.error ??
+    stationStateResult.error ??
+    stationZonesResult.error ??
+    stationSignalsResult.error ??
+    stationWriteResult.error;
+  if (error) return { ok: false as const, error };
+
+  const stationState: LanvacStationState | null = stationStateResult.data
+    ? {
+        panelType: stationStateResult.data.panel_type,
+        isDisabled: stationStateResult.data.is_disabled,
+        onTestUntil: stationStateResult.data.on_test_until,
+        lastSignalAt: stationStateResult.data.last_signal_at,
+        lastSignalClass: asLanvacSignalClass(stationStateResult.data.last_signal_class),
+        lastSyncedAt: stationStateResult.data.last_synced_at,
+        lastError: stationStateResult.data.last_error,
+      }
+    : null;
+
+  const stationZones: LanvacStationZone[] = (stationZonesResult.data ?? []).map((zone) => {
+    const write = (stationWriteResult.data ?? []).find((row) => row.zone_number === zone.zone_number);
+    return {
+      zoneNumber: zone.zone_number,
+      description: zone.description,
+      zoneType: zone.zone_type,
+      onTest: zone.on_test,
+      useCallList: zone.use_call_list,
+      write: write
+        ? {
+            delay: write.delay,
+            notifyList: parseNotifyList(write.notify_list),
+            signalCode: write.signal_code,
+            restoreCode: write.restore_code,
+          }
+        : null,
+    };
+  });
+
+  const stationSignals: LanvacStationSignal[] = (stationSignalsResult.data ?? []).map((row) => ({
+    occurredAtText: row.occurred_at_text,
+    signal: row.signal,
+    description: row.description,
+    signalClass: asLanvacSignalClass(row.signal_class) ?? "unknown",
+  }));
+
+  return {
+    ok: true as const,
+    contacts: (contactsResult.data ?? []) as CallerIdContact[],
+    changes: (changesResult.data ?? []) as Tables<"caller_id_changes">[],
+    stationState,
+    stationZones,
+    stationSignals,
+  };
 }

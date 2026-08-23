@@ -281,7 +281,7 @@ export async function sendCallerIdAdminAlert({
   fields.push({
     label: "Update the monitoring station",
     value: "Apply these people to the Lanvac call list. Leave police, fire, and ambulance as they are. Then archive this email as the record.",
-    href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
+    href: `${siteConfig.url}/admin-dashboard/clients/${profileId}?tab=security#alarm-contact-list`,
     cta: true,
     buttonLabel: "Open Client Detail",
   });
@@ -488,7 +488,7 @@ export async function sendCardPaymentFailedAlert({
       label: "Follow up",
       value: "Stripe will retry per its schedule. If retries keep failing, contact the client for an updated card.",
       href: profileId
-        ? `${siteConfig.url}/admin-dashboard/clients/${profileId}`
+        ? `${siteConfig.url}/admin-dashboard/clients/${profileId}?tab=billing`
         : `${siteConfig.url}/admin-dashboard?tab=billing`,
       cta: true,
       buttonLabel: "Open Billing",
@@ -568,7 +568,7 @@ export async function sendDeviceExpiryAdminAlert({
     {
       label: "Next step",
       value: "Contact the client to schedule a replacement, then update the install date on their profile (that clears this alert cycle).",
-      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
+      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}?tab=devices#equipment-maintenance`,
       cta: true,
       buttonLabel: "Open Client Detail",
     },
@@ -771,7 +771,7 @@ export async function sendStationZoneWriteAdminAlert({
     {
       label: "Open the station card",
       value: "Review the cached zone list. Restore O5985 if this was a test write.",
-      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
+      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}?tab=security`,
       cta: true,
       buttonLabel: "Open Client Detail",
     },
@@ -816,7 +816,7 @@ export async function sendStationOnTestAdminAlert({
     {
       label: "Open the station card",
       value: "Confirm the site is not left on test.",
-      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}`,
+      href: `${siteConfig.url}/admin-dashboard/clients/${profileId}?tab=security`,
       cta: true,
       buttonLabel: "Open Client Detail",
     },
