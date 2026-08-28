@@ -49,10 +49,10 @@ export function getStripeClient(): Stripe {
 }
 
 /**
- * One portal client, one Stripe customer. Reuse the stored id, then an
- * existing customer with the same email (same person recreated after a
- * delete), and only then create. We never delete Stripe customers from the
- * portal: invoices and receipts stay in Stripe.
+ * One portal **site**, one Stripe customer. Reuse this site's stored id, or
+ * an existing Stripe customer whose metadata.profile_id is this site.
+ * Never pick "first / has-card customer with this email" — two sites may
+ * share a contact email after R53.
  */
 export async function findOrCreateStripeCustomer(input: {
   existingCustomerId: string | null;
@@ -67,18 +67,13 @@ export async function findOrCreateStripeCustomer(input: {
       const existing = await stripe.customers.retrieve(input.existingCustomerId);
       if (!existing.deleted) return existing.id;
     } catch {
-      // Stored id is gone in Stripe; fall through to email reuse or create.
+      // Stored id is gone in Stripe; fall through to a matching metadata row or create.
     }
   }
 
   if (input.email) {
     const listed = await stripe.customers.list({ email: input.email, limit: 10 });
-    const hasCard = (customer: (typeof listed.data)[number]) =>
-      Boolean(customer.invoice_settings?.default_payment_method || customer.default_source);
-    const match =
-      listed.data.find((customer) => customer.metadata?.profile_id === input.profileId) ??
-      listed.data.find(hasCard) ??
-      listed.data[0];
+    const match = listed.data.find((customer) => customer.metadata?.profile_id === input.profileId);
     if (match) {
       await stripe.customers.update(match.id, {
         name: input.name,

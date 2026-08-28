@@ -559,9 +559,10 @@ export async function updateClientLanvacAction(input: {
 export type SetClientStatusResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Disable locks the client out on next request (layout gate + requireUser both
- * reject disabled profiles); enable restores access. Distinct from deletion:
- * data and sign-in are preserved.
+ * Disable is per site. The login stays open if the person still has another
+ * active site. Re-enable is allowed when this row has a leftover user_id or
+ * the account already has an activated Account admin (satellite sites have
+ * user_id null by design).
  */
 export async function setClientStatusAction(input: {
   profileId: string;
@@ -579,7 +580,7 @@ export async function setClientStatusAction(input: {
   const supabase = await createPortalServerClient();
   const { data: target } = await supabase
     .from("profiles")
-    .select("id, role, user_id")
+    .select("id, role, user_id, account_id")
     .eq("id", input.profileId)
     .maybeSingle();
   if (!target) return { ok: false, error: "Client not found." };
@@ -587,7 +588,19 @@ export async function setClientStatusAction(input: {
     return { ok: false, error: "Only client accounts can be changed here." };
   }
   if (input.status === "active" && !target.user_id) {
-    return { ok: false, error: "This client has not activated yet. Resend their invitation instead." };
+    const admin = getPortalAdminClient();
+    const { data: owner } = target.account_id
+      ? await admin
+          .from("account_members")
+          .select("user_id")
+          .eq("account_id", target.account_id)
+          .eq("role", "owner")
+          .not("user_id", "is", null)
+          .maybeSingle()
+      : { data: null };
+    if (!owner?.user_id) {
+      return { ok: false, error: "This client has not activated yet. Resend their invitation instead." };
+    }
   }
 
   const { error } = await supabase
@@ -613,20 +626,13 @@ function namesMatch(a: string, b: string): boolean {
 }
 
 /**
- * Permanently deletes a client and every trace of them: auth user (sign-in),
- * profile, and via cascade their services and invitations. Restricted to
- * `role='client'` so an admin can never delete an admin account (or
- * themselves) from this surface. Runs on the service role because it spans
- * Supabase Auth + database; `requireAdmin()` is the authorization gate.
+ * Permanently deletes **this site** and cascaded rows (services, invitations,
+ * station cache). Restricted to `role='client'`. Stripe subscriptions on
+ * this site are cancelled first; the Stripe customer is kept.
  *
- * Two extra safety gates (stakeholder round 3):
- * - the admin must type the client's full name, verified here on the server,
- *   not just in the browser;
- * - any live card subscriptions are cancelled in Stripe first, so a deleted
- *   client can never keep getting charged. If Stripe refuses, nothing is
- *   deleted. The Stripe customer is kept (invoices stay in Stripe); a later
- *   portal client with the same email reuses that customer instead of
- *   creating a duplicate.
+ * Delete the profile (and empty account if last site) first. Only then
+ * delete Auth, and only if that user has no remaining membership and no
+ * remaining `profiles.user_id`.
  */
 export async function deleteClientAction(input: {
   profileId: string;
@@ -687,8 +693,8 @@ export async function deleteClientAction(input: {
             await stripe.subscriptions.cancel(subscriptionId, { prorate: false });
           }
         }
-        // Keep the Stripe customer. Invoices and receipts stay in Stripe. A
-        // later portal client with the same email reuses this customer.
+        // Keep the Stripe customer. Invoices stay in Stripe. Reuse only when
+        // metadata.profile_id matches this site (or this site already has the id).
         if (profile.stripe_customer_id) {
           await stripe.customers.update(profile.stripe_customer_id, {
             metadata: {
@@ -708,21 +714,31 @@ export async function deleteClientAction(input: {
   }
 
   const admin = getPortalAdminClient();
-
-  if (profile.user_id) {
-    const { error: authError } = await admin.auth.admin.deleteUser(profile.user_id);
-    if (authError) {
-      console.error("[portal] deleteClient auth deletion failed:", authError);
-      return { ok: false, error: "Could not delete the client's sign-in. Nothing was removed; please try again." };
-    }
-  }
+  const loginId = profile.user_id;
 
   const { error: profileError } = await admin.from("profiles").delete().eq("id", profileId);
   if (profileError) {
-    // Auth user is already gone; the remaining profile row is orphaned but
-    // harmless and this action can be retried from the table.
     console.error("[portal] deleteClient profile deletion failed:", profileError);
-    return { ok: false, error: "Sign-in removed, but profile data deletion failed. Retry to finish." };
+    return { ok: false, error: "Could not delete this site. Nothing else was removed; please try again." };
+  }
+
+  if (loginId) {
+    const { data: remainingMembers } = await admin
+      .from("account_members")
+      .select("id")
+      .eq("user_id", loginId)
+      .limit(1);
+    const { data: remainingHome } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("user_id", loginId)
+      .limit(1);
+    if ((remainingMembers ?? []).length === 0 && (remainingHome ?? []).length === 0) {
+      const { error: authError } = await admin.auth.admin.deleteUser(loginId);
+      if (authError) {
+        console.error("[portal] deleteClient leftover auth cleanup failed:", authError);
+      }
+    }
   }
 
   revalidatePath("/admin-dashboard", "layout");

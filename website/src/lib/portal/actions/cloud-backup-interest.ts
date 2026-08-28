@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { SESSION_ERROR_MESSAGE, tryRequireUser } from "@/lib/portal/auth";
+import { SESSION_ERROR_MESSAGE, tryRequireClientSite } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 
 export type CloudBackupInterestResult =
@@ -10,15 +10,13 @@ export type CloudBackupInterestResult =
 
 /**
  * Explicit client consent for Camera Cloud Backup availability emails.
- * The email comes from the linked profile, never from client-supplied input.
- * RLS independently enforces ownership and that the inserted email matches.
+ * The email comes from the selected site contact, never from client-supplied
+ * input. RLS enforces can_access_profile; the site contact email may differ
+ * from the member login.
  */
 export async function joinCloudBackupInterestAction(): Promise<CloudBackupInterestResult> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
-  if (auth.profile.role !== "client") {
-    return { ok: false, error: "This update list is for client accounts." };
-  }
 
   const email = auth.profile.email?.trim();
   if (!email) {
@@ -51,11 +49,8 @@ export async function joinCloudBackupInterestAction(): Promise<CloudBackupIntere
 
 /** Removes the active consent row; no contact entry remains after withdrawal. */
 export async function leaveCloudBackupInterestAction(): Promise<CloudBackupInterestResult> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
-  if (auth.profile.role !== "client") {
-    return { ok: false, error: "This update list is for client accounts." };
-  }
 
   const supabase = await createPortalServerClient();
   const { error } = await supabase

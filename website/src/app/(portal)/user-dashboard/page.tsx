@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { getAuthContext } from "@/lib/portal/auth";
+import { resolvePortalSession } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import {
   SERVICE_TYPE_LABELS,
@@ -82,15 +82,16 @@ function monitoringHeaderCopy(tier: string): string {
 export default async function UserDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ payment?: string; tab?: string }>;
+  searchParams: Promise<{ payment?: string; tab?: string; site?: string }>;
 }) {
   // Pages render in parallel with their layout, so unauthenticated visits
   // reach this code even though the layout shows SignIn instead. Render
-  // nothing in every state the layout gates away.
-  const { user, profile } = await getAuthContext();
-  if (!user || !profile || profile.status === "disabled" || profile.role === "admin") return null;
-
-  const { payment, tab } = await searchParams;
+  // nothing in every state the layout gates away. `?site=` is validated
+  // here (cookie / first active site if missing or not accessible).
+  const { payment, tab, site } = await searchParams;
+  const session = await resolvePortalSession(site);
+  if (session.kind !== "client" || !session.passwordSet) return null;
+  const { user, selectedSite: profile } = session;
   const requestedTab: ClientTabId =
     tab === "settings"
       ? "settings"

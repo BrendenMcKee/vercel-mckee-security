@@ -1,18 +1,50 @@
 import type { NextRequest } from "next/server";
 import { refreshPortalSession } from "@/lib/portal/supabase/proxy-session";
+import {
+  PORTAL_SITE_COOKIE,
+  PORTAL_SITE_HEADER,
+  asSiteId,
+} from "@/lib/portal/site-cookie";
 
 /**
  * Portal-scoped proxy (Next 16 rename of middleware).
  *
- * Sole job: refresh Supabase auth cookies before portal pages render, because
+ * Refreshes Supabase auth cookies before portal pages render, because
  * Server Components cannot write cookies. Authorization happens in layouts,
  * server actions, and RLS (PORTAL_PLAN.md R6); never here.
+ *
+ * Also copies a valid `?site=` onto the selected-site cookie and request
+ * header so layout and actions see the same site as the page. That cookie
+ * is not the ACL: resolvePortalSession still ignores inaccessible / disabled
+ * ids.
  *
  * The matcher is scoped tightly to portal routes so the rest of the site
  * (marketing pages, Data Drops, Starlink admin, static assets) is untouched.
  */
-export function proxy(request: NextRequest) {
-  return refreshPortalSession(request);
+export async function proxy(request: NextRequest) {
+  const siteId = asSiteId(request.nextUrl.searchParams.get("site"));
+  if (siteId) {
+    try {
+      request.headers.set(PORTAL_SITE_HEADER, siteId);
+    } catch {
+      // Request headers are sometimes immutable; the cookie still lands.
+    }
+    request.cookies.set(PORTAL_SITE_COOKIE, siteId);
+  }
+
+  const response = await refreshPortalSession(request);
+
+  if (siteId) {
+    response.cookies.set(PORTAL_SITE_COOKIE, siteId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
+
+  return response;
 }
 
 export const config = {

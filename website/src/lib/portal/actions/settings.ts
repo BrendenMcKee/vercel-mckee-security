@@ -26,6 +26,23 @@ export async function setClientMailEnabledAction(input: {
 
   const now = new Date().toISOString();
   const supabase = await createPortalServerClient();
+  if (input.enabled) {
+    const { data: settings, error: settingsError } = await supabase
+      .from("portal_settings")
+      .select("org_grouping_reviewed_at")
+      .eq("id", 1)
+      .maybeSingle();
+    if (settingsError) {
+      console.error("[portal] grouping sign-off read failed:", settingsError);
+      return { ok: false, error: "Could not confirm organization grouping sign-off. Please try again." };
+    }
+    if (!settings?.org_grouping_reviewed_at) {
+      return {
+        ok: false,
+        error: "Organization grouping must be signed off before GO LIVE.",
+      };
+    }
+  }
   const { data, error } = await supabase
     .from("portal_settings")
     .update(

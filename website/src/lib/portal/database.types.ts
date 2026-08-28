@@ -35,6 +35,77 @@ export type Database = {
         }
         Relationships: []
       }
+      account_members: {
+        Row: {
+          account_id: string
+          created_at: string
+          email: string
+          id: string
+          invite_expires_at: string | null
+          invite_token_hash: string | null
+          password_set_at: string | null
+          role: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invite_expires_at?: string | null
+          invite_token_hash?: string | null
+          password_set_at?: string | null
+          role: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invite_expires_at?: string | null
+          invite_token_hash?: string | null
+          password_set_at?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_members_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          auto_onboard: boolean
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          auto_onboard?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          auto_onboard?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       billing_events: {
         Row: {
           created_at: string
@@ -586,6 +657,7 @@ export type Database = {
           client_mail_enabled_at: string | null
           client_mail_enabled_by: string | null
           id: number
+          org_grouping_reviewed_at: string | null
           updated_at: string
         }
         Insert: {
@@ -593,6 +665,7 @@ export type Database = {
           client_mail_enabled_at?: string | null
           client_mail_enabled_by?: string | null
           id?: number
+          org_grouping_reviewed_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -600,12 +673,14 @@ export type Database = {
           client_mail_enabled_at?: string | null
           client_mail_enabled_by?: string | null
           id?: number
+          org_grouping_reviewed_at?: string | null
           updated_at?: string
         }
         Relationships: []
       }
       profiles: {
         Row: {
+          account_id: string | null
           address: string | null
           created_at: string
           email: string | null
@@ -623,6 +698,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          account_id?: string | null
           address?: string | null
           created_at?: string
           email?: string | null
@@ -640,6 +716,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          account_id?: string | null
           address?: string | null
           created_at?: string
           email?: string | null
@@ -656,7 +733,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       qb_bridges: {
         Row: {

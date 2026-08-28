@@ -20,14 +20,24 @@ export type CleanupSummary = {
 export async function runCleanupJob(): Promise<CleanupSummary> {
   const admin = getPortalAdminClient();
 
-  // Orphan auth users: collect linked user ids first, then walk the auth
-  // user list (paged; the platform's user count is small by design).
+  // Orphan auth users: collect linked user ids first (home-site pointer
+  // or any account membership), then walk the auth user list (paged; the
+  // platform's user count is small by design). Extra members have no
+  // profiles.user_id and must not be deleted.
   const { data: linkedProfiles, error: profilesError } = await admin
     .from("profiles")
     .select("user_id")
     .not("user_id", "is", null);
   if (profilesError) throw new Error(`cleanup profiles query failed: ${profilesError.message}`);
-  const linkedIds = new Set((linkedProfiles ?? []).map((p) => p.user_id));
+  const { data: linkedMembers, error: membersError } = await admin
+    .from("account_members")
+    .select("user_id")
+    .not("user_id", "is", null);
+  if (membersError) throw new Error(`cleanup members query failed: ${membersError.message}`);
+  const linkedIds = new Set([
+    ...(linkedProfiles ?? []).map((p) => p.user_id),
+    ...(linkedMembers ?? []).map((m) => m.user_id),
+  ]);
 
   const cutoff = Date.now() - 7 * 86_400_000;
   let orphanUsersDeleted = 0;

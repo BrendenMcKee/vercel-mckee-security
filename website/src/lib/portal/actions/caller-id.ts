@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireUser } from "@/lib/portal/auth";
+import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireClientSite } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient, isPortalAdminConfigured } from "@/lib/portal/supabase/admin";
 import { normalizePhone } from "@/lib/portal/phone";
@@ -234,12 +234,9 @@ async function runSave(opts: {
 export async function saveMyCallerIdList(input: {
   contacts: { phone: string; label: string; passcode: string }[];
 }): Promise<SaveCallerIdResult> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
   const { user, profile } = auth;
-  if (profile.role !== "client") {
-    return { ok: false, error: "Admins edit lists from the client's detail page." };
-  }
 
   const normalized = normalizeList(input.contacts ?? []);
   if ("error" in normalized) return { ok: false, error: normalized.error };

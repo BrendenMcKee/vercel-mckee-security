@@ -4,22 +4,22 @@ overview: Keep one profile as one site (one Lanvac CODE, one caller list, one mo
 todos:
   - id: schema-accounts
     content: "Migration: accounts, account_members, client-only account_id, can_access_profile, RLS, email-unique change, insert trigger, backfill"
-    status: pending
+    status: completed
   - id: auth-context
     content: "One resolvePortalSession helper: membership across accounts, selected site authorized, requireSelectedSite for every client write; activate upserts owner member"
-    status: pending
+    status: completed
   - id: multi-site-home
     content: "2+ sites: sites list (name, address, CODE, caller-list summary) plus switcher; single-site clients keep today's page"
     status: pending
   - id: login-orphan-cleanup
     content: "Harden sign-in, OAuth callback, cleanup cron, and password_set_at so extra members are not treated as orphans"
-    status: pending
+    status: completed
   - id: delete-disable-rules
     content: "Delete/disable one site without deleting a shared login; forbid last-owner revoke; empty-account cleanup"
     status: pending
   - id: stripe-email-reuse
     content: Stop findOrCreateStripeCustomer from merging two sites that share a contact email
-    status: pending
+    status: completed
   - id: admin-account-card
     content: "Client detail: McKee can attach any site; migrate live-site people as members; keep user_id; membership-only ACL; auto_onboard toggle"
     status: pending
@@ -40,24 +40,24 @@ todos:
     status: pending
   - id: checks-docs
     content: "Update rls-pentest, rls-check, activation-check, cron-check when slices ship (R53 / 9.5.4 / 9.5.5 / ACCOUNTING_PLAN / handover already aligned as planned)"
-    status: pending
+    status: completed
 isProject: false
 ---
 
 # Multi-site accounts and extra logins
 
-Status: **planned, not built. R54 is done.** Implement this file next, starting at slices 1 and 2 (schema + `resolvePortalSession`). Station layer: [`LANVAC_STATION.md`](LANVAC_STATION.md). Zones, Historic, and **account** on-test stay per site (`profile_id`). One CODE = one site. We never put a single zone on test. Client on-test is Account admin only. Delete cascades `lanvac_*` and does not wipe Lanvac. Do not import real clients until this ships and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. **R53 is in `PORTAL_PLAN.md` as planned** (not shipped). Keep this file, R53, 9.5.4 / 9.5.5 / 9.5.5C, and [`PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same commit as each implementation slice. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
+Status: **slices 1–2 shipped and audited 2026-08-28.** Schema, membership RLS, `resolvePortalSession`, orphan / OAuth / cleanup / password. Audit also shipped the live holes those slices opened: Stripe email reuse, delete-site Auth wipe, per-site disable / re-enable, Account-admin-only on-test, `requireSelectedSite` on client writes. Single-site clients keep today's dashboard (no switcher). Next is the rest of slice 3 (last-owner revoke, delete confirm copy) then slices 4–6. Station layer: [`LANVAC_STATION.md`](LANVAC_STATION.md). Do not import real clients until the remaining slices ship and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
 
-## How it works today (why the county cannot log in once)
+## How it worked before R53 (why the county could not log in once)
 
-A portal **client is one `profiles` row**. That row is also the login, the billing contact, and the site:
+A portal **client was one `profiles` row**. That row was also the login, the billing contact, and the site:
 
 - One `user_id` (unique): one Google / password per client
 - One `email` (unique when set): a second property cannot reuse the county email
 - One `lanvac_account_code` (unique when set): one station CODE. After R54, that CODE also owns one zone list, Historic pull, and on-test state (`profile_id` only).
 - [`unique (profile_id, service_type)`](website/src/lib/portal/database.types.ts): at most one monitoring and one VoIP on that row
 
-Caller ID, devices, and Stripe live on that same row. [`getAuthContext`](website/src/lib/portal/auth.ts) loads **one** profile by `user_id`. RLS everywhere is `p.user_id = auth.uid()`.
+Caller ID, devices, and Stripe live on that same row. Before slices 1–2, [`getAuthContext`](website/src/lib/portal/auth.ts) loaded **one** profile by `user_id` and RLS was `p.user_id = auth.uid()`. That is replaced: session is membership + selected site; RLS is `can_access_profile`.
 
 So “assign their account to another system” is not supported. Creating a second client with the same email fails. Two emails means two logins and two inboxes.
 
@@ -99,22 +99,22 @@ The county: one account, many sites, one or more members. They never share a Gma
 
 These are live paths that would break if we only added tables and a switcher.
 
-**1. Extra members look like orphans today.** Sign-in ([`sign-in.tsx`](website/src/components/portal/sign-in.tsx)), Google callback ([`api/auth/callback/route.ts`](website/src/app/api/auth/callback/route.ts)), layout, and [`getAuthContext`](website/src/lib/portal/auth.ts) all require `profiles.user_id`. The cleanup cron ([`cleanup.ts`](website/src/lib/portal/cron/cleanup.ts)) deletes auth users older than 7 days with no `profiles.user_id`. A county staff login that only exists on `account_members` would be signed out and then deleted. Every one of those paths must treat `account_members.user_id` as a linked account.
+**1. Extra members looked like orphans.** **Fixed in slices 1–2.** Sign-in, Google callback, layout, `resolvePortalSession`, and cleanup treat `account_members.user_id` as a linked login.
 
-**2. First-access password gate is per login, not per membership.** [`password_set_at`](website/src/app/(portal)/user-dashboard/layout.tsx) is on `profiles` and stamped by `user_id`. Extra members need it on `account_members`. A person on house + county must not be forced through password setup again. Gate: this auth user has `password_set_at` on **any** of their member rows. Setting a password stamps **all** of their member rows. New memberships for that `user_id` copy it (insert trigger).
+**2. First-access password gate is per login, not per membership.** **Fixed in slices 1–2.** Gate: this auth user has `password_set_at` on **any** of their member rows. Setting a password stamps **all** of their member rows. New memberships for that `user_id` copy it (insert trigger).
 
-**3. Delete site must not delete the county login.** [`deleteClientAction`](website/src/lib/portal/actions/clients.ts) deletes `auth.users` whenever `profile.user_id` is set, **before** the profile row. Deleting one school would lock every other county site, and a later profile-delete failure would leave a dead login. Rules:
+**3. Delete site must not delete the county login.** **Auth-wipe path fixed in the 2026-08-28 audit** (profile first; Auth only if no remaining membership / `user_id`). Still open: confirm copy that says “this site” when the account has more than one site. Rules:
 
 - Delete is **this site only** (services, caller ID, devices, `lanvac_*` station rows, that profile). Do not call Lanvac delete-all.
 - Cancel Stripe subscriptions on **that** site only.
 - Delete the profile (and empty account if last site) **first**. Only then delete Auth, and only if that user has no remaining membership and no remaining `profiles.user_id`.
 - Confirm copy must say “this site” when the account has more than one site.
 
-**4. Disable is per-site, including the home site.** `setClientStatusAction` stays on one profile. [`user-dashboard/layout.tsx`](website/src/app/(portal)/user-dashboard/layout.tsx) and `requireUser()` today lock the whole login when the **home** row is `disabled`. After this change, disable of one site must not lock other active sites. Layout / `requireUser` succeed if the person has **any** active accessible site; the switcher skips disabled rows. If **every** accessible site is disabled, show a clear “this account is disabled” screen, not the orphan-no-profile screen. Admin disable UI in [`admin-client-detail.tsx`](website/src/components/admin-portal/admin-client-detail.tsx) is hidden unless `client.user_id || disabled` — county sites with `user_id` null cannot be disabled today. Show disable for every client site. Do not disable the Auth user unless McKee is disabling (or deleting) the last site they can access.
+**4. Disable is per-site, including the home site.** **Fixed in slices 1–2 / audit.** Layout / `requireUser` succeed if any accessible site is active; all-disabled is its own screen. Admin can disable every client site (not only rows with `user_id`). Re-enable is allowed when the account already has an activated owner.
 
 **5. Last owner.** Cannot revoke the last owner. Cannot attach the last site away from an account that still has members and no remaining owner. Moving a site that empties the source account deletes that empty account. Do **not** flip `auto_onboard` back on when a multi-site account shrinks to one site.
 
-**6. Stripe email reuse would merge county bills.** [`findOrCreateStripeCustomer`](website/src/lib/portal/stripe.ts) already prefers `metadata.profile_id`, then falls through to “any customer with a card” and then `listed.data[0]`. After we allow duplicate `profiles.email`, two county sites would steal one Stripe customer and overwrite `metadata.profile_id`. Reuse only when `metadata.profile_id` matches this site, or when this site already has `stripe_customer_id`. Never pick “first / has-card customer with this email.”
+**6. Stripe email reuse would merge county bills.** **Fixed in the 2026-08-28 audit.** [`findOrCreateStripeCustomer`](website/src/lib/portal/stripe.ts) reuses only this site’s stored id or a customer whose `metadata.profile_id` matches. It does not pick “first / has-card customer with this email.”
 
 **7. Settings vs sign-in email.** Site contact email may repeat and is **not** the login. Settings keeps the **member** email locked (sign-in identity). Phone and address writes apply to the **selected site only**. If the site contact email differs from the member email, show it as a separate admin-maintained line, not as the login.
 
@@ -126,7 +126,7 @@ These are live paths that would break if we only added tables and a switcher.
 
 **11. Server actions must take a site id.** Caller ID, devices, billing, settings, and **R54 station actions** (zone pull, **account** on-test) already take `profileId` from day one. After this change they must `can_access_profile` it. Never write the first site in `sites[]` by accident. Client on-test stays **Account admin only** and is always the whole CODE, never a single zone. Members see the chip. On-test is per site (one CODE).
 
-**12. Site cookie / `?site=`.** Only honor a site the member can access and that is not disabled. Otherwise first active site. A crafted id is not an IDOR.
+**12. Site cookie / `?site=`.** Only honor a site the member can access and that is not disabled. Otherwise first active site. A crafted id is not an IDOR. The Next.js `proxy` copies a valid `?site=` UUID onto the cookie and `x-portal-selected-site` so the layout and server actions match the page on the same request.
 
 **13. RLS helper.** `private.can_access_profile(profile_id)` is security definer, `search_path = ''`, same grant pattern as `is_admin()`. Membership only (see schema). It must not recurse through profiles RLS. `is_admin()` stays “this auth user has a profile with `role = admin`.” INSERT…RETURNING on caller ID still needs the SELECT policy to see the new row. [`save_caller_id_list`](supabase/migrations/20260813201834_caller_id_sort_order.sql) has no in-function auth today (RLS on child tables only). Add `can_access_profile(p_profile_id)` inside the RPC.
 
@@ -136,9 +136,9 @@ These are live paths that would break if we only added tables and a switcher.
 
 **16. One person, two accounts.** Unique member email is per account, not global. `getAuthContext` unions all sites for all memberships. Switcher groups by account name.
 
-**17. `requireUser` today returns the home site.** [`getAuthContext`](website/src/lib/portal/auth.ts) is `.eq("user_id", claims.sub).maybeSingle()`. [`updateMyAccountAction`](website/src/lib/portal/actions/account.ts) then writes `.eq("id", profile.id).eq("user_id", user.id)`. Extra members have no `profiles.user_id`, so they cannot save phone/address at all. Owners would keep writing the **home** site even when the switcher shows another site. Context must return `sites[]` plus `selectedSite` (cookie / `?site=`). Writes take `profileId` and `can_access_profile`. Drop the `user_id` write guard.
+**17. `requireUser` used to return the home site.** **Fixed in slices 1–2 / audit.** `resolvePortalSession` returns `sites[]` plus `selectedSite` (cookie / `?site=`). Client writes go through `tryRequireClientSite` / `requireSelectedSite`. The `user_id` write guard on Settings is gone.
 
-**18. Re-enable after disable.** [`setClientStatusAction`](website/src/lib/portal/actions/clients.ts) refuses `status = active` when `user_id` is null (“has not activated yet”). A second county site is active with `user_id` null by design. After McKee disables it, re-enable must be allowed when the account already has an activated owner.
+**18. Re-enable after disable.** **Fixed in the 2026-08-28 audit.** Re-enable is allowed when this row has `user_id` or the account already has an activated owner.
 
 **19. Member invite to an email that already has a login.** [`activateWithPassword`](website/src/lib/portal/actions/activation.ts) calls `createUser` and on `email_exists` tells them to sign in first. Compensation deletes the auth user if linking fails. Extra-member activation must **never** `createUser` when that email already exists, must **never** `deleteUser` as compensation for an existing user, and must link `account_members.user_id` only (not steal `profiles.user_id` on a site). Reuse the existing “activate as current user” path.
 
@@ -266,9 +266,7 @@ Activation ([`linkProfileToUser`](website/src/lib/portal/actions/activation.ts))
 
 ## Docs and gates
 
-**R53 is already in [PORTAL_PLAN.md](../PORTAL_PLAN.md)** as planned (account vs site, Account admin vs Member, hidden single-site UI, no org checkbox, grouping sign-off, Appoint account admin, `auto_onboard`, delete/disable, Stripe email rule, per-site due dates). 9.5.4 / 9.5.5 / 9.5.5C and [ACCOUNTING_PLAN.md](../ACCOUNTING_PLAN.md) match. [PRODUCT_HANDOVER.md](../PRODUCT_HANDOVER.md) header points at the two Clients-tab buttons + Appoint account admin. When a slice ships, mark the matching R53 bullets as built and update the CUA playbook in the same commit.
-
-Update [`rls-pentest.mjs`](website/scripts/rls-pentest.mjs), [`rls-check.mjs`](website/scripts/rls-check.mjs), [`activation-check.mjs`](website/scripts/activation-check.mjs), and cleanup expectations in [`cron-check.mjs`](website/scripts/cron-check.mjs): client A cannot see client B’s site; a second site on A’s account is visible; a member without `profiles.user_id` is not an orphan; client cannot flip `auto_onboard` unless we add a client UPDATE (we will not: only admin RLS UPDATE on accounts).
+**R53 slices 1–2 plus the 2026-08-28 audit are in [PORTAL_PLAN.md](../PORTAL_PLAN.md).** Check scripts already assert isolation, second-site visibility, member-only access, and no client `auto_onboard` flip. Later slices still need CUA steps when their UI ships.
 
 ## Out of scope for this pass
 
@@ -297,12 +295,12 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 **What this pass must still add (was easy to miss):**
 
 - A **sites list** (not only a switcher) so the county can see every call list at a glance, then edit one. That is the “central management” ask without a dangerous mega-form.
-- `auto_onboard` is onboarding-only, not a mute on payment/caller-ID/device mail.
-- Password gate is per Auth user (house + county).
-- Disable of the home site must not lock the login.
-- Admin can disable a site that has no `user_id`.
-- `save_caller_id_list` and `cloud_backup_interest` policies, not only the obvious `user_id = auth.uid()` selects.
-- One `resolvePortalSession` / `requireSelectedSite` helper so a later action cannot write the home site by accident.
+- `auto_onboard` is onboarding-only, not a mute on payment/caller-ID/device mail. **Honor this flag in create/resend/member-invite (later slice).**
+- Password gate is per Auth user (house + county). **Done.**
+- Disable of the home site must not lock the login. **Done.**
+- Admin can disable a site that has no `user_id`. **Done.**
+- `save_caller_id_list` and `cloud_backup_interest` policies, not only the obvious `user_id = auth.uid()` selects. **Done.**
+- One `resolvePortalSession` / `requireSelectedSite` helper so a later action cannot write the home site by accident. **Done.** `?site=` is persisted by `src/proxy.ts` so layout and actions see the same site.
 
 ## Third audit (remaining holes, then ship)
 
@@ -314,9 +312,9 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 
 **Implementation order** (do not land as one unreviewable dump):
 
-1. Schema, backfill, RLS, unique owner, insert trigger, check-script trigger
-2. `resolvePortalSession` + orphan / OAuth / cleanup / password
-3. Delete, disable, Stripe email reuse
+1. Schema, backfill, RLS, unique owner, insert trigger, check-script trigger — **done**
+2. `resolvePortalSession` + orphan / OAuth / cleanup / password — **done**
+3. Delete, disable, Stripe email reuse — **live holes done in the audit**; last-owner revoke + multi-site delete confirm copy remain
 4. Admin: two buttons, Account card, grouping board + empty-queue sign-off, Appoint account admin
 5. Client: sites list / switcher / People (hidden for the majority)
 6. Emails + render check
@@ -324,7 +322,7 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 8. **Living CUA playbook.** Update [`docs/PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same slice as the UI it describes. After deploy, a computer-using agent runs that file (devtools on) and writes a findings report. **This is the last gate before the Windows MCP bridge and the real import.** Do not start either until the report is clean or every fail is accepted.
 9. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
 
-**Pacing (locked):** R54 is complete (read UI, O5985-gated zone writes, **account-only** on-test). This file matches: zones / Historic / account on-test stay per-site (`profile_id`). **Next implementation is slices 1 and 2** (schema + `resolvePortalSession` / orphan / OAuth / cleanup / password), then stop for an end-to-end audit. Do not start slice 3 until that audit is done. Same pattern for 3–4, 5–6, then CUA. Hosted has **staff and throwaway test clients only**.
+**Pacing (locked):** R54 is complete. **Slices 1–2 are shipped and audited (2026-08-28).** Next is the remainder of slice 3 (last-owner revoke, delete confirm copy), then slices 4–6, then CUA. Hosted has **staff and throwaway test clients only**.
 
 **Alignment:** 10/10 to implement R53. Station tables stay on `profile_id`; actions already take `profileId`; on-test is the whole CODE for that site, never a zone; client start/stop is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
 

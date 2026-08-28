@@ -8,6 +8,7 @@ import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getAuthContext } from "@/lib/portal/auth";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/portal/rate-limit";
+import { upsertOwnerMember } from "@/lib/portal/owner-member";
 
 export type ActivationResult =
   | { ok: false; error: string }
@@ -33,16 +34,17 @@ async function linkProfileToUser(
   profileId: string,
   invitationId: string,
   userId: string,
-  opts?: { passwordSet?: boolean },
+  opts?: { passwordSet?: boolean; email?: string | null },
 ): Promise<boolean> {
   const admin = getPortalAdminClient();
+  const passwordSetAt = opts?.passwordSet ? new Date().toISOString() : null;
 
   const { data: linked, error } = await admin
     .from("profiles")
     .update({
       user_id: userId,
       status: "active",
-      ...(opts?.passwordSet ? { password_set_at: new Date().toISOString() } : {}),
+      ...(passwordSetAt ? { password_set_at: passwordSetAt } : {}),
     })
     .eq("id", profileId)
     .is("user_id", null)
@@ -54,6 +56,13 @@ async function linkProfileToUser(
     console.error("[portal] Profile linking failed:", error ?? "already linked");
     return false;
   }
+
+  await upsertOwnerMember({
+    profileId,
+    userId,
+    email: opts?.email ?? null,
+    passwordSetAt,
+  });
 
   const { error: usedError } = await admin
     .from("invitations")
@@ -132,6 +141,7 @@ export async function activateWithPassword(input: {
 
   const linked = await linkProfileToUser(profile.id, invitation.id, created.user.id, {
     passwordSet: true,
+    email,
   });
   if (!linked) {
     await admin.auth.admin.deleteUser(created.user.id).catch((cleanupError) => {
@@ -215,7 +225,9 @@ export async function activateAsCurrentUser(token: string): Promise<ActivationRe
     };
   }
 
-  const linked = await linkProfileToUser(profile.id, invitation.id, user.id);
+  const linked = await linkProfileToUser(profile.id, invitation.id, user.id, {
+    email: user.email,
+  });
   if (!linked) {
     return { ok: false, error: TOKEN_ERROR };
   }

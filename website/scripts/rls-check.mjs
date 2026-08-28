@@ -31,6 +31,7 @@ const users = [
   { email: `rls-check-b-${stamp}@example.com`, password: randomBytes(24).toString("base64url") },
 ];
 const created = [];
+const extraProfiles = [];
 
 try {
   // Setup: two client users with linked profiles (service role).
@@ -176,12 +177,98 @@ try {
     const { data, error } = await clientA.from("lanvac_zone_write").select("delay");
     check("user A reads zero zone write rows", Boolean(error) || (data ?? []).length === 0, error?.message);
   }
+
+  // 6. R53: insert trigger, second site on the same account, membership ACL.
+  {
+    const { data: siteA } = await admin
+      .from("profiles")
+      .select("account_id")
+      .eq("id", users[0].profileId)
+      .single();
+    check("client insert without account_id created an account", Boolean(siteA?.account_id));
+
+    const { data: site2, error: site2Error } = await admin
+      .from("profiles")
+      .insert({
+        account_id: siteA.account_id,
+        first_name: "Site",
+        last_name: "Two",
+        email: `rls-check-a2-${stamp}@example.com`,
+        role: "client",
+        status: "active",
+      })
+      .select("id")
+      .single();
+    check("second site on A's account inserts", !site2Error && Boolean(site2?.id), site2Error?.message);
+    if (site2?.id) extraProfiles.push(site2.id);
+
+    const { data: twoSites, error: twoError } = await clientA.from("profiles").select("id");
+    const ids = new Set((twoSites ?? []).map((row) => row.id));
+    check(
+      "user A sees both sites on the account",
+      !twoError && ids.has(users[0].profileId) && Boolean(site2?.id) && ids.has(site2.id),
+      twoError?.message ?? `rows=${twoSites?.length}`,
+    );
+
+    const { data: flipped } = await clientA
+      .from("accounts")
+      .update({ auto_onboard: false })
+      .eq("id", siteA.account_id)
+      .select("id");
+    const { data: afterFlip } = await admin
+      .from("accounts")
+      .select("auto_onboard")
+      .eq("id", siteA.account_id)
+      .single();
+    check(
+      "user A cannot UPDATE accounts.auto_onboard",
+      (flipped ?? []).length === 0 && afterFlip?.auto_onboard === true,
+    );
+
+    const memberEmail = `rls-check-member-${stamp}@example.com`;
+    const memberPassword = randomBytes(24).toString("base64url");
+    const { data: memberAuth, error: memberAuthError } = await admin.auth.admin.createUser({
+      email: memberEmail,
+      password: memberPassword,
+      email_confirm: true,
+    });
+    check("member-only auth user created", !memberAuthError && Boolean(memberAuth?.user.id), memberAuthError?.message);
+    if (memberAuth?.user.id) created.push({ id: memberAuth.user.id });
+    if (memberAuth?.user.id && siteA?.account_id) {
+      const { error: memberInsertError } = await admin.from("account_members").insert({
+        account_id: siteA.account_id,
+        user_id: memberAuth.user.id,
+        email: memberEmail,
+        role: "member",
+      });
+      check("member row without profiles.user_id inserts", !memberInsertError, memberInsertError?.message);
+
+      const memberClient = createClient(url, publishableKey, { auth: { persistSession: false } });
+      const { error: memberSignInError } = await memberClient.auth.signInWithPassword({
+        email: memberEmail,
+        password: memberPassword,
+      });
+      check("member-only user signs in", !memberSignInError, memberSignInError?.message);
+      const { data: memberSites, error: memberSitesError } = await memberClient
+        .from("profiles")
+        .select("id");
+      const memberIds = new Set((memberSites ?? []).map((row) => row.id));
+      check(
+        "member without profiles.user_id sees the account sites",
+        !memberSitesError && memberIds.has(users[0].profileId),
+        memberSitesError?.message ?? `rows=${memberSites?.length}`,
+      );
+    }
+  }
 } finally {
+  for (const id of extraProfiles) {
+    await admin.from("profiles").delete().eq("id", id);
+  }
   for (const u of created) {
     await admin.from("profiles").delete().eq("user_id", u.id);
     await admin.auth.admin.deleteUser(u.id);
   }
-  console.log(`Cleanup: ${created.length} test users deleted.`);
+  console.log(`Cleanup: ${created.length} test users + ${extraProfiles.length} extra sites deleted.`);
 }
 
 if (failures.length > 0) {

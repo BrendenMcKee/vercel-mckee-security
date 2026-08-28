@@ -1,7 +1,8 @@
-import { getAuthContext } from "@/lib/portal/auth";
+import { resolvePortalSession } from "@/lib/portal/auth";
 import { AuthFrame } from "@/components/portal/auth-frame";
 import { SignIn } from "@/components/portal/sign-in";
 import { OrphanAccount } from "@/components/portal/orphan-account";
+import { DisabledAccount } from "@/components/portal/disabled-account";
 import { PasswordSetup } from "@/components/portal/password-setup";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 
@@ -10,30 +11,31 @@ import { SignOutButton } from "@/components/portal/sign-out-button";
  * user-dashboard segment, not the (portal) group, because /account/activate
  * must render for anonymous invitees.
  *
- * UX-level gate only: server actions re-check with requireUser()/requireAdmin()
- * and RLS is the final authority (R6).
+ * UX-level gate only: server actions re-check with tryRequireClientSite() /
+ * requireSelectedSite() / requireAdmin() and RLS is the final authority (R6).
+ * Extra members are linked via account_members, not profiles.user_id.
  */
 export default async function UserDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, profile } = await getAuthContext();
+  const session = await resolvePortalSession();
 
-  if (!user) {
+  if (session.kind === "signed_out") {
     return <SignIn />;
   }
 
-  if (!profile) {
-    console.warn(`[portal] Orphan session: auth user ${user.id} has no linked profile.`);
-    return <OrphanAccount email={user.email} />;
+  if (session.kind === "orphan") {
+    console.warn(`[portal] Orphan session: auth user ${session.user.id} has no membership.`);
+    return <OrphanAccount email={session.user.email} />;
   }
 
-  if (profile.status === "disabled") {
-    return <OrphanAccount email={user.email} />;
+  if (session.kind === "client_disabled") {
+    return <DisabledAccount email={session.user.email} />;
   }
 
-  if (profile.role === "admin") {
+  if (session.kind === "admin") {
     return (
       <AuthFrame
         variant="admin"
@@ -54,16 +56,18 @@ export default async function UserDashboardLayout({
 
   // Dummy-proofing (stakeholder 2026-07-05): a client who activated via Google
   // must set a backup password before the dashboard opens, so "I forgot which
-  // way I sign in" can never lock anyone out. Enforced on every visit until set.
-  if (profile.role === "client" && !profile.password_set_at) {
+  // way I sign in" can never lock anyone out. Per Auth user, not per site.
+  if (!session.passwordSet) {
     return (
       <PasswordSetup
         variant="first-access"
-        googleLinked={user.providers.includes("google")}
-        email={user.email}
+        googleLinked={session.user.providers.includes("google")}
+        email={session.user.email}
       />
     );
   }
+
+  const profile = session.selectedSite;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">

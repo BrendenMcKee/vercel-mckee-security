@@ -602,8 +602,8 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
   function toggleStatus() {
     const confirmed = window.confirm(
       disabled
-        ? `Re-enable ${name}? They will be able to sign in again.`
-        : `Disable ${name}? They will be locked out of the portal until re-enabled. Their data is kept.`,
+        ? `Re-enable this site (${name})? People who have access can open it again.`
+        : `Disable this site (${name})? People who still have another active site can keep using those. This site stays in the database; card payments keep running.`,
     );
     if (!confirmed) return;
     setNotice(null);
@@ -614,7 +614,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
       });
       setNotice(
         result.ok
-          ? { kind: "ok", text: disabled ? "Account re-enabled. They can sign in again." : "Account disabled. They can no longer sign in." }
+          ? { kind: "ok", text: disabled ? "Site re-enabled. People who have access can open it again." : "Site disabled. Other sites on this login are unchanged." }
           : { kind: "error", text: result.error },
       );
     });
@@ -639,23 +639,21 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
       <div className="mt-4 space-y-3">
         <NoticeBanner notice={notice} />
 
-        {(client.user_id || disabled) && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-background p-4">
-            <div className="max-w-xl">
-              <p className="text-sm font-bold text-white">
-                {disabled ? "Re-enable account" : "Disable account"}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-white/50">
-                {disabled
-                  ? "This account is currently disabled. Re-enabling lets the client sign in again; everything is exactly as they left it."
-                  : "Temporarily locks the client out of the portal; they cannot sign in until you re-enable them. Nothing is removed: their services, billing, contact list, and history all stay, and automatic card payments keep running. Use this instead of deleting when a situation might get resolved."}
-              </p>
-            </div>
-            <button type="button" disabled={pending} onClick={toggleStatus} className={buttonSecondary}>
-              {disabled ? "Re-enable Account" : "Disable Account"}
-            </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-background p-4">
+          <div className="max-w-xl">
+            <p className="text-sm font-bold text-white">
+              {disabled ? "Re-enable this site" : "Disable this site"}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-white/50">
+              {disabled
+                ? "This site is currently disabled. Re-enabling lets people who have access open it again; everything is exactly as they left it."
+                : "Turns this site off in the portal. People who still have another active site can keep using those. Nothing is removed: services, billing, contact list, and history stay, and automatic card payments keep running."}
+            </p>
           </div>
-        )}
+          <button type="button" disabled={pending} onClick={toggleStatus} className={buttonSecondary}>
+            {disabled ? "Re-enable site" : "Disable site"}
+          </button>
+        </div>
 
         <div className="rounded-xl border border-red-500/25 bg-background p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">

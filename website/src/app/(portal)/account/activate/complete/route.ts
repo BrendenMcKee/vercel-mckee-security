@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ACTIVATION_COOKIE, validateInvitationToken } from "@/lib/portal/invitations";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
+import { upsertOwnerMember } from "@/lib/portal/owner-member";
 
 /**
  * Final step of the Google activation path (PORTAL_PLAN.md 6.4): the OAuth
@@ -40,14 +41,19 @@ export async function GET(request: NextRequest) {
   }
   const { invitation, profile } = validation;
 
-  // A signed-in user who already owns a profile keeps their session; the
-  // invitation stays unconsumed.
+  // A signed-in user who already owns a home site or any membership keeps
+  // their session; the invitation stays unconsumed.
   const { data: existingProfile } = await supabase
     .from("profiles")
     .select("id")
     .eq("user_id", userId)
     .maybeSingle();
-  if (existingProfile) return fail("already_linked");
+  const { data: existingMember } = await supabase
+    .from("account_members")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existingProfile || existingMember) return fail("already_linked");
 
   const targetEmail = invitation.target_email?.toLowerCase() ?? null;
   if (targetEmail && targetEmail !== userEmail) {
@@ -70,6 +76,12 @@ export async function GET(request: NextRequest) {
     await supabase.auth.signOut();
     return fail("token_invalid");
   }
+
+  await upsertOwnerMember({
+    profileId: profile.id,
+    userId,
+    email: userEmail || null,
+  });
 
   const { error: usedError } = await admin
     .from("invitations")

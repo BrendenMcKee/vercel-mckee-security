@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
+import { stampPasswordSetAt } from "@/lib/portal/password-stamp";
 
 const passwordSchema = z
   .string()
@@ -47,15 +48,8 @@ export async function updatePassword(input: {
     return { ok: false, error: "Could not update your password. Please try again." };
   }
 
-  // Service role: clients have no UPDATE policy on profiles by design.
-  const admin = getPortalAdminClient();
-  const { error: stampError } = await admin
-    .from("profiles")
-    .update({ password_set_at: new Date().toISOString() })
-    .eq("user_id", userId);
-  if (stampError) {
-    console.error("[portal] password_set_at stamp failed:", stampError);
-  }
+  // Service role: clients have no UPDATE policy on profiles / members.
+  await stampPasswordSetAt(getPortalAdminClient(), userId);
 
   redirect("/user-dashboard");
 }

@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { SESSION_ERROR_MESSAGE, tryRequireUser } from "@/lib/portal/auth";
+import { SESSION_ERROR_MESSAGE, tryRequireClientSite } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import { formatPhone, normalizePhone } from "@/lib/portal/phone";
 import { sendAccountChangeAdminAlert } from "@/lib/portal/emails";
+import { stampPasswordSetAt } from "@/lib/portal/password-stamp";
 
 const passwordSchema = z.string().min(8, "Password must be at least 8 characters");
 
@@ -33,12 +34,9 @@ export async function updateMyAccountAction(input: {
   phone: string;
   address: string;
 }): Promise<UpdateMyAccountResult> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
-  const { user, profile } = auth;
-  if (profile.role !== "client") {
-    return { ok: false, error: "Account settings are for client profiles." };
-  }
+  const { profile } = auth;
 
   const parsed = accountSchema.safeParse(input);
   if (!parsed.success) {
@@ -77,8 +75,7 @@ export async function updateMyAccountAction(input: {
   const { error } = await admin
     .from("profiles")
     .update({ phone, address })
-    .eq("id", profile.id)
-    .eq("user_id", user.id);
+    .eq("id", profile.id);
 
   if (error) {
     console.error("[portal] updateMyAccount failed:", error);
@@ -107,12 +104,9 @@ export async function updateMyPasswordAction(input: {
   password: string;
   confirmPassword: string;
 }): Promise<UpdateMyPasswordResult> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
   const { user, profile } = auth;
-  if (profile.role !== "client") {
-    return { ok: false, error: "Account settings are for client profiles." };
-  }
 
   if (!input.currentPassword) {
     return { ok: false, error: "Enter your current password." };
@@ -128,7 +122,7 @@ export async function updateMyPasswordAction(input: {
     return { ok: false, error: "The new password must be different from your current password." };
   }
 
-  const email = user.email ?? profile.email;
+  const email = user.email;
   if (!email) {
     return { ok: false, error: "Your account has no sign-in email, so the password cannot be changed here." };
   }
@@ -161,14 +155,7 @@ export async function updateMyPasswordAction(input: {
     return { ok: false, error: "Could not update your password. Please try again." };
   }
 
-  const admin = getPortalAdminClient();
-  const { error: stampError } = await admin
-    .from("profiles")
-    .update({ password_set_at: new Date().toISOString() })
-    .eq("user_id", user.id);
-  if (stampError) {
-    console.error("[portal] password_set_at stamp failed:", stampError);
-  }
+  await stampPasswordSetAt(getPortalAdminClient(), user.id);
 
   await sendAccountChangeAdminAlert({
     clientName: `${profile.first_name} ${profile.last_name}`,

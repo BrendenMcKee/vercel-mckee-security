@@ -170,6 +170,8 @@ try {
   }
 
   // ---- cleanup: old invitation deleted ------------------------------------------------
+  // Orphan auth cleanup now unions profiles.user_id and account_members.user_id
+  // so a member-only login is not deleted. That path is covered by rls-check.
   {
     const res = await fetch(`${baseUrl}/api/cron/cleanup`, authed);
     const body = await res.json();

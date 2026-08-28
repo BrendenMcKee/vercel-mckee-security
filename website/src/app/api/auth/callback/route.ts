@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
+import { hasLinkedPortalLogin } from "@/lib/portal/has-linked-login";
 
 /**
  * The Google activation flow (PORTAL_PLAN.md 6.4) legitimately arrives here
@@ -37,17 +38,14 @@ export async function GET(request: NextRequest) {
         const { data } = await supabase.auth.getClaims();
         const userId = data?.claims?.sub;
         if (userId) {
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("user_id", userId)
-            .maybeSingle();
+          const link = await hasLinkedPortalLogin(supabase, userId);
 
           // Only treat a *successful* empty lookup as "no account": a failed
-          // query must never delete a real user.
-          if (!profileError && !profile) {
+          // query must never delete a real user. Extra members are linked
+          // via account_members, not profiles.user_id.
+          if (!link.lookupFailed && !link.linked) {
             console.warn(
-              `[portal] Uninvited Google sign-in rejected: auth user ${userId} has no profile; removing.`,
+              `[portal] Uninvited Google sign-in rejected: auth user ${userId} has no membership; removing.`,
             );
             await supabase.auth.signOut();
             const { error: deleteError } = await getPortalAdminClient().auth.admin.deleteUser(userId);

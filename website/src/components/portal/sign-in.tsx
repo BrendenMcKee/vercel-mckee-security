@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortalBrowserClient } from "@/lib/portal/supabase/client";
+import { hasLinkedPortalLogin } from "@/lib/portal/has-linked-login";
 import { AuthFrame } from "@/components/portal/auth-frame";
 
 const COPY = {
@@ -91,12 +92,8 @@ export function SignIn({
 
     // Credentials valid but no linked account: stay on the sign-in screen
     // with a clear message instead of pushing into the portal.
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", signInData.user.id)
-      .maybeSingle();
-    if (!profileError && !profile) {
+    const link = await hasLinkedPortalLogin(supabase, signInData.user.id);
+    if (!link.lookupFailed && !link.linked) {
       await supabase.auth.signOut();
       setError(mapAuthError("no_account", variant));
       setPending(false);

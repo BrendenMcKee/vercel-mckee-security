@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   SESSION_ERROR_MESSAGE,
+  resolvePortalSession,
   tryRequireAdmin,
-  tryRequireUser,
+  tryRequireSelectedSite,
 } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient, isPortalAdminConfigured } from "@/lib/portal/supabase/admin";
@@ -69,11 +70,17 @@ async function requireStationAccess(
   if (!parsed.success) return { ok: false, error: "That site could not be found." };
 
   const admin = await tryRequireAdmin();
-  const user = admin ? null : await tryRequireUser();
-  if (!admin && !user) return { ok: false, error: SESSION_ERROR_MESSAGE };
-
-  if (user && user.profile.id !== parsed.data) {
-    return { ok: false, error: "You cannot open another site's station." };
+  let clientUserId: string | null = null;
+  let clientEmail: string | null = null;
+  if (!admin) {
+    const session = await resolvePortalSession();
+    if (session.kind !== "client") return { ok: false, error: SESSION_ERROR_MESSAGE };
+    const allowed = session.sites.some(
+      (row) => row.id === parsed.data && row.status !== "disabled",
+    );
+    if (!allowed) return { ok: false, error: "You cannot open another site's station." };
+    clientUserId = session.user.id;
+    clientEmail = session.user.email;
   }
 
   const supabase = await createPortalServerClient();
@@ -105,7 +112,7 @@ async function requireStationAccess(
     ok: true,
     actor: admin
       ? { role: "admin", userId: admin.user.id, email: admin.user.email }
-      : { role: "client", userId: user!.user.id, email: user!.user.email },
+      : { role: "client", userId: clientUserId!, email: clientEmail },
     code: target.lanvac_account_code,
   };
 }
@@ -246,7 +253,7 @@ function revalidateStation() {
 
 async function requireWriteAccess(
   profileId: string,
-  who: "admin" | "any",
+  who: "admin" | "any" | "owner",
 ): Promise<
   | { ok: true; actor: StationActor; code: string }
   | { ok: false; error: string }
@@ -255,6 +262,12 @@ async function requireWriteAccess(
   if (!access.ok) return access;
   if (who === "admin" && access.actor.role !== "admin") {
     return { ok: false, error: "Only staff can change zones." };
+  }
+  if (who === "owner" && access.actor.role === "client") {
+    const site = await tryRequireSelectedSite(profileId);
+    if (!site?.isAccountAdmin) {
+      return { ok: false, error: "Only the Account admin can put this site on test." };
+    }
   }
   if (!lanvacWritesLive(access.code)) {
     return { ok: false, error: STATION_WRITES_NOT_LIVE };
@@ -453,7 +466,7 @@ export async function setLanvacAccountTestAction(input: {
   if (parsed.data.onTest && parsed.data.minutes == null) {
     return { ok: false, error: "Choose how long to stay on test." };
   }
-  const access = await requireWriteAccess(parsed.data.profileId, "any");
+  const access = await requireWriteAccess(parsed.data.profileId, "owner");
   if (!access.ok) return access;
 
   if (access.actor.role === "client") {

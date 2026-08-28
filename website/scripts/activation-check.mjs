@@ -187,8 +187,15 @@ try {
     check("matching-email completion redirects to dashboard", location.endsWith("/user-dashboard"), `location=${location}`);
   }
   {
-    const { data: profileA } = await admin.from("profiles").select("user_id, status").eq("id", profileIdA).single();
+    const { data: profileA } = await admin.from("profiles").select("user_id, status, account_id").eq("id", profileIdA).single();
     check("profile A linked and active", profileA?.user_id === googleA.id && profileA?.status === "active");
+    const { data: ownerA } = await admin
+      .from("account_members")
+      .select("user_id, role")
+      .eq("account_id", profileA?.account_id)
+      .eq("role", "owner")
+      .maybeSingle();
+    check("profile A owner member upserted on the account", ownerA?.user_id === googleA.id);
     const { data: invA } = await admin.from("invitations").select("used_at").eq("profile_id", profileIdA).single();
     check("invitation A consumed", Boolean(invA?.used_at));
   }
@@ -215,9 +222,13 @@ try {
   {
     // Setting a password (simulated: stamp as the updatePassword action does)
     // releases the gate.
+    const stampedAt = new Date().toISOString();
     await admin.from("profiles")
-      .update({ password_set_at: new Date().toISOString() })
+      .update({ password_set_at: stampedAt })
       .eq("id", profileIdA);
+    await admin.from("account_members")
+      .update({ password_set_at: stampedAt })
+      .eq("user_id", googleA.id);
     const cookies = await sessionCookiesFor(googleA.email, googleA.password);
     const res = await fetch(`${baseUrl}/user-dashboard`, { headers: { cookie: cookies } });
     const html = await res.text();

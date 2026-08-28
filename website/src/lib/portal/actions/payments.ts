@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import type Stripe from "stripe";
-import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireUser } from "@/lib/portal/auth";
+import { SESSION_ERROR_MESSAGE, tryRequireAdmin, tryRequireClientSite } from "@/lib/portal/auth";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 import { getPortalAdminClient } from "@/lib/portal/supabase/admin";
 import {
@@ -50,7 +50,7 @@ async function getOrigin(): Promise<string> {
 }
 
 export async function createCheckoutSession(input: { serviceId: string }): Promise<CheckoutResult> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
   const { user, profile } = auth;
 
@@ -122,12 +122,12 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
     const stripe = getStripeClient();
     const admin = getPortalAdminClient();
 
-    // One portal client, one Stripe customer. Reuse the stored id or an
-    // existing Stripe customer with this email (same person after a delete).
+    // One portal site, one Stripe customer. Receipts use the site contact
+    // (else the login). Reuse is by stored id / metadata.profile_id only.
     const customerId = await findOrCreateStripeCustomer({
       existingCustomerId: profile.stripe_customer_id,
       profileId: profile.id,
-      email: user.email ?? profile.email,
+      email: profile.email ?? user.email,
       name: `${profile.first_name} ${profile.last_name}`,
     });
     if (customerId !== profile.stripe_customer_id) {
@@ -188,7 +188,7 @@ export async function createCheckoutSession(input: { serviceId: string }): Promi
 export async function payOwnVoipPortFeeAction(input: {
   serviceId: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
   const { profile } = auth;
 
@@ -253,7 +253,7 @@ export async function payOwnVoipPortFeeAction(input: {
 
 /** Card already on file: start any leftover approved services and port fees. */
 export async function confirmRemainingAutopayAction(): Promise<{ ok: true } | { ok: false; error: string }> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
   if (!isStripeConfigured()) {
     return { ok: false, error: "Online payment is not available yet. Please contact McKee Security to pay." };
@@ -281,7 +281,7 @@ export async function confirmRemainingAutopayAction(): Promise<{ ok: true } | { 
 export type PortalSessionResult = { ok: true; url: string } | { ok: false; error: string };
 
 export async function createBillingPortalSession(): Promise<PortalSessionResult> {
-  const auth = await tryRequireUser();
+  const auth = await tryRequireClientSite();
   if (!auth) return { ok: false, error: SESSION_ERROR_MESSAGE };
   const { profile } = auth;
 
