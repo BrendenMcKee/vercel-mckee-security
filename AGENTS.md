@@ -107,7 +107,9 @@ gates all degrade gracefully. Only Supabase is hard-required for the portal. Cli
 mail stays off until the Billing-tab `GO LIVE` flip (`PORTAL_PLAN.md` 9.5.5C). Do not enable it
 during import. R54 (station read UI, O5985-gated writes, UI close-out) is done. R53 slices 1–2
 are shipped and audited (schema + `resolvePortalSession` / orphan / OAuth /
-cleanup / password, plus Stripe / delete-Auth / disable hardening). Next is the
+cleanup / password, plus Stripe / delete-Auth / disable hardening). Hosted
+McKee fixture for two-site testing: account `McKee`, Bunkie `O5985` (home
+login) + House `O4964` (no `user_id`). Do not delete those sites. Next is the
 remainder of slice 3 (`docs/MULTI_SITE_ACCOUNTS.md`: last-owner revoke, delete
 confirm copy), then later R53 slices, then the CUA playbook
 (`docs/PORTAL_CUA_TEST.md`). Do not start the Windows QuickBooks bridge, a real

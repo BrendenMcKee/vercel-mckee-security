@@ -14,7 +14,7 @@
 
 No em dashes anywhere in this project. Use periods, commas, or colons. Complete sentences in copy, commits, and documentation.
 
-**Next product work:** Remainder of R53 slice 3 (last-owner revoke, multi-site delete confirm copy). Stripe email reuse, delete-site Auth safety, per-site disable / re-enable, and `requireSelectedSite` on client writes shipped in the 2026-08-28 audit. Then slices 4–6 (admin UI, switcher, emails), then the CUA playbook ([`docs/PORTAL_CUA_TEST.md`](./docs/PORTAL_CUA_TEST.md)) before the Windows bridge or real import. R54 is done. Client mail stays off (R52 / 9.5.5C). When a slice changes UI or schema, update those docs in the same commit so implementation is never working from a stale page.
+**Next product work:** Remainder of R53 slice 3 (last-owner revoke, multi-site delete confirm copy). Stripe email reuse, delete-site Auth safety, per-site disable / re-enable, and `requireSelectedSite` on client writes shipped in the 2026-08-28 audit. Hosted two-site fixture (do not delete): McKee account, Bunkie `O5985` + House `O4964`. Then slices 4–6 (admin UI, switcher, emails), then the CUA playbook ([`docs/PORTAL_CUA_TEST.md`](./docs/PORTAL_CUA_TEST.md)) before the Windows bridge or real import. R54 is done. Client mail stays off (R52 / 9.5.5C). When a slice changes UI or schema, update those docs in the same commit so implementation is never working from a stale page.
 
 ---
 
@@ -1517,6 +1517,7 @@ Existing and unchanged: `RESEND_API_KEY`, `CONTACT_EMAIL`, `EMAIL_FROM`, `DATA_D
 
 | Date | Milestone |
 |------|-----------|
+| 2026-08-28 | **R53 two-site fixture on hosted.** House `O4964` attached to the McKee account beside Bunkie `O5985`. Session without `?site=` / cookie prefers the leftover home site. Membership checks passed on those real rows. Next is last-owner revoke + delete confirm copy. Do not delete the McKee sites. Do not start the Windows QuickBooks bridge or a real import. Do not type `GO LIVE`. |
 | 2026-08-28 | **R53 slices 1–2 audited and hardened.** Stripe no longer merges sites that share an email; checkout uses the site contact. Delete site removes the profile first and only deletes Auth when no membership remains. Disable is per site; re-enable works for `user_id` null when the account has an owner. Client writes use `requireSelectedSite`. `?site=` is copied onto the session cookie so layout and actions match. Next is last-owner revoke + delete confirm copy, then slices 4–6. Do not start the Windows QuickBooks bridge or a real import. Do not type `GO LIVE`. |
 | 2026-08-28 | **R53 slices 1–2 shipped.** `accounts` + `account_members`, membership RLS, `resolvePortalSession`, orphan / OAuth / cleanup / password. Single-site dashboard unchanged. Next is an audit, then slice 3. Do not start the Windows QuickBooks bridge or a real import. Do not type `GO LIVE`. |
 | 2026-08-23 | **R54 UI close-out. Next is R53.** Station layer is done: one Zones table, McKee write defaults, Edit on pulled fire / burglar / low-temp, Historic taller on desktop. Docs now match that screen. Do not start the Windows QuickBooks bridge or a real import. Next implementation is multi-site slices 1 and 2 (`docs/MULTI_SITE_ACCOUNTS.md`), then an audit, then CUA (`docs/PORTAL_CUA_TEST.md`). Do not type `GO LIVE`. |

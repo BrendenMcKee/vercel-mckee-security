@@ -66,11 +66,12 @@ function pickSelectedSite(
   sites: PortalProfile[],
   preferredId: string | null,
   cookieId: string | null,
+  homeId: string | null,
 ): PortalProfile | null {
   const active = sites.filter((site) => site.status !== "disabled");
   const pick = (id: string | null) =>
     id ? (active.find((site) => site.id === id) ?? null) : null;
-  return pick(preferredId) ?? pick(cookieId) ?? active[0] ?? null;
+  return pick(preferredId) ?? pick(cookieId) ?? pick(homeId) ?? active[0] ?? null;
 }
 
 function passwordSetFor(
@@ -196,6 +197,7 @@ export const resolvePortalSession = cache(
       sites,
       asSiteId(preferredSiteId) ?? headerId,
       cookieId,
+      homeProfile?.id ?? null,
     );
     const passwordSet = passwordSetFor(rows, homeProfile);
 
