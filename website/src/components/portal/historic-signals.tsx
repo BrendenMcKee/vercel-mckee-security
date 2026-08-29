@@ -19,6 +19,7 @@ import {
   type HistoricZoneHint,
 } from "@/lib/portal/lanvac-historic";
 import type { LanvacStationSignal } from "@/components/portal/lanvac-station-readout";
+import { StationPullingNotice } from "@/components/portal/station-pulling-notice";
 
 const EMPTY_ZONES: HistoricZoneHint[] = [];
 
@@ -348,12 +349,14 @@ export function HistoricSignals({
   variant,
   signals,
   zones,
+  pulling,
 }: {
   profileId: string;
   canLoadMore: boolean;
   variant: "admin" | "client";
   signals: LanvacStationSignal[];
   zones?: HistoricZoneHint[];
+  pulling?: boolean;
 }) {
   const zoneHints = zones ?? EMPTY_ZONES;
   const router = useRouter();
@@ -463,7 +466,11 @@ export function HistoricSignals({
       )}
 
       {signals.length === 0 ? (
+        pulling ? (
+          <StationPullingNotice label="Loading signals from the monitoring station." />
+        ) : (
         <p className="mt-3 text-sm text-white/45">No signals on file.</p>
+        )
       ) : (
         <div
           ref={listRef}

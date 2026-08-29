@@ -14,6 +14,7 @@ import {
   StationOnTestControls,
 } from "@/components/portal/lanvac-station-writes";
 import { HistoricSignals } from "@/components/portal/historic-signals";
+import { StationPullingNotice } from "@/components/portal/station-pulling-notice";
 
 export type LanvacStationZoneWrite = {
   delay: number;
@@ -231,6 +232,7 @@ export function LanvacStationReadout({
           writesLive={writesLive}
           zones={zones}
           canRefresh={canRefresh}
+          pulling={pending}
           showEquipmentNote={showEquipmentNote}
         />
       ) : (
@@ -244,11 +246,15 @@ export function LanvacStationReadout({
             <p className="mt-2 text-sm text-white/45">Equipment list below.</p>
           )}
           {zones.length === 0 ? (
+            pending ? (
+              <StationPullingNotice label="Loading zones from the monitoring station." />
+            ) : (
             <p className="mt-3 text-sm text-white/45">
               {canRefresh
                 ? "No zones pulled yet. Use Refresh now."
                 : "No zones on file."}
             </p>
+            )
           ) : (
             <div className="mt-3 overflow-x-auto rounded-xl border border-white/10">
               <table className="min-w-full text-left text-sm">
@@ -295,6 +301,7 @@ export function LanvacStationReadout({
         variant={variant}
         signals={signals}
         zones={zones}
+        pulling={pending}
       />
     </div>
   );

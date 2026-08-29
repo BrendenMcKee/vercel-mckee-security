@@ -25,6 +25,7 @@ import {
   type ProvenZoneWriteType,
 } from "@/lib/portal/lanvac-writes";
 import type { LanvacStationZone } from "@/components/portal/lanvac-station-readout";
+import { StationPullingNotice } from "@/components/portal/station-pulling-notice";
 
 const inputClass =
   "min-h-11 rounded-xl border border-white/15 bg-background px-3 py-2 text-sm text-white outline-none transition-colors focus:border-primary";
@@ -267,12 +268,14 @@ export function AdminZoneEditor({
   writesLive,
   zones,
   canRefresh,
+  pulling,
   showEquipmentNote,
 }: {
   profileId: string;
   writesLive: boolean;
   zones: LanvacStationZone[];
   canRefresh: boolean;
+  pulling?: boolean;
   showEquipmentNote?: boolean;
 }) {
   const router = useRouter();
@@ -463,11 +466,15 @@ export function AdminZoneEditor({
       )}
 
       {zones.length === 0 ? (
+        pulling ? (
+          <StationPullingNotice label="Loading zones from the monitoring station." />
+        ) : (
         <p className="text-sm text-white/45">
           {canRefresh
             ? "No zones pulled yet. Use Refresh now."
             : "No zones on file."}
         </p>
+        )
       ) : (
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="min-w-full text-left text-sm">

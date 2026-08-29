@@ -252,7 +252,9 @@ function ProfileCard({ client }: { client: AdminClientDetailRow }) {
             <div>
               <dt className="text-xs uppercase tracking-widest text-white/40">Sign-in</dt>
               <dd className="mt-1 text-white/80">
-                {client.user_id ? "Activated" : "Not activated yet"}
+                {client.user_id
+                  ? "Home login on this site"
+                  : "No separate login. People use the account sign-in."}
               </dd>
             </div>
           </dl>
