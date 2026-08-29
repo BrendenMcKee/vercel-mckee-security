@@ -2,7 +2,7 @@
 
 **Living document.** Update this file in the same work as each implementation slice. When a button, URL, tab, copy, or empty state changes, change the matching step here in that commit. Do not leave the playbook describing a screen that no longer exists. The computer-using agent must run the version that matches the deployed build.
 
-R53 slices 1–2 (schema + session) shipped and audited 2026-08-28. Staff **Account Controls** now say Disable / Re-enable **this site** and work on sites with no `user_id`. Switcher, People with access, grouping board, and the two Clients-tab buttons are **not built yet**. Suites that assume those screens will fail until later slices. Run this **after** the remaining R53 slices are implemented and deployed, and **before** the Windows QuickBooks bridge or any real client import. Include the station cards (zones, Historic, panel chip, on-test) on a monitoring test site. Never put a real customer on test. `O5985` only if a write sitting is in the brief. Client on-test is Account admin only.
+R53 slices 1–3 shipped (1–2 audited 2026-08-28; last-owner revoke + this-site delete copy 2026-08-29). Staff **Account Controls** say Disable / Re-enable / Delete **this site** and work on sites with no `user_id`. Staff Account tab has **People with access**: the last Account admin cannot be revoked. Client Settings still has no People list. Switcher, grouping board, and the two Clients-tab buttons are **not built yet**. Suites that assume those screens will fail until later slices. Run this **after** the remaining R53 slices are implemented and deployed, and **before** the Windows QuickBooks bridge or any real client import. Include the station cards (zones, Historic, panel chip, on-test) on a monitoring test site. Never put a real customer on test. `O5985` only if a write sitting is in the brief. Client on-test is Account admin only. Do not delete the McKee House / Bunkie fixture.
 
 You are a computer-using agent. Drive the real web app in a browser with developer tools open. Follow every suite in order. After each step, check the expected result. If it fails, record a finding and continue unless a hard stop says otherwise.
 
@@ -122,11 +122,13 @@ Sign in as staff.
 
 1. `/admin-dashboard` Overview: KPI cards render. No uncaught error.
 2. `?tab=clients`: list of clients. Search by a known test name. Open that row.
-3. Client detail `/admin-dashboard/clients/{id}`: tabs Account / Billing / Security / Devices. Account has profile. Billing has services (monitoring red, VoIP teal, cloud sky). Security has station + caller list when R45 applies. Devices when R45 applies. Banner still says mail is paused.
-4. `?tab=billing`: collections / due list. Test client appears if they have a due service. Account name chip is OK if multi-site exists; single-site must not look like “14 sites.”
-5. `?tab=devices`: device table or empty state. Links to client detail work.
-6. `?tab=alerts`: list or empty. Resolve one only if it is clearly a test alert.
-7. Phone 390px: every admin tab above. No horizontal overflow. Sticky actions remain tappable.
+3. Client detail `/admin-dashboard/clients/{id}`: tabs Account / Billing / Security / Devices. Account has profile, **People with access**, and Account Controls. Billing has services (monitoring red, VoIP teal, cloud sky). Security has station + caller list when R45 applies. Devices when R45 applies. Banner still says mail is paused.
+4. People with access lists the Account admin (and any Members). The last Account admin has no Revoke button. Copy says transfer first. **Do not revoke** the McKee fixture login.
+5. Open **Delete this site**. Copy says **site**. If this account has another site, copy says the other site(s) and the login stay. Cancel. Do not type the name unless the operator marked the row disposable.
+6. `?tab=billing`: collections / due list. Test client appears if they have a due service. Account name chip is OK if multi-site exists; single-site must not look like “14 sites.”
+7. `?tab=devices`: device table or empty state. Links to client detail work.
+8. `?tab=alerts`: list or empty. Resolve one only if it is clearly a test alert.
+9. Phone 390px: every admin tab above. No horizontal overflow. Sticky actions remain tappable.
 
 ## Suite E. Staff: New client vs Add site
 

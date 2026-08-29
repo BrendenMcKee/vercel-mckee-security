@@ -45,6 +45,7 @@ import { formatPhone, normalizePhone } from "@/lib/portal/phone";
 import { adminInputClass, adminSelectClass, ProfileStatusBadge } from "@/components/admin-portal/ui";
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
+import { deleteSiteConfirmCopy, siblingSiteCountFor } from "@/lib/portal/delete-site-copy";
 
 type DraftContact = { label: string; phone: string; passcode: string };
 type DraftDevice = {
@@ -394,12 +395,14 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
 
   function remove(client: AdminClientRow) {
     const name = `${client.first_name} ${client.last_name}`;
+    const deleteCopy = deleteSiteConfirmCopy({
+      siteName: name,
+      siblingSiteCount: siblingSiteCountFor(client.account_id, client.id, clients),
+    });
     // Destructive admin action (handover 14.2): type-to-confirm, verified
-    // again on the server. Deleting erases the client everywhere and stops
-    // any automatic card payments in Stripe first.
-    const typed = window.prompt(
-      `Permanently delete ${name}?\n\nThis erases their sign-in, profile, services, contact list, devices, payment history, and invitations, and stops any automatic card payments. This cannot be undone.\n\nTo confirm, type the client's full name exactly:`,
-    );
+    // again on the server. Copy names this site so a second property is not
+    // treated like the whole account.
+    const typed = window.prompt(deleteCopy.prompt);
     if (typed === null) return;
     if (typed.trim().replace(/\s+/g, " ").toLowerCase() !== name.trim().replace(/\s+/g, " ").toLowerCase()) {
       setNotice({ kind: "error", text: `The name you typed does not match ${name}. Nothing was deleted.` });
@@ -414,7 +417,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         setNotice({ kind: "error", text: result.error });
         return;
       }
-      setNotice({ kind: "ok", text: `${name} and all their data were deleted.` });
+      setNotice({ kind: "ok", text: deleteCopy.success });
     });
   }
 

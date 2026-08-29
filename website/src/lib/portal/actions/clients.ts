@@ -27,6 +27,7 @@ import {
 import { getStripeClient, isStripeConfigured } from "@/lib/portal/stripe";
 import { siteConfig } from "@/lib/site-config";
 import { clearLanvacStationCache } from "@/lib/portal/lanvac-station-store";
+import { hasLinkedPortalLogin } from "@/lib/portal/has-linked-login";
 
 const createClientSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(100),
@@ -642,7 +643,7 @@ export async function deleteClientAction(input: {
 
   const { profileId, confirmName } = input;
   if (!z.uuid().safeParse(profileId).success) {
-    return { ok: false, error: "Invalid client." };
+    return { ok: false, error: "Invalid site." };
   }
 
   // Read through the user-context client (admin RLS) so a revoked admin
@@ -663,7 +664,7 @@ export async function deleteClientAction(input: {
   if (!namesMatch(confirmName ?? "", fullName)) {
     return {
       ok: false,
-      error: `The name you typed does not match this client (${fullName}). Nothing was deleted.`,
+      error: `The name you typed does not match this site (${fullName}). Nothing was deleted.`,
     };
   }
 
@@ -723,21 +724,14 @@ export async function deleteClientAction(input: {
   }
 
   if (loginId) {
-    const { data: remainingMembers } = await admin
-      .from("account_members")
-      .select("id")
-      .eq("user_id", loginId)
-      .limit(1);
-    const { data: remainingHome } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("user_id", loginId)
-      .limit(1);
-    if ((remainingMembers ?? []).length === 0 && (remainingHome ?? []).length === 0) {
+    const leftover = await hasLinkedPortalLogin(admin, loginId);
+    if (!leftover.lookupFailed && !leftover.linked) {
       const { error: authError } = await admin.auth.admin.deleteUser(loginId);
       if (authError) {
         console.error("[portal] deleteClient leftover auth cleanup failed:", authError);
       }
+    } else if (leftover.lookupFailed) {
+      console.error("[portal] deleteClient leftover-login lookup failed; Auth user kept");
     }
   }
 

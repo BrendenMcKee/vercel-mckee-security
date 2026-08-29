@@ -9,6 +9,7 @@ import {
   type AdminClientTab,
   type CardPaymentEntry,
 } from "@/components/admin-portal/admin-client-detail";
+import type { AdminAccountMember } from "@/components/admin-portal/admin-account-people";
 import type { CallerIdContact } from "@/components/portal/caller-id-editor";
 import type { Tables } from "@/lib/portal/database.types";
 import type {
@@ -83,6 +84,8 @@ export default async function AdminClientDetailPage({
     devicesCountResult,
     zonesCountResult,
     stationPeekResult,
+    siblingCountResult,
+    membersResult,
     settingsResult,
     billingExtras,
     securityExtras,
@@ -109,6 +112,18 @@ export default async function AdminClientDetailPage({
       .select("profile_id")
       .eq("profile_id", profileId)
       .maybeSingle(),
+    urlTab === "account" && client.account_id
+      ? supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("account_id", client.account_id)
+      : Promise.resolve({ count: 1, error: null }),
+    urlTab === "account" && client.account_id
+      ? supabase
+          .from("account_members")
+          .select("id, email, role, user_id")
+          .eq("account_id", client.account_id)
+      : Promise.resolve({ data: [] as AdminAccountMember[], error: null }),
     supabase.from("portal_settings").select("client_mail_enabled").eq("id", 1).maybeSingle(),
     urlTab === "billing" ? loadBillingExtras(supabase, profileId) : Promise.resolve(null),
     urlTab === "security" ? loadSecurityExtras(supabase, profileId) : Promise.resolve(null),
@@ -120,7 +135,9 @@ export default async function AdminClientDetailPage({
     changesCountResult.error ??
     devicesCountResult.error ??
     zonesCountResult.error ??
-    stationPeekResult.error;
+    stationPeekResult.error ??
+    siblingCountResult.error ??
+    membersResult.error;
   if (visibilityError) {
     console.error("[portal] Admin client detail tab visibility failed:", visibilityError);
     throw new Error("Client detail failed to load.");
@@ -221,6 +238,8 @@ export default async function AdminClientDetailPage({
         <AdminClientDetail
           tab={activeTab}
           client={client}
+          siblingSiteCount={Math.max(0, (siblingCountResult.count ?? 1) - 1)}
+          members={(membersResult.data ?? []) as AdminAccountMember[]}
           callerIdContacts={securityExtras?.ok ? securityExtras.contacts : []}
           callerIdChanges={securityExtras?.ok ? securityExtras.changes : []}
           devices={devicesExtras?.ok ? devicesExtras.devices : []}

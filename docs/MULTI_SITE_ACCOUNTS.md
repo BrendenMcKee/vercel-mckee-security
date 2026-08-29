@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: delete-disable-rules
     content: "Delete/disable one site without deleting a shared login; forbid last-owner revoke; empty-account cleanup"
-    status: pending
+    status: completed
   - id: stripe-email-reuse
     content: Stop findOrCreateStripeCustomer from merging two sites that share a contact email
     status: completed
@@ -46,7 +46,7 @@ isProject: false
 
 # Multi-site accounts and extra logins
 
-Status: **slices 1–2 shipped and audited 2026-08-28.** Schema, membership RLS, `resolvePortalSession`, orphan / OAuth / cleanup / password. Audit also shipped the live holes those slices opened: Stripe email reuse, delete-site Auth wipe, per-site disable / re-enable, Account-admin-only on-test, `requireSelectedSite` on client writes. Hosted two-site fixture (do not delete): McKee account, Bunkie `O5985` (Brenden login) + House `O4964` (Dennis & Brenda, same 4702 civic address, no `user_id`). `auto_onboard` is off. Session without `?site=` / cookie prefers the leftover home site so the Bunkie login still opens the Bunkie. Single-site clients keep today's dashboard (no switcher). Next is the rest of slice 3 (last-owner revoke, delete confirm copy) then slices 4–6. Station layer: [`LANVAC_STATION.md`](LANVAC_STATION.md). Do not import real clients until the remaining slices ship and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
+Status: **slices 1–3 shipped (audit of 1–2 on 2026-08-28; slice 3 on 2026-08-29).** Schema, membership RLS, `resolvePortalSession`, orphan / OAuth / cleanup / password. Audit also shipped Stripe email reuse, delete-site Auth wipe, per-site disable / re-enable, Account-admin-only on-test, `requireSelectedSite` on client writes. Slice 3: last Account admin cannot be revoked (staff People with access on the Account tab), and delete confirm copy names **this site** (other sites and the login stay when the account has more than one). Hosted two-site fixture (do not delete): McKee account, Bunkie `O5985` (Brenden login) + House `O4964` (Dennis & Brenda, same 4702 civic address, no `user_id`). `auto_onboard` is off. Session without `?site=` / cookie prefers the leftover home site so the Bunkie login still opens the Bunkie. Single-site clients keep today's dashboard (no switcher, no People list). Next is slices 4–6 (admin two buttons / Account card attach, client switcher, emails). Station layer: [`LANVAC_STATION.md`](LANVAC_STATION.md). Do not import real clients until the remaining slices ship and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
 
 ## How it worked before R53 (why the county could not log in once)
 
@@ -103,7 +103,7 @@ These are live paths that would break if we only added tables and a switcher.
 
 **2. First-access password gate is per login, not per membership.** **Fixed in slices 1–2.** Gate: this auth user has `password_set_at` on **any** of their member rows. Setting a password stamps **all** of their member rows. New memberships for that `user_id` copy it (insert trigger).
 
-**3. Delete site must not delete the county login.** **Auth-wipe path fixed in the 2026-08-28 audit** (profile first; Auth only if no remaining membership / `user_id`). Still open: confirm copy that says “this site” when the account has more than one site. Rules:
+**3. Delete site must not delete the county login.** **Auth-wipe path fixed in the 2026-08-28 audit** (profile first; Auth only if no remaining membership / `user_id`). **Confirm copy shipped in slice 3** (staff list prompt and Account Controls both say **this site**; multi-site copy says the other sites and the login stay). Rules:
 
 - Delete is **this site only** (services, caller ID, devices, `lanvac_*` station rows, that profile). Do not call Lanvac delete-all.
 - Cancel Stripe subscriptions on **that** site only.
@@ -112,7 +112,7 @@ These are live paths that would break if we only added tables and a switcher.
 
 **4. Disable is per-site, including the home site.** **Fixed in slices 1–2 / audit.** Layout / `requireUser` succeed if any accessible site is active; all-disabled is its own screen. Admin can disable every client site (not only rows with `user_id`). Re-enable is allowed when the account already has an activated owner.
 
-**5. Last owner.** Cannot revoke the last owner. Cannot attach the last site away from an account that still has members and no remaining owner. Moving a site that empties the source account deletes that empty account. Do **not** flip `auto_onboard` back on when a multi-site account shrinks to one site.
+**5. Last owner.** **Revoke rule shipped in slice 3.** `revokeAccountMemberAction` refuses the last Account admin (staff People card shows the same copy). Cannot attach the last site away from an account that still has members and no remaining owner (attach is a later slice). Moving a site that empties the source account deletes that empty account. Do **not** flip `auto_onboard` back on when a multi-site account shrinks to one site.
 
 **6. Stripe email reuse would merge county bills.** **Fixed in the 2026-08-28 audit.** [`findOrCreateStripeCustomer`](website/src/lib/portal/stripe.ts) reuses only this site’s stored id or a customer whose `metadata.profile_id` matches. It does not pick “first / has-card customer with this email.”
 
@@ -301,6 +301,7 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 - Admin can disable a site that has no `user_id`. **Done.**
 - `save_caller_id_list` and `cloud_backup_interest` policies, not only the obvious `user_id = auth.uid()` selects. **Done.**
 - One `resolvePortalSession` / `requireSelectedSite` helper so a later action cannot write the home site by accident. **Done.** `?site=` is persisted by `src/proxy.ts` so layout and actions see the same site.
+- Last Account admin cannot be revoked. Delete confirm copy names **this site**. **Done.**
 
 ## Third audit (remaining holes, then ship)
 
@@ -314,7 +315,7 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 
 1. Schema, backfill, RLS, unique owner, insert trigger, check-script trigger — **done**
 2. `resolvePortalSession` + orphan / OAuth / cleanup / password — **done**
-3. Delete, disable, Stripe email reuse — **live holes done in the audit**; last-owner revoke + multi-site delete confirm copy remain
+3. Delete, disable, Stripe email reuse — **live holes done in the audit**; last-owner revoke + multi-site delete confirm copy — **done 2026-08-29**
 4. Admin: two buttons, Account card, grouping board + empty-queue sign-off, Appoint account admin
 5. Client: sites list / switcher / People (hidden for the majority)
 6. Emails + render check
@@ -322,7 +323,7 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 8. **Living CUA playbook.** Update [`docs/PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same slice as the UI it describes. After deploy, a computer-using agent runs that file (devtools on) and writes a findings report. **This is the last gate before the Windows MCP bridge and the real import.** Do not start either until the report is clean or every fail is accepted.
 9. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
 
-**Pacing (locked):** R54 is complete. **Slices 1–2 are shipped and audited (2026-08-28).** Next is the remainder of slice 3 (last-owner revoke, delete confirm copy), then slices 4–6, then CUA. Hosted has **staff and throwaway test clients only**.
+**Pacing (locked):** R54 is complete. **Slices 1–3 are shipped** (1–2 audited 2026-08-28; last-owner revoke + delete confirm copy 2026-08-29). Next is slices 4–6, then CUA. Hosted has **staff and throwaway test clients only**.
 
 **Alignment:** 10/10 to implement R53. Station tables stay on `profile_id`; actions already take `profileId`; on-test is the whole CODE for that site, never a zone; client start/stop is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
 

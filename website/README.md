@@ -13,9 +13,9 @@ service address, password; sign-in email is locked), and **Alerts**. The staff c
 `/admin-dashboard` (Overview, Clients, Billing, Devices, Alerts). Client-facing
 portal mail (invites, reminders, receipts, caller-ID and device notices) stays
 off until the Billing-tab `GO LIVE` confirm (`PORTAL_PLAN.md` 9.5.5C). R54
-is done (`../docs/LANVAC_STATION.md`). R53 slices 1–2 shipped and audited
-(`../docs/MULTI_SITE_ACCOUNTS.md`). Next is the remainder of slice 3, then
-later R53 slices, then [`../docs/PORTAL_CUA_TEST.md`](../docs/PORTAL_CUA_TEST.md),
+is done (`../docs/LANVAC_STATION.md`). R53 slices 1–3 shipped
+(`../docs/MULTI_SITE_ACCOUNTS.md`). Next is slices 4–6, then
+[`../docs/PORTAL_CUA_TEST.md`](../docs/PORTAL_CUA_TEST.md),
 before the Windows QuickBooks bridge or a real client import.
 
 ## Local development

@@ -33,6 +33,11 @@ import {
   updateDeviceAction,
 } from "@/lib/portal/actions/devices";
 import { chargeVoipPortFee, recordManualPayment, updateServiceBilling } from "@/lib/portal/actions/payments";
+import { deleteSiteConfirmCopy } from "@/lib/portal/delete-site-copy";
+import {
+  AdminAccountPeople,
+  type AdminAccountMember,
+} from "@/components/admin-portal/admin-account-people";
 import { formatPhone } from "@/lib/portal/phone";
 import {
   BILLING_INTERVAL_LABELS,
@@ -588,7 +593,13 @@ function InvitationCard({ client }: { client: AdminClientDetailRow }) {
   );
 }
 
-function DangerZone({ client }: { client: AdminClientDetailRow }) {
+function DangerZone({
+  client,
+  siblingSiteCount,
+}: {
+  client: AdminClientDetailRow;
+  siblingSiteCount: number;
+}) {
   const router = useRouter();
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
@@ -597,6 +608,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
 
   const disabled = client.status === "disabled";
   const name = `${client.first_name} ${client.last_name}`;
+  const deleteCopy = deleteSiteConfirmCopy({ siteName: name, siblingSiteCount });
   const nameMatches =
     confirmName.trim().replace(/\s+/g, " ").toLowerCase() ===
     name.trim().replace(/\s+/g, " ").toLowerCase();
@@ -660,15 +672,8 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
         <div className="rounded-xl border border-red-500/25 bg-background p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="max-w-xl">
-              <p className="text-sm font-bold text-white">Delete client</p>
-              <p className="mt-1 text-xs leading-relaxed text-white/50">
-                Permanently erases this client everywhere: their sign-in,
-                profile, services, alarm contact list, devices, payment
-                history, and invitations. Any automatic card payments are
-                stopped in Stripe first. This cannot be undone. If you just
-                need to lock them out for a while, disable the account
-                instead.
-              </p>
+              <p className="text-sm font-bold text-white">{deleteCopy.title}</p>
+              <p className="mt-1 text-xs leading-relaxed text-white/50">{deleteCopy.body}</p>
             </div>
             {!confirmingDelete && (
               <button
@@ -681,7 +686,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
                 }}
                 className="cursor-pointer rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-red-300 transition-colors hover:bg-red-500/15 disabled:cursor-default disabled:opacity-50"
               >
-                Delete Client...
+                Delete this site...
               </button>
             )}
           </div>
@@ -689,7 +694,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
           {confirmingDelete && (
             <div className="mt-4 space-y-3 rounded-xl border border-red-500/30 bg-red-500/5 p-4">
               <p className="text-sm text-white/80">
-                To confirm, type the client&apos;s full name exactly:{" "}
+                {deleteCopy.confirmLead}{" "}
                 <span className="font-bold text-white">{name}</span>
               </p>
               <input
@@ -698,7 +703,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
                 placeholder={name}
                 autoComplete="off"
                 className={`${adminInputClass} w-full max-w-md`}
-                aria-label="Type the client's full name to confirm deletion"
+                aria-label="Type the site name to confirm deletion"
               />
               <div className="flex flex-wrap items-center gap-3">
                 <button
@@ -707,7 +712,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
                   onClick={remove}
                   className="cursor-pointer rounded-lg border border-red-500/50 bg-red-500/15 px-4 py-2 text-xs font-bold uppercase tracking-wide text-red-200 transition-colors hover:bg-red-500/25 disabled:cursor-default disabled:opacity-40"
                 >
-                  {pending ? "Deleting..." : "Permanently Delete This Client"}
+                  {pending ? "Deleting..." : deleteCopy.confirmButton}
                 </button>
                 <button
                   type="button"
@@ -718,7 +723,7 @@ function DangerZone({ client }: { client: AdminClientDetailRow }) {
                   }}
                   className={buttonSecondary}
                 >
-                  Keep the Client
+                  {deleteCopy.keepButton}
                 </button>
                 {confirmName.trim() !== "" && !nameMatches && (
                   <p className="text-xs text-white/45">The name does not match yet.</p>
@@ -2235,6 +2240,8 @@ export type AdminClientTab = "account" | "billing" | "security" | "devices";
 export function AdminClientDetail({
   tab,
   client,
+  siblingSiteCount,
+  members,
   callerIdContacts,
   callerIdChanges,
   devices,
@@ -2248,6 +2255,8 @@ export function AdminClientDetail({
 }: {
   tab: AdminClientTab;
   client: AdminClientDetailRow;
+  siblingSiteCount: number;
+  members: AdminAccountMember[];
   callerIdContacts: CallerIdContact[];
   callerIdChanges: Tables<"caller_id_changes">[];
   devices: Tables<"devices">[];
@@ -2357,7 +2366,8 @@ export function AdminClientDetail({
     <div className="space-y-6">
       <ProfileCard client={client} />
       <InvitationCard client={client} />
-      <DangerZone client={client} />
+      <AdminAccountPeople members={members} />
+      <DangerZone client={client} siblingSiteCount={siblingSiteCount} />
     </div>
   );
 }
