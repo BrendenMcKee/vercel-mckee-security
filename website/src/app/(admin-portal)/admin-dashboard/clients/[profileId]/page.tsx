@@ -18,6 +18,7 @@ import type {
 } from "@/components/portal/lanvac-station-readout";
 import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
 import { lanvacWritesLive, parseNotifyList } from "@/lib/portal/lanvac-writes";
+import { PendingTabLink } from "@/components/portal/pending-tab-link";
 import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 import { ScrollToHash } from "@/components/portal/scroll-to-hash";
@@ -205,19 +206,14 @@ export default async function AdminClientDetailPage({
         aria-label="Client sections"
       >
         {clientTabs.map((item) => (
-          <Link
+          <PendingTabLink
             key={item.id}
             href={item.href}
+            active={activeTab === item.id}
             prefetch={item.id === "security" ? false : undefined}
-            className={`shrink-0 whitespace-nowrap rounded-t-xl px-3.5 py-2.5 text-[13px] font-bold uppercase tracking-wide transition-colors sm:px-5 sm:text-sm ${
-              activeTab === item.id
-                ? "border border-b-0 border-white/10 bg-surface text-white"
-                : "text-white/50 hover:text-white"
-            }`}
-            aria-current={activeTab === item.id ? "page" : undefined}
           >
             {item.label}
-          </Link>
+          </PendingTabLink>
         ))}
       </nav>
 

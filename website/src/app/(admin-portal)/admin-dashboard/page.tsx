@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
+import { PendingTabLink } from "@/components/portal/pending-tab-link";
 import { AdminAlerts } from "@/components/admin-portal/admin-alerts";
 import { AdminBilling } from "@/components/admin-portal/admin-billing";
 import { AdminClientsPanel } from "@/components/admin-portal/admin-clients-panel";
@@ -91,32 +91,25 @@ export default async function AdminDashboardPage({
         aria-label="Dashboard sections"
       >
         {TABS.map((t) => (
-          <Link
+          <PendingTabLink
             key={t.id}
             href={t.id === "overview" ? "/admin-dashboard" : `/admin-dashboard?tab=${t.id}`}
-            className={`shrink-0 whitespace-nowrap rounded-t-xl px-3.5 py-2.5 text-[13px] font-bold uppercase tracking-wide transition-colors sm:px-5 sm:text-sm ${
-              activeTab === t.id
-                ? "border border-b-0 border-white/10 bg-surface text-white"
-                : "text-white/50 hover:text-white"
-            }`}
-            aria-current={activeTab === t.id ? "page" : undefined}
+            active={activeTab === t.id}
           >
-            <span className="inline-flex items-center gap-2">
-              {t.label}
-              {t.id === "alerts" && (
-                <span
-                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
-                    alertBadge > 0
-                      ? "bg-red-500 text-white"
-                      : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40"
-                  }`}
-                  aria-label={`${alertBadge} open alerts`}
-                >
-                  {alertBadge}
-                </span>
-              )}
-            </span>
-          </Link>
+            {t.label}
+            {t.id === "alerts" && (
+              <span
+                className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+                  alertBadge > 0
+                    ? "bg-red-500 text-white"
+                    : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40"
+                }`}
+                aria-label={`${alertBadge} open alerts`}
+              >
+                {alertBadge}
+              </span>
+            )}
+          </PendingTabLink>
         ))}
       </nav>
 

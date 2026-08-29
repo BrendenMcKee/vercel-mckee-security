@@ -33,6 +33,7 @@ import { lanvacEmergencyNumbers } from "@/lib/portal/lanvac-cities";
 import { asLanvacSignalClass } from "@/lib/portal/lanvac-signals";
 import { isStationOnTest, lanvacWritesLive } from "@/lib/portal/lanvac-writes";
 import { ScrollToHash } from "@/components/portal/scroll-to-hash";
+import { PendingTabLink } from "@/components/portal/pending-tab-link";
 
 export const metadata: Metadata = {
   title: "Manage Account",
@@ -357,33 +358,26 @@ export default async function UserDashboardPage({
         aria-label="Client portal sections"
       >
         {clientTabs.map((item) => (
-          <Link
+          <PendingTabLink
             key={item.id}
             href={item.href}
+            active={activeTab === item.id}
             prefetch={item.id === "security" ? false : undefined}
-            className={`shrink-0 whitespace-nowrap rounded-t-xl px-3.5 py-2.5 text-[13px] font-bold uppercase tracking-wide transition-colors sm:px-5 sm:text-sm ${
-              activeTab === item.id
-                ? "border border-b-0 border-white/10 bg-surface text-white"
-                : "text-white/50 hover:text-white"
-            }`}
-            aria-current={activeTab === item.id ? "page" : undefined}
           >
-            <span className="inline-flex items-center gap-2">
-              {item.label}
-              {item.id === "alerts" && (
-                <span
-                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
-                    alertCount > 0
-                      ? "bg-red-500 text-white"
-                      : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40"
-                  }`}
-                  aria-label={`${alertCount} alerts`}
-                >
-                  {alertCount}
-                </span>
-              )}
-            </span>
-          </Link>
+            {item.label}
+            {item.id === "alerts" && (
+              <span
+                className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+                  alertCount > 0
+                    ? "bg-red-500 text-white"
+                    : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40"
+                }`}
+                aria-label={`${alertCount} alerts`}
+              >
+                {alertCount}
+              </span>
+            )}
+          </PendingTabLink>
         ))}
       </nav>
 
