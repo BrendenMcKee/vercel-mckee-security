@@ -28,6 +28,9 @@ import { getStripeClient, isStripeConfigured } from "@/lib/portal/stripe";
 import { siteConfig } from "@/lib/site-config";
 import { clearLanvacStationCache } from "@/lib/portal/lanvac-station-store";
 import { hasLinkedPortalLogin } from "@/lib/portal/has-linked-login";
+import { findEmailCollision } from "@/lib/portal/email-collision";
+import { accountDisplayName } from "@/lib/portal/account-list";
+import { MULTI_SITE_NO_SITE_INVITE_MESSAGE } from "@/lib/portal/invite-delivery";
 
 const createClientSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(100),
@@ -78,10 +81,267 @@ export type CreateClientResult =
       emailAttempted: boolean;
       /** True when client mail is paused (import / pre-go-live). Not a send failure. */
       emailPaused: boolean;
+      /** Mail is live, but this account has automatic onboarding off. */
+      emailHeldAutoOnboard: boolean;
       /** Client exists; optional follow-up if contacts/devices did not save. */
       warning?: string;
     }
+  | {
+      ok: false;
+      error: string;
+      suggestAddSite?: { accountId: string; accountName: string };
+    };
+
+const addSiteSchema = createClientSchema.omit({ email: true }).extend({
+  accountId: z.uuid(),
+  email: z.string().trim().toLowerCase().max(320),
+});
+
+export type AddSiteInput = z.infer<typeof addSiteSchema>;
+
+export type AddSiteResult =
+  | { ok: true; profileId: string; accountName: string; warning?: string }
   | { ok: false; error: string };
+
+type ParsedNewSite = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  address: string;
+  phone: string;
+  monitoringTier: CreateClientInput["monitoringTier"];
+  cloudTier: CreateClientInput["cloudTier"];
+  voipTier: CreateClientInput["voipTier"];
+  voipNumbers: number;
+  voipSeats: number;
+  voipPorts: number;
+  billingMethod: CreateClientInput["billingMethod"];
+  storedPhone: string | null;
+  lanvacCode: string | null;
+  lanvacCity: string | null;
+  seedContacts: { phone: string; label: string; passcode: string }[];
+  seedDevices: z.infer<typeof createDeviceDraftSchema>[];
+};
+
+function parseNewSiteFields(
+  input: CreateClientInput | AddSiteInput,
+  extras: CreateClientExtras,
+  options: { emailRequired: boolean },
+): { ok: true; data: ParsedNewSite } | { ok: false; error: string } {
+  const firstName = input.firstName;
+  const lastName = input.lastName;
+  const email = input.email;
+  const address = input.address;
+  const phone = input.phone;
+  const monitoringTier = input.monitoringTier;
+  const cloudTier = input.cloudTier;
+  const voipTier = input.voipTier;
+  const voipNumbers = input.voipNumbers;
+  const voipSeats = input.voipSeats;
+  const voipPorts = input.voipPorts;
+  const billingMethod = input.billingMethod;
+  const lanvacAccountCode = input.lanvacAccountCode;
+  const lanvacCity = input.lanvacCity;
+
+  if (options.emailRequired && !email) {
+    return { ok: false, error: "Email is required" };
+  }
+  if (email) {
+    const emailCheck = z.email("Enter a valid email address").safeParse(email);
+    if (!emailCheck.success) {
+      return { ok: false, error: emailCheck.error.issues[0]?.message ?? "Enter a valid email address" };
+    }
+  }
+
+  const needsStation = Boolean(monitoringTier);
+  const parsedCode = parseLanvacAccountCode(lanvacAccountCode, { required: needsStation });
+  if (!parsedCode.ok) return { ok: false, error: parsedCode.error };
+  const parsedCity = parseLanvacCity(lanvacCity, { required: needsStation });
+  if (!parsedCity.ok) return { ok: false, error: parsedCity.error };
+
+  let storedPhone: string | null = null;
+  if (phone) {
+    storedPhone = normalizePhone(phone);
+    if (!storedPhone) {
+      return { ok: false, error: "Enter a valid North American phone number, or leave it blank." };
+    }
+  }
+
+  if (cloudTier && !isServiceAvailable("cloud_backup")) {
+    return { ok: false, error: CLOUD_BACKUP_DEVELOPMENT_MESSAGE };
+  }
+  if (voipTier && voipPorts > voipNumbers) {
+    return { ok: false, error: "Numbers being ported cannot exceed the numbers on the system." };
+  }
+
+  const seedContacts: { phone: string; label: string; passcode: string }[] = [];
+  const seedDevices: z.infer<typeof createDeviceDraftSchema>[] = [];
+  if (monitoringTier) {
+    const seenIdentities = new Set<string>();
+    for (const rawContact of extras.contacts ?? []) {
+      const parsedContact = createContactDraftSchema.safeParse(rawContact);
+      if (!parsedContact.success) {
+        return { ok: false, error: parsedContact.error.issues[0]?.message ?? "Invalid alarm contact." };
+      }
+      const contactPhone = normalizePhone(parsedContact.data.phone);
+      if (!contactPhone) {
+        return { ok: false, error: `"${parsedContact.data.phone}" is not a valid North American phone number.` };
+      }
+      const identity = `${contactPhone}|${parsedContact.data.label}|${parsedContact.data.passcode}`;
+      if (seenIdentities.has(identity)) {
+        return { ok: false, error: `${parsedContact.data.label} with that number and passcode is already on the list.` };
+      }
+      if (seenIdentities.size >= 15) {
+        return { ok: false, error: "The alarm contact list is capped at 15 people." };
+      }
+      seenIdentities.add(identity);
+      seedContacts.push({
+        phone: contactPhone,
+        label: parsedContact.data.label,
+        passcode: parsedContact.data.passcode,
+      });
+    }
+    for (const rawDevice of extras.devices ?? []) {
+      const parsedDevice = createDeviceDraftSchema.safeParse(rawDevice);
+      if (!parsedDevice.success) {
+        return { ok: false, error: parsedDevice.error.issues[0]?.message ?? "Invalid device." };
+      }
+      if (new Date(parsedDevice.data.installedOn).getTime() > Date.now()) {
+        return { ok: false, error: "Device install date cannot be in the future." };
+      }
+      seedDevices.push(parsedDevice.data);
+    }
+  }
+
+  return {
+    ok: true,
+    data: {
+      firstName,
+      lastName,
+      email,
+      address,
+      phone,
+      monitoringTier,
+      cloudTier,
+      voipTier,
+      voipNumbers,
+      voipSeats,
+      voipPorts,
+      billingMethod,
+      storedPhone,
+      lanvacCode: parsedCode.value,
+      lanvacCity: parsedCity.value,
+      seedContacts,
+      seedDevices,
+    },
+  };
+}
+
+async function applySiteFollowup(
+  supabase: Awaited<ReturnType<typeof createPortalServerClient>>,
+  profileId: string,
+  site: ParsedNewSite,
+  options: { applyProfileExtras: boolean },
+): Promise<string[]> {
+  const seedWarnings: string[] = [];
+  if (options.applyProfileExtras && (site.storedPhone || site.lanvacCode || site.lanvacCity)) {
+    const { error: extrasError } = await supabase
+      .from("profiles")
+      .update({
+        ...(site.storedPhone ? { phone: site.storedPhone } : {}),
+        ...(site.lanvacCode ? { lanvac_account_code: site.lanvacCode } : {}),
+        ...(site.lanvacCity ? { lanvac_city: site.lanvacCity } : {}),
+      })
+      .eq("id", profileId);
+    if (extrasError) {
+      console.error("[portal] site profile extras failed:", extrasError);
+      seedWarnings.push(
+        extrasError.code === "23505"
+          ? "The site was created, but that Lanvac account code is already on another client. Set it on the client page."
+          : "The site was created, but the Lanvac account or city could not be saved. Set it on the client page.",
+      );
+    }
+  }
+
+  if (site.monitoringTier || site.cloudTier || site.voipTier) {
+    const { error: railError } = await supabase
+      .from("services")
+      .update({
+        billing_method: site.billingMethod,
+        ...(site.billingMethod === "manual" ? { next_due_on: todayIsoDate() } : {}),
+      })
+      .eq("profile_id", profileId);
+    if (railError) console.error("[portal] billing method set failed:", railError);
+  }
+
+  const pricePrefills: {
+    serviceType: "monitoring" | "voip";
+    tier: string;
+    numberCount?: number;
+    seatCount?: number;
+  }[] = [];
+  if (site.monitoringTier) pricePrefills.push({ serviceType: "monitoring", tier: site.monitoringTier });
+  if (site.voipTier) {
+    pricePrefills.push({
+      serviceType: "voip",
+      tier: site.voipTier,
+      numberCount: site.voipNumbers,
+      seatCount: site.voipTier === "professional" ? site.voipSeats : 1,
+    });
+  }
+  for (const prefill of pricePrefills) {
+    const rate = serviceMonthlyCents(prefill);
+    if (rate == null) continue;
+    const { error: priceError } = await supabase
+      .from("services")
+      .update({ monthly_amount_cents: rate })
+      .eq("profile_id", profileId)
+      .eq("service_type", prefill.serviceType);
+    if (priceError) console.error(`[portal] ${prefill.serviceType} price prefill failed:`, priceError);
+  }
+
+  if (site.seedContacts.length > 0) {
+    const { error: contactError } = await supabase.from("caller_id_contacts").insert(
+      site.seedContacts.map((contact, index) => ({
+        profile_id: profileId,
+        phone: contact.phone,
+        label: contact.label,
+        passcode: contact.passcode,
+        sort_order: index + 1,
+      })),
+    );
+    if (contactError) {
+      console.error("[portal] site caller ID seed failed:", contactError);
+      seedWarnings.push("The alarm contact list could not be saved. Open the client and add it there.");
+    }
+  }
+
+  if (site.seedDevices.length > 0) {
+    const { error: deviceError } = await supabase.from("devices").insert(
+      site.seedDevices.map((device) => ({
+        profile_id: profileId,
+        label: device.label,
+        category: device.category,
+        installed_on: device.installedOn,
+        lifetime_years: device.lifetimeYears,
+      })),
+    );
+    if (deviceError) {
+      console.error("[portal] site device seed failed:", deviceError);
+      seedWarnings.push("A device could not be saved. Open the client and add it there.");
+    }
+  }
+
+  return seedWarnings;
+}
+
+function autoOnboardFromEmbed(
+  accounts: { auto_onboard: boolean } | { auto_onboard: boolean }[] | null | undefined,
+): boolean {
+  if (!accounts) return false;
+  if (Array.isArray(accounts)) return accounts[0]?.auto_onboard === true;
+  return accounts.auto_onboard === true;
+}
 
 async function getOrigin(): Promise<string> {
   const h = await headers();
@@ -107,73 +367,36 @@ export async function createClientAction(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
-  const { firstName, lastName, email, address, phone, monitoringTier, cloudTier, voipTier, voipNumbers, voipSeats, voipPorts, billingMethod, lanvacAccountCode, lanvacCity } =
-    parsed.data;
+  const site = parseNewSiteFields(parsed.data, extras, { emailRequired: true });
+  if (!site.ok) return { ok: false, error: site.error };
+  const {
+    firstName,
+    lastName,
+    email,
+    address,
+    monitoringTier,
+    cloudTier,
+    voipTier,
+    voipNumbers,
+    voipSeats,
+    voipPorts,
+  } = site.data;
 
-  const needsStation = Boolean(monitoringTier);
-  const parsedCode = parseLanvacAccountCode(lanvacAccountCode, { required: needsStation });
-  if (!parsedCode.ok) return { ok: false, error: parsedCode.error };
-  const parsedCity = parseLanvacCity(lanvacCity, { required: needsStation });
-  if (!parsedCity.ok) return { ok: false, error: parsedCity.error };
+  const supabase = await createPortalServerClient();
 
-  let storedPhone: string | null = null;
-  if (phone) {
-    storedPhone = normalizePhone(phone);
-    if (!storedPhone) {
-      return { ok: false, error: "Enter a valid North American phone number, or leave it blank." };
-    }
+  const collision = await findEmailCollision(supabase, email);
+  if (!collision.ok) {
+    return { ok: false, error: "Could not check whether that email is already in use. Please try again." };
   }
-
-  // Keep the future service visible in the form without allowing a stale UI
-  // or hand-crafted server-action request to assign it before Track 2 ships.
-  if (cloudTier && !isServiceAvailable("cloud_backup")) {
-    return { ok: false, error: CLOUD_BACKUP_DEVELOPMENT_MESSAGE };
-  }
-  if (voipTier && voipPorts > voipNumbers) {
-    return { ok: false, error: "Numbers being ported cannot exceed the numbers on the system." };
-  }
-
-  const seedContacts: { phone: string; label: string; passcode: string }[] = [];
-  const seedDevices: z.infer<typeof createDeviceDraftSchema>[] = [];
-  if (monitoringTier) {
-    const seenIdentities = new Set<string>();
-    for (const rawContact of extras.contacts ?? []) {
-      const parsedContact = createContactDraftSchema.safeParse(rawContact);
-      if (!parsedContact.success) {
-        return { ok: false, error: parsedContact.error.issues[0]?.message ?? "Invalid alarm contact." };
-      }
-      const phone = normalizePhone(parsedContact.data.phone);
-      if (!phone) {
-        return { ok: false, error: `"${parsedContact.data.phone}" is not a valid North American phone number.` };
-      }
-      const identity = `${phone}|${parsedContact.data.label}|${parsedContact.data.passcode}`;
-      if (seenIdentities.has(identity)) {
-        return { ok: false, error: `${parsedContact.data.label} with that number and passcode is already on the list.` };
-      }
-      if (seenIdentities.size >= 15) {
-        return { ok: false, error: "The alarm contact list is capped at 15 people." };
-      }
-      seenIdentities.add(identity);
-      seedContacts.push({
-        phone,
-        label: parsedContact.data.label,
-        passcode: parsedContact.data.passcode,
-      });
-    }
-    for (const rawDevice of extras.devices ?? []) {
-      const parsedDevice = createDeviceDraftSchema.safeParse(rawDevice);
-      if (!parsedDevice.success) {
-        return { ok: false, error: parsedDevice.error.issues[0]?.message ?? "Invalid device." };
-      }
-      if (new Date(parsedDevice.data.installedOn).getTime() > Date.now()) {
-        return { ok: false, error: "Device install date cannot be in the future." };
-      }
-      seedDevices.push(parsedDevice.data);
-    }
+  if (collision.collision) {
+    return {
+      ok: false,
+      error: `That email is already on the ${collision.collision.accountName} account. Add a site there instead of creating a second login.`,
+      suggestAddSite: collision.collision,
+    };
   }
 
   const { raw, hash } = generateInvitationToken();
-  const supabase = await createPortalServerClient();
 
   const { data: profileId, error } = await supabase.rpc("admin_create_client", {
     p_first_name: firstName,
@@ -195,102 +418,23 @@ export async function createClientAction(
     return { ok: false, error: "Could not create the client. Please try again." };
   }
 
-  const seedWarnings: string[] = [];
-  if (storedPhone || parsedCode.value || parsedCity.value) {
-    const { error: extrasError } = await supabase
-      .from("profiles")
-      .update({
-        ...(storedPhone ? { phone: storedPhone } : {}),
-        ...(parsedCode.value ? { lanvac_account_code: parsedCode.value } : {}),
-        ...(parsedCity.value ? { lanvac_city: parsedCity.value } : {}),
-      })
-      .eq("id", profileId);
-    if (extrasError) {
-      console.error("[portal] createClient profile extras failed:", extrasError);
-      seedWarnings.push(
-        extrasError.code === "23505"
-          ? "The client was created, but that Lanvac account code is already on another client. Set it on the client page."
-          : "The client was created, but the Lanvac account or city could not be saved. Set it on the client page.",
-      );
-    }
-  }
-
-  // The RPC created the services on the default (manual) rail; apply the
-  // chosen billing method to all of them. Autopay clients are asked for
-  // their card right on the dashboard after activation.
-  if (monitoringTier || cloudTier || voipTier) {
-    const { error: railError } = await supabase
-      .from("services")
-      .update({
-        billing_method: billingMethod,
-        ...(billingMethod === "manual" ? { next_due_on: todayIsoDate() } : {}),
-      })
-      .eq("profile_id", profileId);
-    if (railError) console.error("[portal] billing method set failed:", railError);
-  }
-
-  const pricePrefills: {
-    serviceType: "monitoring" | "voip";
-    tier: string;
-    numberCount?: number;
-    seatCount?: number;
-  }[] = [];
-  if (monitoringTier) pricePrefills.push({ serviceType: "monitoring", tier: monitoringTier });
-  if (voipTier) {
-    pricePrefills.push({
-      serviceType: "voip",
-      tier: voipTier,
-      numberCount: voipNumbers,
-      seatCount: voipTier === "professional" ? voipSeats : 1,
-    });
-  }
-  for (const prefill of pricePrefills) {
-    const rate = serviceMonthlyCents(prefill);
-    if (rate == null) continue;
-    const { error: priceError } = await supabase
-      .from("services")
-      .update({ monthly_amount_cents: rate })
-      .eq("profile_id", profileId)
-      .eq("service_type", prefill.serviceType);
-    if (priceError) console.error(`[portal] ${prefill.serviceType} price prefill failed:`, priceError);
-  }
-
-  if (seedContacts.length > 0) {
-    const { error: contactError } = await supabase.from("caller_id_contacts").insert(
-      seedContacts.map((contact, index) => ({
-        profile_id: profileId,
-        phone: contact.phone,
-        label: contact.label,
-        passcode: contact.passcode,
-        sort_order: index + 1,
-      })),
-    );
-    if (contactError) {
-      console.error("[portal] createClient caller ID seed failed:", contactError);
-      seedWarnings.push("The alarm contact list could not be saved. Open the client and add it there.");
-    }
-  }
-
-  if (seedDevices.length > 0) {
-    const { error: deviceError } = await supabase.from("devices").insert(
-      seedDevices.map((device) => ({
-        profile_id: profileId,
-        label: device.label,
-        category: device.category,
-        installed_on: device.installedOn,
-        lifetime_years: device.lifetimeYears,
-      })),
-    );
-    if (deviceError) {
-      console.error("[portal] createClient device seed failed:", deviceError);
-      seedWarnings.push("A device could not be saved. Open the client and add it there.");
-    }
-  }
+  const seedWarnings = await applySiteFollowup(supabase, profileId, site.data, {
+    applyProfileExtras: true,
+  });
 
   const activateUrl = `${await getOrigin()}/account/activate?token=${raw}`;
+  const [{ data: createdProfile }, mailEnabled] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("account_id, accounts(auto_onboard)")
+      .eq("id", profileId)
+      .maybeSingle(),
+    isClientMailEnabled(),
+  ]);
+  const autoOnboard = autoOnboardFromEmbed(createdProfile?.accounts);
 
   let emailSent = false;
-  if (email) {
+  if (email && mailEnabled && autoOnboard) {
     const { data: invitation } = await supabase
       .from("invitations")
       .select("expires_at")
@@ -312,13 +456,21 @@ export async function createClientAction(
     activateUrl,
     emailSent,
     emailAttempted: Boolean(email),
-    emailPaused: !(await isClientMailEnabled()),
+    emailPaused: !mailEnabled,
+    emailHeldAutoOnboard: mailEnabled && !autoOnboard,
     warning: seedWarnings.length > 0 ? seedWarnings.join(" ") : undefined,
   };
 }
 
 export type ResendInviteResult =
-  | { ok: true; activateUrl: string; emailSent: boolean; emailAttempted: boolean; emailPaused: boolean }
+  | {
+      ok: true;
+      activateUrl: string;
+      emailSent: boolean;
+      emailAttempted: boolean;
+      emailPaused: boolean;
+      emailHeldAutoOnboard: boolean;
+    }
   | { ok: false; error: string };
 
 /**
@@ -340,7 +492,7 @@ export async function resendInviteAction(profileId: string): Promise<ResendInvit
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, first_name, email, status, user_id")
+    .select("id, first_name, email, status, user_id, account_id, accounts(auto_onboard)")
     .eq("id", profileId)
     .maybeSingle();
 
@@ -371,6 +523,20 @@ export async function resendInviteAction(profileId: string): Promise<ResendInvit
   }
 
   if (!updated) {
+    if (profile.account_id) {
+      const { count, error: siteCountError } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", profile.account_id)
+        .eq("role", "client");
+      if (siteCountError) {
+        console.error("[portal] resendInvite site count failed:", siteCountError);
+        return { ok: false, error: "Could not refresh the invitation. Please try again." };
+      }
+      if ((count ?? 0) > 1) {
+        return { ok: false, error: MULTI_SITE_NO_SITE_INVITE_MESSAGE };
+      }
+    }
     const { error: insertError } = await supabase.from("invitations").insert({
       profile_id: profileId,
       token_hash: hash,
@@ -385,9 +551,11 @@ export async function resendInviteAction(profileId: string): Promise<ResendInvit
   }
 
   const activateUrl = `${await getOrigin()}/account/activate?token=${raw}`;
+  const mailEnabled = await isClientMailEnabled();
+  const autoOnboard = autoOnboardFromEmbed(profile.accounts);
 
   let emailSent = false;
-  if (profile.email) {
+  if (profile.email && mailEnabled && autoOnboard) {
     emailSent = await sendInvitationEmail({
       to: profile.email,
       firstName: profile.first_name,
@@ -402,8 +570,185 @@ export async function resendInviteAction(profileId: string): Promise<ResendInvit
     activateUrl,
     emailSent,
     emailAttempted: Boolean(profile.email),
-    emailPaused: !(await isClientMailEnabled()),
+    emailPaused: !mailEnabled,
+    emailHeldAutoOnboard: mailEnabled && !autoOnboard,
   };
+}
+
+/**
+ * Add a site to an existing account. No invitation. auto_onboard turns off
+ * once the account has (or is gaining) a second site. Status is active when
+ * an Account admin has already signed in; otherwise pending with no mail.
+ */
+export async function addSiteToAccountAction(
+  input: AddSiteInput,
+  extras: CreateClientExtras = {},
+): Promise<AddSiteResult> {
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
+
+  const parsed = addSiteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const site = parseNewSiteFields(parsed.data, extras, { emailRequired: false });
+  if (!site.ok) return { ok: false, error: site.error };
+
+  const supabase = await createPortalServerClient();
+  const { data: account, error: accountError } = await supabase
+    .from("accounts")
+    .select("id, name")
+    .eq("id", parsed.data.accountId)
+    .maybeSingle();
+  if (accountError) {
+    console.error("[portal] addSite account lookup failed:", accountError);
+    return { ok: false, error: "Could not load that account. Please try again." };
+  }
+  if (!account) return { ok: false, error: "Account not found." };
+
+  const [{ data: owners, error: ownerError }, { count: existingSites, error: countError }] =
+    await Promise.all([
+      supabase
+        .from("account_members")
+        .select("user_id")
+        .eq("account_id", account.id)
+        .eq("role", "owner"),
+      supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", account.id)
+        .eq("role", "client"),
+    ]);
+  if (ownerError || countError) {
+    console.error("[portal] addSite account state failed:", ownerError ?? countError);
+    return { ok: false, error: "Could not load that account. Please try again." };
+  }
+
+  const hasActivatedOwner = (owners ?? []).some((row) => Boolean(row.user_id));
+  const siteStatus = hasActivatedOwner ? "active" : "pending";
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("profiles")
+    .insert({
+      account_id: account.id,
+      first_name: site.data.firstName,
+      last_name: site.data.lastName,
+      email: site.data.email || null,
+      address: site.data.address || null,
+      phone: site.data.storedPhone,
+      lanvac_account_code: site.data.lanvacCode,
+      lanvac_city: site.data.lanvacCity,
+      role: "client",
+      status: siteStatus,
+      user_id: null,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !inserted) {
+    console.error("[portal] addSite insert failed:", insertError);
+    if (insertError?.code === "23505") {
+      return {
+        ok: false,
+        error: "That Lanvac account code is already on another client. Use a different CODE.",
+      };
+    }
+    return { ok: false, error: "Could not add the site. Please try again." };
+  }
+
+  const serviceRows: {
+    profile_id: string;
+    service_type: "monitoring" | "cloud_backup" | "voip";
+    tier: string;
+    billing_interval?: "annual";
+    number_count?: number;
+    seat_count?: number;
+    port_count?: number;
+  }[] = [];
+  if (site.data.monitoringTier) {
+    serviceRows.push({
+      profile_id: inserted.id,
+      service_type: "monitoring",
+      tier: site.data.monitoringTier,
+      billing_interval: "annual",
+    });
+  }
+  if (site.data.cloudTier) {
+    serviceRows.push({
+      profile_id: inserted.id,
+      service_type: "cloud_backup",
+      tier: site.data.cloudTier,
+    });
+  }
+  if (site.data.voipTier) {
+    serviceRows.push({
+      profile_id: inserted.id,
+      service_type: "voip",
+      tier: site.data.voipTier,
+      number_count: site.data.voipNumbers,
+      seat_count: site.data.voipTier === "professional" ? site.data.voipSeats : 1,
+      port_count: site.data.voipPorts,
+    });
+  }
+
+  const seedWarnings: string[] = [];
+  if (serviceRows.length > 0) {
+    const { error: serviceError } = await supabase.from("services").insert(serviceRows);
+    if (serviceError) {
+      console.error("[portal] addSite services failed:", serviceError);
+      seedWarnings.push("The site was created, but services could not be saved. Open the site and add them.");
+    }
+  }
+
+  seedWarnings.push(
+    ...(await applySiteFollowup(supabase, inserted.id, site.data, { applyProfileExtras: false })),
+  );
+
+  if ((existingSites ?? 0) >= 1) {
+    const { error: onboardError } = await supabase
+      .from("accounts")
+      .update({ auto_onboard: false })
+      .eq("id", account.id);
+    if (onboardError) {
+      console.error("[portal] addSite auto_onboard off failed:", onboardError);
+      seedWarnings.push("The site was added, but automatic onboarding could not be turned off. Use the Account card.");
+    }
+  }
+
+  revalidatePath("/admin-dashboard", "layout");
+  return {
+    ok: true,
+    profileId: inserted.id,
+    accountName: accountDisplayName(account.name),
+    warning: seedWarnings.length > 0 ? seedWarnings.join(" ") : undefined,
+  };
+}
+
+export type SetAccountAutoOnboardResult = { ok: true } | { ok: false; error: string };
+
+export async function setAccountAutoOnboardAction(input: {
+  accountId: string;
+  autoOnboard: boolean;
+}): Promise<SetAccountAutoOnboardResult> {
+  if (!(await tryRequireAdmin())) return { ok: false, error: SESSION_ERROR_MESSAGE };
+  if (!z.uuid().safeParse(input.accountId).success) {
+    return { ok: false, error: "Account not found." };
+  }
+
+  const supabase = await createPortalServerClient();
+  const { data, error } = await supabase
+    .from("accounts")
+    .update({ auto_onboard: input.autoOnboard })
+    .eq("id", input.accountId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[portal] set auto_onboard failed:", error);
+    return { ok: false, error: "Could not update automatic onboarding. Please try again." };
+  }
+  if (!data) return { ok: false, error: "Account not found." };
+
+  revalidatePath("/admin-dashboard", "layout");
+  return { ok: true };
 }
 
 const updateProfileSchema = z.object({

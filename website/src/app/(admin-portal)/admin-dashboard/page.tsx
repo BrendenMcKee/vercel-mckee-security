@@ -25,6 +25,8 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Tabbed operating console (PORTAL_PLAN.md 7.2). Overview (KPIs + activity
  * feed), Clients (search, filters, create, row click to detail), Billing
@@ -36,9 +38,9 @@ type TabId = (typeof TABS)[number]["id"];
 export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; addTo?: string }>;
 }) {
-  const { tab } = await searchParams;
+  const { tab, addTo } = await searchParams;
   const activeTab: TabId =
     tab === "clients"
       ? "clients"
@@ -124,18 +126,18 @@ export default async function AdminDashboardPage({
         ) : activeTab === "alerts" ? (
           <AdminAlerts />
         ) : (
-          <ClientsTab />
+          <ClientsTab addToAccountId={addTo} />
         )}
       </div>
     </section>
   );
 }
 
-async function ClientsTab() {
+async function ClientsTab({ addToAccountId }: { addToAccountId?: string }) {
   const supabase = await createPortalServerClient();
   const { data: clients, error } = await supabase
     .from("profiles")
-    .select("*, services(*), invitations(id, target_email, expires_at, used_at, created_at), accounts(name)")
+    .select("*, services(*), invitations(id, target_email, expires_at, used_at, created_at), accounts(name, account_members(email))")
     .eq("role", "client")
     .order("created_at", { ascending: false });
 
@@ -144,5 +146,8 @@ async function ClientsTab() {
     throw new Error("Clients failed to load.");
   }
 
-  return <AdminClientsPanel clients={clients ?? []} />;
+  const prefillAccountId =
+    addToAccountId && UUID_RE.test(addToAccountId) ? addToAccountId : "";
+
+  return <AdminClientsPanel clients={clients ?? []} prefillAccountId={prefillAccountId} />;
 }

@@ -10,6 +10,7 @@ import {
   type CardPaymentEntry,
 } from "@/components/admin-portal/admin-client-detail";
 import type { AdminAccountMember } from "@/components/admin-portal/admin-account-people";
+import type { AdminAccountSiteLink } from "@/components/admin-portal/admin-account-card";
 import type { CallerIdContact } from "@/components/portal/caller-id-editor";
 import type { Tables } from "@/lib/portal/database.types";
 import type {
@@ -85,7 +86,8 @@ export default async function AdminClientDetailPage({
     devicesCountResult,
     zonesCountResult,
     stationPeekResult,
-    siblingCountResult,
+    siblingSitesResult,
+    accountResult,
     membersResult,
     settingsResult,
     billingExtras,
@@ -116,9 +118,18 @@ export default async function AdminClientDetailPage({
     urlTab === "account" && client.account_id
       ? supabase
           .from("profiles")
-          .select("id", { count: "exact", head: true })
+          .select("id, first_name, last_name, lanvac_account_code")
           .eq("account_id", client.account_id)
-      : Promise.resolve({ count: 1, error: null }),
+          .eq("role", "client")
+          .order("last_name")
+      : Promise.resolve({ data: [] as AdminAccountSiteLink[], error: null }),
+    urlTab === "account" && client.account_id
+      ? supabase
+          .from("accounts")
+          .select("id, name, auto_onboard")
+          .eq("id", client.account_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
     urlTab === "account" && client.account_id
       ? supabase
           .from("account_members")
@@ -137,7 +148,8 @@ export default async function AdminClientDetailPage({
     devicesCountResult.error ??
     zonesCountResult.error ??
     stationPeekResult.error ??
-    siblingCountResult.error ??
+    siblingSitesResult.error ??
+    accountResult.error ??
     membersResult.error;
   if (visibilityError) {
     console.error("[portal] Admin client detail tab visibility failed:", visibilityError);
@@ -239,7 +251,17 @@ export default async function AdminClientDetailPage({
         <AdminClientDetail
           tab={activeTab}
           client={client}
-          siblingSiteCount={Math.max(0, (siblingCountResult.count ?? 1) - 1)}
+          siblingSiteCount={Math.max(0, (siblingSitesResult.data?.length ?? 1) - 1)}
+          account={
+            accountResult.data
+              ? {
+                  id: accountResult.data.id,
+                  name: accountResult.data.name,
+                  autoOnboard: accountResult.data.auto_onboard,
+                  sites: (siblingSitesResult.data ?? []) as AdminAccountSiteLink[],
+                }
+              : null
+          }
           members={(membersResult.data ?? []) as AdminAccountMember[]}
           callerIdContacts={securityExtras?.ok ? securityExtras.contacts : []}
           callerIdChanges={securityExtras?.ok ? securityExtras.changes : []}

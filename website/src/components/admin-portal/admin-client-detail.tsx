@@ -38,6 +38,11 @@ import {
   AdminAccountPeople,
   type AdminAccountMember,
 } from "@/components/admin-portal/admin-account-people";
+import {
+  AdminAccountCard,
+  type AdminAccountCardAccount,
+} from "@/components/admin-portal/admin-account-card";
+import { canMintSiteInvitation, inviteDeliveryNotice } from "@/lib/portal/invite-delivery";
 import { formatPhone } from "@/lib/portal/phone";
 import {
   BILLING_INTERVAL_LABELS,
@@ -531,7 +536,13 @@ function AddServiceForm({ client }: { client: AdminClientDetailRow }) {
   );
 }
 
-function InvitationCard({ client }: { client: AdminClientDetailRow }) {
+function InvitationCard({
+  client,
+  siblingSiteCount,
+}: {
+  client: AdminClientDetailRow;
+  siblingSiteCount: number;
+}) {
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, startTransition] = useTransition();
 
@@ -539,12 +550,23 @@ function InvitationCard({ client }: { client: AdminClientDetailRow }) {
   const used = client.invitations.find((inv) => inv.used_at);
 
   let stateLine: string;
+  const showResend = canMintSiteInvitation({
+    status: client.status,
+    hasOpenInvite: Boolean(open),
+    accountSiteCount: siblingSiteCount + 1,
+  });
+
   if (client.status !== "pending") {
     stateLine = used
       ? `Activated ${new Date(used.used_at!).toLocaleDateString("en-CA")}.`
-      : "Account is active.";
+      : siblingSiteCount > 0
+        ? "This site is active. The Account admin already has access. No invitation was created."
+        : "Account is active.";
   } else if (!open) {
-    stateLine = "No open invitation.";
+    stateLine =
+      siblingSiteCount > 0
+        ? "No open invitation. Added sites do not get their own house invite."
+        : "No open invitation.";
   } else if (new Date(open.expires_at).getTime() <= Date.now()) {
     stateLine = `Invitation expired ${new Date(open.expires_at).toLocaleDateString("en-CA")}.`;
   } else {
@@ -559,19 +581,12 @@ function InvitationCard({ client }: { client: AdminClientDetailRow }) {
         setNotice({ kind: "error", text: result.error });
         return;
       }
-      if (!result.emailAttempted) {
-        setNotice({ kind: "ok", text: "New invitation created. No email on file, copy the link:", link: result.activateUrl });
-      } else if (result.emailPaused) {
-        setNotice({
-          kind: "ok",
-          text: "Invitation refreshed. Email is held until go-live (Billing tab). Copy the link if you need it now:",
-          link: result.activateUrl,
-        });
-      } else if (!result.emailSent) {
-        setNotice({ kind: "error", text: "Invitation refreshed, but the email failed to send. Copy the link:", link: result.activateUrl });
-      } else {
-        setNotice({ kind: "ok", text: "Invitation refreshed and email re-sent." });
-      }
+      const delivery = inviteDeliveryNotice(result, "resent");
+      setNotice({
+        kind: delivery.kind,
+        text: delivery.text,
+        link: delivery.showLink ? result.activateUrl : undefined,
+      });
     });
   }
 
@@ -582,7 +597,7 @@ function InvitationCard({ client }: { client: AdminClientDetailRow }) {
         <NoticeBanner notice={notice} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-white/70">{stateLine}</p>
-          {client.status === "pending" && (
+          {showResend && (
             <button type="button" disabled={pending} onClick={resend} className={buttonSecondary}>
               {pending ? "Sending..." : "Resend Invite"}
             </button>
@@ -2241,6 +2256,7 @@ export function AdminClientDetail({
   tab,
   client,
   siblingSiteCount,
+  account,
   members,
   callerIdContacts,
   callerIdChanges,
@@ -2256,6 +2272,7 @@ export function AdminClientDetail({
   tab: AdminClientTab;
   client: AdminClientDetailRow;
   siblingSiteCount: number;
+  account: AdminAccountCardAccount | null;
   members: AdminAccountMember[];
   callerIdContacts: CallerIdContact[];
   callerIdChanges: Tables<"caller_id_changes">[];
@@ -2365,7 +2382,8 @@ export function AdminClientDetail({
   return (
     <div className="space-y-6">
       <ProfileCard client={client} />
-      <InvitationCard client={client} />
+      <InvitationCard client={client} siblingSiteCount={siblingSiteCount} />
+      {account && <AdminAccountCard account={account} currentProfileId={client.id} />}
       <AdminAccountPeople members={members} />
       <DangerZone client={client} siblingSiteCount={siblingSiteCount} />
     </div>

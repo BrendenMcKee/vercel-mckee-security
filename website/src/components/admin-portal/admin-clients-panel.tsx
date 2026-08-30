@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Tables } from "@/lib/portal/database.types";
 import {
+  addSiteToAccountAction,
   createClientAction,
   deleteClientAction,
   resendInviteAction,
   type CreateClientInput,
 } from "@/lib/portal/actions/clients";
+import { AdminAccountPicker } from "@/components/admin-portal/admin-account-picker";
+import { canMintSiteInvitation, inviteDeliveryNotice } from "@/lib/portal/invite-delivery";
 import {
   LANVAC_ACCOUNT_CODE_INPUT_MAX,
   LANVAC_CONTACT_NAME_MAX,
@@ -49,10 +52,13 @@ import { DeviceNameSelect } from "@/components/portal/device-name-select";
 import { deleteSiteConfirmCopy, siblingSiteCountFor } from "@/lib/portal/delete-site-copy";
 import {
   accountNameFromEmbed,
+  accountsFromClientRows,
   linkedAccountChip,
   siteCountByAccount,
   type SiteLinkFilter,
 } from "@/lib/portal/account-list";
+
+type FormMode = "closed" | "create" | "add-site";
 
 type DraftContact = { label: string; phone: string; passcode: string };
 type DraftDevice = {
@@ -70,7 +76,10 @@ type InvitationSummary = Pick<
 export type AdminClientRow = Tables<"profiles"> & {
   services: Tables<"services">[];
   invitations: InvitationSummary[];
-  accounts: { name: string } | { name: string }[] | null;
+  accounts:
+    | { name: string; account_members?: Array<{ email: string } | null> | null }
+    | { name: string; account_members?: Array<{ email: string } | null> | null }[]
+    | null;
 };
 
 const ACCOUNT_CHIP_CLASS =
@@ -99,7 +108,10 @@ const CLOUD_BACKUP_AVAILABLE = isServiceAvailable("cloud_backup");
 type SortKey = "name" | "email" | "status" | "created";
 type SortDir = "asc" | "desc";
 
-function inviteState(client: AdminClientRow): {
+function inviteState(
+  client: AdminClientRow,
+  accountSiteCount: number,
+): {
   label: string;
   tone: "ok" | "warn" | "muted";
   canResend: boolean;
@@ -108,7 +120,12 @@ function inviteState(client: AdminClientRow): {
     return { label: "Activated", tone: "muted", canResend: false };
   }
   const open = client.invitations.find((inv) => !inv.used_at);
-  if (!open) return { label: "No invite", tone: "warn", canResend: true };
+  const canResend = canMintSiteInvitation({
+    status: client.status,
+    hasOpenInvite: Boolean(open),
+    accountSiteCount,
+  });
+  if (!open) return { label: "No invite", tone: "warn", canResend };
   const msLeft = new Date(open.expires_at).getTime() - Date.now();
   if (msLeft <= 0) return { label: "Invite expired", tone: "warn", canResend: true };
   const days = Math.ceil(msLeft / 86400_000);
@@ -141,7 +158,13 @@ function compare(a: AdminClientRow, b: AdminClientRow, key: SortKey): number {
   }
 }
 
-export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
+export function AdminClientsPanel({
+  clients,
+  prefillAccountId = "",
+}: {
+  clients: AdminClientRow[];
+  prefillAccountId?: string;
+}) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | Tables<"profiles">["status"]>("");
@@ -151,7 +174,8 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("created");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [page, setPage] = useState(0);
-  const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState<FormMode>(prefillAccountId ? "add-site" : "closed");
+  const [addAccountId, setAddAccountId] = useState(prefillAccountId);
   const [form, setForm] = useState<CreateClientInput>(EMPTY_FORM);
   const [draftContacts, setDraftContacts] = useState<DraftContact[]>([]);
   const [contactDraft, setContactDraft] = useState<DraftContact>({ label: "", phone: "", passcode: "" });
@@ -163,12 +187,38 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
     years: "5",
   });
   const [cityLocked, setCityLocked] = useState(false);
-  const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string; link?: string } | null>(null);
+  const [notice, setNotice] = useState<{
+    kind: "ok" | "error";
+    text: string;
+    link?: string;
+    suggestAddSite?: { accountId: string; accountName: string };
+  } | null>(null);
   const [pending, startTransition] = useTransition();
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const siteCounts = useMemo(() => siteCountByAccount(clients), [clients]);
+  const accountOptions = useMemo(() => accountsFromClientRows(clients), [clients]);
+  const ignorePrefill = useRef(false);
+
+  useEffect(() => {
+    if (!prefillAccountId || ignorePrefill.current) return;
+    setFormMode("add-site");
+    setAddAccountId(prefillAccountId);
+  }, [prefillAccountId]);
+
+  function clearAddToFromUrl() {
+    if (!prefillAccountId) return;
+    router.replace("/admin-dashboard?tab=clients");
+  }
+
+  function finishForm() {
+    ignorePrefill.current = true;
+    resetCreateForm();
+    setFormMode("closed");
+    setAddAccountId("");
+    clearAddToFromUrl();
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -179,6 +229,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         return (
           `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
           (c.email ?? "").toLowerCase().includes(q) ||
+          (c.lanvac_account_code ?? "").toLowerCase().includes(q) ||
           account.includes(q)
         );
       });
@@ -321,6 +372,11 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
     event.preventDefault();
     setNotice(null);
 
+    if (formMode === "add-site" && !addAccountId) {
+      setNotice({ kind: "error", text: "Pick an account first." });
+      return;
+    }
+
     if (form.monitoringTier && (!form.lanvacAccountCode.trim() || !form.lanvacCity.trim())) {
       setNotice({
         kind: "error",
@@ -337,7 +393,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       if (!pendingLabel || !pendingPasscode || !pendingPhone) {
         setNotice({
           kind: "error",
-          text: "Finish the alarm contact (name, phone, and passcode) or clear those fields before creating the client.",
+          text: "Finish the alarm contact (name, phone, and passcode) or clear those fields before saving.",
         });
         return;
       }
@@ -361,7 +417,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       if (!deviceDraft.label.trim() || !deviceDraft.installedOn || !Number.isFinite(lifetimeYears) || lifetimeYears < 1) {
         setNotice({
           kind: "error",
-          text: "Finish the device (name, install date, and years) or clear those fields before creating the client.",
+          text: "Finish the device (name, install date, and years) or clear those fields before saving.",
         });
         return;
       }
@@ -376,42 +432,47 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       ];
     }
 
+    const extras = {
+      contacts: form.monitoringTier ? contacts : [],
+      devices: form.monitoringTier ? devices : [],
+    };
+
     startTransition(async () => {
-      const result = await createClientAction(form, {
-        contacts: form.monitoringTier ? contacts : [],
-        devices: form.monitoringTier ? devices : [],
-      });
-      if (!result.ok) {
-        setNotice({ kind: "error", text: result.error });
-        return;
-      }
-      resetCreateForm();
-      setShowForm(false);
-      const seedNote = result.warning ? ` ${result.warning}` : "";
-      if (!result.emailAttempted) {
-        setNotice({
-          kind: "ok",
-          text: `Client created. There is no email on file, so copy the activation link and deliver it yourself:${seedNote}`,
-          link: result.activateUrl,
-        });
-      } else if (result.emailPaused) {
-        setNotice({
-          kind: "ok",
-          text: `Client created. Invitation email is held until go-live (Billing tab). Copy the link if you need it now:${seedNote}`,
-          link: result.activateUrl,
-        });
-      } else if (!result.emailSent) {
-        setNotice({
-          kind: "error",
-          text: `Client created, but the invitation email failed to send. Copy the link and deliver it yourself:${seedNote}`,
-          link: result.activateUrl,
-        });
-      } else {
+      if (formMode === "add-site") {
+        if (!addAccountId) {
+          setNotice({ kind: "error", text: "Pick an account first." });
+          return;
+        }
+        const result = await addSiteToAccountAction({ ...form, accountId: addAccountId }, extras);
+        if (!result.ok) {
+          setNotice({ kind: "error", text: result.error });
+          return;
+        }
+        finishForm();
+        const seedNote = result.warning ? ` ${result.warning}` : "";
         setNotice({
           kind: result.warning ? "error" : "ok",
-          text: `Client created and invitation email sent.${seedNote}`,
+          text: `Site added to ${result.accountName}. No invitation was sent.${seedNote}`,
         });
+        return;
       }
+
+      const result = await createClientAction(form, extras);
+      if (!result.ok) {
+        setNotice({
+          kind: "error",
+          text: result.error,
+          suggestAddSite: result.suggestAddSite,
+        });
+        return;
+      }
+      finishForm();
+      const delivery = inviteDeliveryNotice(result, "created", result.warning);
+      setNotice({
+        kind: delivery.kind,
+        text: delivery.text,
+        link: delivery.showLink ? result.activateUrl : undefined,
+      });
     });
   }
 
@@ -453,27 +514,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         setNotice({ kind: "error", text: result.error });
         return;
       }
-      if (!result.emailAttempted) {
-        setNotice({
-          kind: "ok",
-          text: "New invitation created. There is no email on file, so copy the activation link:",
-          link: result.activateUrl,
-        });
-      } else if (result.emailPaused) {
-        setNotice({
-          kind: "ok",
-          text: "Invitation refreshed. Email is held until go-live (Billing tab). Copy the link if you need it now:",
-          link: result.activateUrl,
-        });
-      } else if (!result.emailSent) {
-        setNotice({
-          kind: "error",
-          text: "Invitation refreshed, but the email failed to send. Copy the link:",
-          link: result.activateUrl,
-        });
-      } else {
-        setNotice({ kind: "ok", text: "Invitation refreshed and email re-sent." });
-      }
+      const delivery = inviteDeliveryNotice(result, "resent");
+      setNotice({
+        kind: delivery.kind,
+        text: delivery.text,
+        link: delivery.showLink ? result.activateUrl : undefined,
+      });
     });
   }
 
@@ -489,24 +535,60 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-white">Clients</h2>
-        <button
-          type="button"
-          onClick={() => {
-            if (!showForm) resetCreateForm();
-            setShowForm((v) => !v);
-            setNotice(null);
-          }}
-          className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)]"
-        >
-          {showForm ? "Close" : "New Client"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              ignorePrefill.current = true;
+              resetCreateForm();
+              setAddAccountId("");
+              setFormMode("create");
+              setNotice(null);
+              clearAddToFromUrl();
+            }}
+            className={`cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 ${
+              formMode === "create"
+                ? "bg-primary text-white hover:bg-[var(--primary-hover)]"
+                : "border border-white/20 text-white/80 hover:bg-white/10"
+            }`}
+          >
+            New client
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              resetCreateForm();
+              setFormMode("add-site");
+              setNotice(null);
+            }}
+            className={`cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 ${
+              formMode === "add-site"
+                ? "bg-primary text-white hover:bg-[var(--primary-hover)]"
+                : "border border-white/20 text-white/80 hover:bg-white/10"
+            }`}
+          >
+            Add site to an account
+          </button>
+          {formMode !== "closed" && (
+            <button
+              type="button"
+              onClick={() => {
+                finishForm();
+                setNotice(null);
+              }}
+              className="cursor-pointer rounded-xl border border-white/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white/80 transition-all duration-200 hover:bg-white/10"
+            >
+              Close
+            </button>
+          )}
+        </div>
       </div>
 
-      {!showForm && (
+      {formMode === "closed" && (
         <div className="space-y-3">
           <input
             type="search"
-            placeholder="Search name, email, or account..."
+            placeholder="Search name, email, account, or CODE..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -596,6 +678,21 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
           }`}
         >
           <p>{notice.text}</p>
+          {notice.suggestAddSite && (
+            <button
+              type="button"
+              onClick={() => {
+                const target = notice.suggestAddSite!;
+                resetCreateForm();
+                setFormMode("add-site");
+                setAddAccountId(target.accountId);
+                setNotice(null);
+              }}
+              className="mt-3 cursor-pointer rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-amber-100 hover:bg-amber-500/15"
+            >
+              Add site to {notice.suggestAddSite.accountName}
+            </button>
+          )}
           {notice.link && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <code className="break-all rounded bg-black/30 px-2 py-1 text-xs text-white/80">
@@ -613,14 +710,30 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         </div>
       )}
 
-      {showForm && (
+      {formMode !== "closed" && (
         <form
           onSubmit={submitCreate}
           className="space-y-6 rounded-2xl border border-white/10 bg-surface p-5 sm:p-6"
         >
+          {formMode === "add-site" && (
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-bold uppercase tracking-widest text-white/40">
+                Account
+              </legend>
+              <p className="text-xs text-white/50">
+                Pick the account first. This adds a site only. It does not create
+                a new login or send an invitation.
+              </p>
+              <AdminAccountPicker
+                accounts={accountOptions}
+                selectedId={addAccountId}
+                onSelect={setAddAccountId}
+              />
+            </fieldset>
+          )}
           <fieldset className="space-y-3">
             <legend className="text-xs font-bold uppercase tracking-widest text-white/40">
-              Client Details
+              {formMode === "add-site" ? "Site" : "Client Details"}
             </legend>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
@@ -631,6 +744,11 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   onChange={(e) => set("firstName", e.target.value)}
                   className={adminInputClass}
                 />
+                {formMode === "add-site" && (
+                  <span className="text-xs text-white/40">
+                    Site display name. Example: Stanhope or Public Works.
+                  </span>
+                )}
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
                 Last name *
@@ -642,16 +760,18 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Email *
+                {formMode === "add-site" ? "Site contact email" : "Email *"}
                 <input
-                  required
+                  required={formMode === "create"}
                   type="email"
                   value={form.email}
                   onChange={(e) => set("email", e.target.value)}
                   className={adminInputClass}
                 />
                 <span className="text-xs text-white/40">
-                  Required. The invitation, receipts, and reminders go here. This is also their sign-in email.
+                  {formMode === "add-site"
+                    ? "Optional. Site contact only. Not a new login."
+                    : "Required. The invitation, receipts, and reminders go here. This is also their sign-in email."}
                 </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
@@ -1106,7 +1226,9 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               </select>
               <span className="text-xs text-white/40">
                 {form.billingMethod === "stripe"
-                  ? "The client is asked for their card when they activate their account."
+                  ? formMode === "add-site"
+                    ? "The Account admin can add a card from the portal. This site does not send a new invitation."
+                    : "The client is asked for their card when they activate their account."
                   : "You will record payments by hand. The first invoice is due today (change it on their page if they are already paid ahead). Security is billed once a year; VoIP is billed every month."}
               </span>
             </label>
@@ -1118,25 +1240,32 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               disabled={pending}
               className="cursor-pointer rounded-xl bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
             >
-              {pending ? "Creating..." : "Create Client & Send Invite"}
+              {pending
+                ? formMode === "add-site"
+                  ? "Adding..."
+                  : "Creating..."
+                : formMode === "add-site"
+                  ? "Add site"
+                  : "Create client"}
             </button>
           </div>
         </form>
       )}
 
-      {!showForm && (
+      {formMode === "closed" && (
       <>
       {/* Mobile: stacked cards. A six-column table can't work at 390px. */}
       <div className="space-y-3 md:hidden">
         {pageRows.length === 0 && (
           <p className="rounded-2xl border border-white/10 bg-surface px-4 py-8 text-center text-sm text-white/40">
             {clients.length === 0
-              ? "No clients yet. Create the first one with New Client."
+              ? "No clients yet. Create the first one with New client."
               : "No clients match your search or filters."}
           </p>
         )}
         {pageRows.map((client) => {
-          const invite = inviteState(client);
+          const accountSiteCount = client.account_id ? (siteCounts.get(client.account_id) ?? 1) : 1;
+          const invite = inviteState(client, accountSiteCount);
           const link = siteLink(client);
           return (
             <div
@@ -1255,13 +1384,14 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-white/40">
                   {clients.length === 0
-                    ? "No clients yet. Create the first one with New Client."
+                    ? "No clients yet. Create the first one with New client."
                     : "No clients match your search or filters."}
                 </td>
               </tr>
             )}
             {pageRows.map((client) => {
-              const invite = inviteState(client);
+              const accountSiteCount = client.account_id ? (siteCounts.get(client.account_id) ?? 1) : 1;
+              const invite = inviteState(client, accountSiteCount);
               const link = siteLink(client);
               return (
                 <tr

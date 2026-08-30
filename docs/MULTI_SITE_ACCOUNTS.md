@@ -25,13 +25,13 @@ todos:
     status: pending
   - id: create-client-attach
     content: "Clients tab: two buttons (New client = one new account + one site; Add site to an account = pick account then site form). Email collision offers the add-site flow. No multi-site wizard on New client."
-    status: pending
+    status: completed
   - id: client-switcher
     content: Site switcher and People with access only when 2+ sites or 2+ members
     status: pending
   - id: honor-auto-onboard
-    content: Skip automatic invite/resend when auto_onboard is false or client mail is paused; cancel leftover site invites on attach
-    status: pending
+    content: Skip automatic invite/resend when auto_onboard is false or client mail is paused (leftover site invites on attach stay with attach)
+    status: completed
   - id: import-grouping-gate
     content: "Grouping board on existing profiles (heuristics, accept/reject); empty-queue sign-off required before GO LIVE; not blocked on 8A seed"
     status: pending
@@ -46,7 +46,7 @@ isProject: false
 
 # Multi-site accounts and extra logins
 
-Status: **slices 1–3 shipped (audit of 1–2 on 2026-08-28; slice 3 on 2026-08-29).** Schema, membership RLS, `resolvePortalSession`, orphan / OAuth / cleanup / password. Audit also shipped Stripe email reuse, delete-site Auth wipe, per-site disable / re-enable, Account-admin-only on-test, `requireSelectedSite` on client writes. Slice 3: last Account admin cannot be revoked (staff People with access on the Account tab), and delete confirm copy names **this site** (other sites and the login stay when the account has more than one). Hosted two-site fixture (do not delete): McKee account, Bunkie `O5985` (Brenden login) + House `O4964` (Dennis & Brenda, same 4702 civic address, no `user_id`). `auto_onboard` is off. Session without `?site=` / cookie prefers the leftover home site so the Bunkie login still opens the Bunkie. Single-site clients keep today's dashboard (no switcher, no People list). Staff Clients list chips linked accounts (`McKee · 2 sites`) and can filter them (2026-08-30). Next is slices 4–6 (admin two buttons / Account card attach, client switcher, emails). Station layer: [`LANVAC_STATION.md`](LANVAC_STATION.md). Do not import real clients until the remaining slices ship and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
+Status: **slices 1–3 shipped; slice 4 first increment shipped 2026-08-30.** Schema, membership RLS, `resolvePortalSession`, orphan / OAuth / cleanup / password. Audit also shipped Stripe email reuse, delete-site Auth wipe, per-site disable / re-enable, Account-admin-only on-test, `requireSelectedSite` on client writes. Slice 3: last Account admin cannot be revoked (staff People with access on the Account tab), and delete confirm copy names **this site** (other sites and the login stay when the account has more than one). Hosted two-site fixture (do not delete): McKee account, Bunkie `O5985` (Brenden login) + House `O4964` (Dennis & Brenda, same 4702 civic address, no `user_id`). `auto_onboard` is off. Session without `?site=` / cookie prefers the leftover home site so the Bunkie login still opens the Bunkie. Single-site clients keep today's dashboard (no switcher, no People list). Staff Clients list chips linked accounts (`McKee · 2 sites`) and can filter them. Slice 4 increment: two Clients-tab buttons (New client / Add site to an account), email collision offers Add site, Account card (name, site links, auto-onboard toggle), create/resend honor `auto_onboard`. Grouping board, Appoint account admin, and attach/move a live site are still open in slice 4. Next is that remainder, then slices 5–6 (client switcher, emails). Station layer: [`LANVAC_STATION.md`](LANVAC_STATION.md). Do not import real clients until the remaining slices ship and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
 
 ## How it worked before R53 (why the county could not log in once)
 
@@ -118,9 +118,9 @@ These are live paths that would break if we only added tables and a switcher.
 
 **7. Settings vs sign-in email.** Site contact email may repeat and is **not** the login. Settings keeps the **member** email locked (sign-in identity). Phone and address writes apply to the **selected site only**. If the site contact email differs from the member email, show it as a separate admin-maintained line, not as the login.
 
-**8. Invitations.** Keep the existing one-open-invite-per-**site** row for first activation. Extra people use invite hash/expiry on `account_members`, not a second `invitations.profile_id` (that unique index would block resend on the home site). Member invite mail is client-facing: honor R52 (`dispatchClientEmail`) and `auto_onboard`. Staff can always copy the link.
+**8. Invitations.** Keep the existing one-open-invite-per-**site** row for first activation. Extra people use invite hash/expiry on `account_members`, not a second `invitations.profile_id` (that unique index would block resend on the home site). Member invite mail is client-facing: honor R52 (`dispatchClientEmail`) and `auto_onboard`. Staff can always copy the link. **Resend does not mint a new house invite** on a site that has no open invite when the account already has more than one site (Appoint account admin is how a pending multi-site account gets a login). Rotating an existing house invite is still allowed.
 
-**9. Add a site to an already-active account.** Do not insert an `invitations` row and do not email. New site: `user_id` null, `status = active` if the account already has an activated owner (they can use it immediately), otherwise `pending` with no mail until McKee invites the owner once. [`admin_create_client`](supabase/migrations/20260813163800_voip_hardening.sql) gets `p_account_id uuid default null` so older callers keep resolving.
+**9. Add a site to an already-active account.** Do not insert an `invitations` row and do not email. New site: `user_id` null, `status = active` if the account already has an activated owner (they can use it immediately), otherwise `pending` with no mail until McKee invites the owner once. Add site inserts `profiles` with `account_id` set so `private.ensure_client_account()` does not create a second account. `admin_create_client` stays the New-client path and does not take `p_account_id`.
 
 **10. Attach after import.** When McKee groups pending imported sites onto one account, **expire unused site invitations** on the attached rows so a later GO LIVE cannot send 40 activate-and-add-a-card emails. Invite the owner once.
 
@@ -295,13 +295,14 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 **What this pass must still add (was easy to miss):**
 
 - A **sites list** (not only a switcher) so the county can see every call list at a glance, then edit one. That is the “central management” ask without a dangerous mega-form.
-- `auto_onboard` is onboarding-only, not a mute on payment/caller-ID/device mail. **Honor this flag in create/resend/member-invite (later slice).**
+- `auto_onboard` is onboarding-only, not a mute on payment/caller-ID/device mail. **Create and resend honor it (2026-08-30).** Member-invite and leftover-invite cancel on attach still follow those slices.
 - Password gate is per Auth user (house + county). **Done.**
 - Disable of the home site must not lock the login. **Done.**
 - Admin can disable a site that has no `user_id`. **Done.**
 - `save_caller_id_list` and `cloud_backup_interest` policies, not only the obvious `user_id = auth.uid()` selects. **Done.**
 - One `resolvePortalSession` / `requireSelectedSite` helper so a later action cannot write the home site by accident. **Done.** `?site=` is persisted by `src/proxy.ts` so layout and actions see the same site.
 - Last Account admin cannot be revoked. Delete confirm copy names **this site**. **Done.**
+- Two Clients-tab buttons, Add site, email collision, Account card, create/resend honor `auto_onboard`. **Done 2026-08-30.** Resend will not mint a house invite on an added site.
 
 ## Third audit (remaining holes, then ship)
 
@@ -316,14 +317,14 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 1. Schema, backfill, RLS, unique owner, insert trigger, check-script trigger — **done**
 2. `resolvePortalSession` + orphan / OAuth / cleanup / password — **done**
 3. Delete, disable, Stripe email reuse — **live holes done in the audit**; last-owner revoke + multi-site delete confirm copy — **done 2026-08-29**
-4. Admin: two buttons, Account card, grouping board + empty-queue sign-off, Appoint account admin
+4. Admin: two buttons + Account card (name, sites, auto_onboard) **shipped 2026-08-30**; grouping board + empty-queue sign-off, Appoint account admin, attach/move still open
 5. Client: sites list / switcher / People (hidden for the majority)
 6. Emails + render check
 7. Keep PORTAL_PLAN R53 / 9.5.4 / 9.5.5 / 9.5.5C and this file current as each slice lands (R53 is already written as planned)
 8. **Living CUA playbook.** Update [`docs/PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same slice as the UI it describes. After deploy, a computer-using agent runs that file (devtools on) and writes a findings report. **This is the last gate before the Windows MCP bridge and the real import.** Do not start either until the report is clean or every fail is accepted.
 9. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
 
-**Pacing (locked):** R54 is complete. **Slices 1–3 are shipped** (1–2 audited 2026-08-28; last-owner revoke + delete confirm copy 2026-08-29). Next is slices 4–6, then CUA. Hosted has **staff and throwaway test clients only**.
+**Pacing (locked):** R54 is complete. **Slices 1–3 are shipped** (1–2 audited 2026-08-28; last-owner revoke + delete confirm copy 2026-08-29). Slice 4 first increment (two buttons, Add site, Account card, honor auto_onboard) shipped 2026-08-30. Next is grouping / Appoint / attach, then slices 5–6, then CUA. Hosted has **staff and throwaway test clients only**.
 
 **Alignment:** 10/10 to implement R53. Station tables stay on `profile_id`; actions already take `profileId`; on-test is the whole CODE for that site, never a zone; client start/stop is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
 
