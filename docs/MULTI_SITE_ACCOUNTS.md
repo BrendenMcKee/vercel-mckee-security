@@ -21,7 +21,7 @@ todos:
     content: Stop findOrCreateStripeCustomer from merging two sites that share a contact email
     status: completed
   - id: admin-account-card
-    content: "Client detail: McKee can attach any site; migrate live-site people as members; keep user_id; membership-only ACL; auto_onboard toggle"
+    content: "Account card shipped (name, sibling links, auto_onboard toggle, Add site link). Still open: attach/move a live or pending site; migrate live-site people as members"
     status: pending
   - id: create-client-attach
     content: "Clients tab: two buttons (New client = one new account + one site; Add site to an account = pick account then site form). Email collision offers the add-site flow. No multi-site wizard on New client."
@@ -41,6 +41,9 @@ todos:
   - id: checks-docs
     content: "Update rls-pentest, rls-check, activation-check, cron-check when slices ship (R53 / 9.5.4 / 9.5.5 / ACCOUNTING_PLAN / handover already aligned as planned)"
     status: completed
+  - id: cua-portal-test
+    content: "Keep docs/PORTAL_CUA_TEST.md in lockstep with each slice. After deploy, CUA runs that file and files a findings report. Do not start QB bridge / import until the report is clean or accepted."
+    status: pending
 isProject: false
 ---
 
@@ -324,7 +327,7 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 8. **Living CUA playbook.** Update [`docs/PORTAL_CUA_TEST.md`](PORTAL_CUA_TEST.md) in the same slice as the UI it describes. After deploy, a computer-using agent runs that file (devtools on) and writes a findings report. **This is the last gate before the Windows MCP bridge and the real import.** Do not start either until the report is clean or every fail is accepted.
 9. Do **not** flip GO LIVE, start the Windows bridge, or send Lanvac `fullupdate`
 
-**Pacing (locked):** R54 is complete. **Slices 1–3 are shipped** (1–2 audited 2026-08-28; last-owner revoke + delete confirm copy 2026-08-29). Slice 4 first increment (two buttons, Add site, Account card, honor auto_onboard) shipped 2026-08-30. Next is grouping / Appoint / attach, then slices 5–6, then CUA. Hosted has **staff and throwaway test clients only**.
+**Pacing (locked):** R54 is complete. **Slices 1–3 are shipped** (1–2 audited 2026-08-28; last-owner revoke + delete confirm copy 2026-08-29). Slice 4 first increment (two buttons, Add site, Account card, honor auto_onboard) shipped 2026-08-30 and audited again the same day (Clients list no longer nests members on every row; Resend refuses a new house invite before minting a token; Add site submit stays disabled until an account is picked). Next is grouping / Appoint / attach, then slices 5–6, then CUA. Hosted has **staff and throwaway test clients only**.
 
 **Alignment:** 10/10 to implement R53. Station tables stay on `profile_id`; actions already take `profileId`; on-test is the whole CODE for that site, never a zone; client start/stop is Account admin only. Execution risk on later R53 slices stays; that is why we pause and audit instead of one-shotting.
 

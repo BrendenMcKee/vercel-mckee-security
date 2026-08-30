@@ -41,58 +41,60 @@ export type AccountListOption = {
 };
 
 /** Unique accounts from the staff Clients list, for the Add-site picker. */
-type AccountEmbed = {
-  name: string;
-  account_members?: Array<{ email: string } | null> | null;
-};
-
-function memberEmailsFromEmbed(
-  accounts: AccountEmbed | AccountEmbed[] | null | undefined,
-): string[] {
-  if (!accounts) return [];
-  const row = Array.isArray(accounts) ? accounts[0] : accounts;
-  return (row?.account_members ?? [])
-    .map((member) => member?.email?.trim())
-    .filter((email): email is string => Boolean(email));
-}
-
 export function accountsFromClientRows(
   rows: Array<{
     account_id: string | null;
     email: string | null;
     lanvac_account_code: string | null;
-    accounts: AccountEmbed | AccountEmbed[] | null;
+    accounts: { name: string } | { name: string }[] | null;
   }>,
 ): AccountListOption[] {
   const map = new Map<string, AccountListOption>();
   for (const row of rows) {
     if (!row.account_id) continue;
-    const extraEmails = memberEmailsFromEmbed(row.accounts);
     const existing = map.get(row.account_id);
     if (!existing) {
-      const emails = row.email ? [row.email] : [];
-      for (const email of extraEmails) {
-        if (!emails.includes(email)) emails.push(email);
-      }
       map.set(row.account_id, {
         id: row.account_id,
         name: accountNameFromEmbed(row.accounts),
         siteCount: 1,
-        emails,
+        emails: row.email ? [row.email] : [],
         codes: row.lanvac_account_code ? [row.lanvac_account_code] : [],
       });
       continue;
     }
     existing.siteCount += 1;
     if (row.email && !existing.emails.includes(row.email)) existing.emails.push(row.email);
-    for (const email of extraEmails) {
-      if (!existing.emails.includes(email)) existing.emails.push(email);
-    }
     if (row.lanvac_account_code && !existing.codes.includes(row.lanvac_account_code)) {
       existing.codes.push(row.lanvac_account_code);
     }
   }
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Member emails come from a separate query so the Clients list does not nest them. */
+export function mergeMemberEmails(
+  accounts: AccountListOption[],
+  members: Array<{ account_id: string; email: string }>,
+): AccountListOption[] {
+  if (members.length === 0) return accounts;
+  const extras = new Map<string, string[]>();
+  for (const member of members) {
+    const email = member.email.trim();
+    if (!email) continue;
+    const list = extras.get(member.account_id) ?? [];
+    if (!list.includes(email)) list.push(email);
+    extras.set(member.account_id, list);
+  }
+  return accounts.map((account) => {
+    const more = extras.get(account.id);
+    if (!more?.length) return account;
+    const emails = [...account.emails];
+    for (const email of more) {
+      if (!emails.includes(email)) emails.push(email);
+    }
+    return { ...account, emails };
+  });
 }
 
 export function accountMatchesQuery(account: AccountListOption, query: string): boolean {

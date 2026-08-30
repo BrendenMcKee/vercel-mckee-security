@@ -241,8 +241,9 @@ async function applySiteFollowup(
   supabase: Awaited<ReturnType<typeof createPortalServerClient>>,
   profileId: string,
   site: ParsedNewSite,
-  options: { applyProfileExtras: boolean },
+  options: { applyProfileExtras: boolean; noun?: "client" | "site" },
 ): Promise<string[]> {
+  const noun = options.noun ?? "site";
   const seedWarnings: string[] = [];
   if (options.applyProfileExtras && (site.storedPhone || site.lanvacCode || site.lanvacCity)) {
     const { error: extrasError } = await supabase
@@ -257,8 +258,8 @@ async function applySiteFollowup(
       console.error("[portal] site profile extras failed:", extrasError);
       seedWarnings.push(
         extrasError.code === "23505"
-          ? "The site was created, but that Lanvac account code is already on another client. Set it on the client page."
-          : "The site was created, but the Lanvac account or city could not be saved. Set it on the client page.",
+          ? `The ${noun} was created, but that Lanvac account code is already on another client. Set it on the client page.`
+          : `The ${noun} was created, but the Lanvac account or city could not be saved. Set it on the client page.`,
       );
     }
   }
@@ -420,6 +421,7 @@ export async function createClientAction(
 
   const seedWarnings = await applySiteFollowup(supabase, profileId, site.data, {
     applyProfileExtras: true,
+    noun: "client",
   });
 
   const activateUrl = `${await getOrigin()}/account/activate?token=${raw}`;
@@ -501,42 +503,50 @@ export async function resendInviteAction(profileId: string): Promise<ResendInvit
     return { ok: false, error: "This client has already activated their account." };
   }
 
-  const { raw, hash } = generateInvitationToken();
-  const expiresAt = new Date(Date.now() + 7 * 86400_000).toISOString();
-
-  const { data: updated, error: updateError } = await supabase
+  const { data: openInvite, error: openInviteError } = await supabase
     .from("invitations")
-    .update({
-      token_hash: hash,
-      expires_at: expiresAt,
-      target_email: profile.email,
-      created_by: user.id,
-    })
+    .select("id")
     .eq("profile_id", profileId)
     .is("used_at", null)
-    .select("id")
     .maybeSingle();
-
-  if (updateError) {
-    console.error("[portal] resendInvite update failed:", updateError);
+  if (openInviteError) {
+    console.error("[portal] resendInvite open lookup failed:", openInviteError);
     return { ok: false, error: "Could not refresh the invitation. Please try again." };
   }
 
-  if (!updated) {
-    if (profile.account_id) {
-      const { count, error: siteCountError } = await supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("account_id", profile.account_id)
-        .eq("role", "client");
-      if (siteCountError) {
-        console.error("[portal] resendInvite site count failed:", siteCountError);
-        return { ok: false, error: "Could not refresh the invitation. Please try again." };
-      }
-      if ((count ?? 0) > 1) {
-        return { ok: false, error: MULTI_SITE_NO_SITE_INVITE_MESSAGE };
-      }
+  if (!openInvite && profile.account_id) {
+    const { count, error: siteCountError } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("account_id", profile.account_id)
+      .eq("role", "client");
+    if (siteCountError) {
+      console.error("[portal] resendInvite site count failed:", siteCountError);
+      return { ok: false, error: "Could not refresh the invitation. Please try again." };
     }
+    if ((count ?? 0) > 1) {
+      return { ok: false, error: MULTI_SITE_NO_SITE_INVITE_MESSAGE };
+    }
+  }
+
+  const { raw, hash } = generateInvitationToken();
+  const expiresAt = new Date(Date.now() + 7 * 86400_000).toISOString();
+
+  if (openInvite) {
+    const { error: updateError } = await supabase
+      .from("invitations")
+      .update({
+        token_hash: hash,
+        expires_at: expiresAt,
+        target_email: profile.email,
+        created_by: user.id,
+      })
+      .eq("id", openInvite.id);
+    if (updateError) {
+      console.error("[portal] resendInvite update failed:", updateError);
+      return { ok: false, error: "Could not refresh the invitation. Please try again." };
+    }
+  } else {
     const { error: insertError } = await supabase.from("invitations").insert({
       profile_id: profileId,
       token_hash: hash,
@@ -700,7 +710,10 @@ export async function addSiteToAccountAction(
   }
 
   seedWarnings.push(
-    ...(await applySiteFollowup(supabase, inserted.id, site.data, { applyProfileExtras: false })),
+    ...(await applySiteFollowup(supabase, inserted.id, site.data, {
+      applyProfileExtras: false,
+      noun: "site",
+    })),
   );
 
   if ((existingSites ?? 0) >= 1) {

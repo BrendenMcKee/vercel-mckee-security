@@ -53,6 +53,7 @@ import { deleteSiteConfirmCopy, siblingSiteCountFor } from "@/lib/portal/delete-
 import {
   accountNameFromEmbed,
   accountsFromClientRows,
+  mergeMemberEmails,
   linkedAccountChip,
   siteCountByAccount,
   type SiteLinkFilter,
@@ -76,10 +77,7 @@ type InvitationSummary = Pick<
 export type AdminClientRow = Tables<"profiles"> & {
   services: Tables<"services">[];
   invitations: InvitationSummary[];
-  accounts:
-    | { name: string; account_members?: Array<{ email: string } | null> | null }
-    | { name: string; account_members?: Array<{ email: string } | null> | null }[]
-    | null;
+  accounts: { name: string } | { name: string }[] | null;
 };
 
 const ACCOUNT_CHIP_CLASS =
@@ -160,9 +158,11 @@ function compare(a: AdminClientRow, b: AdminClientRow, key: SortKey): number {
 
 export function AdminClientsPanel({
   clients,
+  memberEmails = [],
   prefillAccountId = "",
 }: {
   clients: AdminClientRow[];
+  memberEmails?: Array<{ account_id: string; email: string }>;
   prefillAccountId?: string;
 }) {
   const router = useRouter();
@@ -198,7 +198,10 @@ export function AdminClientsPanel({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const siteCounts = useMemo(() => siteCountByAccount(clients), [clients]);
-  const accountOptions = useMemo(() => accountsFromClientRows(clients), [clients]);
+  const accountOptions = useMemo(
+    () => mergeMemberEmails(accountsFromClientRows(clients), memberEmails),
+    [clients, memberEmails],
+  );
   const ignorePrefill = useRef(false);
 
   useEffect(() => {
@@ -546,8 +549,8 @@ export function AdminClientsPanel({
               setNotice(null);
               clearAddToFromUrl();
             }}
-            className={`cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 ${
-              formMode === "create"
+            className={`w-full cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 sm:w-auto ${
+              formMode !== "add-site"
                 ? "bg-primary text-white hover:bg-[var(--primary-hover)]"
                 : "border border-white/20 text-white/80 hover:bg-white/10"
             }`}
@@ -561,7 +564,7 @@ export function AdminClientsPanel({
               setFormMode("add-site");
               setNotice(null);
             }}
-            className={`cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 ${
+            className={`w-full cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 sm:w-auto ${
               formMode === "add-site"
                 ? "bg-primary text-white hover:bg-[var(--primary-hover)]"
                 : "border border-white/20 text-white/80 hover:bg-white/10"
@@ -576,7 +579,7 @@ export function AdminClientsPanel({
                 finishForm();
                 setNotice(null);
               }}
-              className="cursor-pointer rounded-xl border border-white/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white/80 transition-all duration-200 hover:bg-white/10"
+              className="w-full cursor-pointer rounded-xl border border-white/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white/80 transition-all duration-200 hover:bg-white/10 sm:w-auto"
             >
               Close
             </button>
@@ -1237,7 +1240,7 @@ export function AdminClientsPanel({
           <div>
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || (formMode === "add-site" && !addAccountId)}
               className="cursor-pointer rounded-xl bg-primary px-6 py-3 text-sm font-bold uppercase tracking-wide text-white transition-all duration-200 hover:bg-[var(--primary-hover)] disabled:cursor-default disabled:opacity-50"
             >
               {pending

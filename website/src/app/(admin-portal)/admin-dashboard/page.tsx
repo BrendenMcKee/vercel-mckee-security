@@ -135,19 +135,31 @@ export default async function AdminDashboardPage({
 
 async function ClientsTab({ addToAccountId }: { addToAccountId?: string }) {
   const supabase = await createPortalServerClient();
-  const { data: clients, error } = await supabase
-    .from("profiles")
-    .select("*, services(*), invitations(id, target_email, expires_at, used_at, created_at), accounts(name, account_members(email))")
-    .eq("role", "client")
-    .order("created_at", { ascending: false });
+  const [{ data: clients, error }, membersResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*, services(*), invitations(id, target_email, expires_at, used_at, created_at), accounts(name)")
+      .eq("role", "client")
+      .order("created_at", { ascending: false }),
+    supabase.from("account_members").select("account_id, email"),
+  ]);
 
   if (error) {
     console.error("[portal] Admin clients query failed:", error);
     throw new Error("Clients failed to load.");
   }
+  if (membersResult.error) {
+    console.error("[portal] Admin account members query failed:", membersResult.error);
+  }
 
   const prefillAccountId =
     addToAccountId && UUID_RE.test(addToAccountId) ? addToAccountId : "";
 
-  return <AdminClientsPanel clients={clients ?? []} prefillAccountId={prefillAccountId} />;
+  return (
+    <AdminClientsPanel
+      clients={clients ?? []}
+      memberEmails={membersResult.data ?? []}
+      prefillAccountId={prefillAccountId}
+    />
+  );
 }
