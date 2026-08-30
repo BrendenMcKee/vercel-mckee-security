@@ -134,7 +134,7 @@ async function ClientsTab() {
   const supabase = await createPortalServerClient();
   const { data: clients, error } = await supabase
     .from("profiles")
-    .select("*, services(*), invitations(id, target_email, expires_at, used_at, created_at)")
+    .select("*, services(*), invitations(id, target_email, expires_at, used_at, created_at), accounts(name)")
     .eq("role", "client")
     .order("created_at", { ascending: false });
 

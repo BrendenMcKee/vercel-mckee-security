@@ -46,6 +46,12 @@ import { adminInputClass, adminSelectClass, ProfileStatusBadge } from "@/compone
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
 import { deleteSiteConfirmCopy, siblingSiteCountFor } from "@/lib/portal/delete-site-copy";
+import {
+  accountNameFromEmbed,
+  linkedAccountChip,
+  siteCountByAccount,
+  type SiteLinkFilter,
+} from "@/lib/portal/account-list";
 
 type DraftContact = { label: string; phone: string; passcode: string };
 type DraftDevice = {
@@ -63,7 +69,11 @@ type InvitationSummary = Pick<
 export type AdminClientRow = Tables<"profiles"> & {
   services: Tables<"services">[];
   invitations: InvitationSummary[];
+  accounts: { name: string } | { name: string }[] | null;
 };
+
+const ACCOUNT_CHIP_CLASS =
+  "inline-flex rounded-full border border-amber-400/40 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-200";
 
 const EMPTY_FORM: CreateClientInput = {
   firstName: "",
@@ -135,6 +145,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | Tables<"profiles">["status"]>("");
+  const [siteLinkFilter, setSiteLinkFilter] = useState<SiteLinkFilter>("");
   const [serviceFilter, setServiceFilter] = useState<"" | ServiceType | "none">("");
   const [tierFilter, setTierFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("created");
@@ -157,17 +168,28 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const siteCounts = useMemo(() => siteCountByAccount(clients), [clients]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let rows = clients;
     if (q) {
-      rows = rows.filter(
-        (c) =>
+      rows = rows.filter((c) => {
+        const account = accountNameFromEmbed(c.accounts).toLowerCase();
+        return (
           `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
-          (c.email ?? "").toLowerCase().includes(q),
-      );
+          (c.email ?? "").toLowerCase().includes(q) ||
+          account.includes(q)
+        );
+      });
     }
     if (statusFilter) rows = rows.filter((c) => c.status === statusFilter);
+    if (siteLinkFilter) {
+      rows = rows.filter((c) => {
+        const count = c.account_id ? (siteCounts.get(c.account_id) ?? 1) : 1;
+        return siteLinkFilter === "linked" ? count > 1 : count <= 1;
+      });
+    }
     if (serviceFilter === "none") {
       rows = rows.filter((c) => c.services.length === 0);
     } else if (serviceFilter) {
@@ -185,7 +207,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
       return sortDir === "asc" ? result : -result;
     });
     return sorted;
-  }, [clients, search, statusFilter, serviceFilter, tierFilter, sortKey, sortDir]);
+  }, [clients, search, statusFilter, siteLinkFilter, siteCounts, serviceFilter, tierFilter, sortKey, sortDir]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
@@ -457,6 +479,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
 
   const selectClass = adminSelectClass;
 
+  function siteLink(client: AdminClientRow): { chip: string | null; linked: boolean } {
+    const count = client.account_id ? (siteCounts.get(client.account_id) ?? 1) : 1;
+    const chip = linkedAccountChip(accountNameFromEmbed(client.accounts), count);
+    return { chip, linked: chip != null };
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -478,7 +506,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         <div className="space-y-3">
           <input
             type="search"
-            placeholder="Search name or email..."
+            placeholder="Search name, email, or account..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -500,6 +528,19 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
               <option value="active">Active</option>
               <option value="pending">Pending</option>
               <option value="disabled">Disabled</option>
+            </select>
+            <select
+              value={siteLinkFilter}
+              onChange={(e) => {
+                setSiteLinkFilter(e.target.value as SiteLinkFilter);
+                setPage(0);
+              }}
+              className={`${selectClass} max-w-full`}
+              aria-label="Filter by linked account"
+            >
+              <option value="">All sites</option>
+              <option value="linked">Linked accounts</option>
+              <option value="single">One site</option>
             </select>
             <select
               value={serviceFilter}
@@ -1096,6 +1137,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
         )}
         {pageRows.map((client) => {
           const invite = inviteState(client);
+          const link = siteLink(client);
           return (
             <div
               key={client.id}
@@ -1112,7 +1154,12 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   <p className="truncate font-bold text-white">
                     {client.first_name} {client.last_name}
                   </p>
-                  <p className="mt-0.5 truncate text-sm text-white/60">
+                  {link.chip && (
+                    <p className="mt-1">
+                      <span className={ACCOUNT_CHIP_CLASS}>{link.chip}</span>
+                    </p>
+                  )}
+                  <p className={`mt-0.5 truncate text-sm ${link.linked ? "text-amber-200" : "text-white/60"}`}>
                     {client.email ?? "No email"}
                   </p>
                 </div>
@@ -1213,16 +1260,26 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             )}
             {pageRows.map((client) => {
               const invite = inviteState(client);
+              const link = siteLink(client);
               return (
                 <tr
                   key={client.id}
                   onClick={() => router.push(`/admin-dashboard/clients/${client.id}`)}
                   className="cursor-pointer border-b border-white/5 transition-colors last:border-0 hover:bg-white/5"
                 >
-                  <td className="px-4 py-3 font-bold text-white">
-                    {client.first_name} {client.last_name}
+                  <td className="px-4 py-3">
+                    <p className="font-bold text-white">
+                      {client.first_name} {client.last_name}
+                    </p>
+                    {link.chip && (
+                      <p className="mt-1">
+                        <span className={ACCOUNT_CHIP_CLASS}>{link.chip}</span>
+                      </p>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-white/70">{client.email ?? "No email"}</td>
+                  <td className={`px-4 py-3 ${link.linked ? "text-amber-200" : "text-white/70"}`}>
+                    {client.email ?? "No email"}
+                  </td>
                   <td className="px-4 py-3">
                     <ProfileStatusBadge status={client.status} />
                   </td>
