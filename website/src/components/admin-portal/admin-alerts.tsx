@@ -32,7 +32,7 @@ function contextSummary(context: Tables<"portal_alerts">["context"]): string | n
 export async function AdminAlerts() {
   const supabase = await createPortalServerClient();
   const nowIso = new Date().toISOString();
-  const [openResult, resolvedResult, onTestState, onTestZones] = await Promise.all([
+  const [openResult, resolvedResult, onTestState] = await Promise.all([
     supabase
       .from("portal_alerts")
       .select("*")
@@ -48,25 +48,32 @@ export async function AdminAlerts() {
       .from("lanvac_account_state")
       .select("profile_id, on_test_until")
       .gt("on_test_until", nowIso),
-    supabase.from("lanvac_zones").select("profile_id, zone_number").eq("on_test", true),
   ]);
 
-  if (openResult.error || resolvedResult.error || onTestState.error || onTestZones.error) {
+  if (openResult.error || resolvedResult.error || onTestState.error) {
     console.error(
       "[portal] alerts query failed:",
-      openResult.error ?? resolvedResult.error ?? onTestState.error ?? onTestZones.error,
+      openResult.error ?? resolvedResult.error ?? onTestState.error,
     );
     throw new Error("Alerts failed to load.");
   }
 
   const open = openResult.data ?? [];
   const resolved = resolvedResult.data ?? [];
-  const onTestIds = [
-    ...new Set([
-      ...(onTestState.data ?? []).map((row) => row.profile_id),
-      ...(onTestZones.data ?? []).map((row) => row.profile_id),
+  const onTestIds = [...new Set((onTestState.data ?? []).map((row) => row.profile_id))];
+  const { data: onTestProfiles } = onTestIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, lanvac_account_code")
+        .in("id", onTestIds)
+    : { data: [] as { id: string; first_name: string; last_name: string; lanvac_account_code: string | null }[] };
+  const onTestNames = new Map(
+    (onTestProfiles ?? []).map((row) => [
+      row.id,
+      `${row.first_name} ${row.last_name}`.trim() +
+        (row.lanvac_account_code ? ` · ${row.lanvac_account_code}` : ""),
     ]),
-  ];
+  );
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -86,7 +93,7 @@ export async function AdminAlerts() {
                   href={`/admin-dashboard/clients/${profileId}?tab=security`}
                   className="text-sm font-bold text-sky-100 hover:text-white"
                 >
-                  Open site
+                  {onTestNames.get(profileId) || "Open site"}
                 </a>
               </li>
             ))}

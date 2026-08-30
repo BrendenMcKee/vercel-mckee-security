@@ -46,7 +46,12 @@ import {
   type DeviceCategory,
 } from "@/lib/portal/devices";
 import { formatPhone, normalizePhone } from "@/lib/portal/phone";
-import { adminInputClass, adminSelectClass, ProfileStatusBadge } from "@/components/admin-portal/ui";
+import {
+  adminFilterSelectClass,
+  adminInputClass,
+  adminSelectClass,
+  ProfileStatusBadge,
+} from "@/components/admin-portal/ui";
 import { DatePickerInput } from "@/components/portal/date-picker-input";
 import { DeviceNameSelect } from "@/components/portal/device-name-select";
 import { deleteSiteConfirmCopy, siblingSiteCountFor } from "@/lib/portal/delete-site-copy";
@@ -527,6 +532,15 @@ export function AdminClientsPanel({
   }
 
   const selectClass = adminSelectClass;
+  const filtersActive = Boolean(statusFilter || siteLinkFilter || serviceFilter || tierFilter);
+
+  function clearFilters() {
+    setStatusFilter("");
+    setSiteLinkFilter("");
+    setServiceFilter("");
+    setTierFilter("");
+    setPage(0);
+  }
 
   function siteLink(client: AdminClientRow): { chip: string | null; linked: boolean } {
     const count = client.account_id ? (siteCounts.get(client.account_id) ?? 1) : 1;
@@ -539,39 +553,47 @@ export function AdminClientsPanel({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-white">Clients</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              ignorePrefill.current = true;
-              resetCreateForm();
-              setAddAccountId("");
-              setFormMode("create");
-              setNotice(null);
-              clearAddToFromUrl();
-            }}
-            className={`w-full cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 sm:w-auto ${
-              formMode !== "add-site"
-                ? "bg-primary text-white hover:bg-[var(--primary-hover)]"
-                : "border border-white/20 text-white/80 hover:bg-white/10"
-            }`}
+          <div
+            role="group"
+            aria-label="Client form mode"
+            className="inline-flex w-full rounded-xl border border-white/15 bg-black/30 p-1 sm:w-auto"
           >
-            New client
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              resetCreateForm();
-              setFormMode("add-site");
-              setNotice(null);
-            }}
-            className={`w-full cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold uppercase tracking-wide transition-all duration-200 sm:w-auto ${
-              formMode === "add-site"
-                ? "bg-primary text-white hover:bg-[var(--primary-hover)]"
-                : "border border-white/20 text-white/80 hover:bg-white/10"
-            }`}
-          >
-            Add site to an account
-          </button>
+            <button
+              type="button"
+              aria-pressed={formMode !== "add-site"}
+              onClick={() => {
+                ignorePrefill.current = true;
+                resetCreateForm();
+                setAddAccountId("");
+                setFormMode("create");
+                setNotice(null);
+                clearAddToFromUrl();
+              }}
+              className={`min-w-0 flex-1 cursor-pointer rounded-lg px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200 sm:flex-none ${
+                formMode !== "add-site"
+                  ? "bg-primary text-white"
+                  : "text-white/55 hover:bg-white/5 hover:text-white/80"
+              }`}
+            >
+              New client
+            </button>
+            <button
+              type="button"
+              aria-pressed={formMode === "add-site"}
+              onClick={() => {
+                resetCreateForm();
+                setFormMode("add-site");
+                setNotice(null);
+              }}
+              className={`min-w-0 flex-1 cursor-pointer rounded-lg px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200 sm:flex-none ${
+                formMode === "add-site"
+                  ? "bg-primary text-white"
+                  : "text-white/55 hover:bg-white/5 hover:text-white/80"
+              }`}
+            >
+              Add site to an account
+            </button>
+          </div>
           {formMode !== "closed" && (
             <button
               type="button"
@@ -606,7 +628,7 @@ export function AdminClientsPanel({
                 setStatusFilter(e.target.value as typeof statusFilter);
                 setPage(0);
               }}
-              className={`${selectClass} max-w-full`}
+              className={`${adminFilterSelectClass(Boolean(statusFilter))} max-w-full`}
               aria-label="Filter by status"
             >
               <option value="">All statuses</option>
@@ -620,7 +642,7 @@ export function AdminClientsPanel({
                 setSiteLinkFilter(e.target.value as SiteLinkFilter);
                 setPage(0);
               }}
-              className={`${selectClass} max-w-full`}
+              className={`${adminFilterSelectClass(Boolean(siteLinkFilter))} max-w-full`}
               aria-label="Filter by linked account"
             >
               <option value="">All sites</option>
@@ -634,7 +656,7 @@ export function AdminClientsPanel({
                 setTierFilter("");
                 setPage(0);
               }}
-              className={`${selectClass} max-w-full`}
+              className={`${adminFilterSelectClass(Boolean(serviceFilter))} max-w-full`}
               aria-label="Filter by service"
             >
               <option value="">All services</option>
@@ -653,7 +675,7 @@ export function AdminClientsPanel({
                   setTierFilter(e.target.value);
                   setPage(0);
                 }}
-                className={`${selectClass} max-w-full`}
+                className={`${adminFilterSelectClass(Boolean(tierFilter))} max-w-full`}
                 aria-label="Filter by tier"
               >
                 <option value="">All tiers</option>
@@ -664,7 +686,16 @@ export function AdminClientsPanel({
                 ))}
               </select>
             )}
-            <span className="text-xs text-white/40">
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="cursor-pointer text-xs font-bold uppercase tracking-wide text-amber-200 hover:text-white"
+              >
+                Clear filters
+              </button>
+            )}
+            <span className={`text-xs ${filtersActive ? "font-bold text-amber-200" : "text-white/40"}`}>
               {filtered.length} of {clients.length}
             </span>
           </div>

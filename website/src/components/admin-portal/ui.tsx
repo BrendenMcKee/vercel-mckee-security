@@ -11,6 +11,13 @@ export const adminInputClass =
 /** For <select> elements: custom chevron inset from the right edge. */
 export const adminSelectClass = `${adminInputClass} select-chevron cursor-pointer`;
 
+/** Amber chrome when a Clients filter is not the default, so staff can see it is on. */
+export function adminFilterSelectClass(active: boolean): string {
+  return active
+    ? `${adminSelectClass} border-amber-400/55 bg-amber-500/10 text-amber-100`
+    : adminSelectClass;
+}
+
 export function ProfileStatusBadge({ status }: { status: Tables<"profiles">["status"] }) {
   const styles: Record<string, string> = {
     active: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",

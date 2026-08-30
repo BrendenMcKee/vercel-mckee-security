@@ -108,8 +108,8 @@ mail stays off until the Billing-tab `GO LIVE` flip (`PORTAL_PLAN.md` 9.5.5C). D
 during import. R54 (station read UI, O5985-gated writes, UI close-out) is done. R53 slices 1–3
 are shipped (schema + `resolvePortalSession` / orphan / OAuth /
 cleanup / password, Stripe / delete-Auth / disable hardening, last-owner
-revoke, this-site delete copy, Clients-tab two buttons / Add site /
-Account card / honor `auto_onboard`). Hosted
+revoke, this-site delete copy, Clients-tab New client / Add site
+mode toggle, Account card / honor `auto_onboard`). Hosted
 McKee fixture for two-site testing: account `McKee`, Bunkie `O5985` (home
 login) + House `O4964` (no `user_id`). Do not delete those sites. Next is
 the rest of slice 4 (`docs/MULTI_SITE_ACCOUNTS.md`: grouping board, Appoint

@@ -54,7 +54,7 @@ export default async function AdminDashboardPage({
 
   const supabase = await createPortalServerClient();
   const nowIso = new Date().toISOString();
-  const [{ count: openAlerts }, settingsRes, onTestState, onTestZones] = await Promise.all([
+  const [{ count: openAlerts }, settingsRes, onTestState] = await Promise.all([
     supabase
       .from("portal_alerts")
       .select("id", { count: "exact", head: true })
@@ -64,12 +64,10 @@ export default async function AdminDashboardPage({
       .from("lanvac_account_state")
       .select("profile_id")
       .gt("on_test_until", nowIso),
-    supabase.from("lanvac_zones").select("profile_id").eq("on_test", true),
   ]);
-  const onTestSites = new Set([
-    ...(onTestState.data ?? []).map((row) => row.profile_id),
-    ...(onTestZones.data ?? []).map((row) => row.profile_id),
-  ]).size;
+  // Match the Security tab: the account clock is the source of truth.
+  // Stale lanvac_zones.on_test rows must not keep the badge on after Off Test.
+  const onTestSites = new Set((onTestState.data ?? []).map((row) => row.profile_id)).size;
   const alertBadge = (openAlerts ?? 0) + onTestSites;
   const clientMailEnabled = settingsRes.data?.client_mail_enabled === true;
 

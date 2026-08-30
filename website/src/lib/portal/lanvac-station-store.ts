@@ -439,6 +439,15 @@ export async function persistLanvacOnTest(input: {
     console.error("[portal] station account on-test cache failed:", error);
     return { ok: false, error: "Could not save the on-test state." };
   }
+  if (!input.onTest) {
+    const { error: zoneClearError } = await admin
+      .from("lanvac_zones")
+      .update({ on_test: false })
+      .eq("profile_id", input.profileId);
+    if (zoneClearError) {
+      console.error("[portal] station zone on-test clear failed:", zoneClearError);
+    }
+  }
   await admin.from("lanvac_station_events").insert({
     profile_id: input.profileId,
     lanvac_account_code: input.code,
