@@ -24,6 +24,7 @@ import {
   SERVICE_TIERS,
   SERVICE_TYPE_LABELS,
   isServiceAvailable,
+  listServiceChipLabel,
   serviceChipClass,
   tierLabel,
   type ServiceType,
@@ -73,7 +74,7 @@ export type AdminClientRow = Tables<"profiles"> & {
 };
 
 const ACCOUNT_CHIP_CLASS =
-  "inline-flex shrink-0 rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-200";
+  "inline-flex shrink-0 whitespace-nowrap rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-200";
 
 const EMPTY_FORM: CreateClientInput = {
   firstName: "",
@@ -114,18 +115,17 @@ function inviteState(client: AdminClientRow): {
   return { label: `Invited · ${days}d left`, tone: "ok", canResend: true };
 }
 
-const SERVICE_CHIP_LABELS: Record<string, string> = {
-  monitoring: "Monitoring",
-  cloud_backup: "Cloud",
-  voip: "VoIP",
-};
-
-function serviceChips(services: Tables<"services">[]): { key: string; label: string; type: string }[] {
-  return services.map((s) => ({
-    key: s.id,
-    type: s.service_type,
-    label: `${SERVICE_CHIP_LABELS[s.service_type] ?? s.service_type} · ${tierLabel(s.tier)}${s.status !== "active" ? ` (${s.status})` : ""}`,
-  }));
+function serviceChips(
+  services: Tables<"services">[],
+): { key: string; label: string; title: string; type: string }[] {
+  return services.map((s) => {
+    const chip = listServiceChipLabel({
+      serviceType: s.service_type,
+      tier: s.tier,
+      status: s.status,
+    });
+    return { key: s.id, type: s.service_type, label: chip.label, title: chip.title };
+  });
 }
 
 function compare(a: AdminClientRow, b: AdminClientRow, key: SortKey): number {
@@ -1151,7 +1151,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-bold text-white">
+                  <p className="whitespace-nowrap font-bold text-white">
                     {client.first_name} {client.last_name}
                   </p>
                   <p className="mt-0.5 truncate text-sm text-white/60">
@@ -1170,7 +1170,8 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   {serviceChips(client.services).map((chip) => (
                     <span
                       key={chip.key}
-                      className={`rounded-full border px-2.5 py-0.5 text-xs ${serviceChipClass(chip.type)}`}
+                      title={chip.title}
+                      className={`whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs ${serviceChipClass(chip.type)}`}
                     >
                       {chip.label}
                     </span>
@@ -1268,18 +1269,20 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   onClick={() => router.push(`/admin-dashboard/clients/${client.id}`)}
                   className="cursor-pointer border-b border-white/5 transition-colors last:border-0 hover:bg-white/5"
                 >
-                  <td className="px-4 py-3 font-bold text-white">
+                  <td className="whitespace-nowrap px-4 py-3 font-bold text-white">
                     {client.first_name} {client.last_name}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="whitespace-nowrap px-4 py-3">
                     {link.chip ? (
                       <span className={ACCOUNT_CHIP_CLASS}>{link.chip}</span>
                     ) : (
                       <span className="text-white/25">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-white/70">{client.email ?? "No email"}</td>
-                  <td className="px-4 py-3">
+                  <td className="max-w-[14rem] truncate px-4 py-3 text-white/70" title={client.email ?? undefined}>
+                    {client.email ?? "No email"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
                     <ProfileStatusBadge status={client.status} />
                   </td>
                   <td className="px-4 py-3 text-white/70">
@@ -1290,7 +1293,8 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                         {serviceChips(client.services).map((chip) => (
                           <span
                             key={chip.key}
-                            className={`rounded-full border px-2.5 py-0.5 text-xs ${serviceChipClass(chip.type)}`}
+                            title={chip.title}
+                            className={`whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs ${serviceChipClass(chip.type)}`}
                           >
                             {chip.label}
                           </span>
@@ -1298,8 +1302,8 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-2">
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <div className="flex flex-nowrap items-center gap-2">
                       <span
                         className={
                           invite.tone === "ok"

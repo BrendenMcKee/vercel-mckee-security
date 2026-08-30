@@ -24,6 +24,7 @@ import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-pa
 import { SignOutButton } from "@/components/portal/sign-out-button";
 import { ScrollToHash } from "@/components/portal/scroll-to-hash";
 import { hasCurrentMonitoring } from "@/lib/portal/service-labels";
+import { PORTAL_SHELL_CLASS } from "@/lib/portal/shell";
 
 type PortalClient = Awaited<ReturnType<typeof createPortalServerClient>>;
 
@@ -196,7 +197,7 @@ export default async function AdminClientDetailPage({
   ];
 
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-12">
+    <section className={`${PORTAL_SHELL_CLASS} py-8 sm:py-12`}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
           <Link

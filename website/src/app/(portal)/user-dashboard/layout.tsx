@@ -5,6 +5,7 @@ import { OrphanAccount } from "@/components/portal/orphan-account";
 import { DisabledAccount } from "@/components/portal/disabled-account";
 import { PasswordSetup } from "@/components/portal/password-setup";
 import { SignOutButton } from "@/components/portal/sign-out-button";
+import { PORTAL_SHELL_CLASS } from "@/lib/portal/shell";
 
 /**
  * Auth gate for the client dashboard (PORTAL_PLAN.md 6.1). Lives on the
@@ -70,7 +71,7 @@ export default async function UserDashboardLayout({
   const profile = session.selectedSite;
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-10">
+    <div className={`${PORTAL_SHELL_CLASS} py-8 sm:py-10`}>
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5 sm:pb-6">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-widest text-primary sm:text-sm">

@@ -8,6 +8,7 @@ import { AdminDevices } from "@/components/admin-portal/admin-devices";
 import { AdminOverview } from "@/components/admin-portal/admin-overview";
 import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
+import { PORTAL_SHELL_CLASS } from "@/lib/portal/shell";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -71,7 +72,7 @@ export default async function AdminDashboardPage({
   const clientMailEnabled = settingsRes.data?.client_mail_enabled === true;
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
+    <section className={`${PORTAL_SHELL_CLASS} py-8 sm:py-12`}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm font-bold uppercase tracking-widest text-amber-300">

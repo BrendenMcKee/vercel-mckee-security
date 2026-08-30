@@ -63,6 +63,40 @@ export function tierLabel(tier: string): string {
   return TIER_LABELS[tier] ?? tier;
 }
 
+const LIST_TYPE_ABBREV: Record<string, string> = {
+  monitoring: "Mon.",
+  voip: "VoIP",
+  cloud_backup: "Cloud",
+};
+
+const LIST_TIER_ABBREV: Record<string, string> = {
+  landline: "Landline",
+  cellular: "Cellular",
+  cellular_tc: "TC 2.0",
+  cellular_tc_home: "TC Home",
+  residential: "Residential",
+  professional: "Commercial",
+  "7day": "7-day",
+  "30day": "30-day",
+  "90day": "90-day",
+};
+
+/** Compact chip for the staff Clients table. Hover shows the full product name. */
+export function listServiceChipLabel(input: {
+  serviceType: string;
+  tier: string;
+  status: string;
+}): { label: string; title: string } {
+  const typeLabel = LIST_TYPE_ABBREV[input.serviceType] ?? input.serviceType;
+  const shortTier = LIST_TIER_ABBREV[input.tier] ?? tierLabel(input.tier);
+  const fullType = SERVICE_TYPE_LABELS[input.serviceType as ServiceType] ?? input.serviceType;
+  const extra = input.status !== "active" ? ` (${input.status})` : "";
+  return {
+    label: `${typeLabel} · ${shortTier}${extra}`,
+    title: `${fullType} · ${tierLabel(input.tier)}${extra}`,
+  };
+}
+
 export const SERVICE_STATUS_LABELS: Record<ServiceStatus, string> = {
   active: "Active",
   paused: "Paused",
