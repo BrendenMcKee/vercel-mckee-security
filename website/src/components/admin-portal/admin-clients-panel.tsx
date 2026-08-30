@@ -73,7 +73,7 @@ export type AdminClientRow = Tables<"profiles"> & {
 };
 
 const ACCOUNT_CHIP_CLASS =
-  "inline-flex rounded-full border border-amber-400/40 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-200";
+  "inline-flex shrink-0 rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-200";
 
 const EMPTY_FORM: CreateClientInput = {
   firstName: "",
@@ -1154,17 +1154,17 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   <p className="truncate font-bold text-white">
                     {client.first_name} {client.last_name}
                   </p>
-                  {link.chip && (
-                    <p className="mt-1">
-                      <span className={ACCOUNT_CHIP_CLASS}>{link.chip}</span>
-                    </p>
-                  )}
-                  <p className={`mt-0.5 truncate text-sm ${link.linked ? "text-amber-200" : "text-white/60"}`}>
+                  <p className="mt-0.5 truncate text-sm text-white/60">
                     {client.email ?? "No email"}
                   </p>
                 </div>
                 <ProfileStatusBadge status={client.status} />
               </div>
+              {link.chip && (
+                <p className="mt-3">
+                  <span className={ACCOUNT_CHIP_CLASS}>{link.chip}</span>
+                </p>
+              )}
               {client.services.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {serviceChips(client.services).map((chip) => (
@@ -1223,7 +1223,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
 
       {/* Desktop: full table. */}
       <div className="hidden overflow-x-auto rounded-2xl border border-white/10 bg-surface md:block">
-        <table className="w-full min-w-[44rem] text-left text-sm">
+        <table className="w-full min-w-[50rem] text-left text-sm">
           <thead>
             <tr className="border-b border-white/10 text-xs uppercase tracking-widest text-white/40">
               <th className="px-4 py-3 font-bold">
@@ -1231,6 +1231,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   Name{sortIndicator("name")}
                 </button>
               </th>
+              <th className="px-4 py-3 font-bold">Account</th>
               <th className="px-4 py-3 font-bold">
                 <button type="button" onClick={() => toggleSort("email")} className="cursor-pointer uppercase tracking-widest hover:text-white">
                   Email{sortIndicator("email")}
@@ -1251,7 +1252,7 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
           <tbody>
             {pageRows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-white/40">
+                <td colSpan={7} className="px-4 py-10 text-center text-white/40">
                   {clients.length === 0
                     ? "No clients yet. Create the first one with New Client."
                     : "No clients match your search or filters."}
@@ -1267,19 +1268,17 @@ export function AdminClientsPanel({ clients }: { clients: AdminClientRow[] }) {
                   onClick={() => router.push(`/admin-dashboard/clients/${client.id}`)}
                   className="cursor-pointer border-b border-white/5 transition-colors last:border-0 hover:bg-white/5"
                 >
+                  <td className="px-4 py-3 font-bold text-white">
+                    {client.first_name} {client.last_name}
+                  </td>
                   <td className="px-4 py-3">
-                    <p className="font-bold text-white">
-                      {client.first_name} {client.last_name}
-                    </p>
-                    {link.chip && (
-                      <p className="mt-1">
-                        <span className={ACCOUNT_CHIP_CLASS}>{link.chip}</span>
-                      </p>
+                    {link.chip ? (
+                      <span className={ACCOUNT_CHIP_CLASS}>{link.chip}</span>
+                    ) : (
+                      <span className="text-white/25">—</span>
                     )}
                   </td>
-                  <td className={`px-4 py-3 ${link.linked ? "text-amber-200" : "text-white/70"}`}>
-                    {client.email ?? "No email"}
-                  </td>
+                  <td className="px-4 py-3 text-white/70">{client.email ?? "No email"}</td>
                   <td className="px-4 py-3">
                     <ProfileStatusBadge status={client.status} />
                   </td>
