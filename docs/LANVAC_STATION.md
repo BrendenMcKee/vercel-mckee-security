@@ -1,6 +1,6 @@
 # Lanvac station layer
 
-Status: **read UI + O5985-gated writes / account on-test shipped 2026-08-22. UI close-out 2026-08-23.** Caller-ID `fullupdate` stays off until you say go. [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) is confirmed: zones, Historic, and account on-test stay per site (`profile_id`). **R54 is done. Next implementation is R53.** Do not start R53 in this file.
+Status: **read UI + O5985-gated writes / account on-test shipped 2026-08-22. UI close-out 2026-08-23. House/other-CODE write chrome signed off 2026-09-05** (read-only note, not grayed buttons). Caller-ID `fullupdate` stays off until you say go. [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) is confirmed: zones, Historic, and account on-test stay per site (`profile_id`). **R54 read/write is done. Next implementation is the rest of R53 slice 4** (grouping / Appoint / attach). Do not start that work in this file. **R54b** (show portal actor on Historic / on-test) and **R54c** (optional staff Lanvac passwords) are planned below. Do not build them before the remaining R53 slices.
 
 Re-pull: from `website/`, `node --env-file=.env.local scripts/lanvac-o5985-read.mjs`. Output is `website/.lanvac-o5985/` (gitignored, password stripped).
 
@@ -73,7 +73,7 @@ Zone numbers above 100 are fine to list. We never call Zone/OnTest.
 
 - New server-only module `website/src/lib/portal/lanvac-api.ts`. Never return the dealer password or raw request body. Cache writes live in `lanvac-station-store.ts` (`server-only`). Do not export cache-clear as a server action.
 - **Reads:** any CODE already on a portal profile. On-demand when the client Security tab or the admin client Security tab is open. No cron over all CODEs. Dashboard / Settings / Alerts / admin Account or Billing tabs do not pull Lanvac.
-- **Writes:** `O5985` only until you say go. Other sites show the UI and "Station writes are not live on this account."
+- **Writes:** `O5985` only until you say go. Other sites show on/off-test status and a read-only note. They do not show grayed start/end or zone-edit buttons.
 - UI and **server actions** require `hasCurrentMonitoring` and a CODE.
 - Every action takes `profileId` from day one. Today: session profile must match (or admin). After R53: `requireSelectedSite`.
 - Client SELECT only on cached rows. No client PostgREST write of `on_test`. On-test is a server action that talks to Lanvac, then updates our cache.
@@ -118,6 +118,45 @@ Pull does **not** clear account `on_test_until` (Account GET has no on-test fiel
 
 There is no zone 7 or 8. After any write sitting, this table must match again.
 
+## Who put this on test (R54b / R54c)
+
+Lanvac Historic attributes the **dealer login** that made the API call, not the portal user. Today every portal write (staff or client) uses `LANVAC_DEALER_ACCOUNT` + `LANVAC_DEALER_PASSWORD` from Vercel. Two staff members therefore look like the same operator in Mobi. A client on-test looks like McKee’s dealer login. That is expected with one shared credential.
+
+**We already store the portal actor.** `lanvac_station_events` is append-only (`on_test`, `off_test`, `zone_write`, `pull`, `code_change`). Each row has `profile_id`, `lanvac_account_code`, `actor_user_id`, `actor_email`, `detail`, `created_at`. `persistLanvacOnTest` and zone writes fill those fields from the signed-in session. Staff also get the on-test email with `changedBy`. Caller-ID already has its own immutable `caller_id_changes` trail. The gap is **display**, not capture.
+
+**Do not build a second audit table for this.** Reuse `lanvac_station_events`.
+
+### R54b. Show the portal actor (required for clients; also helps staff)
+
+When: after remaining R53 slices (grouping / Appoint / attach), not instead of them.
+
+- Historic stays the Lanvac log. Do not rewrite a Lanvac row to pretend it knows the portal user.
+- Overlay or pair portal events on the same Security tab: “On test started by {name} · {CODE} · {account}” (and the same for off-test and zone writes).
+- Clients must see their own site’s events. Today events are admin-SELECT only; add a membership SELECT (`can_access_profile`) and keep the table append-only (no client insert).
+- Staff see the same line plus the actor email.
+- Matching is by this site’s `profile_id` and time window, not by parsing Historic text.
+
+### R54c. Optional staff Lanvac passwords (later, not required to know who clicked)
+
+When: only after R54b, and only if Mobi-side attribution still matters after the portal line is visible.
+
+Idea (locked if we build it):
+
+- Username stays `LANVAC_DEALER_ACCOUNT` (`10638`). Only the WinLinks **password** differs per technician.
+- Staff Account page: each admin can store their own Lanvac password. Default / fallback is the Vercel env password.
+- Server uses that password **only for that admin’s writes**. Reads can stay on the env login.
+- **Clients never get a password field.** Client writes always use the env dealer login. R54b is how we know which client and which site.
+- Confirm with Lanvac/WinLinks that password-per-operator is how Historic labels the user before we store secrets.
+
+Constraints if this ships:
+
+- Encrypt at rest. Never `NEXT_PUBLIC_`. Never log the password. Never return it after save.
+- Staff-only RLS. One secret per admin profile.
+- Missing or invalid personal password falls back to env and the portal event still records the signed-in admin.
+- Do not send technician passwords from the browser except through the save action.
+
+Until R54c exists, the double trail is: portal event (true actor) + Lanvac Historic (shared dealer login). That is enough to move R53 forward.
+
 ## Out of scope
 
-Alarmnet 360, technician Expo / TSheets / shared agent, caller-ID `fullupdate`, QB bridge, real import, GO LIVE, multi-site schema, live websockets.
+Alarmnet 360, technician Expo / TSheets / shared agent, caller-ID `fullupdate`, QB bridge, real import, GO LIVE, live websockets. Per-admin Lanvac passwords and Historic “Made by” are R54c / R54b, not R53.

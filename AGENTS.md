@@ -117,7 +117,8 @@ account admin, attach/move), then slices 5–6 (client switcher, emails), then
 the CUA playbook (`docs/PORTAL_CUA_TEST.md`). Do not start the Windows
 QuickBooks bridge, a real client import, or Lanvac `fullupdate` until those
 are done. Station writes stay `O5985` until you say go. Grouping sign-off is
-also a GO LIVE gate.
+also a GO LIVE gate. R54b (show who clicked on-test) and R54c (staff Lanvac
+passwords) wait until after that remainder (`docs/LANVAC_STATION.md`).
 
 ### Next.js 16 note
 
