@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { setAccountAutoOnboardAction } from "@/lib/portal/actions/clients";
-import { accountDisplayName } from "@/lib/portal/account-list";
+import { accountDisplayName, accountSitesThisFirst } from "@/lib/portal/account-list";
 
 export type AdminAccountSiteLink = {
   id: string;
@@ -35,6 +35,7 @@ export function AdminAccountCard({
   }, [account.autoOnboard]);
   const name = accountDisplayName(account.name);
   const siteCount = account.sites.length;
+  const sites = accountSitesThisFirst(account.sites, currentProfileId);
 
   function toggleAutoOnboard() {
     const next = !autoOnboard;
@@ -91,7 +92,7 @@ export function AdminAccountCard({
       )}
 
       <ul className="mt-4 space-y-2">
-        {account.sites.map((site) => {
+        {sites.map((site) => {
           const current = site.id === currentProfileId;
           const label = `${site.first_name} ${site.last_name}`.trim();
           return (
@@ -133,23 +134,32 @@ export function AdminAccountCard({
             off. It does not mute payment, caller-ID, or device mail.
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={autoOnboard}
-          aria-label="Automatic onboarding"
-          disabled={pending}
-          onClick={toggleAutoOnboard}
-          className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-300 ease-out disabled:cursor-default disabled:opacity-50 ${
-            autoOnboard ? "bg-emerald-500" : "bg-red-500"
-          }`}
-        >
+        <div className="flex shrink-0 items-center gap-2">
           <span
-            className={`inline-block h-6 w-6 rounded-full bg-white shadow transition-transform duration-300 ease-out ${
-              autoOnboard ? "translate-x-7" : "translate-x-1"
+            className={`text-xs font-bold uppercase tracking-wide ${
+              autoOnboard ? "text-emerald-300" : "text-red-300"
             }`}
-          />
-        </button>
+          >
+            {pending ? "Saving..." : autoOnboard ? "On" : "Off"}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoOnboard}
+            aria-label="Automatic onboarding"
+            disabled={pending}
+            onClick={toggleAutoOnboard}
+            className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-300 ease-out disabled:cursor-default disabled:opacity-50 ${
+              autoOnboard ? "bg-emerald-500" : "bg-red-500"
+            }`}
+          >
+            <span
+              className={`inline-block h-6 w-6 rounded-full bg-white shadow transition-transform duration-300 ease-out ${
+                autoOnboard ? "translate-x-7" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

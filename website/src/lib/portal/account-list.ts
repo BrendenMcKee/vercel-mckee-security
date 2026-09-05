@@ -18,6 +18,18 @@ export function accountDisplayName(name: string | null | undefined): string {
   return trimmed || "Account";
 }
 
+/** Current site first, then the rest by name. */
+export function accountSitesThisFirst<T extends { id: string; first_name: string; last_name: string }>(
+  sites: T[],
+  currentProfileId: string,
+): T[] {
+  return [...sites].sort((a, b) => {
+    if (a.id === currentProfileId) return -1;
+    if (b.id === currentProfileId) return 1;
+    return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+  });
+}
+
 /** Null when this site is the only one on its account. */
 export function linkedAccountChip(accountName: string, siteCount: number): string | null {
   if (siteCount < 2) return null;

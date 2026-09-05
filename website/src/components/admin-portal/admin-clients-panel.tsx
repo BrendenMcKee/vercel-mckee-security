@@ -228,6 +228,24 @@ export function AdminClientsPanel({
     clearAddToFromUrl();
   }
 
+  const actionButtonClass =
+    "w-full cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-[var(--primary-hover)] sm:w-auto";
+
+  function openCreate() {
+    ignorePrefill.current = true;
+    resetCreateForm();
+    setAddAccountId("");
+    setFormMode("create");
+    setNotice(null);
+    clearAddToFromUrl();
+  }
+
+  function openAddSite() {
+    resetCreateForm();
+    setFormMode("add-site");
+    setNotice(null);
+  }
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let rows = clients;
@@ -553,58 +571,58 @@ export function AdminClientsPanel({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-white">Clients</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <div
-            role="group"
-            aria-label="Client form mode"
-            className="inline-flex w-full rounded-xl border border-white/15 bg-black/30 p-1 sm:w-auto"
-          >
-            <button
-              type="button"
-              aria-pressed={formMode !== "add-site"}
-              onClick={() => {
-                ignorePrefill.current = true;
-                resetCreateForm();
-                setAddAccountId("");
-                setFormMode("create");
-                setNotice(null);
-                clearAddToFromUrl();
-              }}
-              className={`min-w-0 flex-1 cursor-pointer rounded-lg px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200 sm:flex-none ${
-                formMode !== "add-site"
-                  ? "bg-primary text-white"
-                  : "text-white/55 hover:bg-white/5 hover:text-white/80"
-              }`}
-            >
-              New client
-            </button>
-            <button
-              type="button"
-              aria-pressed={formMode === "add-site"}
-              onClick={() => {
-                resetCreateForm();
-                setFormMode("add-site");
-                setNotice(null);
-              }}
-              className={`min-w-0 flex-1 cursor-pointer rounded-lg px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200 sm:flex-none ${
-                formMode === "add-site"
-                  ? "bg-primary text-white"
-                  : "text-white/55 hover:bg-white/5 hover:text-white/80"
-              }`}
-            >
-              Add site to an account
-            </button>
-          </div>
-          {formMode !== "closed" && (
-            <button
-              type="button"
-              onClick={() => {
-                finishForm();
-                setNotice(null);
-              }}
-              className="w-full cursor-pointer rounded-xl border border-white/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white/80 transition-all duration-200 hover:bg-white/10 sm:w-auto"
-            >
-              Close
-            </button>
+          {formMode === "closed" ? (
+            <>
+              <button type="button" onClick={openCreate} className={actionButtonClass}>
+                New client
+              </button>
+              <button type="button" onClick={openAddSite} className={actionButtonClass}>
+                Add site to an account
+              </button>
+            </>
+          ) : (
+            <>
+              <div
+                role="group"
+                aria-label="Client form mode"
+                className="inline-flex w-full rounded-xl border border-white/15 bg-black/30 p-1 sm:w-auto"
+              >
+                <button
+                  type="button"
+                  aria-pressed={formMode === "create"}
+                  onClick={openCreate}
+                  className={`min-w-0 flex-1 cursor-pointer rounded-lg px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200 sm:flex-none ${
+                    formMode === "create"
+                      ? "bg-primary text-white"
+                      : "text-white/55 hover:bg-white/5 hover:text-white/80"
+                  }`}
+                >
+                  New client
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={formMode === "add-site"}
+                  onClick={openAddSite}
+                  className={`min-w-0 flex-1 cursor-pointer rounded-lg px-4 py-2 text-sm font-bold uppercase tracking-wide transition-colors duration-200 sm:flex-none ${
+                    formMode === "add-site"
+                      ? "bg-primary text-white"
+                      : "text-white/55 hover:bg-white/5 hover:text-white/80"
+                  }`}
+                >
+                  Add site to an account
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  finishForm();
+                  setNotice(null);
+                }}
+                className="w-full cursor-pointer rounded-xl border border-white/20 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white/80 transition-all duration-200 hover:bg-white/10 sm:w-auto"
+              >
+                Close
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -717,10 +735,15 @@ export function AdminClientsPanel({
               type="button"
               onClick={() => {
                 const target = notice.suggestAddSite!;
+                ignorePrefill.current = true;
                 resetCreateForm();
                 setFormMode("add-site");
                 setAddAccountId(target.accountId);
-                setNotice(null);
+                clearAddToFromUrl();
+                setNotice({
+                  kind: "ok",
+                  text: `Adding a site to ${target.accountName}. That email already belongs to this account, so this will not create a second login.`,
+                });
               }}
               className="mt-3 cursor-pointer rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-amber-100 hover:bg-amber-500/15"
             >

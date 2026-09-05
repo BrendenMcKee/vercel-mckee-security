@@ -176,7 +176,7 @@ These are live paths that would break if we only added tables and a switcher.
 
 ## What McKee sees (two admin flows)
 
-The Clients tab has **one connected mode toggle** (New client | Add site to an account), not two separate buttons and not one form that tries to do both. Close is a separate dismiss. They share the site-fields UI (address, phone, CODE, city, monitoring, VoIP, billing rail) so the form is not duplicated.
+The Clients list shows **two red action buttons** (New client, Add site to an account). Once a form is open they become one connected mode toggle, with Close as a separate dismiss. They share the site-fields UI (address, phone, CODE, city, monitoring, VoIP, billing rail) so the form is not duplicated.
 
 **1. New client** (today’s button). Always **one new account + one site**. No “is this an organization?” checkbox. An account is just an account; the extra UI appears when a second site or second person exists. First/last/email become the Account admin and the site contact. Invitation is created (held until GO LIVE / `auto_onboard`). If they later need a second CODE, staff leave this flow and use Add site. Do **not** put “add another site” on this form.
 
@@ -184,7 +184,7 @@ If the typed email already belongs to a member or a site contact, warn and offer
 
 **2. Add site to an account.** Pick the account first (search name, site label, email, or CODE). The picker shows CODEs when they exist and site names when a site has no monitoring CODE, so VoIP-only sites stay distinguishable. The list caps at 12 and says to type to narrow. Then only the site: display name (still `first_name` / `last_name`, e.g. Stanhope / Public Works), address, optional site-contact email (not a new login), CODE, city, services, billing rail. No automatic invitation. `auto_onboard` turns off when this is the second site; the extra client UI appears. If that account already has an activated account admin, they stay the account admin. If it does not (imported pending sites), use **Appoint account admin** (below). Same action from the client-detail **Account** card when staff are already looking at the county.
 
-Account card on client detail also has: account name and site count, the current site highlighted (sky name and matching border), links to sibling sites, members (invite/revoke), attach/move a **pending or live** site (rules in item 20), **Automatic onboarding** switch (red track off, green track on).
+Account card on client detail also has: account name and site count, the current site first and highlighted (sky name and matching border), links to sibling sites, members (invite/revoke), attach/move a **pending or live** site (rules in item 20), **Automatic onboarding** switch (red track off, green track on).
 
 Clients list: **shipped 2026-08-30.** An **Account** column chips the account name and site count when that account has two or more sites (example: `McKee · 2 sites`, one line). Single-site rows show a dash. Name and email stay ordinary. Service chips on this table are abbreviated; hover for the full product. The link key is `account_id`, not a repeated site-contact email. Search matches account name. Filter: All sites / Linked accounts / One site. A filter that is not the default uses amber chrome and a Clear filters control so staff can see it is on. Staff and client portal shells share `max-w-[90rem]`. Do not say enterprise, organization, or Master.
 

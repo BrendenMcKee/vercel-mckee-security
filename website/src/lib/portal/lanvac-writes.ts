@@ -14,6 +14,8 @@ export const LANVAC_ON_TEST_MAX_MINUTES = 3600;
 export const LANVAC_CLIENT_TEST_COOLDOWN_MS = 120_000;
 export const LANVAC_ON_TEST_PULL_GRACE_MS = 45_000;
 export const STATION_WRITES_NOT_LIVE = "Station writes are not live on this account.";
+export const STATION_WRITES_NOT_LIVE_DETAIL =
+  "On-test and zone writes are live only on O5985 until you say go. This CODE is read-only. The on/off-test status above is still correct.";
 
 export const PROVEN_ZONE_WRITE_TYPES = ["FIR", "BUR", "LOW"] as const;
 export type ProvenZoneWriteType = (typeof PROVEN_ZONE_WRITE_TYPES)[number];

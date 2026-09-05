@@ -13,6 +13,7 @@ import {
   LANVAC_ZONE_DESCRIPTION_MAX,
   PROVEN_ZONE_WRITE_TYPES,
   STATION_WRITES_NOT_LIVE,
+  STATION_WRITES_NOT_LIVE_DETAIL,
   formatOnTestRemaining,
   formatStationDateTime,
   mapZoneTypeToWrite,
@@ -213,35 +214,39 @@ export function StationOnTestControls({
           : "This system is off test."}
       </p>
       {!writesLive && (
-        <p className="text-sm text-white/45">{STATION_WRITES_NOT_LIVE}</p>
+        <p className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/70">
+          {STATION_WRITES_NOT_LIVE_DETAIL}
+        </p>
       )}
       {notice && <p className="text-sm text-amber-100">{notice}</p>}
-      {!accountOnTest && (
+      {writesLive && !accountOnTest && (
         <DurationPicker
           minutes={minutes}
           onChange={setMinutes}
           onValidChange={setDurationOk}
-          disabled={!writesLive || pending}
+          disabled={pending}
         />
       )}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={!canStart}
-          onClick={() => run(true)}
-          className={startTestButtonClass}
-        >
-          {pending && !accountOnTest ? "Working..." : "Put Account on Test"}
-        </button>
-        <button
-          type="button"
-          disabled={!canEnd}
-          onClick={() => run(false)}
-          className={buttonClass}
-        >
-          {pending && accountOnTest ? "Working..." : "End account test"}
-        </button>
-      </div>
+      {writesLive && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={!canStart}
+            onClick={() => run(true)}
+            className={startTestButtonClass}
+          >
+            {pending && !accountOnTest ? "Working..." : "Put Account on Test"}
+          </button>
+          <button
+            type="button"
+            disabled={!canEnd}
+            onClick={() => run(false)}
+            className={buttonClass}
+          >
+            {pending && accountOnTest ? "Working..." : "End account test"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -374,16 +379,22 @@ export function AdminZoneEditor({
             <p className="mt-2 text-sm text-white/45">Equipment list below.</p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          disabled={unusedNumbers.length === 0}
-          className={buttonClass}
-        >
-          Add zone
-        </button>
+        {writesLive && (
+          <button
+            type="button"
+            onClick={openCreate}
+            disabled={unusedNumbers.length === 0}
+            className={buttonClass}
+          >
+            Add zone
+          </button>
+        )}
       </div>
-      {!writesLive && <p className="text-sm text-white/45">{STATION_WRITES_NOT_LIVE}</p>}
+      {!writesLive && (
+        <p className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/70">
+          {STATION_WRITES_NOT_LIVE_DETAIL}
+        </p>
+      )}
       {notice && <p className="text-sm text-amber-100">{notice}</p>}
 
       {editing != null && (
@@ -483,9 +494,11 @@ export function AdminZoneEditor({
                 <th className="px-3 py-2.5 font-bold">Zone #</th>
                 <th className="border-l border-white/10 px-3 py-2.5 font-bold">Description</th>
                 <th className="border-l border-white/10 px-3 py-2.5 font-bold">Type</th>
-                <th className="border-l border-white/10 px-3 py-2.5 font-bold">
-                  <span className="sr-only">Actions</span>
-                </th>
+                {writesLive && (
+                  <th className="border-l border-white/10 px-3 py-2.5 font-bold">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
@@ -498,26 +511,28 @@ export function AdminZoneEditor({
                   <td className="border-l border-white/10 px-3 py-2.5">
                     {zone.zoneType || "Not on file"}
                   </td>
-                  <td className="border-l border-white/10 px-3 py-2.5">
-                    <span className="flex flex-wrap justify-end gap-2">
-                      {canEditZone(zone) && (
+                  {writesLive && (
+                    <td className="border-l border-white/10 px-3 py-2.5">
+                      <span className="flex flex-wrap justify-end gap-2">
+                        {canEditZone(zone) && (
+                          <button
+                            type="button"
+                            onClick={() => openEdit(zone)}
+                            className={buttonClass}
+                          >
+                            Edit
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => openEdit(zone)}
+                          onClick={() => remove(zone)}
                           className={buttonClass}
                         >
-                          Edit
+                          Delete
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => remove(zone)}
-                        className={buttonClass}
-                      >
-                        Delete
-                      </button>
-                    </span>
-                  </td>
+                      </span>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

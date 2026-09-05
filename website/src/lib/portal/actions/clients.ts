@@ -416,6 +416,14 @@ export async function createClientAction(
 
   if (error || !profileId) {
     console.error("[portal] createClient failed:", error);
+    const again = await findEmailCollision(supabase, email);
+    if (again.ok && again.collision) {
+      return {
+        ok: false,
+        error: `That email is already on the ${again.collision.accountName} account. Add a site there instead of creating a second login.`,
+        suggestAddSite: again.collision,
+      };
+    }
     return { ok: false, error: "Could not create the client. Please try again." };
   }
 
@@ -636,6 +644,8 @@ export async function addSiteToAccountAction(
   const hasActivatedOwner = (owners ?? []).some((row) => Boolean(row.user_id));
   const siteStatus = hasActivatedOwner ? "active" : "pending";
 
+  // No invitation and no login. The Account admin already on this account
+  // keeps access. Appoint account admin is the later path for pending accounts.
   const { data: inserted, error: insertError } = await supabase
     .from("profiles")
     .insert({
