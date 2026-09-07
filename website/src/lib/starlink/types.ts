@@ -46,7 +46,7 @@ export const STATUS_META: Record<
   requested: {
     label: "Requested",
     tone: "amber",
-    description: "New request from the website. Not locked in.",
+    description: "Inquiry in. Confirm once they agree to the rate.",
   },
   confirmed: {
     label: "Confirmed",

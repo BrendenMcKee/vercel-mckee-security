@@ -38,8 +38,8 @@ export { buildDigestGroups } from "./outstanding";
  *   a booking is about to go out unpaid. Each of those is sent once, guarded by
  *   the `rental_reminders` table.
  * - Something should already have been done: the kit is late back, a deposit is
- *   still sitting with us, a request never got a reply. Those go in one daily
- *   digest and keep coming back until the booking is put right.
+ *   still sitting with us, a website request was never confirmed. Those go in
+ *   one daily digest and keep coming back until the booking is put right.
  */
 
 const RENTAL_SELECT = "*, unit:units(id,name,color,active)";

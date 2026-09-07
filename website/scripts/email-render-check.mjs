@@ -161,7 +161,7 @@ const cases = [
     flag: "picks up in 14 days",
   },
   {
-    what: "an unanswered request is chased with how long it has waited",
+    what: "an unconfirmed request is chased with how long it has waited",
     rental: booking({
       status: "requested",
       unit_id: null,
@@ -175,7 +175,7 @@ const cases = [
       deposit_returned: false,
       created_at: `${day(-4)}T12:00:00.000Z`,
     }),
-    section: "Reply to 1 website request",
+    section: "Confirm 1 website request",
     priority: "today",
     flag: "waiting 4 days",
   },
@@ -264,7 +264,7 @@ for (const { what, rental, section, priority, flag } of cases) {
   const digest = buildDigestGroups([sameDayRequest], TODAY);
   check(
     digest.some((g) => g.id === "stale_requests"),
-    "a website request that picks up today is chased immediately, not after a day's grace",
+    "a website request that picks up today is chased to confirm immediately, not after a day's grace",
   );
 }
 

@@ -47,7 +47,7 @@ export type RentalActionGroup = {
 /** How early an unpaid booking gets chased before its pickup date. */
 export const PAYMENT_LEAD_DAYS = 2;
 
-/** Grace given to a website request before it counts as unanswered. */
+/** Grace given to a website request before it counts as still unconfirmed. */
 const REQUEST_REPLY_GRACE_DAYS = 1;
 
 /** How long a finished rental's deposit can sit before the tone changes. */
@@ -264,7 +264,7 @@ function buildActionGroups(
   const staleRequests = rentals.filter((r) => {
     if (r.status !== "requested") return false;
     // A request that picks up today or in the payment window cannot wait out
-    // the usual one-day grace — tomorrow is too late.
+    // the usual one-day grace — tomorrow is too late to still be unconfirmed.
     if (r.pickup_date <= paymentWindowEnd) return true;
     const created = Date.parse(r.created_at);
     return Number.isFinite(created) && created <= requestCutoff;
@@ -411,10 +411,10 @@ function buildActionGroups(
         id: "stale_requests",
         icon: "✉️",
         priority: "today",
-        action: (n) => `Reply to ${plural(n, "website request")}`,
-        summary: (n) => `${plural(n, "request")} to answer`,
+        action: (n) => `Confirm ${plural(n, "website request")}`,
+        summary: (n) => `${plural(n, "request")} to confirm`,
         instruction:
-          "These came in through the website and have not been quoted yet. Send them pricing, then confirm or cancel the request.",
+          "The first reply already went by email. These stay Requested until the customer agrees to the quoted amount. Set the status to Confirmed once they have, or cancel the request if they will not.",
       },
       staleRequests,
       (r) =>
