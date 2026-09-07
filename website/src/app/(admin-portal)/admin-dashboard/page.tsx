@@ -5,7 +5,12 @@ import { AdminAlerts } from "@/components/admin-portal/admin-alerts";
 import { AdminBilling } from "@/components/admin-portal/admin-billing";
 import { AdminClientsPanel } from "@/components/admin-portal/admin-clients-panel";
 import { AdminDevices } from "@/components/admin-portal/admin-devices";
+import { AdminGroupingBoard } from "@/components/admin-portal/admin-grouping-board";
 import { AdminOverview } from "@/components/admin-portal/admin-overview";
+import {
+  countOpenGroupingSuggestions,
+  refreshGroupingBoard,
+} from "@/lib/portal/grouping-refresh";
 import { ClientMailPausedBanner } from "@/components/admin-portal/client-mail-paused-banner";
 import { SignOutButton } from "@/components/portal/sign-out-button";
 import { PORTAL_SHELL_CLASS } from "@/lib/portal/shell";
@@ -18,6 +23,7 @@ export const metadata: Metadata = {
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "clients", label: "Clients" },
+  { id: "grouping", label: "Grouping" },
   { id: "billing", label: "Billing" },
   { id: "devices", label: "Devices" },
   { id: "alerts", label: "Alerts" },
@@ -29,11 +35,12 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /**
  * Tabbed operating console (PORTAL_PLAN.md 7.2). Overview (KPIs + activity
- * feed), Clients (search, filters, create, row click to detail), Billing
- * (autopay + manual collection boards, Phase 5), Devices (all tracked
- * equipment across clients, filterable by category and due status), and
- * Alerts (operational failures, Phase 7). Fleet joins in Phase 6A. Reads run
- * on the user-context client: admin RLS policies authorize them (R13).
+ * feed), Clients (search, filters, create, row click to detail), Grouping
+ * (possible linked accounts), Billing (autopay + manual collection boards,
+ * Phase 5), Devices (all tracked equipment across clients, filterable by
+ * category and due status), and Alerts (operational failures, Phase 7).
+ * Fleet joins in Phase 6A. Reads run on the user-context client: admin RLS
+ * policies authorize them (R13).
  */
 export default async function AdminDashboardPage({
   searchParams,
@@ -44,17 +51,19 @@ export default async function AdminDashboardPage({
   const activeTab: TabId =
     tab === "clients"
       ? "clients"
-      : tab === "billing"
-        ? "billing"
-        : tab === "devices"
-          ? "devices"
-          : tab === "alerts"
-            ? "alerts"
-            : "overview";
+      : tab === "grouping"
+        ? "grouping"
+        : tab === "billing"
+          ? "billing"
+          : tab === "devices"
+            ? "devices"
+            : tab === "alerts"
+              ? "alerts"
+              : "overview";
 
   const supabase = await createPortalServerClient();
   const nowIso = new Date().toISOString();
-  const [{ count: openAlerts }, settingsRes, onTestState] = await Promise.all([
+  const [{ count: openAlerts }, settingsRes, onTestState, groupingOpen, grouping] = await Promise.all([
     supabase
       .from("portal_alerts")
       .select("id", { count: "exact", head: true })
@@ -64,7 +73,10 @@ export default async function AdminDashboardPage({
       .from("lanvac_account_state")
       .select("profile_id")
       .gt("on_test_until", nowIso),
+    countOpenGroupingSuggestions(supabase),
+    activeTab === "grouping" ? refreshGroupingBoard(supabase) : Promise.resolve(null),
   ]);
+  const groupingBadge = grouping ? grouping.open.length : groupingOpen;
   // Match the Security tab: the account clock is the source of truth.
   // Stale lanvac_zones.on_test rows must not keep the badge on after Off Test.
   const onTestSites = new Set((onTestState.data ?? []).map((row) => row.profile_id)).size;
@@ -98,6 +110,18 @@ export default async function AdminDashboardPage({
             active={activeTab === t.id}
           >
             {t.label}
+            {t.id === "grouping" && (
+              <span
+                className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+                  groupingBadge > 0
+                    ? "bg-amber-400 text-black"
+                    : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/40"
+                }`}
+                aria-label={`${groupingBadge} open grouping suggestions`}
+              >
+                {groupingBadge}
+              </span>
+            )}
             {t.id === "alerts" && (
               <span
                 className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
@@ -117,6 +141,14 @@ export default async function AdminDashboardPage({
       <div className="mt-6 sm:mt-8">
         {activeTab === "overview" ? (
           <AdminOverview />
+        ) : activeTab === "grouping" ? (
+          grouping ? (
+            <AdminGroupingBoard
+              open={grouping.open}
+              civic={grouping.civic}
+              signedOffAt={grouping.signedOffAt}
+            />
+          ) : null
         ) : activeTab === "billing" ? (
           <AdminBilling />
         ) : activeTab === "devices" ? (

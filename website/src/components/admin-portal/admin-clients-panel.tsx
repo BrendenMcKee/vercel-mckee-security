@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Tables } from "@/lib/portal/database.types";
 import {
@@ -569,7 +570,16 @@ export function AdminClientsPanel({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-white">Clients</h2>
+        <div>
+          <h2 className="text-xl font-bold text-white">Clients</h2>
+          <p className="mt-1 text-sm text-white/50">
+            Possible linked accounts live on the{" "}
+            <Link href="/admin-dashboard?tab=grouping" className="font-bold text-sky-300 hover:text-sky-200">
+              Grouping
+            </Link>{" "}
+            tab.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {formMode === "closed" ? (
             <>

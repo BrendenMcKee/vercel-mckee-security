@@ -72,6 +72,13 @@ export async function AdminBilling() {
         enabled={settingsRes.data?.client_mail_enabled === true}
         enabledAt={settingsRes.data?.client_mail_enabled_at ?? null}
       />
+      <p className="text-sm text-white/55">
+        Review possible linked accounts on the{" "}
+        <Link href="/admin-dashboard?tab=grouping" className="font-bold text-sky-300 hover:text-sky-200">
+          Grouping
+        </Link>{" "}
+        tab before go-live.
+      </p>
 
       {failedEvents.length > 0 && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 sm:p-6">

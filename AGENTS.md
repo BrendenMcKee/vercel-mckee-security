@@ -48,6 +48,10 @@ for the overview and [`docs/`](./docs) for deployment/architecture. Note: the ol
     hosted or local Supabase). Creates a throwaway sandbox bridge, asserts auth, the
     company-file guard, empty write tasks, heartbeat-only report, and a mirror upsert that
     keeps `profile_id`. Does not talk to QuickBooks.
+  - `grouping-heuristic-check.mjs` — grouping-board heuristics after that slice changes
+    (McKee already-together skip, same email/name, NEW CUSTOMER blocklist, civic watchlist,
+    keep an existing multi-site account name). Alias loader:
+    `node --import ./scripts/register-ts-alias.mjs scripts/grouping-heuristic-check.mjs`.
 
   The UI/email checks write screenshots to gitignored directories.
 - Data Drops backend (`data-drops-aws-backend`, Express + MySQL): rarely run locally. The website's
@@ -112,8 +116,9 @@ revoke, this-site delete copy, Clients-tab New client / Add site
 mode toggle, Account card / honor `auto_onboard`). Hosted
 McKee fixture for two-site testing: account `McKee`, Bunkie `O5985` (home
 login) + House `O4964` (no `user_id`). Do not delete those sites. Next is
-the rest of slice 4 (`docs/MULTI_SITE_ACCOUNTS.md`: grouping board, Appoint
-account admin, attach/move), then slices 5–6 (client switcher, emails), then
+the rest of slice 4 (`docs/MULTI_SITE_ACCOUNTS.md`: Appoint
+account admin, attach/move). Grouping board + empty-queue sign-off shipped
+2026-09-07. Then slices 5–6 (client switcher, emails), then
 the CUA playbook (`docs/PORTAL_CUA_TEST.md`). Do not start the Windows
 QuickBooks bridge, a real client import, or Lanvac `fullupdate` until those
 are done. Station writes stay `O5985` until you say go. Grouping sign-off is

@@ -260,6 +260,29 @@ try {
       );
     }
   }
+
+  {
+    const { data, error } = await clientA.from("account_group_suggestions").select("id");
+    check(
+      "client cannot read grouping suggestions",
+      Boolean(error) || (data ?? []).length === 0,
+      error?.message,
+    );
+    const { data: inserted, error: insertError } = await clientA
+      .from("account_group_suggestions")
+      .insert({
+        kind: "same_email",
+        status: "open",
+        suggested_name: "RLS Block",
+        fingerprint: `rls-check-${stamp}`,
+      })
+      .select("id");
+    check(
+      "client cannot insert grouping suggestions",
+      Boolean(insertError) || (inserted ?? []).length === 0,
+      insertError?.message,
+    );
+  }
 } finally {
   for (const id of extraProfiles) {
     await admin.from("profiles").delete().eq("id", id);

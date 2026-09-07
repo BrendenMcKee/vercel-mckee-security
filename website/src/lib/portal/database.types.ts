@@ -35,6 +35,83 @@ export type Database = {
         }
         Relationships: []
       }
+      account_group_suggestion_sites: {
+        Row: {
+          profile_id: string
+          suggestion_id: string
+        }
+        Insert: {
+          profile_id: string
+          suggestion_id: string
+        }
+        Update: {
+          profile_id?: string
+          suggestion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_group_suggestion_sites_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_group_suggestion_sites_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "account_group_suggestions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_group_suggestions: {
+        Row: {
+          accepted_account_id: string | null
+          created_at: string
+          fingerprint: string
+          id: string
+          kind: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          suggested_name: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_account_id?: string | null
+          created_at?: string
+          fingerprint: string
+          id?: string
+          kind: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_name: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_account_id?: string | null
+          created_at?: string
+          fingerprint?: string
+          id?: string
+          kind?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_group_suggestions_accepted_account_id_fkey"
+            columns: ["accepted_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_members: {
         Row: {
           account_id: string

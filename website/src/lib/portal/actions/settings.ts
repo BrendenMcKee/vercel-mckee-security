@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { SESSION_ERROR_MESSAGE, tryRequireAdmin } from "@/lib/portal/auth";
 import { CLIENT_MAIL_GO_LIVE_PHRASE } from "@/lib/portal/client-mail-phrase";
+import { countOpenGroupingSuggestions } from "@/lib/portal/grouping-refresh";
 import { createPortalServerClient } from "@/lib/portal/supabase/server";
 
 export type SetClientMailResult = { ok: true; enabled: boolean } | { ok: false; error: string };
@@ -40,6 +41,13 @@ export async function setClientMailEnabledAction(input: {
       return {
         ok: false,
         error: "Organization grouping must be signed off before GO LIVE.",
+      };
+    }
+    const openSuggestions = await countOpenGroupingSuggestions(supabase);
+    if (openSuggestions > 0) {
+      return {
+        ok: false,
+        error: "Possible linked accounts still need a decision. Finish the Grouping tab first.",
       };
     }
   }

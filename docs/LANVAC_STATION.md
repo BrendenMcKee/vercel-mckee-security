@@ -1,6 +1,6 @@
 # Lanvac station layer
 
-Status: **read UI + O5985-gated writes / account on-test shipped 2026-08-22. UI close-out 2026-08-23. House/other-CODE write chrome signed off 2026-09-05** (read-only note, not grayed buttons). Caller-ID `fullupdate` stays off until you say go. [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) is confirmed: zones, Historic, and account on-test stay per site (`profile_id`). **R54 read/write is done. Next implementation is the rest of R53 slice 4** (grouping / Appoint / attach). Do not start that work in this file. **R54b** (show portal actor on Historic / on-test) and **R54c** (optional staff Lanvac passwords) are planned below. Do not build them before the remaining R53 slices.
+Status: **read UI + O5985-gated writes / account on-test shipped 2026-08-22. UI close-out 2026-08-23. House/other-CODE write chrome signed off 2026-09-05** (read-only note, not grayed buttons). Caller-ID `fullupdate` stays off until you say go. [`MULTI_SITE_ACCOUNTS.md`](MULTI_SITE_ACCOUNTS.md) is confirmed: zones, Historic, and account on-test stay per site (`profile_id`). **R54 read/write is done. Next implementation is the rest of R53 slice 4** (Appoint / attach). Grouping board shipped 2026-09-07. Do not start that work in this file. **R54b** (show portal actor on Historic / on-test) and **R54c** (optional staff Lanvac passwords) are planned below. Do not build them before the remaining R53 slices.
 
 Re-pull: from `website/`, `node --env-file=.env.local scripts/lanvac-o5985-read.mjs`. Output is `website/.lanvac-o5985/` (gitignored, password stripped).
 
@@ -128,7 +128,7 @@ Lanvac Historic attributes the **dealer login** that made the API call, not the 
 
 ### R54b. Show the portal actor (required for clients; also helps staff)
 
-When: after remaining R53 slices (grouping / Appoint / attach), not instead of them.
+When: after remaining R53 slices (Appoint / attach, switcher, emails), not instead of them.
 
 - Historic stays the Lanvac log. Do not rewrite a Lanvac row to pretend it knows the portal user.
 - Overlay or pair portal events on the same Security tab: “On test started by {name} · {CODE} · {account}” (and the same for off-test and zone writes).
