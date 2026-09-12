@@ -3,8 +3,8 @@
 Monorepo for [mckeesecurity.ca](https://mckeesecurity.ca): the Next.js marketing site, the customer and admin portals, Starlink rental admin, and the Data Drops backend.
 
 - **Portal (authoritative):** [`PORTAL_PLAN.md`](./PORTAL_PLAN.md) — client dashboard at `/user-dashboard` (Dashboard / Security / Settings / Alerts), staff console at `/admin-dashboard`. Client-facing portal mail stays off until the Billing-tab `GO LIVE` flip (R52 / 9.5.5C). Plain-language accounting companion: [`ACCOUNTING_PLAN.md`](./ACCOUNTING_PLAN.md).
-- **Lanvac station layer (R54):** [`docs/LANVAC_STATION.md`](./docs/LANVAC_STATION.md) — done (read UI, O5985-gated writes, UI close-out). Next is multi-site.
-- **Multi-site / extra logins (R53 slices 1–3 shipped):** [`docs/MULTI_SITE_ACCOUNTS.md`](./docs/MULTI_SITE_ACCOUNTS.md) — schema + `resolvePortalSession`, last-owner revoke, this-site delete copy, Clients-list linked-account chip. Next is admin UI and switcher. Required before county-style import.
+- **Lanvac station layer (R54):** [`docs/LANVAC_STATION.md`](./docs/LANVAC_STATION.md). Done (read UI, O5985-gated writes, UI close-out). Remaining R53 is next, not more station work.
+- **Multi-site / extra logins (R53 slices 1–3 shipped; slice 4 grouping + staff help + client header shipped):** [`docs/MULTI_SITE_ACCOUNTS.md`](./docs/MULTI_SITE_ACCOUNTS.md). Next is Appoint account admin and Account-card attach/move, then the client switcher. Required before county-style import.
 - **Portal CUA test (after R54 and R53 ship):** [`docs/PORTAL_CUA_TEST.md`](./docs/PORTAL_CUA_TEST.md) — last gate before the QuickBooks bridge and real import.
 - **Requirements baseline (not the current UI spec):** [`PRODUCT_HANDOVER.md`](./PRODUCT_HANDOVER.md)
 - **Deployment and workflow:** [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md)

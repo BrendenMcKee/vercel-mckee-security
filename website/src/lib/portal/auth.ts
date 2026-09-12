@@ -46,6 +46,7 @@ export type PortalSession =
       memberships: PortalMembership[];
       sites: PortalProfile[];
       selectedSite: PortalProfile;
+      selectedAccountName: string;
       isAccountAdmin: boolean;
       passwordSet: boolean;
     };
@@ -175,16 +176,27 @@ export const resolvePortalSession = cache(
     const accountIds = [...new Set(rows.map((row) => row.account_id))];
 
     let sites: PortalProfile[] = [];
+    const accountNames = new Map<string, string>();
     if (accountIds.length > 0) {
-      const { data: siteRows, error: siteError } = await supabase
-        .from("profiles")
-        .select("*")
-        .in("account_id", accountIds)
-        .eq("role", "client");
-      if (siteError) {
-        console.warn("[portal] site read failed:", siteError.message);
+      const [siteResult, accountResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .in("account_id", accountIds)
+          .eq("role", "client"),
+        supabase.from("accounts").select("id, name").in("id", accountIds),
+      ]);
+      if (siteResult.error) {
+        console.warn("[portal] site read failed:", siteResult.error.message);
       }
-      sites = siteRows ?? [];
+      if (accountResult.error) {
+        console.warn("[portal] account name read failed:", accountResult.error.message);
+      }
+      sites = siteResult.data ?? [];
+      for (const account of accountResult.data ?? []) {
+        const name = account.name?.trim();
+        if (name) accountNames.set(account.id, name);
+      }
     }
 
     if (rows.length === 0 && !homeProfile) {
@@ -212,6 +224,9 @@ export const resolvePortalSession = cache(
     }
 
     const selectedMembership = rows.find((row) => row.account_id === selected.account_id);
+    const selectedAccountName = selected.account_id
+      ? (accountNames.get(selected.account_id) ?? "")
+      : "";
 
     return {
       kind: "client",
@@ -219,6 +234,7 @@ export const resolvePortalSession = cache(
       memberships: rows,
       sites,
       selectedSite: selected,
+      selectedAccountName,
       isAccountAdmin: selectedMembership?.role === "owner",
       passwordSet,
     };

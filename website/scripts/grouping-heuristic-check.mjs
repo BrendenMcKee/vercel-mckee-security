@@ -1,5 +1,6 @@
 import {
   civicWatchlist,
+  draftGroupingHints,
   groupingCandidates,
   preferredGroupingAccountName,
 } from "../src/lib/portal/grouping.ts";
@@ -121,4 +122,65 @@ assert(
   ) === "McKee",
   "prefers existing multi-site account name",
 );
+
+const mckeeNamed = mckee.map((site) => ({ ...site, account_name: "McKee" }));
+const mckeeCounts = new Map([[mckeeAccount, 2]]);
+const nameHints = draftGroupingHints(
+  { firstName: "Brenden", lastName: "McKee", email: "" },
+  mckeeNamed,
+  mckeeCounts,
+);
+assert(
+  nameHints.some((hint) => hint.kind === "same_name" && hint.accountId === mckeeAccount),
+  "typed McKee name must hint the existing account",
+);
+assert(
+  draftGroupingHints(
+    { firstName: "Brenden", lastName: "McKee", email: "" },
+    mckeeNamed,
+    mckeeCounts,
+    { ignoreAccountId: mckeeAccount },
+  ).every((hint) => hint.kind !== "same_name"),
+  "Add site on the same account must not self-hint",
+);
+assert(
+  draftGroupingHints(
+    { firstName: "Other", lastName: "Person", email: "brendenmckee255@gmail.com" },
+    mckeeNamed,
+    mckeeCounts,
+  ).some((hint) => hint.kind === "same_email" && hint.siteCount === 2),
+  "typed same email must hint the multi-site account",
+);
+assert(
+  draftGroupingHints(
+    { firstName: "Brenden", lastName: "McKee", email: "brendenmckee255@gmail.com" },
+    mckeeNamed,
+    mckeeCounts,
+  ).some((hint) => hint.kind === "same_name_email" && hint.accountId === mckeeAccount),
+  "same name and email on one account must merge into one hint",
+);
+assert(
+  draftGroupingHints(
+    { firstName: "Dysart", lastName: "Library", email: "" },
+    [],
+    new Map(),
+  ).some((hint) => hint.kind === "civic" && !hint.accountId),
+  "civic draft name is review-only",
+);
+assert(
+  draftGroupingHints(
+    { firstName: "NEW", lastName: "CUSTOMER", email: "" },
+    junk,
+    new Map([
+      ["acct-j1", 1],
+      ["acct-j2", 1],
+    ]),
+  ).every((hint) => hint.kind !== "same_name"),
+  "NEW CUSTOMER draft must not same-name hint",
+);
+assert(
+  draftGroupingHints({ firstName: "", lastName: "", email: "" }, mckeeNamed, mckeeCounts).length === 0,
+  "empty draft must not hint",
+);
+
 console.log("grouping-heuristic-check ok");

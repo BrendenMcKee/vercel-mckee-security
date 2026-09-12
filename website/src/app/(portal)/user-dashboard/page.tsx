@@ -955,6 +955,7 @@ function ClientSecurityPanel({
                 {monitoring && <ServiceStatusBadge status={monitoring.status} withIcon />}
               </div>
               <p className="mt-1.5 text-sm leading-relaxed text-white/50">
+                {lanvacAccountCode ? `${lanvacAccountCode} · ` : ""}
                 {monitoring
                   ? `${tierLabel(monitoring.tier)} · ${SERVICE_TYPE_LABELS.monitoring}`
                   : "Contacts and equipment on file"}

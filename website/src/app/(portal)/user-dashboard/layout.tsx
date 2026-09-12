@@ -69,6 +69,12 @@ export default async function UserDashboardLayout({
   }
 
   const profile = session.selectedSite;
+  const siteName = `${profile.first_name} ${profile.last_name}`.trim();
+  const siteCode = profile.lanvac_account_code?.trim() || "No CODE";
+  const sitesOnAccount = session.sites.filter(
+    (site) => site.account_id === profile.account_id && site.status !== "disabled",
+  ).length;
+  const accountName = session.selectedAccountName;
 
   return (
     <div className={`${PORTAL_SHELL_CLASS} py-8 sm:py-10`}>
@@ -80,6 +86,16 @@ export default async function UserDashboardLayout({
           <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
             Welcome, {profile.first_name}
           </h1>
+          <p className="mt-1 text-sm font-bold text-white">
+            {siteName} · {siteCode}
+          </p>
+          {accountName &&
+            (sitesOnAccount > 1 || accountName.toLowerCase() !== siteName.toLowerCase()) && (
+            <p className="mt-0.5 text-sm text-white/60">
+              Account {accountName}
+              {sitesOnAccount > 1 ? ` · ${sitesOnAccount} sites` : ""}
+            </p>
+          )}
           {profile.email && (
             <p className="mt-1 break-all text-sm text-white/45">{profile.email}</p>
           )}

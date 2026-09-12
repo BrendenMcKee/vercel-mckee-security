@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { setAccountAutoOnboardAction } from "@/lib/portal/actions/clients";
 import { accountDisplayName, accountSitesThisFirst } from "@/lib/portal/account-list";
+import { PortalHelpTip } from "@/components/portal/portal-help-tip";
 
 export type AdminAccountSiteLink = {
   id: string;
@@ -53,7 +54,7 @@ export function AdminAccountCard({
       setNotice({
         kind: "ok",
         text: next
-          ? "Automatic onboarding is on. Invite mail still waits for go-live on the Billing tab."
+          ? "Automatic onboarding is on. New sites on this account can get invitation mail."
           : "Automatic onboarding is off. Staff can still copy an invitation link.",
       });
     });
@@ -127,11 +128,27 @@ export function AdminAccountCard({
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
         <div className="min-w-0 max-w-xl">
-          <p className="text-sm font-bold text-white">Automatic onboarding</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-bold text-white">Automatic onboarding</p>
+            <PortalHelpTip label="What automatic onboarding does" title="Automatic onboarding">
+              <p>
+                When this is on, the portal can send invitation and activate mail for this
+                account. When it is off, no automatic onboarding mail goes out. Staff can still
+                copy a link.
+              </p>
+              <p>
+                A second site turns this off. Appoint account admin is a separate staff action.
+                It still works while this is off.
+              </p>
+              <p>
+                This does not mute payment reminders, receipts, caller-ID notices, or device
+                notices. Those still send to the site contact after client email is live on the
+                Billing tab.
+              </p>
+            </PortalHelpTip>
+          </div>
           <p className="mt-1 text-xs leading-relaxed text-white/50">
-            When off, the portal does not automatically send onboarding mail for
-            this account. Staff can still copy a link. A second site turns this
-            off. It does not mute payment, caller-ID, or device mail.
+            Invitation mail for this account. Payment and caller-ID notices are separate.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

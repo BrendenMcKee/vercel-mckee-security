@@ -64,6 +64,8 @@ import {
   siteCountByAccount,
   type SiteLinkFilter,
 } from "@/lib/portal/account-list";
+import { draftGroupingHintCopy, draftGroupingHints } from "@/lib/portal/grouping";
+import { PortalHelpTip } from "@/components/portal/portal-help-tip";
 
 type FormMode = "closed" | "create" | "add-site";
 
@@ -204,6 +206,24 @@ export function AdminClientsPanel({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const siteCounts = useMemo(() => siteCountByAccount(clients), [clients]);
+  const groupingHints = useMemo(() => {
+    if (formMode === "closed") return [];
+    return draftGroupingHints(
+      { firstName: form.firstName, lastName: form.lastName, email: form.email },
+      clients.map((row) => ({
+        id: row.id,
+        account_id: row.account_id,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        email: row.email,
+        lanvac_account_code: row.lanvac_account_code,
+        lanvac_city: row.lanvac_city,
+        account_name: accountNameFromEmbed(row.accounts),
+      })),
+      siteCounts,
+      { ignoreAccountId: formMode === "add-site" ? addAccountId : "" },
+    );
+  }, [form.firstName, form.lastName, form.email, clients, siteCounts, formMode, addAccountId]);
   const accountOptions = useMemo(
     () => mergeMemberEmails(accountsFromClientRows(clients), memberEmails),
     [clients, memberEmails],
@@ -477,9 +497,13 @@ export function AdminClientsPanel({
         }
         finishForm();
         const seedNote = result.warning ? ` ${result.warning}` : "";
+        const hintNote =
+          groupingHints.some((hint) => hint.kind !== "civic")
+            ? " Review Grouping if this site also matches another account."
+            : "";
         setNotice({
           kind: result.warning ? "error" : "ok",
-          text: `Site added to ${result.accountName}. No invitation was sent.${seedNote}`,
+          text: `Site added to ${result.accountName}. No invitation was sent.${seedNote}${hintNote}`,
         });
         return;
       }
@@ -495,9 +519,14 @@ export function AdminClientsPanel({
       }
       finishForm();
       const delivery = inviteDeliveryNotice(result, "created", result.warning);
+      const linkHint = groupingHints.some((hint) => hint.kind !== "civic")
+        ? " Open Grouping to accept or reject a link, or use Add site if it already belongs on that account."
+        : groupingHints.some((hint) => hint.kind === "civic")
+          ? " This name looks municipal. Check Grouping after save. Do not merge every civic site into one account."
+          : "";
       setNotice({
         kind: delivery.kind,
-        text: delivery.text,
+        text: `${delivery.text}${linkHint}`,
         link: delivery.showLink ? result.activateUrl : undefined,
       });
     });
@@ -865,6 +894,55 @@ export function AdminClientsPanel({
                 </span>
               </label>
             </div>
+            {groupingHints.length > 0 && (
+              <div className="rounded-xl border border-amber-400/35 bg-amber-500/10 p-4 text-sm text-amber-50">
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-amber-100">Possible linked account</p>
+                  <PortalHelpTip label="What this grouping hint means" title="Possible linked account">
+                    <p>
+                      This is a helper while you type. It does not attach the site. Same name or
+                      same email can belong on an existing account. Use Add site to put it there
+                      now, or save and Accept it on the Grouping tab.
+                    </p>
+                    <p>
+                      A civic-looking name is a review flag only. Do not merge every COUNTY,
+                      LIBRARY, or PUBLIC WORKS site into one account.
+                    </p>
+                  </PortalHelpTip>
+                </div>
+                <ul className="mt-2 space-y-1.5 text-amber-50/90">
+                  {groupingHints.map((hint) => (
+                    <li key={`${hint.kind}:${hint.accountId ?? "civic"}`}>
+                      {draftGroupingHintCopy(hint)}
+                    </li>
+                  ))}
+                </ul>
+                {groupingHints.some((hint) => hint.accountId) && formMode === "create" && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {[...new Map(
+                      groupingHints
+                        .filter((hint) => hint.accountId)
+                        .map((hint) => [hint.accountId, hint]),
+                    ).values()]
+                      .slice(0, 2)
+                      .map((hint) => (
+                        <button
+                          key={hint.accountId}
+                          type="button"
+                          onClick={() => {
+                            ignorePrefill.current = true;
+                            setFormMode("add-site");
+                            setAddAccountId(hint.accountId!);
+                          }}
+                          className="cursor-pointer rounded-lg border border-amber-400/40 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-amber-100 hover:bg-amber-500/15"
+                        >
+                          Add site to {hint.accountName}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
           </fieldset>
 
           <fieldset className="space-y-3">

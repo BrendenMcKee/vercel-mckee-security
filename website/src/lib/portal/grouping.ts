@@ -153,6 +153,108 @@ export function civicWatchlist(sites: GroupingSiteInput[]): GroupingSiteInput[] 
     .sort((a, b) => siteDisplayName(a).localeCompare(siteDisplayName(b)));
 }
 
+export type DraftGroupingHint = {
+  kind: "same_name" | "same_email" | "same_name_email" | "civic";
+  accountId: string | null;
+  accountName: string;
+  siteCount: number;
+  sampleLabel: string;
+};
+
+export function draftGroupingHintCopy(hint: DraftGroupingHint): string {
+  if (hint.kind === "civic") {
+    return "This name looks municipal. After you save, check Grouping. Do not one-click merge every civic site.";
+  }
+  const count = hint.siteCount > 1 ? ` (${hint.siteCount} sites)` : "";
+  if (hint.kind === "same_name_email") {
+    return `Same name and email as ${hint.sampleLabel} on ${hint.accountName}${count}. Add site now, or Accept on Grouping after you save.`;
+  }
+  if (hint.kind === "same_email") {
+    return `Same email as ${hint.sampleLabel} on ${hint.accountName}${count}. Use Add site if it belongs there.`;
+  }
+  return `Same name as ${hint.sampleLabel} on ${hint.accountName}${count}. Add site now, or Accept on Grouping after you save.`;
+}
+
+/**
+ * Live hint while staff type a New client or Add site form. Does not attach.
+ * Same-name / same-email point at an existing account. Civic is review-only.
+ * Caps account matches at three so a reused shop email cannot flood the form.
+ */
+export function draftGroupingHints(
+  draft: { firstName: string; lastName: string; email: string },
+  sites: Array<
+    GroupingSiteInput & {
+      account_name?: string | null;
+    }
+  >,
+  accountSiteCounts: Map<string, number>,
+  opts?: { ignoreAccountId?: string },
+): DraftGroupingHint[] {
+  const draftName = normalizeGroupingName(`${draft.firstName} ${draft.lastName}`);
+  const draftEmail = draft.email.trim().toLowerCase();
+  const ignore = opts?.ignoreAccountId ?? "";
+  const civic = looksCivicName(`${draft.firstName} ${draft.lastName}`);
+  if (!draftName && !draftEmail && !civic) return [];
+
+  const byAccount = new Map<string, DraftGroupingHint>();
+
+  function remember(hint: DraftGroupingHint) {
+    const key = hint.accountId ?? `none:${hint.sampleLabel}`;
+    const existing = byAccount.get(key);
+    if (!existing) {
+      byAccount.set(key, hint);
+      return;
+    }
+    if (existing.kind !== hint.kind) {
+      byAccount.set(key, { ...existing, kind: "same_name_email" });
+    }
+  }
+
+  for (const site of sites) {
+    if (site.account_id && site.account_id === ignore) continue;
+    const accountName = site.account_name?.trim() || siteDisplayName(site);
+    const siteCount = site.account_id ? (accountSiteCounts.get(site.account_id) ?? 1) : 1;
+    const sample = [siteDisplayName(site), site.lanvac_account_code].filter(Boolean).join(" · ");
+
+    if (draftName && NAME_BLOCKLIST.has(draftName) === false) {
+      if (normalizeGroupingName(siteDisplayName(site)) === draftName) {
+        remember({
+          kind: "same_name",
+          accountId: site.account_id,
+          accountName,
+          siteCount,
+          sampleLabel: sample,
+        });
+      }
+    }
+    if (draftEmail && site.email?.trim().toLowerCase() === draftEmail) {
+      remember({
+        kind: "same_email",
+        accountId: site.account_id,
+        accountName,
+        siteCount,
+        sampleLabel: sample,
+      });
+    }
+  }
+
+  const accountHints = [...byAccount.values()].sort((a, b) => {
+    if (b.siteCount !== a.siteCount) return b.siteCount - a.siteCount;
+    return a.accountName.localeCompare(b.accountName);
+  });
+  const hints = accountHints.slice(0, 3);
+  if (civic) {
+    hints.push({
+      kind: "civic",
+      accountId: null,
+      accountName: "",
+      siteCount: 0,
+      sampleLabel: "",
+    });
+  }
+  return hints;
+}
+
 export function groupingKindLabel(kind: GroupingKind): string {
   switch (kind) {
     case "same_name":

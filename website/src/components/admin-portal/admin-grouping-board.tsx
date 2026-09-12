@@ -13,6 +13,7 @@ import {
   type GroupingBoardSuggestion,
 } from "@/lib/portal/grouping";
 import { adminInputClass } from "@/components/admin-portal/ui";
+import { PortalHelpTip } from "@/components/portal/portal-help-tip";
 
 function siteLabel(site: GroupingBoardSite): string {
   const name = `${site.firstName} ${site.lastName}`.trim();
@@ -212,14 +213,32 @@ export function AdminGroupingBoard({
             Last signed off {new Date(signedOffAt).toLocaleString("en-CA")}.
           </p>
         )}
-        <button
-          type="button"
-          disabled={!empty || pending}
-          onClick={signOff}
-          className="mt-4 cursor-pointer rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-amber-300 disabled:cursor-default disabled:opacity-50"
-        >
-          {pending ? "Saving..." : "Sign off grouping"}
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={!empty || pending}
+            onClick={signOff}
+            className="cursor-pointer rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-black transition-colors hover:bg-amber-300 disabled:cursor-default disabled:opacity-50"
+          >
+            {pending ? "Saving..." : "Sign off grouping"}
+          </button>
+          <PortalHelpTip label="What grouping sign-off does" title="Sign off grouping">
+            <p>
+              Sign off records that a person reviewed possible linked accounts. Client email on
+              the Billing tab cannot go live until this is done. If a new suggestion is still
+              open, client email stays blocked even if you signed off earlier.
+            </p>
+            <p>
+              Signing off does not link sites and does not send mail. Accept on a suggestion is
+              what puts sites on one account. Reject keeps that same set from coming back.
+            </p>
+            <p>
+              An empty queue is fine to sign off. After import, or when you add a site that
+              matches an existing name or email, new suggestions appear and sign-off clears.
+              Walk the queue again.
+            </p>
+          </PortalHelpTip>
+        </div>
         {notice && (
           <p role="status" className={`mt-3 text-sm ${notice.kind === "error" ? "text-red-200" : "text-emerald-200"}`}>
             {notice.text}
