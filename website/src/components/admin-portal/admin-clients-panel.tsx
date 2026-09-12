@@ -65,7 +65,7 @@ import {
   type SiteLinkFilter,
 } from "@/lib/portal/account-list";
 import { draftGroupingHintCopy, draftGroupingHints } from "@/lib/portal/grouping";
-import { PortalHelpTip } from "@/components/portal/portal-help-tip";
+import { PortalHelpSection, PortalHelpTip } from "@/components/portal/portal-help-tip";
 
 type FormMode = "closed" | "create" | "add-site";
 
@@ -831,29 +831,38 @@ export function AdminClientsPanel({
             <legend className="text-xs font-bold uppercase tracking-widest text-white/40">
               {formMode === "add-site" ? "Site" : "Client Details"}
             </legend>
+            <p className="text-xs leading-relaxed text-white/50">
+              First and last name are the label on the site, not a legal-name form. A house uses
+              the person (Jane / Smith). A town or business uses the building (Dysart / Library).
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                First name *
+                {formMode === "add-site" ? "Site name (first part) *" : "First name *"}
                 <input
                   required
                   value={form.firstName}
                   onChange={(e) => set("firstName", e.target.value)}
                   className={adminInputClass}
                 />
-                {formMode === "add-site" && (
-                  <span className="text-xs text-white/40">
-                    Site display name. Example: Stanhope or Public Works.
-                  </span>
-                )}
+                <span className="text-xs text-white/40">
+                  {formMode === "add-site"
+                    ? "Example: Dysart, Stanhope, or Jane."
+                    : "Person or building. Example: Jane or Dysart."}
+                </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
-                Last name *
+                {formMode === "add-site" ? "Site name (second part) *" : "Last name *"}
                 <input
                   required
                   value={form.lastName}
                   onChange={(e) => set("lastName", e.target.value)}
                   className={adminInputClass}
                 />
+                <span className="text-xs text-white/40">
+                  {formMode === "add-site"
+                    ? "Example: Library, Public Works, or Smith."
+                    : "Person or building. Example: Smith or Library."}
+                </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm text-white/80">
                 {formMode === "add-site" ? "Site contact email" : "Email *"}
@@ -898,16 +907,35 @@ export function AdminClientsPanel({
               <div className="rounded-xl border border-amber-400/35 bg-amber-500/10 p-4 text-sm text-amber-50">
                 <div className="flex items-center gap-2">
                   <p className="font-bold text-amber-100">Possible linked account</p>
-                  <PortalHelpTip label="What this grouping hint means" title="Possible linked account">
-                    <p>
-                      This is a helper while you type. It does not attach the site. Same name or
-                      same email can belong on an existing account. Use Add site to put it there
-                      now, or save and Accept it on the Grouping tab.
-                    </p>
-                    <p>
-                      A civic-looking name is a review flag only. Do not merge every COUNTY,
-                      LIBRARY, or PUBLIC WORKS site into one account.
-                    </p>
+                  <PortalHelpTip label="More info about this possible linked account" title="Possible linked account">
+                    <PortalHelpSection title="Why this yellow box appeared">
+                      <p>
+                        You typed a name or email that we already have on another site, or a
+                        town-style name. We are asking: is this another property for a customer
+                        we already know?
+                      </p>
+                    </PortalHelpSection>
+                    <PortalHelpSection title="What the box does right now">
+                      <p>
+                        Nothing. It is a flag while you type. It does not attach the site and it
+                        does not send email.
+                      </p>
+                    </PortalHelpSection>
+                    <PortalHelpSection title="What you can do">
+                      <ul className="list-disc space-y-1.5 pl-5">
+                        <li>If we named an account, Add site puts this property there now.</li>
+                        <li>Keep going with New client if this is a different customer who happens to share a name.</li>
+                        <li>After you save, the Grouping tab can still offer Accept or Reject.</li>
+                      </ul>
+                    </PortalHelpSection>
+                    <PortalHelpSection title="Town and business names">
+                      <p>
+                        First and last name are just the label on the site. For a library, type
+                        Dysart and Library. A municipal note means "look before you group." Do
+                        not put every library or county building on one account. Dysart Library
+                        and Minden Municipal Office are different customers.
+                      </p>
+                    </PortalHelpSection>
                   </PortalHelpTip>
                 </div>
                 <ul className="mt-2 space-y-1.5 text-amber-50/90">

@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { setAccountAutoOnboardAction } from "@/lib/portal/actions/clients";
 import { accountDisplayName, accountSitesThisFirst } from "@/lib/portal/account-list";
-import { PortalHelpTip } from "@/components/portal/portal-help-tip";
+import { PortalHelpSection, PortalHelpTip } from "@/components/portal/portal-help-tip";
 
 export type AdminAccountSiteLink = {
   id: string;
@@ -130,25 +130,44 @@ export function AdminAccountCard({
         <div className="min-w-0 max-w-xl">
           <div className="flex items-center gap-2">
             <p className="text-sm font-bold text-white">Automatic onboarding</p>
-            <PortalHelpTip label="What automatic onboarding does" title="Automatic onboarding">
-              <p>
-                When this is on, the portal can send invitation and activate mail for this
-                account. When it is off, no automatic onboarding mail goes out. Staff can still
-                copy a link.
-              </p>
-              <p>
-                A second site turns this off. Appoint account admin is a separate staff action.
-                It still works while this is off.
-              </p>
-              <p>
-                This does not mute payment reminders, receipts, caller-ID notices, or device
-                notices. Those still send to the site contact after client email is live on the
-                Billing tab.
-              </p>
+            <PortalHelpTip label="More info about automatic onboarding" title="Automatic onboarding">
+              <PortalHelpSection title="Why this switch exists">
+                <p>
+                  When you add a new customer, the portal can email them a "set up your login"
+                  link. A township with many buildings should not get one of those emails for
+                  every building. This switch is the brake for this account only.
+                </p>
+              </PortalHelpSection>
+              <PortalHelpSection title="What On means">
+                <p>
+                  The portal may email the join-the-portal letter for this account (the invite
+                  to set a password and open the dashboard).
+                </p>
+              </PortalHelpSection>
+              <PortalHelpSection title="What Off means">
+                <p>
+                  The portal will not send that letter by itself. You can still copy the link
+                  and text it, email it, or read it over the phone.
+                </p>
+              </PortalHelpSection>
+              <PortalHelpSection title="What this switch does not do">
+                <p>
+                  It does not stop bills, receipts, alarm-list emails, or battery notices.
+                  Those are a different kind of email.
+                </p>
+              </PortalHelpSection>
+              <PortalHelpSection title="When a second site is added">
+                <p>
+                  The switch turns Off so we do not treat every building like a brand-new
+                  customer. Appoint account admin is a separate staff step that invites one
+                  person for the whole account. That still works while this is Off. It is not
+                  on this card yet.
+                </p>
+              </PortalHelpSection>
             </PortalHelpTip>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-white/50">
-            Invitation mail for this account. Payment and caller-ID notices are separate.
+            This is only the join-the-portal email. Bills and alarm emails are separate.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

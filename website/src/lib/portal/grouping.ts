@@ -163,7 +163,7 @@ export type DraftGroupingHint = {
 
 export function draftGroupingHintCopy(hint: DraftGroupingHint): string {
   if (hint.kind === "civic") {
-    return "This name looks municipal. After you save, check Grouping. Do not one-click merge every civic site.";
+    return "This looks like a town or municipal site. Use the building name (Dysart / Library). After you save, check Grouping. Do not put every library or county building on one account.";
   }
   const count = hint.siteCount > 1 ? ` (${hint.siteCount} sites)` : "";
   if (hint.kind === "same_name_email") {

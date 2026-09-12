@@ -118,7 +118,7 @@ McKee fixture for two-site testing: account `McKee`, Bunkie `O5985` (home
 login) + House `O4964` (no `user_id`). Do not delete those sites. Next is
 the rest of slice 4 (`docs/MULTI_SITE_ACCOUNTS.md`: Appoint
 account admin, attach/move). Grouping board + empty-queue sign-off shipped
-2026-09-07. Staff (i) help, create-form grouping hint, and client header
+2026-09-07. Staff More info help, create-form grouping hint, and client header
 site · CODE shipped 2026-09-12. Then slices 5–6 (client switcher, emails), then
 the CUA playbook (`docs/PORTAL_CUA_TEST.md`). Do not start the Windows
 QuickBooks bridge, a real client import, or Lanvac `fullupdate` until those

@@ -9,7 +9,7 @@ todos:
     content: "One resolvePortalSession helper: membership across accounts, selected site authorized, requireSelectedSite for every client write; activate upserts owner member"
     status: completed
   - id: multi-site-home
-    content: "2+ sites: sites list (name, address, CODE, caller-list summary) plus switcher; single-site clients keep today's page"
+    content: "Header site name · CODE shipped 2026-09-12 (Account line when useful). Still open: 2+ sites list plus switcher. Single-site clients keep today's page."
     status: pending
   - id: login-orphan-cleanup
     content: "Harden sign-in, OAuth callback, cleanup cron, and password_set_at so extra members are not treated as orphans"
@@ -21,13 +21,16 @@ todos:
     content: Stop findOrCreateStripeCustomer from merging two sites that share a contact email
     status: completed
   - id: admin-account-card
-    content: "Account card shipped (name, sibling links, auto_onboard toggle, Add site link). Still open: attach/move a live or pending site; migrate live-site people as members"
+    content: "Account card shipped (name, this-site first, sibling links, auto_onboard + More info, Add site link). Staff People with access is on the Account tab."
+    status: completed
+  - id: attach-move
+    content: "Account-card attach/move a live or pending site; migrate live-site people as members. After Appoint."
     status: pending
   - id: create-client-attach
-    content: "Clients list: two red buttons. Open a form and they become a New client / Add site toggle. Email collision offers Add site. No multi-site wizard on New client."
+    content: "Clients list: two red buttons. Open a form and they become a New client / Add site toggle. Email collision offers Add site. Live Possible linked account hint while typing (same name / email / civic). Does not attach. No multi-site wizard on New client."
     status: completed
   - id: client-switcher
-    content: Site switcher and People with access only when 2+ sites or 2+ members
+    content: "Client site switcher and client Settings People with access only when 2+ sites or 2+ members. Staff People already shipped. Header identity is a separate shipped item."
     status: pending
   - id: honor-auto-onboard
     content: Skip automatic invite/resend when auto_onboard is false or client mail is paused (leftover site invites on attach stay with attach)
@@ -36,26 +39,26 @@ todos:
     content: "Grouping board on existing profiles (heuristics, accept/reject); empty-queue sign-off required before GO LIVE; not blocked on 8A seed"
     status: completed
   - id: staff-help-tips
-    content: "Staff (i) help on grouping sign-off, auto-onboard, and New client / Add site grouping hint. Copy written for live mail."
+    content: "Staff More info links on grouping sign-off, auto-onboard, and New client / Add site grouping hint. Plain-language why/what/not. Copy written for live mail."
     status: completed
   - id: client-header-identity
-    content: "Client header always shows site name · CODE. Account line when the account name differs or there are 2+ sites. Switcher still slice 5."
+    content: "Client header always shows site name · CODE. Account line when the account name differs or there are 2+ active sites. Account name from the cached session. Switcher still slice 5."
     status: completed
   - id: master-setup-email
-    content: "Appoint account-admin queue, org account-admin setup email (also if a bill/invite goes out with no auth yet), Transfer account admin to an existing member"
+    content: "Appoint account admin queue, org Account admin setup email (also if a bill/invite goes out with no auth yet), Transfer account admin to an existing member. This is the next implementation."
     status: pending
   - id: checks-docs
     content: "Update rls-pentest, rls-check, activation-check, cron-check when slices ship (R53 / 9.5.4 / 9.5.5 / ACCOUNTING_PLAN / handover already aligned as planned)"
     status: completed
   - id: cua-portal-test
-    content: "Keep docs/PORTAL_CUA_TEST.md in lockstep with each slice. After deploy, CUA runs that file and files a findings report. Do not start QB bridge / import until the report is clean or accepted."
+    content: "Playbook is living and updated with each slice. Full CUA run after remaining R53 slices deploy. Do not start QB bridge / import until the report is clean or accepted."
     status: pending
 isProject: false
 ---
 
 # Multi-site accounts and extra logins
 
-Status: **slices 1–3 shipped; slice 4 grouping board shipped 2026-09-07; staff (i) help, create-form grouping hint, and client header site · CODE shipped 2026-09-12; Clients / Account / Alerts UI polish signed off 2026-09-05.** Schema, membership RLS, `resolvePortalSession`, orphan / OAuth / cleanup / password. Audit also shipped Stripe email reuse, delete-site Auth wipe, per-site disable / re-enable, Account-admin-only on-test, `requireSelectedSite` on client writes. Slice 3: last Account admin cannot be revoked (staff People with access on the Account tab), and delete confirm copy names **this site** (other sites and the login stay when the account has more than one). Hosted two-site fixture (do not delete): McKee account, Bunkie `O5985` (Brenden login) + House `O4964` (Dennis & Brenda, same 4702 civic address, no `user_id`). `auto_onboard` is off. Session without `?site=` / cookie prefers the leftover home site so the Bunkie login still opens the Bunkie. Single-site clients keep today's dashboard (no switcher, no People list). Staff Clients list chips linked accounts (`McKee · 2 sites`) and can filter them. A non-default filter uses amber chrome. Slice 4 increment: Clients list shows two red buttons (New client, Add site to an account); they become a mode toggle only after a form is open. Email collision offers Add site. Account card (current site first and sky-highlighted, auto-onboard switch, Add site link). Create/resend honor `auto_onboard`. Alerts on-test matches the Security clock. **Grouping tab** reviews same-name / same-email / QuickBooks-job suggestions. Accept links sites (no mail). Reject dismisses. Empty-queue sign-off writes `org_grouping_reviewed_at`. Hosted McKee House + Bunkie already share an account, so the queue stays empty unless throwaway test rows appear. Staff **(i)** buttons open a short modal (sign-off, automatic onboarding, create-form hint). Copy describes live mail so it does not need a rewrite after the Billing flip. New client / Add site shows an amber **Possible linked account** card while you type a matching name or email, or a civic-looking name. It does not attach. **Still open in slice 4:** Appoint account admin, attach/move a live site from the Account card. Then slices 5–6 (client switcher / sites list / People, emails), then CUA. The client header already shows **site name · CODE** (and Account when the name differs or there are 2+ sites). That is not the switcher. Station writes stay `O5985`. Who clicked on-test is already stored; showing it on Historic is R54b, not this slice ([`LANVAC_STATION.md`](LANVAC_STATION.md)). Do not import real clients until the remaining slices ship and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
+Status: **slices 1–3 shipped; slice 4 grouping board shipped 2026-09-07; staff More info help, create-form grouping hint, and client header site · CODE shipped 2026-09-12; Clients / Account / Alerts UI polish signed off 2026-09-05.** Schema, membership RLS, `resolvePortalSession`, orphan / OAuth / cleanup / password. Audit also shipped Stripe email reuse, delete-site Auth wipe, per-site disable / re-enable, Account-admin-only on-test, `requireSelectedSite` on client writes. Slice 3: last Account admin cannot be revoked (staff People with access on the Account tab), and delete confirm copy names **this site** (other sites and the login stay when the account has more than one). Hosted two-site fixture (do not delete): McKee account, Bunkie `O5985` (Brenden login) + House `O4964` (Dennis & Brenda, same 4702 civic address, no `user_id`). `auto_onboard` is off. Session without `?site=` / cookie prefers the leftover home site so the Bunkie login still opens the Bunkie. Single-site clients keep today's dashboard (no switcher, no People list). Staff Clients list chips linked accounts (`McKee · 2 sites`) and can filter them. A non-default filter uses amber chrome. Slice 4 increment: Clients list shows two red buttons (New client, Add site to an account); they become a mode toggle only after a form is open. Email collision offers Add site. Account card (current site first and sky-highlighted, auto-onboard switch, Add site link). Create/resend honor `auto_onboard`. Alerts on-test matches the Security clock. **Grouping tab** reviews same-name / same-email / QuickBooks-job suggestions. Accept links sites (no mail). Reject dismisses. Empty-queue sign-off writes `org_grouping_reviewed_at`. Hosted McKee House + Bunkie already share an account, so the queue stays empty unless throwaway test rows appear. Staff **(i)** buttons open a short modal (sign-off, automatic onboarding, create-form hint). Copy describes live mail so it does not need a rewrite after the Billing flip. New client / Add site shows an amber **Possible linked account** card while you type a matching name or email, or a civic-looking name. It does not attach. **Still open in slice 4:** Appoint account admin, attach/move a live site from the Account card. Then slices 5–6 (client switcher / sites list / People, emails), then CUA. The client header already shows **site name · CODE** (and Account when the name differs or there are 2+ sites). That is not the switcher. Station writes stay `O5985`. Who clicked on-test is already stored; showing it on Historic is R54b, not this slice ([`LANVAC_STATION.md`](LANVAC_STATION.md)). Do not import real clients until the remaining slices ship and grouping is signed off. Client mail stays off until Billing-tab `GO LIVE`. Do not start the Windows QuickBooks bridge or CUA until those slices ship.
 
 ## How it worked before R53 (why the county could not log in once)
 
@@ -185,15 +188,15 @@ These are live paths that would break if we only added tables and a switcher.
 
 The Clients list shows **two red action buttons** (New client, Add site to an account). Once a form is open they become one connected mode toggle, with Close as a separate dismiss. They share the site-fields UI (address, phone, CODE, city, monitoring, VoIP, billing rail) so the form is not duplicated.
 
-**1. New client** (today’s button). Always **one new account + one site**. No “is this an organization?” checkbox. An account is just an account; the extra UI appears when a second site or second person exists. First/last/email become the Account admin and the site contact. Invitation is created (held until GO LIVE / `auto_onboard`). If they later need a second CODE, staff leave this flow and use Add site. Do **not** put “add another site” on this form.
+**1. New client** (today’s button). Always **one new account + one site**. No “is this an organization?” checkbox. An account is just an account; the extra UI appears when a second site or second person exists. First/last are the **site label** (Jane / Smith, or Dysart / Library), not a legal-name form. Email is the site contact and the first login. Invitation is created (held until GO LIVE / `auto_onboard`). If they later need a second CODE, staff leave this flow and use Add site. Do **not** put “add another site” on this form. A dedicated corporate-name field is later if we want it. Do not invent an organization checkbox now.
 
 If the typed email already belongs to a member or a site contact, warn and offer to switch to **Add site to an account** (the 9.5.4 near-duplicate warning, but it actually attaches).
 
-While you type, a **Possible linked account** card also appears for the same name, the same email, or a civic-looking name against existing sites. Same-name / same-email name the existing account and offer **Add site to {account}**. Civic is review-only: do not merge every COUNTY, LIBRARY, or PUBLIC WORKS site into one account. The card does not attach. After save, Grouping still reviews Accept / Reject. The (i) on that card explains this. Copy is written for live mail.
+While you type, a **Possible linked account** card also appears for the same name, the same email, or a civic-looking name against existing sites. Same-name / same-email name the existing account and offer **Add site to {account}**. Civic is review-only: do not merge every COUNTY, LIBRARY, or PUBLIC WORKS site into one account. The card does not attach. After save, Grouping still reviews Accept / Reject. **More info** on that card explains this in plain language. Copy is written for live mail.
 
 **2. Add site to an account.** Pick the account first (search name, site label, email, or CODE). The picker shows CODEs when they exist and site names when a site has no monitoring CODE, so VoIP-only sites stay distinguishable. The list caps at 12 and says to type to narrow. Then only the site: display name (still `first_name` / `last_name`, e.g. Stanhope / Public Works), address, optional site-contact email (not a new login), CODE, city, services, billing rail. No automatic invitation. `auto_onboard` turns off when this is the second site; the extra client UI appears. If that account already has an activated account admin, they stay the account admin. If it does not (imported pending sites), use **Appoint account admin** (below). Same action from the client-detail **Account** card when staff are already looking at the county.
 
-Account card on client detail also has: account name and site count, the current site first and highlighted (sky name and matching border), links to sibling sites, members (invite/revoke), attach/move a **pending or live** site (rules in item 20), **Automatic onboarding** switch (red track off, green track on) with an **(i)** that explains the live-mail brake (invitation / activate only; copy-link still works; second site turns it off; Appoint still works while off; does not mute payment, receipts, caller-ID, or device notices).
+Account card on client detail also has: account name and site count, the current site first and highlighted (sky name and matching border), links to sibling sites, members (invite/revoke), attach/move a **pending or live** site (rules in item 20), **Automatic onboarding** switch (red track off, green track on) with a **More info** link that explains the join-the-portal email in plain language (copy-link still works; second site turns it off; Appoint still works while off; does not mute payment, receipts, caller-ID, or device notices).
 
 Clients list: **shipped 2026-08-30.** An **Account** column chips the account name and site count when that account has two or more sites (example: `McKee · 2 sites`, one line). Single-site rows show a dash. Name and email stay ordinary. Service chips on this table are abbreviated; hover for the full product. The link key is `account_id`, not a repeated site-contact email. Search matches account name. Filter: All sites / Linked accounts / One site. A filter that is not the default uses amber chrome and a Clear filters control so staff can see it is on. Staff and client portal shells share `max-w-[90rem]`. Do not say enterprise, organization, or Master.
 
@@ -331,7 +334,7 @@ Original ask: one login for many systems, extra staff logins without sharing Gma
 1. Schema, backfill, RLS, unique owner, insert trigger, check-script trigger — **done**
 2. `resolvePortalSession` + orphan / OAuth / cleanup / password — **done**
 3. Delete, disable, Stripe email reuse — **live holes done in the audit**; last-owner revoke + multi-site delete confirm copy — **done 2026-08-29**
-4. Admin: New client / Add site + Account card **shipped 2026-08-30**, UI polish **signed off 2026-09-05**. Grouping board + empty-queue sign-off **shipped 2026-09-07**. Staff (i) help, create-form grouping hint **shipped 2026-09-12**. Appoint account admin and Account-card attach/move still open. **This is the next implementation.**
+4. Admin: New client / Add site + Account card **shipped 2026-08-30**, UI polish **signed off 2026-09-05**. Grouping board + empty-queue sign-off **shipped 2026-09-07**. Staff More info help, create-form grouping hint **shipped 2026-09-12**. Appoint account admin and Account-card attach/move still open. **This is the next implementation.**
 5. Client: header site name · CODE **shipped 2026-09-12**. Sites list / switcher / People (hidden for the majority) still this slice.
 6. Emails + render check
 7. Keep PORTAL_PLAN R53 / 9.5.4 / 9.5.5 / 9.5.5C and this file current as each slice lands (R53 is already written as planned)

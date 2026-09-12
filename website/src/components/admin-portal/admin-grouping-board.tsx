@@ -13,7 +13,7 @@ import {
   type GroupingBoardSuggestion,
 } from "@/lib/portal/grouping";
 import { adminInputClass } from "@/components/admin-portal/ui";
-import { PortalHelpTip } from "@/components/portal/portal-help-tip";
+import { PortalHelpSection, PortalHelpTip } from "@/components/portal/portal-help-tip";
 
 function siteLabel(site: GroupingBoardSite): string {
   const name = `${site.firstName} ${site.lastName}`.trim();
@@ -199,8 +199,8 @@ export function AdminGroupingBoard({
         <p className="text-sm font-bold uppercase tracking-widest text-white/70">Grouping</p>
         {empty ? (
           <p className="mt-2 text-sm leading-relaxed text-white/80">
-            The queue is empty. Sites that already share an account do not appear here. You may
-            sign off an empty queue.
+            The list is empty. Sites that already share an account, like McKee House and
+            Bunkie, do not show here. You can still sign off.
           </p>
         ) : (
           <p className="mt-2 text-sm leading-relaxed text-white/70">
@@ -222,21 +222,42 @@ export function AdminGroupingBoard({
           >
             {pending ? "Saving..." : "Sign off grouping"}
           </button>
-          <PortalHelpTip label="What grouping sign-off does" title="Sign off grouping">
-            <p>
-              Sign off records that a person reviewed possible linked accounts. Client email on
-              the Billing tab cannot go live until this is done. If a new suggestion is still
-              open, client email stays blocked even if you signed off earlier.
-            </p>
-            <p>
-              Signing off does not link sites and does not send mail. Accept on a suggestion is
-              what puts sites on one account. Reject keeps that same set from coming back.
-            </p>
-            <p>
-              An empty queue is fine to sign off. After import, or when you add a site that
-              matches an existing name or email, new suggestions appear and sign-off clears.
-              Walk the queue again.
-            </p>
+          <PortalHelpTip label="More info about grouping sign-off" title="Sign off grouping">
+            <PortalHelpSection title="Why this button exists">
+              <p>
+                This portal can email real customers. Before customer email is turned on, a
+                person at McKee has to look at the list of "these two sites might be the same
+                customer." Sign off is that person's "I looked" stamp. It is a safety check, not
+                a merge.
+              </p>
+            </PortalHelpSection>
+            <PortalHelpSection title="What you are looking for">
+              <p>
+                Two alarm systems that belong to one customer (a house and a bunkie, or two
+                township buildings) should share one login later. Two different customers who
+                happen to have similar names should stay apart.
+              </p>
+            </PortalHelpSection>
+            <PortalHelpSection title="What this button does">
+              <ul className="list-disc space-y-1.5 pl-5">
+                <li>It records that you reviewed this list.</li>
+                <li>Customer email on the Billing tab cannot be turned on until someone has signed off.</li>
+                <li>If a new maybe-match shows up later, the stamp clears and you look again.</li>
+              </ul>
+            </PortalHelpSection>
+            <PortalHelpSection title="What this button does not do">
+              <ul className="list-disc space-y-1.5 pl-5">
+                <li>It does not put two sites on one account. That is the Accept button on a card.</li>
+                <li>It does not send any email.</li>
+                <li>It does not change anyone's login.</li>
+              </ul>
+            </PortalHelpSection>
+            <PortalHelpSection title="When the list is empty">
+              <p>
+                That is OK. Sites that already share an account, like McKee House and Bunkie,
+                do not show here. You can still sign off an empty list.
+              </p>
+            </PortalHelpSection>
           </PortalHelpTip>
         </div>
         {notice && (
